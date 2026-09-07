@@ -10,6 +10,7 @@
  * module keeps the webview-only presentation heuristics (grid columns, option text).
  */
 import { ieBlockSize, type IeScheme } from "@bgforge/image/ie-direction";
+import { type IeGroup } from "@bgforge/animation/group-labels";
 
 export interface CycleGridAnalysis {
     /** More cycles than a single directional set can hold (>8) - so it is NOT one direction rose but
@@ -60,8 +61,23 @@ export function cycleGridHint(cycleCount: number, analysis: CycleGridAnalysis): 
 /** Option text for one direction group - shared by the webview's group select and the host's FRM
  *  save-as quick pick, so both surfaces name a block identically. Group i covers the i-th block of the
  *  scheme's own size; without a scheme the coarse one is the only reading available. */
-export function ieGroupOptionText(labels: string[] | undefined, index: number, scheme?: IeScheme): string {
+export function ieGroupOptionText(blocks: readonly IeGroup[] | undefined, index: number, scheme?: IeScheme): string {
     const stride = ieBlockSize(scheme) ?? MAX_SINGLE_DIRECTION_SET;
     const first = index * stride;
-    return `${labels?.[index] ?? `Group ${index + 1}`} (cycles ${first}-${first + stride - 1})`;
+    return `${blocks?.[index]?.label ?? `Group ${index + 1}`} (cycles ${first}-${first + stride - 1})`;
+}
+
+/**
+ * Which of a file's direction blocks to offer, by their own index in the file.
+ *
+ * A block the scheme addresses no sequence to is padding the format forces on the file: it still holds a
+ * frame per facing, so nothing structural rules it out and only the declaration can. The stance reader in
+ * `@bgforge/animation` drops one on exactly that, and both of this editor's block pickers share this so
+ * the three surfaces cannot disagree about what the file contains.
+ *
+ * Indices are the blocks' own, never their position in the result - the index is how a block is addressed
+ * in the file, so dropping one must not renumber the rest.
+ */
+export function offeredGroups(groupCount: number, blocks?: readonly IeGroup[]): number[] {
+    return Array.from({ length: groupCount }, (_, index) => index).filter((index) => blocks?.[index]?.unused !== true);
 }

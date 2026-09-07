@@ -190,7 +190,6 @@
         groupSeededView = v;
         roseGroup = seed;
     });
-    const roseGroupLabels = $derived(roseBlockNames?.map((block) => block.label));
     const clampedRoseGroup = $derived(Math.min(roseGroup, Math.max(0, roseGroupCount - 1)));
     const roseTiles = $derived.by((): RoseTile[] => {
         if (!view) return [];
@@ -465,7 +464,7 @@
                     onModeChange={(m) => (layoutChoice = m)}
                     groupCount={roseGroupCount}
                     group={clampedRoseGroup}
-                    groupLabels={roseGroupLabels}
+                    groupBlocks={roseBlockNames}
                     scheme={ieRose?.scheme}
                     onGroupChange={(g) => (roseGroup = g)}
                 />

@@ -7,7 +7,7 @@
  * scheme and band inference, the conversion planner and the facet decomposition - stays module-local. A
  * caller picking a table by hand would bypass the rule that an install's own declaration always wins.
  *
- * `ieGroupLabels` is not here either: it has its own `@bgforge/animation/group-labels` entry point, because
+ * `ieGroups` is not here either: it has its own `@bgforge/animation/group-labels` entry point, because
  * the animation editor's webview needs it and this barrel reaches the image library's Node-only codecs.
  */
 

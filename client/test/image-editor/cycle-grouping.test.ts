@@ -3,6 +3,7 @@ import {
     analyzeCycleGrid,
     cycleGridHint,
     ieGroupOptionText,
+    offeredGroups,
 } from "../../src/image-editor/webview/render/cycle-grouping";
 
 test("a single directional set (<=8 cycles) is not flagged as multi-sequence", () => {
@@ -62,7 +63,8 @@ describe("cycleGridHint", () => {
 
 describe("ieGroupOptionText", () => {
     test("combines the scheme name with the group's cycle range", () => {
-        expect(ieGroupOptionText(["WK - walk", "SC - combat stance"], 1)).toBe("SC - combat stance (cycles 8-15)");
+        const blocks = [{ label: "WK - walk" }, { label: "SC - combat stance" }];
+        expect(ieGroupOptionText(blocks, 1)).toBe("SC - combat stance (cycles 8-15)");
     });
 
     test("falls back to a numbered group without labels", () => {
@@ -73,5 +75,36 @@ describe("ieGroupOptionText", () => {
     test("counts the range in the scheme's block size", () => {
         expect(ieGroupOptionText(undefined, 1, "ie9")).toBe("Group 2 (cycles 9-17)");
         expect(ieGroupOptionText(undefined, 1, "ie8")).toBe("Group 2 (cycles 8-15)");
+    });
+});
+
+describe("offeredGroups", () => {
+    /**
+     * A block the scheme addresses no sequence to is padding the format forces on the file. It still
+     * holds a frame per facing, so nothing structural rules it out - only the declaration does, and the
+     * stance reader in `@bgforge/animation` drops it on exactly that. Offering it here handed the reader
+     * a sequence nothing can play, which the burrowing family opens on.
+     */
+    test("leaves out a block the scheme addresses no sequence to", () => {
+        const blocks = [{ label: "(unused)", unused: true as const }, { label: "DE - die" }, { label: "TW - twitch" }];
+
+        expect(offeredGroups(3, blocks)).toEqual([1, 2]);
+    });
+
+    // The index addresses the block in the FILE, so dropping one must not renumber the rest.
+    test("keeps each block's own index", () => {
+        const blocks = [{ label: "A" }, { label: "(unused)", unused: true as const }, { label: "B" }];
+
+        expect(offeredGroups(3, blocks)).toEqual([0, 2]);
+    });
+
+    test("offers every block where the scheme matched none, and where none is unused", () => {
+        expect(offeredGroups(3, undefined)).toEqual([0, 1, 2]);
+        expect(offeredGroups(2, [{ label: "A" }, { label: "B" }])).toEqual([0, 1]);
+    });
+
+    /** The block table can be shorter than the file: a shorter file carries a prefix of the layout. */
+    test("offers a block the table says nothing about", () => {
+        expect(offeredGroups(3, [{ label: "A" }])).toEqual([0, 1, 2]);
     });
 });

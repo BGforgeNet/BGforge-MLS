@@ -35,10 +35,10 @@ import {
 import { sidecarPalPath } from "./sidecar";
 import { type AnimationSet, type StanceIo, animationIdHex, setTitle } from "@bgforge/animation";
 import { CONVERSION_PROFILES, convertOpenSet, defaultPrefix, suggestTargetId } from "./conversion";
-import { ieGroupLabels } from "@bgforge/animation/group-labels";
+import { ieGroups } from "@bgforge/animation/group-labels";
 import { parseAnimationSetUri } from "../ie-resources/uri";
 import { openAnimationSet } from "../ie-resources/open-set";
-import { ieGroupOptionText } from "./webview/render/cycle-grouping";
+import { ieGroupOptionText, offeredGroups } from "./webview/render/cycle-grouping";
 import {
     type AnimationView,
     type ConversionRequestView,
@@ -730,12 +730,16 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         section: string | undefined,
     ): Promise<number | undefined> {
         const scheme = ieSchemeOf(layout);
-        const labels = ieGroupLabels(sourceName, groupCount, scheme, section);
-        const items = Array.from({ length: groupCount }, (_, i) => ieGroupOptionText(labels, i, scheme));
+        const blocks = ieGroups(sourceName, groupCount, scheme, section);
+        // The offered blocks carry their own indices, so the pick maps back through them rather than by
+        // its position in the list - a block the scheme addresses nothing to is left out, and taking the
+        // position would then hand the caller the wrong block.
+        const offered = offeredGroups(groupCount, blocks);
+        const items = offered.map((index) => ieGroupOptionText(blocks, index, scheme));
         const picked = await vscode.window.showQuickPick(items, {
             title: "Which direction group should the FRM use? (its north/south cycles have no FRM rotation)",
         });
-        return picked === undefined ? undefined : items.indexOf(picked);
+        return picked === undefined ? undefined : offered[items.indexOf(picked)];
     }
 
     /**

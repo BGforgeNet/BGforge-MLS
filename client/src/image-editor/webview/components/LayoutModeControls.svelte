@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { IeScheme } from "@bgforge/image/ie-direction";
     import type { LayoutMode } from "../render/compass-layout";
-    import { ieGroupOptionText } from "../render/cycle-grouping";
+    import { ieGroupOptionText, offeredGroups } from "../render/cycle-grouping";
+    import type { IeGroup } from "@bgforge/animation/group-labels";
 
     // Rose/grid layout selector, shown only when a rose is constructible for the current view. The
     // caller seeds `mode` from detection on open (an FRM's tagged facings, or the IE block-structure
@@ -12,7 +13,7 @@
         onModeChange,
         groupCount,
         group,
-        groupLabels,
+        groupBlocks,
         scheme,
         onGroupChange,
     }: {
@@ -20,7 +21,9 @@
         onModeChange: (mode: LayoutMode) => void;
         groupCount: number; // 0 or 1 = no group picker
         group: number;
-        groupLabels?: string[]; // scheme names per group (ieGroupLabels); numbered fallback when absent
+        // The scheme's own blocks, which name each group AND say which the scheme addresses nothing to;
+        // numbered fallback when the file matched no documented layout.
+        groupBlocks?: readonly IeGroup[];
         scheme?: IeScheme; // block size the option's cycle range counts in
         onGroupChange: (group: number) => void;
     } = $props();
@@ -66,8 +69,8 @@
                 }}
                 aria-label="Sequence group"
             >
-                {#each Array.from({ length: groupCount }, (_, i) => i) as i (i)}
-                    <option value={String(i)}>{ieGroupOptionText(groupLabels, i, scheme)}</option>
+                {#each offeredGroups(groupCount, groupBlocks) as i (i)}
+                    <option value={String(i)}>{ieGroupOptionText(groupBlocks, i, scheme)}</option>
                 {/each}
             </select>
         </label>

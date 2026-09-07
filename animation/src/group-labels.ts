@@ -251,13 +251,3 @@ export function ieGroups(
     }
     return undefined;
 }
-
-/** Scheme names for a multi-block file's direction groups - what a picker shows. */
-export function ieGroupLabels(
-    basename: string,
-    groupCount: number,
-    scheme?: IeScheme,
-    section?: string,
-): string[] | undefined {
-    return ieGroups(basename, groupCount, scheme, section)?.map((group) => group.label);
-}
