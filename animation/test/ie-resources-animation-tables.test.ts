@@ -3,6 +3,7 @@ import { openGame } from "@bgforge/binary";
 import { buildAnimationIndex } from "../src/animation-index";
 import { tableForFlavour } from "../src/animation-tables";
 import { characterDrawsBody } from "../src/animation-schemes/character";
+import { drawnArmourLevels } from "../src/set-stances";
 import { setTile } from "../src/set-tiles";
 
 /**
@@ -57,6 +58,43 @@ describe.skipIf(table === undefined)("a vendored table against the install it is
         expect(sets.length, `${GAME} lists no effect animation, so nothing was exercised`).toBeGreaterThan(0);
         process.stdout.write(`  ${sets.length - dead.length}/${sets.length} effect animations draw\n`);
         expect(dead.map((set) => `0x${set.id.toString(16).padStart(4, "0")} ${set.name || set.code}`)).toEqual([]);
+    });
+
+    /**
+     * A row naming SOME body is not a row naming every armour level's body: a level whose prefix the row
+     * gets wrong silently drops that level from the picker, and the test above passes on the other three.
+     *
+     * The thief bodies are the case. A classic archive spreads them over three letters - the base body at
+     * levels 1 and 3, the class letter at 2, and the plate letter at 4 - and the rows carried only the
+     * first two, so every thief lost its plate level. Measured against the archive rather than assumed:
+     * `C<race><gender>F4G1` is present for all twenty of them.
+     */
+    it("draws every armour level the archive holds a body for, on the rows that split across prefixes", () => {
+        const exists = (resref: string): boolean => game!.canRead(resref, "bam");
+        // The letters each family's levels are actually stored under, read off a classic archive: a thief
+        // is base/class/base/plate, a monk is monk/base/base/chain. Named per family rather than derived,
+        // because deriving them from the row under test is what let the gap through in the first place.
+        const expected = new Map<RegExp, (set: { name: string }) => string[]>([
+            [/^THIEF_/, () => ["", "", "", "F4"]],
+            [/^MONK_/, () => ["M1", "B2", "B3", "C4"]],
+        ]);
+        const sets = buildAnimationIndex(game!, table).filter((set) => table!.has(set.id) && !declaresOwn(set.id));
+
+        const missing: string[] = [];
+        for (const set of sets) {
+            const rule = [...expected.entries()].find(([pattern]) => pattern.test(set.name))?.[1];
+            if (rule === undefined) continue;
+            const body = [...set.prefixByArmour.values()][0]?.slice(0, 3) ?? "";
+            const drawn = new Set(drawnArmourLevels(set, exists));
+            for (const [index, suffix] of rule(set).entries()) {
+                // Only levels the archive HAS a body for; a level it lacks is the install's business.
+                if (suffix === "" || !exists(`${body}${suffix}G1`)) continue;
+                if (!drawn.has(index + 1)) missing.push(`${set.name} L${index + 1}: ${body}${suffix}G1`);
+            }
+        }
+
+        expect(sets.length, `${GAME} supplies no rows here, so nothing was exercised`).toBeGreaterThan(0);
+        expect(missing).toEqual([]);
     });
 
     it("leaves the ids it does not cover listed rather than dropping or guessing them", () => {

@@ -22,44 +22,54 @@ import { animationTable, type AnimationTable, type TableRows } from "./table";
  * install answers from its INIs and never asks.
  */
 /**
- * The thief bodies, which a classic archive splits across two prefixes.
+ * The thief bodies, which a classic archive splits across THREE prefixes.
  *
  * An Enhanced install ships all four armour levels under the class prefix and declares its base letter as
  * that same letter, so a row derived from one names files the classic archive does not have: it keeps only
  * the studded-leather level under the class prefix and the rest under the base body. Naming the base here is
  * what lets the per-file fallback reach them - without it three levels in four draw nothing.
+ *
+ * The plate level is the third prefix and needs naming outright, because the fallback cannot reach it: the
+ * base body has no level-4 file, so a row that named only the class letter and the base dropped every
+ * thief's plate armour silently. Measured on a classic archive - `C<race><gender>F4G1` is present for all
+ * twenty - and pinned by the thief case in `ie-resources-animation-tables.test.ts`.
  */
 const CLASSIC_THIEF_BODIES: TableRows = [
-    [0x5300, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMT"], section: "character", base: "CHMB", paperdoll: "CHMT" }],
-    [0x5301, { prefixes: ["CEMT", "CEMT", "CEMT", "CEMT"], section: "character", base: "CEMB", paperdoll: "CEMT" }],
-    [0x5302, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
-    [0x5303, { prefixes: ["CIMT", "CIMT", "CIMT", "CIMT"], section: "character", base: "CIMB", paperdoll: "CIMT" }],
-    [0x5310, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFT"], section: "character", base: "CHFB", paperdoll: "CHFT" }],
-    [0x5311, { prefixes: ["CEFT", "CEFT", "CEFT", "CEFT"], section: "character", base: "CEFB", paperdoll: "CEFT" }],
-    [0x5313, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFT"], section: "character", base: "CIFB", paperdoll: "CIFT" }],
-    [0x6300, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMT"], section: "character", base: "CHMB", paperdoll: "CHMT" }],
-    [0x6301, { prefixes: ["CEMT", "CEMT", "CEMT", "CEMT"], section: "character", base: "CEMB", paperdoll: "CEMT" }],
-    [0x6302, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
-    [0x6303, { prefixes: ["CIMT", "CIMT", "CIMT", "CIMT"], section: "character", base: "CIMB", paperdoll: "CIMT" }],
-    [0x6304, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CGMT" }],
-    [0x6305, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMT"], section: "character", base: "CHMB", paperdoll: "COMT" }],
-    [0x6310, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFT"], section: "character", base: "CHFB", paperdoll: "CHFT" }],
-    [0x6311, { prefixes: ["CEFT", "CEFT", "CEFT", "CEFT"], section: "character", base: "CEFB", paperdoll: "CEFT" }],
-    [0x6313, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFT"], section: "character", base: "CIFB", paperdoll: "CIFT" }],
-    [0x6314, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFT"], section: "character", base: "CIFB", paperdoll: "CGFT" }],
-    [0x6315, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFT"], section: "character", base: "CHFB", paperdoll: "COFT" }],
+    [0x5300, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMF"], section: "character", base: "CHMB", paperdoll: "CHMT" }],
+    [0x5301, { prefixes: ["CEMT", "CEMT", "CEMT", "CEMF"], section: "character", base: "CEMB", paperdoll: "CEMT" }],
+    [0x5302, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMF"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
+    [0x5303, { prefixes: ["CIMT", "CIMT", "CIMT", "CIMF"], section: "character", base: "CIMB", paperdoll: "CIMT" }],
+    [0x5310, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFF"], section: "character", base: "CHFB", paperdoll: "CHFT" }],
+    [0x5311, { prefixes: ["CEFT", "CEFT", "CEFT", "CEFF"], section: "character", base: "CEFB", paperdoll: "CEFT" }],
+    [0x5313, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFF"], section: "character", base: "CIFB", paperdoll: "CIFT" }],
+    [0x6300, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMF"], section: "character", base: "CHMB", paperdoll: "CHMT" }],
+    [0x6301, { prefixes: ["CEMT", "CEMT", "CEMT", "CEMF"], section: "character", base: "CEMB", paperdoll: "CEMT" }],
+    [0x6302, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMF"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
+    [0x6303, { prefixes: ["CIMT", "CIMT", "CIMT", "CIMF"], section: "character", base: "CIMB", paperdoll: "CIMT" }],
+    [0x6304, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMF"], section: "character", base: "CDMB", paperdoll: "CGMT" }],
+    [0x6305, { prefixes: ["CHMT", "CHMT", "CHMT", "CHMF"], section: "character", base: "CHMB", paperdoll: "COMT" }],
+    [0x6310, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFF"], section: "character", base: "CHFB", paperdoll: "CHFT" }],
+    [0x6311, { prefixes: ["CEFT", "CEFT", "CEFT", "CEFF"], section: "character", base: "CEFB", paperdoll: "CEFT" }],
+    [0x6313, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFF"], section: "character", base: "CIFB", paperdoll: "CIFT" }],
+    [0x6314, { prefixes: ["CIFT", "CIFT", "CIFT", "CIFF"], section: "character", base: "CIFB", paperdoll: "CGFT" }],
+    [0x6315, { prefixes: ["CHFT", "CHFT", "CHFT", "CHFF"], section: "character", base: "CHFB", paperdoll: "COFT" }],
 ];
 
 const CLASSIC_DELTAS: TableRows = [
     [0x5012, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMC"], section: "character", paperdoll: "CDMC" }],
     [0x5112, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMF"], section: "character", paperdoll: "CDMF" }],
     [0x5212, { prefixes: ["CDMW", "CDMW", "CDMW", "CDMW"], section: "character", paperdoll: "CDMW" }],
-    [0x5312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
+    [0x5312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMF"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
     [0x6012, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMC"], section: "character", paperdoll: "CDMC" }],
     [0x6112, { prefixes: ["CDMB", "CDMB", "CDMB", "CDMF"], section: "character", paperdoll: "CDMF" }],
     [0x6212, { prefixes: ["CDMW", "CDMW", "CDMW", "CDMW"], section: "character", paperdoll: "CDMW" }],
     [0x6214, { prefixes: ["CDMW", "CDMW", "CDMW", "CDMW"], section: "character", paperdoll: "CDMW" }],
-    [0x6312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMT"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
+    [0x6312, { prefixes: ["CDMT", "CDMT", "CDMT", "CDMF"], section: "character", base: "CDMB", paperdoll: "CDMT" }],
+    // The monk bodies split the same way the thieves do, and the derived row carries only the first: the
+    // monk letter holds level 1 alone, the base body holds 2 and 3, and chain holds 4. All eight files
+    // verified present on a classic archive; `CHMM2G1` is not, which is what the derived row asked for.
+    [0x6500, { prefixes: ["CHMM", "CHMB", "CHMB", "CHMC"], section: "character", paperdoll: "CHMM" }],
+    [0x6510, { prefixes: ["CHFM", "CHFB", "CHFB", "CHFC"], section: "character", paperdoll: "CHFM" }],
 ];
 
 const DERIVED: TableRows = [
