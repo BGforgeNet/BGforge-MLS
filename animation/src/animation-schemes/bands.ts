@@ -159,7 +159,7 @@ export function stancesOfMembers(
             // so only the declaration can rule it out.
             if (slots.length === 0 || file.drawn[band] !== true || groups?.[band]?.unused === true) continue;
             stances.push({
-                label: bandLabel(member.label, groups?.[band]?.label, band, file.bands.length),
+                label: bandLabel(member, groups?.[band]?.label, band, file.bands.length),
                 action: bandAction(member.action, groups?.[band]),
                 resref: member.resref,
                 parts: member.parts,
@@ -172,10 +172,18 @@ export function stancesOfMembers(
     return stances;
 }
 
-/** A single-band file is its own stance; a packed one takes the block's name, else a number. */
-function bandLabel(member: string, name: string | undefined, band: number, bandCount: number): string {
-    if (bandCount === 1) return member;
-    return name ?? `${member} - group ${band + 1}`;
+/**
+ * A single-band file is its own stance; a packed one takes the block's name, else a number.
+ *
+ * The block's name says nothing about WHICH file it came from, so a set drawing a second set of files
+ * under the same scheme would name both runs identically - eight pairs of colliding labels on the
+ * burrowing family, pointing at different files. Only that branch needs the layer: the other two lead
+ * with the member's own label, which already carries it.
+ */
+function bandLabel(member: SchemeMember, name: string | undefined, band: number, bandCount: number): string {
+    if (bandCount === 1) return member.label;
+    if (name === undefined) return `${member.label} - group ${band + 1}`;
+    return member.layer === undefined ? name : `${name} (${member.layer})`;
 }
 
 /**

@@ -175,6 +175,36 @@ describe("stancesOfMembers", () => {
         expect(stances.at(-1)?.resref).toBe("MOGHG2");
     });
 
+    /**
+     * A set with a second set of files bands both, and the block table names their bands identically - so
+     * without the layer the two runs are indistinguishable, and a converter reading these as actions gets
+     * eight pairs of colliding labels pointing at different files.
+     */
+    it("keeps a layer member's stances apart from the base member's of the same band", () => {
+        const base = member("G1", "MAKHG1");
+        const overlay = { ...member("G1", "MAKHDG1"), layer: "second piece" };
+
+        const stances = stancesOfMembers([base, overlay], () => bands(4, 8), "monster_ankheg");
+
+        expect(stances.map((s) => s.label)).toEqual([
+            "DE - die",
+            "TW - twitch",
+            "SD - stand (emerged)",
+            "DE - die (second piece)",
+            "TW - twitch (second piece)",
+            "SD - stand (emerged) (second piece)",
+        ]);
+    });
+
+    /** A numbered band already leads with the member's own label, which carries the layer. */
+    it("does not name the layer twice on a band nothing documents", () => {
+        const overlay = { ...member("G2", "MAKHDG2"), label: "G2 (second piece)", layer: "second piece" };
+
+        const stances = stancesOfMembers([overlay], () => bands(2, 10, undefined));
+
+        expect(stances.map((s) => s.label)).toEqual(["G2 (second piece) - group 1", "G2 (second piece) - group 2"]);
+    });
+
     it("drops a member the archive cannot band rather than offering a dead row", () => {
         const stances = stancesOfMembers([member("G1", "MOGHG1"), member("G9", "MISSING")], (row) =>
             row.resref === "MOGHG1" ? bands(1) : undefined,

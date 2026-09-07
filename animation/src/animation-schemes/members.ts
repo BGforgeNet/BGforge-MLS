@@ -38,6 +38,13 @@ export interface SchemeMember {
      * is a set of alternatives: they are ONE member here and the caller composes them.
      */
     parts: readonly string[];
+    /**
+     * Which second set of files this member came from, where it came from one - absent for a base member.
+     *
+     * Carried beside the label rather than read back out of it: a consumer that names bands from a block
+     * table discards the member's label, and the two runs are then indistinguishable (`bands.ts`).
+     */
+    layer?: string;
 }
 
 /** A member before the archive has been asked which of its files exist. */
@@ -191,9 +198,9 @@ export function schemeMembers(
         const parts = member.parts.filter(exists);
         const first = parts[0];
         if (first === undefined) return [];
-        // The layer is named in the LABEL only: what the member depicts is still what its cycle code says,
-        // and a picker showing two bare `G1` rows could not say which file each opened.
+        // The layer does not change what the member DEPICTS - that is still what its cycle code says - so
+        // it rides in the label, and beside it as a field for the consumers that build their own.
         const label = layer === undefined ? member.label : `${member.label} (${layer})`;
-        return [{ label, action: member.action, resref: first, parts }];
+        return [{ label, action: member.action, resref: first, parts, ...(layer === undefined ? {} : { layer }) }];
     });
 }

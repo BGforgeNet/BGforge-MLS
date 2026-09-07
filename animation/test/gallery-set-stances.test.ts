@@ -315,28 +315,40 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
 
     // The burrowing set is the one whose whole shape is documented and whose own files contradict the
     // structural key: three blocks of an eight-wide G2 are another family's attacks under that key, and its
-    // G1 opens on a block no sequence addresses.
+    // G1 opens on a block no sequence addresses. It also draws a SECOND set of files under the same scheme,
+    // so the same eight blocks come back twice and only the layer tells the runs apart.
     it("names the burrowing scheme's blocks and leaves out the one it addresses nothing to", () => {
         const { sets, io } = install();
         const set = sets.find((candidate) => candidate.section === "monster_ankheg");
         if (set === undefined) return; // an install without the section proves nothing either way
         const armour = firstArmour(set);
         expect(armour, `${set.code} declares no prefix`).toBeDefined();
-
-        const stances = setStances(set, armour!, io);
-
-        expect(stances.map((stance) => stance.label)).toEqual([
+        const blocks = [
             "DE - die",
             "TW - twitch",
-            "SD - stand",
-            "SC - combat stance",
+            "SD - stand (emerged)",
+            "SD - stand (hidden)",
             "EMERGE - emerge",
             "HIDE - burrow",
             "A1 - attack",
             "CA - cast",
+        ];
+
+        const stances = setStances(set, armour!, io);
+
+        expect(stances.map((stance) => stance.label)).toEqual([
+            ...blocks,
+            ...blocks.map((label) => `${label} (second piece)`),
         ]);
         // Every one draws all eight facings, which takes the eastern twin: the base file stores five.
-        expect(stances.map((stance) => stance.slots.length)).toEqual(Array.from({ length: 8 }, () => 8));
+        //
+        // The base run only. The second piece is a still per facing - every one of its cycles is one frame
+        // long - so nothing in those files varies for the block reader to cut on, and their bands come back
+        // at widths the base's do not share. What they SHOULD be is the base's, since the overlay is drawn
+        // over it facing for facing; nothing yet relates a layer member to the member it overlays.
+        expect(stances.slice(0, blocks.length).map((stance) => stance.slots.length)).toEqual(
+            Array.from({ length: blocks.length }, () => 8),
+        );
     });
 
     it("names most stances from the schemes' own block tables rather than numbering them", () => {

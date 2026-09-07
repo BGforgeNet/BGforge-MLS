@@ -93,6 +93,9 @@ describe("schemeMembers", () => {
      * A layer is a member of its own rather than a part of the base one: measured on a classic archive, an
      * overlay file's palette differs from its base's, and the composer merges indexed pixels on the
      * assumption that parts share one.
+     *
+     * The layer travels as a FIELD as well as in the label, because the band reader names its stances from
+     * a block table and discards the label - and both runs then come back under the same eight names.
      */
     it("names a layer's members apart from the base ones", () => {
         const members = schemeMembers("cycles", "MOGMS", has("MOGMSG1", "MOGMSG1E"), "weapon overlay");
@@ -102,6 +105,7 @@ describe("schemeMembers", () => {
                 action: cycleAction("G1"),
                 resref: "MOGMSG1",
                 parts: ["MOGMSG1", "MOGMSG1E"],
+                layer: "weapon overlay",
             },
         ]);
     });
