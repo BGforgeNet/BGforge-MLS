@@ -30,14 +30,22 @@ describe("layoutOf", () => {
         expect(layoutOf("monster", undefined)).toBe("cycles");
     });
 
-    it("lets the archive decide for the sections that mix layouts with nothing declaring which", () => {
+    it("lets the archive decide for the section that genuinely mixes layouts", () => {
         expect(layoutOf("monster_icewind", undefined)).toBe("mixed");
-        expect(layoutOf("monster_large16", undefined)).toBe("mixed");
     });
 
     /**
-     * The install's quadrant count looks like it should settle these outright - and deliberately does not.
-     * See `layoutOf`: making it exclusive drops real files on 70 of the 75 BG:EE prefixes it would decide.
+     * The wide-band family's own definition names one cycle per file plus an eastern twin, and nothing in
+     * either install contradicts it. The quadrant files its prefix also resolves belong to the quadrant
+     * animations that share the prefix - see `layoutOf`.
+     */
+    it("reads the wide-band family as one cycle per file, not as whatever its prefix resolves", () => {
+        expect(layoutOf("monster_large16", undefined)).toBe("cycles");
+    });
+
+    /**
+     * The install's quadrant count looks like it should settle this outright - and does not need to.
+     * See `layoutOf`: the archive already agrees with it on every prefix in either install.
      */
     it("leaves a mixed section to the archive even where the install declares a quadrant count", () => {
         expect(layoutOf("multi_new", true)).toBe("mixed");
