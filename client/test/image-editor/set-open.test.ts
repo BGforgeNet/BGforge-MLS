@@ -10,6 +10,7 @@ import type * as vscode from "vscode";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
 import type { AnimationSetLookup, AnimationSetSource } from "../../src/image-editor/set-document";
 import { type Frame, type IndexedAnimation, type Rgba, parseBamV1, serializeBamV1 } from "@bgforge/image";
+import type { AnimationView } from "../../src/image-editor/webview/messages";
 
 const GAME_SCHEME = "bgforge-ie-resource";
 const GAME_QUERY = "g=%2Fgames%2Fbgee";
@@ -146,6 +147,37 @@ function twoMembers(): Record<string, Uint8Array> {
     return { TSTBG1: baseFileBam(), TSTBG2: baseFileBam() };
 }
 
+/** The colour table a view would draw with. Every member here is palette-indexed, so a true-colour view is
+ *  a broken test rather than a case to handle. */
+function activePalette(document: { toView: () => AnimationView }): readonly Rgba[] {
+    const view = document.toView();
+    if (view.colorModel !== "indexed") throw new Error(`expected an indexed view, got ${view.colorModel}`);
+    return view.palette;
+}
+
+/**
+ * An 8bpp BMP carrying nothing but a colour table - the shape a replacement palette ships in. Every entry
+ * is `tint`, so one lookup says which table the picture was drawn under.
+ */
+function paletteBmp(tint: number): Uint8Array {
+    const paletteAt = 14 + 40;
+    const pixelOffset = paletteAt + 256 * 4;
+    const out = new Uint8Array(pixelOffset + 4);
+    const view = new DataView(out.buffer);
+    out[0] = 0x42;
+    out[1] = 0x4d;
+    view.setUint32(2, out.length, true);
+    view.setUint32(10, pixelOffset, true);
+    view.setUint32(14, 40, true);
+    view.setInt32(18, 1, true);
+    view.setInt32(22, 1, true);
+    view.setUint16(26, 1, true);
+    view.setUint16(28, 8, true);
+    view.setUint32(46, 256, true);
+    for (let entry = 0; entry < 256; entry++) out.set([tint, tint, tint, 0], paletteAt + entry * 4);
+    return out;
+}
+
 describe("opening an animation set", () => {
     beforeEach(() => {
         readFileMock.mockReset();
@@ -190,6 +222,51 @@ describe("opening an animation set", () => {
         expect(document.toView().set?.action).toBe("TSTBG2");
         expect(document.selectSetAction("TSTBCA")).toBe("refused");
         expect(document.toView().set?.action).toBe("TSTBG2");
+    });
+
+    /**
+     * A tiled family stores one colour table per stance group and numbers them, so the declared name alone
+     * names no file - and the group the reader is looking at decides which table the picture is drawn
+     * under. Swapping groups has to swap the table with it, or five of the six colour dragons draw in the
+     * first group's colours.
+     */
+    it("draws a tiled member under the colour table its own stance group declares", async () => {
+        const tiled: AnimationSet = { ...SET, layout: "pieces", newPalette: "TSTB_GR" };
+        const tables: Record<string, Uint8Array> = { TSTB_GR1: paletteBmp(11), TSTB_GR2: paletteBmp(22) };
+        const document = await ImageEditorDocument.open(
+            setUri("1234"),
+            undefined,
+            undefined,
+            setSource(() => found(tiled, ioFor({ TSTB1100: baseFileBam(), TSTB2100: baseFileBam() }))),
+        );
+
+        document.applyDeclaredPalette((resref, ext) => (ext === "bmp" ? tables[resref] : undefined));
+
+        expect(document.setState?.action.resref).toBe("TSTB1100");
+        expect(activePalette(document)[1]).toEqual({ r: 11, g: 11, b: 11, a: 255 });
+
+        expect(document.selectSetAction("TSTB2100")).toBe("changed");
+        expect(activePalette(document)[1]).toEqual({ r: 22, g: 22, b: 22, a: 255 });
+    });
+
+    /**
+     * Every other layout ships the bare name, so the declared table is read as declared - and a member
+     * whose table the install does not ship keeps the palette its own file carries.
+     */
+    it("reads a cycle member's declared table under the bare name, and leaves an absent one alone", async () => {
+        const declared: AnimationSet = { ...SET, newPalette: "TSTB_BL" };
+        const source = setSource(() => found(declared, ioFor(twoMembers())));
+        const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
+
+        document.applyDeclaredPalette((resref, ext) =>
+            ext === "bmp" && resref === "TSTB_BL" ? paletteBmp(33) : undefined,
+        );
+        expect(activePalette(document)[1]).toEqual({ r: 33, g: 33, b: 33, a: 255 });
+
+        const missing = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
+        missing.applyDeclaredPalette(() => undefined);
+        // The embedded table, which `blockBam` fills with one grey per index.
+        expect(activePalette(missing)[1]).toEqual({ r: 1, g: 1, b: 1, a: 255 });
     });
 
     it("reports no set selection at all for a document opened on a file", async () => {

@@ -3,7 +3,8 @@ import { openGame } from "@bgforge/binary";
 import { buildAnimationIndex } from "../src/animation-index";
 import { tableForFlavour } from "../src/animation-tables";
 import { characterDrawsBody } from "../src/animation-schemes/character";
-import { drawnArmourLevels } from "../src/set-stances";
+import { replacementPaletteNames } from "../src/set-palette";
+import { drawnArmourLevels, setMembers } from "../src/set-stances";
 import { setTile } from "../src/set-tiles";
 
 /**
@@ -98,23 +99,55 @@ describe.skipIf(table === undefined)("a vendored table against the install it is
     });
 
     /**
-     * A declared replacement palette is only worth reading if the install ships it. The tiled families
-     * number theirs per tile (`MDR1_GR1`..`_GR5`) and the rest carry the bare name, so a check for the bare
-     * name alone reports the numbered ones absent - which is exactly the wrong answer, and was the one this
-     * arrived at first.
+     * A declared replacement palette is only worth reading if the install ships it, and the name to look
+     * for is the one the EDITOR composes: the tiled families store one table per stance group and number
+     * them, so a member's own name decides which. Asked per member rather than per set for that reason -
+     * a per-set check has no group to number with, and reports the numbered families absent.
+     *
+     * What is judged is OUR composition, not the install's completeness: a game declaring a palette it
+     * ships no file for is making its own claim - BG:EE does it for ninety-odd members - and a name
+     * neither of us has says nothing about the rule. So the miss that fails here is a table the install
+     * DOES ship under some name that the composed one did not reach, found through a wider net than the
+     * rule uses. That is the shape the bare-name-only reading had, and the numbered families are what it
+     * lost.
      */
-    it("names a replacement palette the install actually ships, wherever one is declared", () => {
-        const sets = buildAnimationIndex(game!, table).filter((set) => set.newPalette !== undefined);
-        const tiers = ["", "1", "2", "3", "4", "5"];
-        const dead = sets.filter((set) => !tiers.some((tier) => game!.canRead(`${set.newPalette}${tier}`, "bmp")));
+    it("composes a name that reaches every replacement palette the install actually ships", () => {
+        const exists = (resref: string): boolean => game!.canRead(resref, "bam");
+        // Deliberately not `replacementPaletteNames`: a net derived from the rule under test could not
+        // report a file the rule fails to name.
+        const anyName = (base: string): string | undefined =>
+            ["", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+                .map((suffix) => `${base}${suffix}`)
+                .find((name) => game!.canRead(name, "bmp"));
+
+        const missed: string[] = [];
+        let shipped = 0;
+        let undeclared = 0;
+        for (const set of buildAnimationIndex(game!, table)) {
+            const base = set.newPalette;
+            if (base === undefined) continue;
+            for (const level of drawnArmourLevels(set, exists)) {
+                for (const member of setMembers(set, level, exists)) {
+                    if (anyName(base) === undefined) {
+                        undeclared++;
+                        continue;
+                    }
+                    shipped++;
+                    const names = replacementPaletteNames(set, member.resref, level);
+                    if (names.some((name) => game!.canRead(name, "bmp"))) continue;
+                    missed.push(`0x${set.id.toString(16).padStart(4, "0")} ${member.resref} -> ${names.join(" or ")}`);
+                }
+            }
+        }
 
         // An install with no INIs declares none, and has nothing to answer for here.
-        if (sets.length === 0) {
-            process.stdout.write("  (this install declares no replacement palettes)\n");
+        if (shipped === 0) {
+            process.stdout.write(`  (this install ships no declared palette; ${undeclared} members declare one)\n`);
             return;
         }
-        process.stdout.write(`  ${sets.length - dead.length}/${sets.length} declared palettes resolve\n`);
-        expect(dead.map((set) => `0x${set.id.toString(16).padStart(4, "0")} -> ${set.newPalette}`)).toEqual([]);
+        process.stdout.write(`  ${shipped - missed.length}/${shipped} members reach their shipped palette`);
+        process.stdout.write(` (${undeclared} more declare one this install does not ship)\n`);
+        expect(missed).toEqual([]);
     });
 
     it("leaves the ids it does not cover listed rather than dropping or guessing them", () => {

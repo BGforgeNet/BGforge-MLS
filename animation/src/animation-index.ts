@@ -93,7 +93,8 @@ export interface AnimationSet {
      * The replacement colour table this animation declares (`new_palette`), where it declares one.
      *
      * What separates the colour variants of a shared body: the six colour dragons all draw `MDR1`'s art
-     * and differ only here. Carried as declared - the resref is already composed, magic golems included.
+     * and differ only here. Carried verbatim, since it is not always the resref of a file - a tiled family
+     * stores one table per stance group and this is their common stem. `set-palette.ts` composes the name.
      */
     newPalette?: string;
     /** Present only where the id declares them - a monster or a named individual has none. */

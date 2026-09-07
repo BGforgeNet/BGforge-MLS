@@ -25,7 +25,7 @@ import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
 import { type AnimationSetSource, AnimationSetState, type SetPick, setView } from "./set-document";
 import { parseAnimationSetUri, resourceUri } from "../ie-resources/uri";
-import { animationIdHex } from "@bgforge/animation";
+import { animationIdHex, replacementPaletteNames } from "@bgforge/animation";
 import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
 import { composePvrzResolver } from "./pvrz-resolver";
@@ -119,26 +119,42 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         this.model.onChange = undefined;
         this.model = model;
         this.model.onChange = () => this._onDidRefresh.fire();
-        this.model.useDeclaredPalette(this.declaredPalette);
+        this.resolveDeclaredPalette();
     }
 
-    /** Resolved once per document; a model swap re-applies it, since the declaration is the SET's. */
-    private declaredPalette: Rgba[] | undefined;
+    /** How the open game answers a resource read, kept so a model swap can re-resolve the table below. */
+    private paletteSource: ((resref: string, ext: string) => Uint8Array | undefined) | undefined;
 
     /**
      * Draw this document under the replacement colour table its animation declares, where the install
      * ships one. `read` fetches a resource from the open game.
      *
      * The declaration is the animation's, not the file's - the six colour dragons are one body under six
-     * palettes - so it comes from the set rather than from anything the opened bytes carry. A name the
-     * install does not resolve leaves the file's own palette in place: the tiled families number theirs per
-     * tile (`MDR1_GR1`..`_GR5`), which needs a palette per part and so a palette-aware compose.
+     * palettes - so it comes from the set rather than from anything the opened bytes carry. It is also per
+     * MEMBER: a tiled family stores one table per stance group, so swapping groups swaps the table, and the
+     * source is kept rather than the resolved palette.
      */
     applyDeclaredPalette(read: (resref: string, ext: string) => Uint8Array | undefined): void {
-        const resref = this.setState?.set.newPalette;
-        const bytes = resref === undefined ? undefined : read(resref, "bmp");
-        this.declaredPalette = bytes === undefined ? undefined : readBmpPalette(bytes);
-        this.model.useDeclaredPalette(this.declaredPalette);
+        this.paletteSource = read;
+        this.resolveDeclaredPalette();
+    }
+
+    /**
+     * Point the open model at the table its member declares, or at nothing where the install ships none -
+     * which leaves the picture drawn under the palette its own file carries.
+     */
+    private resolveDeclaredPalette(): void {
+        const state = this.setState;
+        const read = this.paletteSource;
+        if (state === undefined || read === undefined) return;
+        // Stopping at the first hit rather than reading them all: the names are ordered by preference,
+        // and the later ones are fallbacks an archive read would be spent on for nothing.
+        let bytes: Uint8Array | undefined;
+        for (const name of replacementPaletteNames(state.set, state.action.resref, state.armour)) {
+            bytes = read(name, "bmp");
+            if (bytes !== undefined) break;
+        }
+        this.model.useDeclaredPalette(bytes === undefined ? undefined : readBmpPalette(bytes));
     }
 
     /**

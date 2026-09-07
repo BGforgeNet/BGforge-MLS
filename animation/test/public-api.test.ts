@@ -32,6 +32,7 @@ const REQUIRED_VALUE_EXPORTS = [
     // Schemes and stances
     "schemeForStride",
     "drawnArmourLevels",
+    "replacementPaletteNames",
     "setMembers",
     "setTile",
     // The neutral model
