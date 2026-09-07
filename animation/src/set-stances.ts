@@ -5,13 +5,9 @@
  * a set draws, `bands.ts` decides how a file's cycles divide into stances and what to call them. This is
  * the only place that reads bytes, so both stay unit-testable without a game.
  */
-import { cycleDrawsArt, drawsCycle, readBamV1Tables } from "@bgforge/image";
-import {
-    ieBandsOfStride,
-    interpretIeDirections,
-    type IeDirectionSlot,
-    type SequenceShape,
-} from "@bgforge/image/ie-direction";
+import { readBamV1Tables } from "@bgforge/image";
+import { ieBandsOfStride, interpretIeDirections, type IeDirectionSlot } from "@bgforge/image/ie-direction";
+import { type PartTables, mergeParts } from "./animation-schemes/part-tables";
 import { type AnimationSet, armourLevels } from "./animation-index";
 import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
 import { decodeActionCode } from "./animation-schemes/actions";
@@ -64,69 +60,6 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
     ];
 }
 
-/** One file's cycle table, which is all the band reading needs - no frame is decoded here. */
-interface PartTables {
-    sequences: SequenceShape[];
-    frameCount: number;
-    /** Each frame's pixel count, so a cycle can be asked whether it draws anything without decoding one. */
-    frameAreas: number[];
-}
-
-/**
- * The cycle table of a whole member, plus which of its cycles hold art at all.
- *
- * No frame areas of its own: a merged cycle's refs index the frame table of the PART it came from, so the
- * areas are only meaningful beside their own part and the reading they support is already taken below.
- */
-interface MergedTables {
-    sequences: SequenceShape[];
-    frameCount: number;
-    holdsArt: boolean[];
-}
-
-/** Whether a cycle opens on a frame that draws something rather than on a placeholder. */
-function cycleHoldsArt(sequence: SequenceShape | undefined, areas: readonly number[]): boolean {
-    return sequence !== undefined && cycleDrawsArt(sequence.frameRefs, areas);
-}
-
-/**
- * The cycle table of a member's whole picture.
- *
- * Per cycle, a part that DRAWS it beats one that only holds a placeholder for it - `drawsCycle` is the
- * composer's own test, so what the band reads and what the viewer draws agree by construction. Reading
- * the first part alone would report a slot as unstored while a sibling file holds its art, which is
- * exactly the unmirrored layouts, whose eastern twin holds the facings the base file pads.
- *
- * Where SEVERAL parts draw one cycle the first wins, which is also what the pixel composer settles on:
- * measured across both shipped installs, the parts that share a drawn cycle agree on its length in all but
- * a handful of members, and the composer refuses exactly those - so preferring a later part here would
- * make the bands describe a picture that then falls back to the base file alone. Cycle indices line up
- * across parts, so a merged entry addresses the same cycle of the composed animation.
- */
-function mergedTables(parts: PartTables[]): MergedTables | undefined {
-    const [first] = parts;
-    if (first === undefined) return undefined;
-    // The longest part's table, not the first's: a twin holding only the facings it draws still reaches the
-    // cycle positions those sit at, and the base file stops short of them - the same spine the composer
-    // follows, so the bands read here and the picture drawn from them span the same cycles.
-    const spine = parts.reduce(
-        (longest, part) => (part.sequences.length > longest.length ? part.sequences : longest),
-        first.sequences,
-    );
-    const sequences = spine.map(
-        (seq, cycle) => parts.map((part) => part.sequences[cycle]).find((candidate) => drawsCycle(candidate)) ?? seq,
-    );
-    // Judged per part, because a cycle's refs index the frame table of the file they came from - and a
-    // cycle draws where ANY part holds pixels for it, which is the same reading the merge above takes.
-    return {
-        frameCount: Math.max(...parts.map((part) => part.frameCount)),
-        sequences,
-        holdsArt: sequences.map((_, cycle) =>
-            parts.some((part) => cycleHoldsArt(part.sequences[cycle], part.frameAreas)),
-        ),
-    };
-}
-
 /**
  * Cut a member's cycles into direction bands.
  *
@@ -147,7 +80,7 @@ function bandsOf(
             // One unreadable part is a lost piece, not a dead row - the posture the index takes too.
         }
     }
-    const merged = mergedTables(tables);
+    const merged = mergeParts(tables);
     if (merged === undefined) return undefined;
     /** A band draws where any of its cycles holds art - the rest are the skeleton a packed file carries. */
     const drawn = (bands: readonly (readonly IeDirectionSlot[])[]): boolean[] =>
@@ -168,7 +101,13 @@ function bandsOf(
         bands: analysis.groups,
         drawn: drawn(analysis.groups),
         scheme: analysis.scheme,
-        confidence: analysis.detected ? "declared" : "inferred",
+        // A merge across parts is itself the identification. The fingerprint the interpreter looks for is a
+        // base file's PADDED eastern slots, and merging the twin fills exactly those - so a member that
+        // pairs loses the mark while gaining the art it names, and its facings would come back as a bare
+        // cycle list a converter into a mirroring target would silently drop the eastern frames of. Only
+        // the unmirrored schemes divide a picture between files this way: a spatial split hands every
+        // cycle to the same part, since its quarters draw the same moments.
+        confidence: analysis.detected || merged.contributors > 1 ? "declared" : "inferred",
     };
 }
 
