@@ -80,6 +80,14 @@ export interface AnimationSet {
      */
     layerPrefixes?: readonly string[];
     /**
+     * TODO: two more overlay kinds are declared and not modelled here, both measured against BG2:ToB.
+     *
+     * A character animation declares a HELMET flag and a WEAPON body-size letter, which pick the equipment
+     * BAMs drawn over the body - 78 of the classic table's rows carry one. And three effect rows name a
+     * SHADOW resref drawn under the sprite (`SKLH` + `SPSHADOW`). Neither is a naming variant of the base
+     * files, so neither can be inferred: both are separate art the declaration points at.
+     */
+    /**
      * Whether a wide band's sixteen slots hold eight pictures rather than sixteen. Only the tiled families
      * declare it, and only when they store the finer set - so absent means the sixteen slots are distinct.
      */
