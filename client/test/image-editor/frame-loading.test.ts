@@ -78,10 +78,11 @@ describe("framesNeededFor", () => {
         expect(framesNeededFor([10, 11, 12, 13], 1)).toEqual([11, 12]);
     });
 
-    it("clamps to the sequence's own last frame, which a shorter cycle sits on", () => {
-        // Playback holds ONE shared index across cycles of differing length; a short cycle repeats
-        // its last frame rather than running off the end.
-        expect(framesNeededFor([10, 11], 5)).toEqual([11]);
+    it("wraps a short cycle round its own length, so it keeps animating past the shared index", () => {
+        // Playback holds ONE shared index across cycles of differing length; a short cycle restarts
+        // rather than sitting on its last frame. Frame 5 of a 2-frame cycle is its frame 1, and the
+        // one after it is frame 0 again.
+        expect(framesNeededFor([10, 11], 5)).toEqual([11, 10]);
     });
 
     it("returns nothing for an empty sequence", () => {

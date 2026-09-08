@@ -17,38 +17,17 @@ export const TILE_BASE_PX = 96;
 export const ZOOM_MIN = 0.1;
 export const ZOOM_MAX = 4;
 export const ZOOM_STEP = 0.05;
-/** One-click levels, spanning the range; the slider covers everything between. */
+/**
+ * One-click levels, ascending - and the ladder the automatic fit walks down.
+ *
+ * Every rung is a power of two, which is what keeps a sprite crisp: the canvas holds the frame at native
+ * resolution and CSS scales it with `image-rendering: pixelated`, so a whole-number factor maps each
+ * source pixel to an exact block and a halving averages a whole block down. The fractional zooms between
+ * them render some source pixels wider than others, which reads as a ragged sprite.
+ */
 export const ZOOM_PRESETS = [0.25, 0.5, 1, 2, 4];
 
-/**
- * The zoom to START a freshly opened view at - the largest that sprite legibility asks for.
- *
- * The target is the SPRITE: double while the largest frame still renders under half the stage, not the
- * composite, which for a rose/grid is already several tiles wide (doubling a 4-tile composite overflows
- * the stage; the incident that split this out). The composite footprint then bounds the result from
- * above: halve back while the whole layout overflows.
- *
- * This never goes below 100%, because the halving is scaled from ONE zoom-1 measurement and a layout's
- * footprint is not linear in zoom once it wraps. Shrinking to fit is `fitZoomByMeasuring`.
- */
-export function autoZoomLevel(args: {
-    maxFrameW: number;
-    maxFrameH: number;
-    contentW: number; // composite footprint at zoom 1
-    contentH: number;
-    availW: number; // stage size with padding already subtracted
-    availH: number;
-    cap: number;
-}): number {
-    const { maxFrameW, maxFrameH, contentW, contentH, availW, availH, cap } = args;
-    if (maxFrameW <= 0 || maxFrameH <= 0 || availW <= 0 || availH <= 0) return 1;
-    let z = 1;
-    while (z < cap && maxFrameW * z < availW / 2 && maxFrameH * z < availH / 2) z *= 2;
-    while (z > 1 && (contentW * z > availW || contentH * z > availH)) z /= 2;
-    return z;
-}
-
-/** Halvings of the range the fit search spends; 7 resolves the ladder to within a couple of percent. */
+/** Halvings of the range the fit search spends; 7 resolves it to within a couple of percent. */
 const FIT_SEARCH_STEPS = 7;
 
 /**
@@ -85,4 +64,38 @@ export async function fitZoomByMeasuring(
     }
     await apply(lo);
     return lo;
+}
+
+/**
+ * The sprite scale a freshly fitted subject starts at: the largest ladder rung the room allows.
+ *
+ * The cell grid is fitted to the stage continuously - a cell is a plain rectangle, and stopping it on a
+ * rung would leave the stage part empty for nothing. The ART inside it is what has to stay pixel-exact
+ * (ZOOM_PRESETS), so it takes a rung. `room` is what the cell really has for it (`spriteFillRatio`, which
+ * measures against the anchor rather than the art's own size), so the automatic choice and the Fill
+ * control read the same number and cannot disagree about what fits.
+ *
+ * Below the smallest rung nothing is crisp anyway, so an oversized sprite takes the plain ratio that
+ * fits rather than overflowing the cell the grid reserved for it.
+ */
+export function snapToLadder(room: number): number {
+    return ZOOM_PRESETS.findLast((preset) => preset <= room) ?? room;
+}
+
+/**
+ * What a view is auto-fitted FOR - everything that changes the drawn composite's footprint.
+ *
+ * The stage is mounted once and a selection arrives as another view, so the fit has to be told when it
+ * is looking at a new picture: a different set (a small creature inheriting a dragon's fit is drawn
+ * microscopic, which is the report), a different action, a different direction block, or the same
+ * cycles packed into the other layout. What is NOT in here is the reader's own controls - zoom,
+ * background, marker - and the armour level, which redraws one creature's own equipment at its size.
+ */
+export function zoomSubject(
+    view: { basename: string; set?: { id: number; action: string } },
+    block: number,
+    layout: string,
+): string {
+    const drawn = view.set === undefined ? `file:${view.basename}` : `set:${view.set.id}/${view.set.action}`;
+    return `${drawn}#${block}@${layout}`;
 }

@@ -11,7 +11,8 @@
         loadedPixels,
         tiles,
         frame,
-        zoom,
+        layoutScale,
+        spriteScale,
         tileBox,
         showOffsetMarker = false,
     }: {
@@ -19,15 +20,16 @@
         loadedPixels: ReadonlyMap<number, Uint8Array>;
         tiles: RoseTile[];
         frame: number;
-        zoom: number;
+        layoutScale: number;
+        spriteScale: number;
         tileBox: TileBox;
         showOffsetMarker?: boolean;
     } = $props();
 
     // Radius and box both depend on which facings are present - see roseGeometry.
     const geometry = $derived(roseGeometry(tiles));
-    const cellW = $derived(tileBox.w * zoom);
-    const cellH = $derived(tileBox.h * zoom);
+    const cellW = $derived(tileBox.w * layoutScale);
+    const cellH = $derived(tileBox.h * layoutScale);
     // The wheel stays a CIRCLE on a rectangular tile: spacing it by each axis separately would put the
     // facings on an ellipse, at angles that are no longer the compass angles the layout exists to show.
     // So one spacing for both axes, the larger side - which is what keeps neighbouring tiles from
@@ -58,7 +60,8 @@
                 seq={tile.seq}
                 facing={tile.facing}
                 {frame}
-                {zoom}
+                {layoutScale}
+                {spriteScale}
                 {tileBox}
                 {showOffsetMarker}
             />

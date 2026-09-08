@@ -301,3 +301,14 @@ export function ieRoseTiles(view: AnimationView, interpretation: DirectionBlocks
         return [{ seq, pos, facing: slot.facing }];
     });
 }
+
+/**
+ * The cycles a layout has ON SCREEN - what the transport is sized against, and what frames are fetched for.
+ *
+ * A rose draws one direction block of a file that packs several, so the file's own cycle list is the wrong
+ * set for both: it stretches the timeline to an action nobody is looking at (see timelineFrameCount) and
+ * asks the host for frames of cycles that are not drawn.
+ */
+export function drawnSequences(mode: LayoutMode, rose: readonly RoseTile[], grid: readonly GridTile[]): SequenceView[] {
+    return (mode === "rose" ? rose : grid).map((tile) => tile.seq);
+}

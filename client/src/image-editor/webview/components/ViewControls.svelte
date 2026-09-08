@@ -16,7 +16,7 @@
     }
 
     function clampZoom(z: number): number {
-        return Math.min(Math.max(z, ZOOM_MIN), ZOOM_MAX);
+        return Math.min(Math.max(z, ZOOM_MIN), zoomCeiling);
     }
 
     /** Persisted subset of the view choices, read/written through `vscode.getState()`/`setState()`. */
@@ -27,6 +27,7 @@
 
     const {
         zoom,
+        fillZoom,
         background,
         showOffsetMarker,
         onZoomChange,
@@ -35,6 +36,8 @@
         viewState,
     }: {
         zoom: number;
+        /** The scale at which the drawn animation exactly fills its cell - what the Fill button sets. */
+        fillZoom: number;
         background: Background;
         showOffsetMarker: boolean;
         onZoomChange: (zoom: number) => void;
@@ -42,6 +45,16 @@
         onToggleOffsetMarker: () => void;
         viewState?: { get: () => unknown; set: (state: unknown) => void };
     } = $props();
+
+    /**
+     * The scale at which the sprite exactly fills its cell, which is above the ladder's top wherever the
+     * cell has room to spare - a small creature's cell is floored at a size several times its art. So the
+     * slider's top is the fill point rather than a constant: a control that cannot represent the value it
+     * is showing would snap the reader's own choice back on the next drag.
+     */
+    const fill = $derived(Math.max(ZOOM_MIN, fillZoom));
+    const zoomCeiling = $derived(Math.max(ZOOM_MAX, fill));
+    const isFill = $derived(Math.abs(zoom - fill) < 0.001);
 
     function isRecord(v: unknown): v is Record<string, unknown> {
         return typeof v === "object" && v !== null;
@@ -81,7 +94,7 @@
         <input
             type="range"
             min={ZOOM_MIN}
-            max={ZOOM_MAX}
+            max={zoomCeiling}
             step={ZOOM_STEP}
             value={zoom}
             oninput={(e) => handleZoomChange(clampZoom(Number(e.currentTarget.value)))}
@@ -101,6 +114,16 @@
                 {Math.round(preset * 100)}%
             </button>
         {/each}
+        <button
+            type="button"
+            class="bg-option"
+            class:active={isFill}
+            aria-pressed={isFill}
+            title="Largest scale at which the whole animation still fits its tile - off the pixel-exact ladder"
+            onclick={() => handleZoomChange(fill)}
+        >
+            Fill
+        </button>
     </div>
     <div class="view-field" role="radiogroup" aria-label="Background">
         <span class="view-label">Background</span>

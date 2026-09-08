@@ -2,6 +2,7 @@
     import type { Facing } from "@bgforge/image";
     import type { AnimationView, FrameView, SequenceView } from "../messages";
     import { createFrameFallback } from "../render/frame-loading";
+    import { cycleFrameIndex } from "../render/playback";
     import type { TileBox } from "../render/anchor";
     import FrameCanvas from "./FrameCanvas.svelte";
 
@@ -13,7 +14,8 @@
         seq,
         facing,
         frame,
-        zoom,
+        layoutScale,
+        spriteScale,
         tileBox,
         showOffsetMarker,
     }: {
@@ -27,16 +29,16 @@
         // announces itself identically.
         facing?: Facing;
         frame: number;
-        zoom: number;
+        layoutScale: number;
+        spriteScale: number;
         tileBox: TileBox;
         showOffsetMarker: boolean;
     } = $props();
 
     const shownFacing = $derived(facing ?? seq.facing);
 
-    // Playback holds one shared frame index; a shorter sequence clamps to its own last frame.
-    const clampedIndex = $derived(Math.min(frame, seq.frameRefs.length - 1));
-    const frameRef = $derived(seq.frameRefs[clampedIndex]);
+    // Playback holds one shared frame index; a shorter sequence wraps at its own length (playback.ts).
+    const frameRef = $derived(seq.frameRefs[cycleFrameIndex(seq.frameRefs.length, frame)]);
     const frameView = $derived(frameRef === undefined ? undefined : view.frames[frameRef]);
     const bytes = $derived(frameRef === undefined ? undefined : loadedPixels.get(frameRef));
 
@@ -53,7 +55,8 @@
         colorModel={view.colorModel}
         palette={view.colorModel === "indexed" ? view.palette : undefined}
         transparentIndex={view.meta.transparentIndex ?? 0}
-        {zoom}
+        {layoutScale}
+        {spriteScale}
         sourceFormat={view.sourceFormat}
         dirOffsetX={seq.dirOffsetX}
         dirOffsetY={seq.dirOffsetY}

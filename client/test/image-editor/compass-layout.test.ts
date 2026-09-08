@@ -5,6 +5,7 @@ import {
     compassPosition,
     defaultLayoutMode,
     directionBlocks,
+    drawnSequences,
     firstDrawnBlock,
     ieRoseTiles,
     layoutSequences,
@@ -234,6 +235,19 @@ test("ieRoseTiles builds one direction block's rose from untagged cycles, at the
     const block1 = ieRoseTiles(view, interpretation, 1);
     expect(block1.map((tile) => tile.seq.frameRefs[0])).toEqual([9, 10, 11, 12, 13]);
     expect(ieRoseTiles(view, interpretation, 99)).toEqual([]);
+});
+
+test("drawnSequences is the rose's own block, never the whole file the grid would show", () => {
+    // What the transport is sized against. A creature file packs several actions at very different
+    // lengths, so a rose sized to the file plays its block out and then holds a still image.
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    const interpretation = interpretIeDirections(view.sequences, 17);
+    if (!interpretation) throw new Error("expected an IE interpretation");
+    const rose = ieRoseTiles(view, interpretation, 1);
+    const grid = view.sequences.map((seq, index) => ({ seq, index }));
+
+    expect(drawnSequences("rose", rose, grid)).toEqual(rose.map((tile) => tile.seq));
+    expect(drawnSequences("grid", rose, grid)).toEqual(view.sequences);
 });
 
 /**

@@ -3,6 +3,8 @@ import { type IndexedAnimation, convertToFrm, emptyPalette } from "@bgforge/imag
 import {
     frameTopLeft,
     referenceMarkerPercent,
+    spriteFillRatio,
+    spriteRect,
     tileBoxPx,
     type TileBox,
 } from "../../src/image-editor/webview/render/anchor";
@@ -201,17 +203,65 @@ test("tileBoxPx sizes each side independently, so an off-centre anchor costs onl
     });
 });
 
-test("tileBoxPx holds art that sits entirely to one side of its anchor, and keeps the anchor inside", () => {
+test("the fill ratio grows a small sprite until its art meets the floored cell's edges", () => {
+    // A 40x40 centre-anchored frame gets the 96px floor, so 56px of its cell is padding. 2.4x is where
+    // the art reaches 96 - the scale the Fill button hands the reader.
+    const view = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
+    expect(spriteFillRatio(view, tileBoxPx(view))).toBeCloseTo(2.4);
+});
+
+test("the fill ratio is bounded by the ANCHOR's own room, not by the art-to-cell ratio", () => {
+    // The same 40x40 art in the same 96x96 cell, but anchored 300px below itself. The art is drawn at
+    // reference - anchor*scale, so it walks UP the cell as the sprite grows and leaves through the top
+    // at 328/300 - long before the 2.4x the art-to-cell ratio alone would allow. Falsified by measuring
+    // art against cell (the case above then still passes, this one answers 2.4).
+    const view = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 300 });
+    expect(spriteFillRatio(view, tileBoxPx(view))).toBeCloseTo(328 / 300);
+});
+
+test("a tile already sized to its own art cannot be filled any further", () => {
+    // The dragon: the box IS the art's bounding box, so 1:1 is both the fit and the fill.
+    const view = oneFrameView({ width: 200, height: 500, offsetX: 100, offsetY: 480 });
+    expect(spriteFillRatio(view, tileBoxPx(view))).toBeCloseTo(1);
+});
+
+test("the fill ratio of an animation that draws nothing is 1", () => {
+    const view = { sourceFormat: "bam" as const, frames: [], sequences: [] };
+    expect(spriteFillRatio(view, tileBoxPx(view))).toBe(1);
+});
+
+test("tileBoxPx does not stretch to reach an anchor the art never gets near", () => {
+    // A rat-shaped case: a 40x40 sprite whose ground point sits 300px below it, so the art occupies a
+    // band nowhere near the anchor. Spanning to the anchor made the tile 300 tall to hold 40 of art, and
+    // every layout pays that per tile - the rose spaces by the tile, so the wheel grew with the gap.
+    const box = tileBoxPx(oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 300 }));
+    expect(box).toEqual({ w: 96, h: 96, refX: 48, refY: 328 });
+    // The reference is now a coordinate, not a point inside the box: it is BELOW the tile here, which is
+    // where the sprite's own data puts it.
+    expect(box.refY).toBeGreaterThan(box.h);
+});
+
+test("a frame whose anchor is outside the box is still drawn wholly inside it", () => {
+    // The property that has to survive dropping the anchor from the extents: the ART is what the box
+    // holds. Falsified by seeding the extents with the reference again - the box grows and this passes
+    // trivially - so it is paired with the size assertion above.
+    const frame = { width: 40, height: 40, offsetX: 20, offsetY: 300 };
+    const box = tileBoxPx(oneFrameView(frame));
+    const tl = frameTopLeft({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box);
+    expect(tl.x).toBeGreaterThanOrEqual(0);
+    expect(tl.y).toBeGreaterThanOrEqual(0);
+    expect(tl.x + frame.width).toBeLessThanOrEqual(box.w);
+    expect(tl.y + frame.height).toBeLessThanOrEqual(box.h);
+});
+
+test("tileBoxPx holds art that sits entirely to one side of its anchor", () => {
     // The dragon shape: a 200x500 sprite whose ground point is 480px below its own top-left, so the art
     // is almost entirely ABOVE the anchor. The square tile had to be 2x480 in BOTH directions; the box
-    // spans the art plus the anchor, and no more.
+    // spans the art and no more.
     const box = tileBoxPx(oneFrameView({ width: 200, height: 500, offsetX: 100, offsetY: 480 }));
     expect(box).toEqual({ w: 200, h: 500, refX: 100, refY: 480 });
-    // The reference must land inside the tile - the offset marker is drawn on it, and every layout
-    // positions a tile by it.
-    expect(box.refX).toBeGreaterThanOrEqual(0);
-    expect(box.refX).toBeLessThanOrEqual(box.w);
-    expect(box.refY).toBeGreaterThanOrEqual(0);
+    // Here the anchor lands inside because the art surrounds it - a property of this sprite, not a
+    // guarantee the box makes; the sibling case above has its reference below the tile.
     expect(box.refY).toBeLessThanOrEqual(box.h);
 });
 
@@ -261,4 +311,50 @@ test("BAM v2 anchors on its stored centre exactly as v1 does", () => {
         frameTopLeft({ sourceFormat: "bam", ...geom }, SQUARE_96),
     );
     expect(referenceMarkerPercent("bamv2", 76, SQUARE_96)).toEqual(referenceMarkerPercent("bam", 76, SQUARE_96));
+});
+
+// The stage fits the CELL GRID to itself and the reader scales the SPRITES inside it, so the two
+// scales are independent. These pin the seam between them.
+const SPRITE = {
+    sourceFormat: "bam" as const,
+    width: 40,
+    height: 76,
+    offsetX: 20,
+    offsetY: 38,
+    dirOffsetX: 0,
+    dirOffsetY: 0,
+};
+
+test("one scale for both reproduces the single-zoom placement exactly", () => {
+    // The compatibility property: nothing moves while the reader leaves the sprite scale at the fit.
+    const box: TileBox = { w: 120, h: 140, refX: 55, refY: 70 };
+    for (const z of [0.25, 1, 2.5]) {
+        const tl = frameTopLeft(SPRITE, box);
+        expect(spriteRect(SPRITE, box, z, z)).toEqual({
+            left: tl.x * z,
+            top: tl.y * z,
+            width: SPRITE.width * z,
+            height: SPRITE.height * z,
+        });
+    }
+});
+
+test("scaling the sprite alone pivots on the anchor, so it grows in place", () => {
+    // What stops the sprite walking across its cell as the reader zooms: the anchor keeps its spot in
+    // the cell and the art expands around it.
+    const box: TileBox = { w: 120, h: 140, refX: 55, refY: 70 };
+    const anchorOf = (spriteScale: number): { x: number; y: number } => {
+        const r = spriteRect(SPRITE, box, 1, spriteScale);
+        return { x: r.left + SPRITE.offsetX * spriteScale, y: r.top + SPRITE.offsetY * spriteScale };
+    };
+    expect(anchorOf(4)).toEqual(anchorOf(1));
+    expect(anchorOf(0.25)).toEqual(anchorOf(1));
+});
+
+test("the cell scale alone moves the anchor, so a tile keeps its place in the grid", () => {
+    const box: TileBox = { w: 120, h: 140, refX: 55, refY: 70 };
+    const at = (layoutScale: number): number => spriteRect(SPRITE, box, layoutScale, 1).left + SPRITE.offsetX;
+    // The anchor sits at refX * layoutScale - it is the cell's own coordinate, not the sprite's.
+    expect(at(1)).toBeCloseTo(55);
+    expect(at(2)).toBeCloseTo(110);
 });

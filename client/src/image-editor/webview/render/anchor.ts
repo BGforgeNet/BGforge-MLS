@@ -82,26 +82,141 @@ export function frameTopLeft(a: AnchorInput, box: TileBox): { x: number; y: numb
     return { x: ref.x - ax, y: ref.y - ay };
 }
 
+/**
+ * Where a frame is drawn, in px, under the stage's TWO independent scales.
+ *
+ * The cell grid is fitted to the stage automatically (`layoutScale`) while the reader scales the art
+ * inside it (`spriteScale`), so a small creature can be read without the wheel growing off-screen. The
+ * anchor is the pivot of both: it sits at the cell's own reference, and the art expands around it - so
+ * raising the sprite scale grows a sprite in place instead of walking it across its cell.
+ *
+ * With one scale passed for both this is exactly `frameTopLeft` scaled, which is what the stage does
+ * while the reader leaves the sprite scale at the fitted size.
+ */
+export function spriteRect(
+    a: AnchorInput,
+    box: TileBox,
+    layoutScale: number,
+    spriteScale: number,
+): { left: number; top: number; width: number; height: number } {
+    const ref = referencePoint(a.sourceFormat, a.height, box);
+    const { ax, ay } = offsetToAnchor(a.sourceFormat, a);
+    return {
+        left: ref.x * layoutScale - ax * spriteScale,
+        top: ref.y * layoutScale - ay * spriteScale,
+        width: a.width * spriteScale,
+        height: a.height * spriteScale,
+    };
+}
+
+/**
+ * How many times the fitted size a sprite can be drawn at before it leaves its cell - what "fill" means.
+ *
+ * NOT the art-to-cell ratio. The anchor is the pivot both scales turn on (`spriteRect`), and it is rarely
+ * the middle of anything: a frame drawn at `reference*layout - anchor*sprite` walks across its cell as the
+ * sprite grows, so a sprite anchored far below its own art runs out of room at the TOP long before its art
+ * is as wide as the cell. Each frame contributes one bound per edge, all of them linear in the sprite
+ * scale, and the tightest is the answer for the whole animation - no frame may clip, since a rose of one
+ * creature has to keep every facing whole.
+ *
+ * Expressed relative to the layout scale, which every bound is proportional to: the cell and the reference
+ * both grow with it, so the ratio is a property of the animation and its box alone.
+ */
+export function spriteFillRatio(
+    view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
+    box: TileBox,
+): number {
+    let ratio = Infinity;
+    /** A `room / need` bound, ignored where the art does not extend that way (nothing to run out of). */
+    const bound = (room: number, need: number): void => {
+        if (need > 0) ratio = Math.min(ratio, room / need);
+    };
+    for (const seq of view.sequences) {
+        for (const ref of seq.frameRefs) {
+            const frame = view.frames[ref];
+            if (!frame) continue;
+            const a = {
+                sourceFormat: view.sourceFormat,
+                width: frame.width,
+                height: frame.height,
+                offsetX: frame.offsetX,
+                offsetY: frame.offsetY,
+                dirOffsetX: seq.dirOffsetX,
+                dirOffsetY: seq.dirOffsetY,
+            };
+            const point = referencePoint(view.sourceFormat, frame.height, box);
+            const { ax, ay } = offsetToAnchor(view.sourceFormat, a);
+            bound(point.x, ax);
+            bound(box.w - point.x, frame.width - ax);
+            bound(point.y, ay);
+            bound(box.h - point.y, frame.height - ay);
+        }
+    }
+    // Nothing drawable, or an animation whose every frame hangs off its anchor in one direction only: the
+    // fitted size is the only size there is anything to say about.
+    return Number.isFinite(ratio) ? ratio : 1;
+}
+
 /** Extents are measured against a zero box, so the numbers come out relative to the reference point. */
 const PROBE_BOX: TileBox = { w: 0, h: 0, refX: 0, refY: 0 };
 
 /**
  * The smallest tile (unzoomed px, each side floored at TILE_BASE_PX) that contains every frame of every
- * sequence at its anchored position, plus the reference point itself - the tile STRETCHES for oversized
- * sprites rather than clipping them or zooming out.
+ * sequence at its anchored position - the tile STRETCHES for oversized sprites rather than clipping them
+ * or zooming out, and the union across the whole animation is what stops a sprite shifting between frames.
  *
  * Both reference formulas are `ref + <box-independent term>`, so a frame's position relative to the
  * reference does not depend on the box: measuring against a zero box is exact, and the result cannot feed
  * back into itself.
  *
- * The reference is included in the extents so it always lands inside the tile - the offset marker is drawn
- * on it, and every layout positions a tile by it.
+ * The ART alone sets the extents. The reference is a coordinate that may fall OUTSIDE the box: a sprite's
+ * ground point can sit well clear of its art, and spanning to it made a tile hundreds of px tall to hold a
+ * few dozen of drawing - dead space every layout then pays per tile, and the rose pays it as radius. The
+ * offset marker still draws there, since a tile does not clip (animation-tiles.css); it is diagnostic, and
+ * outside the box is where that animation genuinely puts it.
  */
 export function tileBoxPx(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): TileBox {
-    let minX = 0;
-    let maxX = 0;
-    let minY = 0;
-    let maxY = 0;
+    const { minX, minY, spanX, spanY } = artExtents(view);
+    // Nothing referenced anything drawable, so there are no extents to size from.
+    if (spanX === undefined || spanY === undefined) return DEFAULT_TILE_BOX;
+    // Padding a side up to the floor is split evenly, so a small sprite stays where a bigger one would be
+    // rather than jumping to a corner of its minimum tile.
+    const pad = (span: number): number => Math.max(0, TILE_BASE_PX - span) / 2;
+    return {
+        w: Math.max(TILE_BASE_PX, spanX),
+        h: Math.max(TILE_BASE_PX, spanY),
+        refX: -minX + pad(spanX),
+        refY: -minY + pad(spanY),
+    };
+}
+
+/**
+ * How much the animation actually DRAWS, unzoomed and unfloored - the union of every referenced frame at
+ * its anchored position.
+ *
+ * The tile box floors each side at TILE_BASE_PX so a small sprite keeps a workable cell, which makes the
+ * box a bad measure of the art: the stage sizes a sprite against the room its cell really has, and a 16px
+ * rat in a 96px box would otherwise be read as already filling it.
+ */
+export function artSpanPx(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): {
+    w: number;
+    h: number;
+} {
+    const { spanX, spanY } = artExtents(view);
+    return { w: spanX ?? TILE_BASE_PX, h: spanY ?? TILE_BASE_PX };
+}
+
+/** Shared by both so the box and the art it holds can never be measured from different traversals. */
+function artExtents(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): {
+    minX: number;
+    minY: number;
+    spanX: number | undefined;
+    spanY: number | undefined;
+} {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
     for (const seq of view.sequences) {
         for (const ref of seq.frameRefs) {
             const frame = view.frames[ref];
@@ -124,17 +239,10 @@ export function tileBoxPx(view: Pick<AnimationView, "sourceFormat" | "frames" | 
             maxY = Math.max(maxY, rel.y + frame.height);
         }
     }
-    // Padding a side up to the floor is split evenly, so a small sprite stays where a bigger one would be
-    // rather than jumping to a corner of its minimum tile.
-    const pad = (span: number): number => Math.max(0, TILE_BASE_PX - span) / 2;
-    const spanX = Math.ceil(maxX - minX);
-    const spanY = Math.ceil(maxY - minY);
-    return {
-        w: Math.max(TILE_BASE_PX, spanX),
-        h: Math.max(TILE_BASE_PX, spanY),
-        refX: -minX + pad(spanX),
-        refY: -minY + pad(spanY),
-    };
+    if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+        return { minX: 0, minY: 0, spanX: undefined, spanY: undefined };
+    }
+    return { minX, minY, spanX: Math.ceil(maxX - minX), spanY: Math.ceil(maxY - minY) };
 }
 
 /**

@@ -2,7 +2,7 @@
     import type { Rgba, SourceFormat } from "@bgforge/image";
     import type { FrameView } from "../messages";
     import { frameToRgba, paletteLut, rgbaFrameToRgba } from "../render/indexed-to-rgba";
-    import { frameTopLeft, referenceMarkerPercent, type TileBox } from "../render/anchor";
+    import { referenceMarkerPercent, spriteRect, type TileBox } from "../render/anchor";
 
     // The per-tile backdrop (.frame-tile-bg, fed by the stage's --tile-bg variable) must stay UNDER
     // every sprite: anchor-shifted canvases overhang their 96px box, so backdrops and canvases carry
@@ -15,7 +15,8 @@
         colorModel,
         palette,
         transparentIndex,
-        zoom,
+        layoutScale,
+        spriteScale,
         sourceFormat,
         dirOffsetX,
         dirOffsetY,
@@ -31,7 +32,10 @@
         colorModel: "indexed" | "rgba";
         palette: Rgba[] | undefined;
         transparentIndex: number;
-        zoom: number;
+        /** Scales the CELL: the stage fits the grid to itself, and the reader does not set this. */
+        layoutScale: number;
+        /** Scales the ART inside the cell: the reader's own control, on the pixel-exact ladder. */
+        spriteScale: number;
         sourceFormat: SourceFormat;
         dirOffsetX: number;
         dirOffsetY: number;
@@ -40,10 +44,10 @@
         ariaLabel?: string;
     } = $props();
 
-    // Game-accurate top-left within the tile (feet-anchored for FRM, center-pixel for BAM); zoom scales
-    // both the footprint and the anchor. See render/anchor.ts.
-    const topLeft = $derived(
-        frameTopLeft(
+    // Game-accurate placement within the tile (feet-anchored for FRM, center-pixel for BAM), under the
+    // stage's two scales - the anchor is the pivot of both. See render/anchor.ts.
+    const rect = $derived(
+        spriteRect(
             {
                 sourceFormat,
                 width: frame.width,
@@ -54,6 +58,8 @@
                 dirOffsetY,
             },
             tileBox,
+            layoutScale,
+            spriteScale,
         ),
     );
 
@@ -103,17 +109,17 @@
 
 </script>
 
-<div class="frame-tile" style:width="{tileBox.w * zoom}px" style:height="{tileBox.h * zoom}px">
+<div class="frame-tile" style:width="{tileBox.w * layoutScale}px" style:height="{tileBox.h * layoutScale}px">
     <div class="frame-tile-bg" aria-hidden="true"></div>
-    <!-- The element carries the ZOOMED size; its backing store holds the frame at native resolution
+    <!-- The element carries the SCALED size; its backing store holds the frame at native resolution
          (see the effect above), so the two must be set together or the sprite draws at the wrong scale. -->
     <canvas
         bind:this={canvasEl}
         aria-label={ariaLabel}
-        style:left="{topLeft.x * zoom}px"
-        style:top="{topLeft.y * zoom}px"
-        style:width="{frame.width * zoom}px"
-        style:height="{frame.height * zoom}px"
+        style:left="{rect.left}px"
+        style:top="{rect.top}px"
+        style:width="{rect.width}px"
+        style:height="{rect.height}px"
     ></canvas>
     {#if showOffsetMarker}
         <div class="frame-offset-marker" style:left="{markerPos.x}%" style:top="{markerPos.y}%" aria-hidden="true"></div>

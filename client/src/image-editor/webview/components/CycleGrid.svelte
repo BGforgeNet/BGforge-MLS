@@ -12,7 +12,8 @@
         loadedPixels,
         tiles,
         frame,
-        zoom,
+        layoutScale,
+        spriteScale,
         tileBox,
         showOffsetMarker = false,
         columns = 0,
@@ -21,7 +22,8 @@
         loadedPixels: ReadonlyMap<number, Uint8Array>;
         tiles: GridTile[];
         frame: number;
-        zoom: number;
+        layoutScale: number;
+        spriteScale: number;
         tileBox: TileBox;
         showOffsetMarker?: boolean;
         columns?: number; // >0 pins the grid to that many columns (rows=sequences); 0 = auto-wrap
@@ -35,7 +37,16 @@
 >
     {#each tiles as tile (tile.index)}
         <div class="cycle-cell">
-            <SequenceTile {view} {loadedPixels} seq={tile.seq} {frame} {zoom} {tileBox} {showOffsetMarker} />
+            <SequenceTile
+                {view}
+                {loadedPixels}
+                seq={tile.seq}
+                {frame}
+                {layoutScale}
+                {spriteScale}
+                {tileBox}
+                {showOffsetMarker}
+            />
             {#if tiles.length > 1}
                 <!-- A lone cell (single-orientation FRM, or a single-cycle animation) needs no label -
                      there is nothing to distinguish it from. -->

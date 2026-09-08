@@ -70,6 +70,29 @@ export function setFrame(state: PlaybackState, frame: number): PlaybackState {
 }
 
 /**
+ * How long a timeline the cycles on screen need: the longest of them.
+ *
+ * Given what is DRAWN, never the file's whole cycle list. One creature file packs several actions at very
+ * different lengths - a death knight walks in 11 frames and casts in 81 - so a rose showing the walk block
+ * against the file's own longest cycle played eleven frames and then held one picture for seventy.
+ */
+export function timelineFrameCount(sequences: readonly { readonly frameRefs: readonly number[] }[]): number {
+    return Math.max(0, ...sequences.map((sequence) => sequence.frameRefs.length));
+}
+
+/**
+ * Which frame of one cycle is showing at a shared timeline position.
+ *
+ * Every tile steps on ONE index, and the cycles beneath them still differ in length: a direction block's
+ * facings need not agree, and the grid lays out a whole file at once. Wrapping is what the engine does with
+ * a cycle - each loops at its own length - and it is the only reading under which a short cycle keeps
+ * animating instead of freezing for the rest of the playthrough.
+ */
+export function cycleFrameIndex(length: number, frame: number): number {
+    return length > 0 ? frame % length : 0;
+}
+
+/**
  * Advances by `floor(elapsedMs / (1000 / fps))` frames. Not playing, an empty
  * animation, or a non-positive fps all leave the state unchanged (division by
  * a non-positive fps is meaningless, so no steps are taken).

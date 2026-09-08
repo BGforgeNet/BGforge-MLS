@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tick as svelteTick } from "svelte";
+    import { tick as svelteTick, untrack } from "svelte";
     import type { Bridge } from "../state/bridge";
     import {
         framePixels,
@@ -9,10 +9,19 @@
         type CreatureOption,
     } from "../messages";
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
-    import { createPlayback, IDLE_PLAYBACK, tick, type PlaybackState } from "../render/playback";
+    import {
+        createPlayback,
+        cycleFrameIndex,
+        IDLE_PLAYBACK,
+        setFrame,
+        tick,
+        timelineFrameCount,
+        type PlaybackState,
+    } from "../render/playback";
     import {
         defaultLayoutMode,
         directionBlocks,
+        drawnSequences,
         firstDrawnBlock,
         ieRoseTiles,
         layoutSequences,
@@ -23,8 +32,8 @@
     import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
-    import { DEFAULT_TILE_BOX, tileBoxPx } from "../render/anchor";
-    import { autoZoomLevel, fitZoomByMeasuring, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
+    import { DEFAULT_TILE_BOX, spriteFillRatio, tileBoxPx } from "../render/anchor";
+    import { fitZoomByMeasuring, snapToLadder, zoomSubject, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
@@ -116,6 +125,12 @@
      */
     let playback = $state.raw<PlaybackState | null>(null);
     // eslint-disable-next-line prefer-const -- reassigned via onZoomChange in the ViewControls markup
+    // Two independent scales. `layoutScale` sizes the CELL GRID and is fitted to the stage automatically,
+    // continuously - a cell is a plain rectangle, so stopping it on a ladder rung would leave the stage
+    // part empty for nothing. `zoom` is the reader's control and scales the ART inside those cells, on the
+    // pixel-exact ladder; raising it grows sprites in place rather than growing the whole layout off the
+    // stage, which is what left a small creature unreadable.
+    let layoutScale = $state(1);
     let zoom = $state(1);
     // eslint-disable-next-line prefer-const -- reassigned via onBackgroundChange in the ViewControls markup
     let background = $state<Background>("transparent");
@@ -137,6 +152,9 @@
     // One tile footprint for the whole animation: stretched (never zoomed out) to fit the largest
     // anchored frame, so oversized sprites (e.g. talking heads) stay inside their tile.
     const tileBox = $derived(view ? tileBoxPx(view) : DEFAULT_TILE_BOX);
+    // How far past the fitted size the art can be pushed before a frame leaves its cell. One number for
+    // the automatic rung and for the Fill control, so the two cannot disagree about what fits.
+    const fillRatio = $derived(view ? spriteFillRatio(view, tileBox) : 1);
 
     // Stage layout (rose vs grid). A fresh open shows the default the file's structure implies; the
     // selector writes `layoutChoice`, which then wins for the webview's lifetime.
@@ -203,6 +221,9 @@
         if (facingLayout?.mode === "grid") return facingLayout.tiles;
         return view.sequences.map((seq, index) => ({ seq, index }));
     });
+    // What is ON SCREEN: the transport is sized against these and frames are fetched for these, never for
+    // the file's whole cycle list (compass-layout.drawnSequences).
+    const drawnCycles = $derived(drawnSequences(layoutMode, roseTiles, gridTiles));
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -262,12 +283,12 @@
     // Progress over the tiles ON SCREEN, not over every frame in the file: with lazy delivery the
     // file's own total never reaches 100% unless the user plays every cycle through, which would read
     // as a load that never finishes.
-    const tileCount = $derived(view?.sequences.length ?? 0);
+    const tileCount = $derived(drawnCycles.length);
     const tilesAwaitingPixels = $derived.by(() => {
-        if (!view || !playback) return 0;
+        if (!playback) return 0;
         const frame = playback.frame;
-        return view.sequences.filter((sequence) => {
-            const ref = sequence.frameRefs[Math.min(frame, sequence.frameRefs.length - 1)];
+        return drawnCycles.filter((sequence) => {
+            const ref = sequence.frameRefs[cycleFrameIndex(sequence.frameRefs.length, frame)];
             return ref !== undefined && !loadedPixels.has(ref);
         }).length;
     });
@@ -275,8 +296,8 @@
     // The open carries only each cycle's first frame, so this is what fills in the rest as playback
     // advances.
     $effect(() => {
-        if (!view || !playback) return;
-        const wanted = framesToRequest(view.sequences, playback.frame, requestedFrames);
+        if (!playback) return;
+        const wanted = framesToRequest(drawnCycles, playback.frame, requestedFrames);
         if (wanted.length > 0) bridge.send({ type: "requestFrames", indices: wanted });
     });
 
@@ -286,7 +307,7 @@
     // inside `tick` happen asynchronously and so never re-trigger (and restart) this effect.
     $effect(() => {
         if (!view) return;
-        const frameCount = Math.max(0, ...view.sequences.map((seq) => seq.frameRefs.length));
+        const frameCount = untrack(() => timelineFrameCount(drawnCycles));
         playback = createPlayback({ frameCount, fps: view.meta.fps ?? 0 });
 
         let raf: number;
@@ -309,16 +330,31 @@
         return () => cancelAnimationFrame(raf);
     });
 
-    // Auto-zoom on open: the whole composite layout fits the stage, sized for the largest FRAME where
-    // there is room to spare - see autoZoomLevel in render/tile.ts. Runs once per opened view, and only
-    // while zoom is still the default 1 - a restored or user-chosen zoom is left alone. Reads only
-    // `view`, never `playback`, so a per-frame playback write can't re-trigger it.
-    let autoZoomedView: AnimationView | undefined;
+    // Picking another direction block or layout changes what is drawn but not what is loaded, so the
+    // transport is RESIZED rather than rebuilt: rebuilding it here would stop playback and rewind to
+    // frame 0 every time the reader looked at another block.
+    $effect(() => {
+        const frameCount = timelineFrameCount(drawnCycles);
+        untrack(() => {
+            if (!playback || playback.frameCount === frameCount) return;
+            playback = setFrame({ ...playback, frameCount }, playback.frame);
+        });
+    });
+
+    // Auto-fit: the cell grid is sized so the whole composite fills the stage, and the sprite scale then
+    // takes the largest ladder rung that fit allows (defaultSpriteScale). Runs once per SUBJECT
+    // (zoomSubject: what is drawn, not how the reader has set the controls), so any change of footprint
+    // re-fits. Never reads `playback`, so a per-frame write cannot re-trigger it.
+    let zoomedSubject: string | undefined;
     $effect(() => {
         const v = view;
-        if (v && v !== autoZoomedView) void applyAutoZoom(v);
+        if (!v) return;
+        // Reads the block and layout too, so picking another sequence or switching to the grid re-fits -
+        // both change the footprint without replacing the view.
+        const subject = zoomSubject(v, roseGroup, layoutMode);
+        if (subject !== zoomedSubject) void applyAutoZoom(v, subject);
     });
-    async function applyAutoZoom(v: AnimationView): Promise<void> {
+    async function applyAutoZoom(v: AnimationView, subject: string): Promise<void> {
         // Wait for the stage content to render and for ViewControls' persisted-zoom hydration to settle.
         await svelteTick();
         if (view !== v || !stageEl) return;
@@ -329,35 +365,33 @@
         const availH = stageEl.clientHeight - parseFloat(stageStyle.paddingTop) - parseFloat(stageStyle.paddingBottom);
         // Not laid out yet (e.g. opened in a hidden tab): leave unmarked so a later view can retry.
         if (!(content instanceof HTMLElement) || availW <= 0 || availH <= 0) return;
-        autoZoomedView = v;
-        if (zoom !== 1) return; // a persisted or user-chosen zoom wins
-        const box = content.getBoundingClientRect(); // measured at zoom 1
-        const start = autoZoomLevel({
-            maxFrameW: Math.max(0, ...v.frames.map((f) => f.width)),
-            maxFrameH: Math.max(0, ...v.frames.map((f) => f.height)),
-            contentW: box.width,
-            contentH: box.height,
-            availW,
-            availH,
-            cap: ZOOM_MAX,
-        });
-        // Then shrink to fit by measuring, because a wrapping grid's footprint is not linear in zoom
-        // (fitZoomByMeasuring). Both callbacks go inert once the view has been replaced, so a search
-        // still unwinding cannot write a zoom chosen for a document that has left the stage.
-        await fitZoomByMeasuring(
-            start,
+        zoomedSubject = subject;
+        // Both callbacks go inert once the subject has moved on - a block or layout change replaces it
+        // without replacing the view - so a search still unwinding cannot write a scale chosen for a
+        // picture that has left the stage.
+        const current = (): boolean => view === v && zoomedSubject === subject;
+        const fitted = await fitZoomByMeasuring(
+            ZOOM_MAX,
             ZOOM_MIN,
             async (next) => {
-                if (view !== v) return;
-                zoom = next;
+                if (!current()) return;
+                layoutScale = next;
+                // The art follows the cell while the reader has not said otherwise, so the fit search
+                // measures the same picture the stage will settle on.
+                zoom = spriteFor(next);
                 await svelteTick();
             },
             () => {
-                if (view !== v) return true;
+                if (!current()) return true;
                 const now = content.getBoundingClientRect();
                 return now.width <= availW && now.height <= availH;
             },
         );
+        if (current()) zoom = spriteFor(fitted);
+    }
+    /** The sprite rung for a cell at this layout scale - the room the cell really has, snapped. */
+    function spriteFor(scale: number): number {
+        return snapToLadder(fillRatio * scale);
     }
 </script>
 
@@ -395,7 +429,8 @@
                         {loadedPixels}
                         tiles={roseTiles}
                         frame={playback.frame}
-                        {zoom}
+                        {layoutScale}
+                        spriteScale={zoom}
                         {tileBox}
                         {showOffsetMarker}
                     />
@@ -405,7 +440,8 @@
                         {loadedPixels}
                         tiles={gridTiles}
                         frame={playback.frame}
-                        {zoom}
+                        {layoutScale}
+                        spriteScale={zoom}
                         {tileBox}
                         {showOffsetMarker}
                         columns={cycleColumns}
@@ -451,6 +487,7 @@
             {/if}
             <ViewControls
                 {zoom}
+                fillZoom={fillRatio * layoutScale}
                 {background}
                 {showOffsetMarker}
                 onZoomChange={(z) => (zoom = z)}
