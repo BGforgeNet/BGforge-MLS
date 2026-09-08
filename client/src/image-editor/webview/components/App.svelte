@@ -228,14 +228,24 @@
     // What is ON SCREEN: the transport is sized against these and frames are fetched for these, never for
     // the file's whole cycle list (compass-layout.drawnSequences).
     const drawnCycles = $derived(drawnSequences(layoutMode, roseTiles, gridTiles));
-    // One tile per ANIMATION - constant size, art centred in it at whatever scale it is drawn - so no
-    // switch of action or sequence moves the tile, the anchor, or the picture's place in it.
+    // The scale at which the art exactly fills the base tile: what Auto asks for, what a freshly opened
+    // animation is drawn at, and the point past which the tile has to grow to keep holding it.
+    const fillRatio = $derived(view ? spriteFillRatio(view) : 1);
+    // How large the reader is drawing the art relative to the cell the fit chose.
+    const spriteRatio = $derived(layoutScale > 0 ? zoom / layoutScale : 1);
+    /**
+     * How many layout fits are searching; nonzero pins the tile to its base size. A grown box measures the
+     * same at every candidate the fit tries, so a search that saw one would settle at the floor and leave
+     * the tiles microscopic as soon as the reader zoomed back out. Counted, not flagged: a fit still
+     * unwinding must not clear the one that replaced it.
+     */
+    let fitsRunning = $state(0);
+    // One tile per ANIMATION - art centred in it at whatever scale it is drawn - so no switch of action or
+    // sequence moves the tile, the anchor, or the picture's place in it. Past the fitted size the box
+    // grows with the art, which is what spreads the tiles apart instead of letting sprites overlap.
     const tileBox = $derived(
-        view ? tileBoxPx(view, layoutScale > 0 ? zoom / layoutScale : 1) : DEFAULT_TILE_BOX,
+        view ? tileBoxPx(view, fitsRunning > 0 ? Math.min(spriteRatio, fillRatio) : spriteRatio) : DEFAULT_TILE_BOX,
     );
-    // How far past the fitted size the art can be pushed before it leaves its tile: what Auto asks for,
-    // and what a freshly opened animation is drawn at.
-    const fillRatio = $derived(view ? spriteFillRatio(view, tileBox) : 1);
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -391,23 +401,31 @@
         // without replacing the view - so a search still unwinding cannot write a scale chosen for a
         // picture that has left the stage.
         const current = (): boolean => view === v && fittedArrangement === arrangement;
-        const fitted = await fitZoomByMeasuring(
-            ZOOM_MAX,
-            ZOOM_MIN,
-            async (next) => {
-                if (!current()) return;
-                layoutScale = next;
-                await svelteTick();
-            },
-            () => {
-                if (!current()) return true;
-                const now = content.getBoundingClientRect();
-                return now.width <= availW && now.height <= availH;
-            },
-        );
-        if (!current() || subject === zoomedSubject) return;
-        zoomedSubject = subject;
-        zoom = autoZoom(fillRatio, fitted);
+        // Claimed here rather than at entry: the caller re-enters until `fittedArrangement` is set, which
+        // is only above, so a write before that point re-triggers the effect that made it and the runtime
+        // kills the whole webview on the update-depth guard.
+        fitsRunning++;
+        try {
+            const fitted = await fitZoomByMeasuring(
+                ZOOM_MAX,
+                ZOOM_MIN,
+                async (next) => {
+                    if (!current()) return;
+                    layoutScale = next;
+                    await svelteTick();
+                },
+                () => {
+                    if (!current()) return true;
+                    const now = content.getBoundingClientRect();
+                    return now.width <= availW && now.height <= availH;
+                },
+            );
+            if (!current() || subject === zoomedSubject) return;
+            zoomedSubject = subject;
+            zoom = autoZoom(fillRatio, fitted);
+        } finally {
+            fitsRunning--;
+        }
     }
 </script>
 

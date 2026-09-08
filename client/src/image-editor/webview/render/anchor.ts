@@ -23,10 +23,11 @@ import { TILE_BOX_PX } from "./tile";
 /**
  * A tile's footprint (unzoomed px) and where the anchor reference point sits INSIDE it.
  *
- * The footprint is one constant square (TILE_BOX_PX); what varies is the REFERENCE, which is placed to
- * centre whatever is drawn. Art is routinely far to one side of its anchor - an IE creature's ground point
- * can sit hundreds of pixels below the sprite - so the reference is carried explicitly rather than assumed
- * to be the middle, and it may land outside the box entirely.
+ * The footprint is a square: TILE_BOX_PX, or the art's own size where the reader has scaled it past that
+ * (`tileBoxPx`). What varies independently is the REFERENCE, which is placed to centre whatever is drawn.
+ * Art is routinely far to one side of its anchor - an IE creature's ground point can sit hundreds of
+ * pixels below the sprite - so the reference is carried explicitly rather than assumed to be the middle,
+ * and it may land outside the box entirely.
  *
  * What has to hold is only that the reference lands at the SAME spot in every tile drawing the same
  * cycles, which an explicit `refX`/`refY` gives directly.
@@ -110,38 +111,42 @@ export function spriteRect(
 }
 
 /**
- * How many times the fitted size the animation can be shown at before it leaves its tile - what Auto asks
- * for, and what a freshly opened animation is drawn at.
+ * The scale at which the animation exactly fills the BASE tile - what Auto asks for, and what a freshly
+ * opened animation is drawn at. Past it the tile grows with the art rather than the art clipping.
  *
- * The art's own union against the tile, and nothing else: the anchor lands wherever centring that union
- * puts it (`tileBoxPx`), so where it sits inside the art costs the sprite nothing. The longer side of the
- * union decides, since both have to fit; the other keeps its margin, split evenly.
+ * Against TILE_BOX_PX, never the tile actually on screen: that one takes the art's own size once the
+ * reader scales past the base square, so measuring against it would make Fill mean whatever scale is
+ * already showing.
+ *
+ * The art's own union and nothing else: the anchor lands wherever centring that union puts it
+ * (`tileBoxPx`), so where it sits inside the art costs the sprite nothing. The longer side of the union
+ * decides, since both have to fit; the other keeps its margin, split evenly.
  *
  * Measured over the WHOLE FILE, not the cycles on screen. The scale is chosen once when the animation
  * opens and then left alone, so a sequence that reaches further than the one being looked at has to fit at
- * it too - otherwise picking it later would push the sprite over its neighbours.
+ * it too - otherwise picking it later would grow every tile under the reader.
  */
-export function spriteFillRatio(
-    view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
-    box: TileBox,
-): number {
+export function spriteFillRatio(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): number {
     const { spanX, spanY } = artExtents(view);
     // Nothing drawable: the fitted size is the only size there is anything to say about.
     if (spanX === undefined || spanY === undefined || spanX <= 0 || spanY <= 0) return 1;
-    return Math.min(box.w / spanX, box.h / spanY);
+    return Math.min(TILE_BOX_PX / spanX, TILE_BOX_PX / spanY);
 }
 
 /** Extents are measured against a zero box, so the numbers come out relative to the reference point. */
 const PROBE_BOX: TileBox = { w: 0, h: 0, refX: 0, refY: 0 };
 
 /**
- * The tile an animation is drawn in: one constant square, with the reference placed so the art lands in
- * the middle of it at the size it is being drawn.
+ * The tile an animation is drawn in: a square holding the whole file's art at the size it is being drawn,
+ * with the reference placed so that art lands in the middle of it.
  *
- * Two decisions, both per ANIMATION and neither per sequence. The SIZE is constant (TILE_BOX_PX) so the
- * background never resizes under the reader. The REFERENCE centres the whole file's art - every cycle, not
- * the one on screen - so switching sequence or action moves nothing at all: the tile stays, the anchor
- * stays, and only the picture standing on it changes.
+ * Two decisions, both per ANIMATION and neither per sequence. The SIZE is TILE_BOX_PX while the art fits
+ * it, so the background never resizes under a reader switching stance, and the art's own square past that,
+ * so a sprite scaled beyond the fitted size spreads the tiles apart instead of reaching over its
+ * neighbours. Both layouts space their cells by the tile, which makes a tile that holds its own art the
+ * whole of the no-overlap guarantee. The REFERENCE centres the whole file's art - every cycle, not the one
+ * on screen - so switching sequence or action moves nothing at all: the tile stays, the anchor stays, and
+ * only the picture standing on it changes.
  *
  * The art is drawn at `reference*layout - anchor*sprite`, so it scales about its ANCHOR: a reference that
  * centred it at 1:1 would stop centring it at any other zoom, and a creature anchored low would drift up
@@ -158,8 +163,11 @@ export function tileBoxPx(
 ): TileBox {
     const { minX, minY, spanX, spanY } = artExtents(view);
     if (spanX === undefined || spanY === undefined) return DEFAULT_TILE_BOX;
-    const centre = (min: number, span: number): number => TILE_BOX_PX / 2 - (min + span / 2) * spriteScaleRatio;
-    return { w: TILE_BOX_PX, h: TILE_BOX_PX, refX: centre(minX, spanX), refY: centre(minY, spanY) };
+    // One side for both axes: the rose spaces its facings on a CIRCLE, by the tile's longer side, so a
+    // box hugging each axis would buy nothing there and give the two layouts differently shaped backdrops.
+    const side = Math.max(TILE_BOX_PX, Math.ceil(Math.max(spanX, spanY) * spriteScaleRatio));
+    const centre = (min: number, span: number): number => side / 2 - (min + span / 2) * spriteScaleRatio;
+    return { w: side, h: side, refX: centre(minX, spanX), refY: centre(minY, spanY) };
 }
 
 /** The union of every frame the animation references, at its anchored position, relative to the anchor. */

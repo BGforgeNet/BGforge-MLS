@@ -1,10 +1,12 @@
 /**
- * The unzoomed footprint every tile has, whatever it holds: one square, the same for every animation.
+ * The unzoomed footprint every tile has at the fitted size: one square, the same for every animation.
  *
- * Square and CONSTANT rather than sized to the art. A box that hugged its own sprite resized whenever the
- * reader changed action, which moved the background under them and re-fitted the layout for a picture of
- * the same creature. With one box, the on-screen cell depends only on the stage and how many tiles are in
- * it, so switching action or facing leaves the grid exactly where it was.
+ * A FLOOR rather than the art's own size. A box that hugged its own sprite resized whenever the reader
+ * changed action, which moved the background under them and re-fitted the layout for a picture of the
+ * same creature. With one box, the on-screen cell depends only on the stage and how many tiles are in it,
+ * so switching action or facing leaves the grid exactly where it was. A reader who scales the art PAST
+ * the fitted size is asking for something the floor cannot give, and there the box grows with the art
+ * (see tileBoxPx) - the one thing that keeps neighbouring sprites off each other.
  *
  * The value is a free parameter, not a limit: the cell is this scaled by the layout fit, and the art
  * inside it is scaled separately (see spriteFillRatio), so what a reader sees is set by those two and not

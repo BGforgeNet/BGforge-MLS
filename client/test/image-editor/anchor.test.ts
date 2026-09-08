@@ -8,6 +8,7 @@ import {
     tileBoxPx,
     type TileBox,
 } from "../../src/image-editor/webview/render/anchor";
+import { TILE_BOX_PX } from "../../src/image-editor/webview/render/tile";
 
 /** The old square tile, as a box: what every position case below was written against. */
 const SQUARE_96: TileBox = { w: 96, h: 96, refX: 48, refY: 48 };
@@ -166,11 +167,15 @@ const oneFrameView = (frame: { width: number; height: number; offsetX: number; o
     sequences: [{ frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
 });
 
-test("every animation gets the same square tile", () => {
+test("every animation gets the same square tile until the art outgrows it", () => {
     const small = tileBoxPx(oneFrameView({ width: 30, height: 30, offsetX: 15, offsetY: 15 }));
     const large = tileBoxPx(oneFrameView({ width: 190, height: 199, offsetX: 95, offsetY: 99 }));
     expect(small.w).toBe(small.h);
     expect([large.w, large.h]).toEqual([small.w, small.h]);
+    // Past the base square the box takes the art's own size at the scale it is drawn, which is what
+    // spreads the tiles apart instead of letting a zoomed sprite reach over its neighbours.
+    const grown = tileBoxPx(oneFrameView({ width: 600, height: 400, offsetX: 300, offsetY: 399 }), 2);
+    expect([grown.w, grown.h]).toEqual([1200, 1200]);
 });
 
 test("the anchor lands wherever centring the art puts it, at any scale", () => {
@@ -190,8 +195,7 @@ test("the anchor lands wherever centring the art puts it, at any scale", () => {
 test("the fill ratio is the tile against the art's longer side", () => {
     // A sprite half as wide as it is tall fills the square's height and keeps its margin across the width.
     const view = oneFrameView({ width: 100, height: 200, offsetX: 50, offsetY: 190 });
-    const box = tileBoxPx(view);
-    expect(spriteFillRatio(view, box)).toBeCloseTo(box.h / 200);
+    expect(spriteFillRatio(view)).toBeCloseTo(TILE_BOX_PX / 200);
 });
 
 test("where the anchor sits inside the art costs the sprite nothing", () => {
@@ -200,7 +204,7 @@ test("where the anchor sits inside the art costs the sprite nothing", () => {
     // fill per anchor edge, which answers a fraction of this for the second.
     const centred = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
     const offAnchor = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 300 });
-    expect(spriteFillRatio(offAnchor, tileBoxPx(offAnchor))).toBeCloseTo(spriteFillRatio(centred, tileBoxPx(centred)));
+    expect(spriteFillRatio(offAnchor)).toBeCloseTo(spriteFillRatio(centred));
 });
 
 test("the whole FILE is what fits, not the cycle on screen", () => {
@@ -218,13 +222,12 @@ test("the whole FILE is what fits, not the cycle on screen", () => {
             { frameRefs: [1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
         ],
     };
-    const box = tileBoxPx(view);
-    expect(spriteFillRatio(view, box)).toBeCloseTo(box.h / 200);
+    expect(spriteFillRatio(view)).toBeCloseTo(TILE_BOX_PX / 200);
 });
 
 test("the fill ratio of an animation that draws nothing is 1", () => {
     const view = { sourceFormat: "bam" as const, frames: [], sequences: [] };
-    expect(spriteFillRatio(view, tileBoxPx(view))).toBe(1);
+    expect(spriteFillRatio(view)).toBe(1);
 });
 
 test("at the fill scale every frame of the animation is inside its tile", () => {
@@ -242,14 +245,45 @@ test("at the fill scale every frame of the animation is inside its tile", () => 
             { frameRefs: [1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
         ],
     };
-    const scale = spriteFillRatio(view, tileBoxPx(view));
+    const scale = spriteFillRatio(view);
     const box = tileBoxPx(view, scale);
+    // The fill scale is exactly the scale that needs no growth - a larger one would round the box up
+    // and stop the tiles reading as one size. Without this the containment below cannot fail, since a
+    // grown box holds its art at any scale.
+    expect(box.w).toBe(TILE_BOX_PX);
     for (const frame of view.frames) {
         const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box, 1, scale);
         expect(rect.left).toBeGreaterThanOrEqual(-0.001);
         expect(rect.top).toBeGreaterThanOrEqual(-0.001);
         expect(rect.left + rect.width).toBeLessThanOrEqual(box.w + 0.001);
         expect(rect.top + rect.height).toBeLessThanOrEqual(box.h + 0.001);
+    }
+});
+
+test("a frame stays inside its tile at every scale, so no tile can reach into its neighbour", () => {
+    // The whole no-overlap guarantee, at the layer that decides it: the rose and the grid both space
+    // their cells by the tile, so containment here is what keeps a dragon's sprites off each other at
+    // 100%. Falsified by a tile of constant size - at 4x the art overhangs by three times the tile.
+    const view = {
+        sourceFormat: "bam" as const,
+        frames: [
+            { width: 620, height: 300, offsetX: 310, offsetY: 299 }, // stands on its anchor
+            { width: 400, height: 480, offsetX: 200, offsetY: 40 }, // hangs below it
+        ],
+        sequences: [
+            { frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
+            { frameRefs: [1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
+        ],
+    };
+    for (const ratio of [0.25, 1, 4]) {
+        const box = tileBoxPx(view, ratio);
+        for (const frame of view.frames) {
+            const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box, 1, ratio);
+            expect(rect.left).toBeGreaterThanOrEqual(-0.001);
+            expect(rect.top).toBeGreaterThanOrEqual(-0.001);
+            expect(rect.left + rect.width).toBeLessThanOrEqual(box.w + 0.001);
+            expect(rect.top + rect.height).toBeLessThanOrEqual(box.h + 0.001);
+        }
     }
 });
 
