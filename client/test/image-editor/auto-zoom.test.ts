@@ -2,6 +2,8 @@ import { expect, test } from "vitest";
 import {
     autoZoom,
     fitZoomByMeasuring,
+    focusScroll,
+    spriteScaleRatio,
     zoomSubject,
     ZOOM_MAX,
     ZOOM_MIN,
@@ -64,6 +66,84 @@ test("a nine-tile creature stance shrinks to a third, not to the floor", async (
     expect(z).toBeLessThanOrEqual(0.33);
     expect(grid.zoom).toBe(z);
     expect(grid.fits()).toBe(true);
+});
+
+// How large the reader is drawing the art relative to the cell the fit chose - the number that decides
+// whether the tile has to grow to keep holding it (render/anchor.ts, tileBoxPx).
+test("the ratio is the reader's zoom against the scale the layout was fitted at", () => {
+    expect(spriteScaleRatio({ zoom: 1, layoutScale: 0.25, fillRatio: 5, fitting: false })).toBeCloseTo(4);
+});
+
+test("a fit in flight sees the fitted size, however far the reader has zoomed past it", () => {
+    // The tile grows to hold art scaled past its fitted size, and a grown one measures the same at every
+    // candidate the fit tries - so a search that saw it would find nothing that fits, settle at the floor,
+    // and leave the tiles microscopic the moment the reader zoomed back out. Falsified by dropping the
+    // clamp: this then answers 4, which is the box the search must not be shown.
+    expect(spriteScaleRatio({ zoom: 1, layoutScale: 0.25, fillRatio: 0.8, fitting: true })).toBeCloseTo(0.8);
+});
+
+test("a fit in flight leaves a sprite already inside its tile alone", () => {
+    // The clamp is a ceiling, not a substitution: a reader zoomed BELOW the fitted size is drawn where
+    // they put themselves, and the box was never going to grow for them anyway.
+    expect(spriteScaleRatio({ zoom: 0.1, layoutScale: 0.25, fillRatio: 0.8, fitting: true })).toBeCloseTo(0.4);
+});
+
+test("nothing is drawn at a ratio of its own before the layout has a scale", () => {
+    // The first render, before any fit has run. Dividing by it would answer Infinity and size a tile from it.
+    expect(spriteScaleRatio({ zoom: 1, layoutScale: 0, fillRatio: 0.8, fitting: false })).toBe(1);
+});
+
+/**
+ * Where the stage looks when the layout is bigger than it.
+ *
+ * A nine-facing creature at 100% is a layout many times the stage, and a compass rose puts nothing in the
+ * middle or the corners of its own box - so a stage left at the origin shows empty space beside a sliver of
+ * one tile, and every stance looks alike there however different the art is.
+ */
+const stage = { width: 900, height: 750 };
+
+test("a layout that fits the stage is not scrolled at all", () => {
+    const at = focusScroll({
+        focus: { left: 100, top: 50, width: 200, height: 200 },
+        viewport: stage,
+        content: { width: 500, height: 400 },
+    });
+    expect(at).toEqual({ left: 0, top: 0 });
+});
+
+test("an overflowing layout is scrolled until the focused tile is centred", () => {
+    // The dragon at 100%: 637px tiles on a 2282x3903 wheel. Centring its first facing is what puts a whole
+    // dragon on screen instead of the corner of one.
+    const at = focusScroll({
+        focus: { left: 822, top: 1633, width: 637, height: 637 },
+        viewport: stage,
+        content: { width: 2282, height: 3903 },
+    });
+    // Tile centre 1140.5, 1951.5; viewport half 450, 375.
+    expect(at.left).toBeCloseTo(690.5);
+    expect(at.top).toBeCloseTo(1576.5);
+});
+
+test("centring never scrolls back past the start of the content", () => {
+    // A tile in the top-left corner: half the viewport past its centre is a negative offset, which would
+    // scroll the content away from the stage rather than toward the tile.
+    const at = focusScroll({
+        focus: { left: 0, top: 0, width: 200, height: 200 },
+        viewport: stage,
+        content: { width: 3000, height: 3000 },
+    });
+    expect(at).toEqual({ left: 0, top: 0 });
+});
+
+test("centring never scrolls past the end of the content", () => {
+    // The far corner: centring it would ask for empty space beyond the layout, and the stage would clamp
+    // silently - so the number handed to it is already the last real position.
+    const at = focusScroll({
+        focus: { left: 2800, top: 2800, width: 200, height: 200 },
+        viewport: stage,
+        content: { width: 3000, height: 3000 },
+    });
+    expect(at).toEqual({ left: 3000 - 900, top: 3000 - 750 });
 });
 
 const walk = { basename: "MDKNG1", set: { id: 0x2300, action: "MDKNG1" } };

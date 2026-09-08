@@ -33,7 +33,15 @@
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
     import { DEFAULT_TILE_BOX, spriteFillRatio, tileBoxPx } from "../render/anchor";
-    import { autoZoom, fitZoomByMeasuring, zoomSubject, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
+    import {
+        autoZoom,
+        fitZoomByMeasuring,
+        focusScroll,
+        spriteScaleRatio,
+        zoomSubject,
+        ZOOM_MAX,
+        ZOOM_MIN,
+    } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
@@ -231,21 +239,17 @@
     // The scale at which the art exactly fills the base tile: what Auto asks for, what a freshly opened
     // animation is drawn at, and the point past which the tile has to grow to keep holding it.
     const fillRatio = $derived(view ? spriteFillRatio(view) : 1);
-    // How large the reader is drawing the art relative to the cell the fit chose.
-    const spriteRatio = $derived(layoutScale > 0 ? zoom / layoutScale : 1);
     /**
-     * How many layout fits are searching; nonzero pins the tile to its base size. A grown box measures the
-     * same at every candidate the fit tries, so a search that saw one would settle at the floor and leave
-     * the tiles microscopic as soon as the reader zoomed back out. Counted, not flagged: a fit still
-     * unwinding must not clear the one that replaced it.
+     * How many layout fits are searching. Counted, not flagged: a fit still unwinding must not clear the
+     * one that replaced it. What a fit in flight does to the tile is `spriteScaleRatio`'s (render/tile.ts).
      */
     let fitsRunning = $state(0);
+    // How large the reader is drawing the art relative to the cell the fit chose.
+    const spriteRatio = $derived(spriteScaleRatio({ zoom, layoutScale, fillRatio, fitting: fitsRunning > 0 }));
     // One tile per ANIMATION - art centred in it at whatever scale it is drawn - so no switch of action or
     // sequence moves the tile, the anchor, or the picture's place in it. Past the fitted size the box
     // grows with the art, which is what spreads the tiles apart instead of letting sprites overlap.
-    const tileBox = $derived(
-        view ? tileBoxPx(view, fitsRunning > 0 ? Math.min(spriteRatio, fillRatio) : spriteRatio) : DEFAULT_TILE_BOX,
-    );
+    const tileBox = $derived(view ? tileBoxPx(view, spriteRatio) : DEFAULT_TILE_BOX);
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -384,6 +388,48 @@
         const subject = zoomSubject(v);
         const arrangement = `${subject}#${drawnBand}@${layoutMode}`;
         if (arrangement !== fittedArrangement) void applyAutoZoom(v, subject, arrangement);
+    });
+
+    /**
+     * Put the stage back on the art whenever the layout RESIZES.
+     *
+     * Scaled past the size its whole wheel fits at, a creature's layout is many times the stage, and the
+     * stage stays wherever it was - which for a fresh rose is the origin, where a compass rose has nothing:
+     * the reader gets blank space beside a sliver of one tile, and every stance looks alike there. Centring
+     * the first tile keeps one whole facing on screen, so changing stance visibly changes the picture.
+     *
+     * Keyed on what MOVES the tiles - the animation, the band, the layout, and both scales - so a reader who
+     * has scrolled somewhere keeps their position until one of those changes it out from under them anyway.
+     */
+    let centredFor: string | undefined;
+    $effect(() => {
+        const key = `${view?.basename ?? ""}#${drawnBand}@${layoutMode}:${zoom}:${layoutScale}`;
+        const el = stageEl;
+        if (!el || key === centredFor) return;
+        centredFor = key;
+        void svelteTick().then(() => {
+            // The FIRST tile, whichever layout drew it: the rose orders its cells by the block's own slots,
+            // so this is the same facing across a change of stance.
+            const tile = el.querySelector(".frame-tile");
+            if (!(tile instanceof HTMLElement)) return;
+            // Measured against the STAGE's own scroll box, never the tile's offsetParent (a rose cell is
+            // absolutely positioned, so every tile reports offset 0 inside it) and never the content
+            // element's width (a rose wider than the stage is flex-shrunk while its cells overflow it).
+            const box = tile.getBoundingClientRect();
+            const stage = el.getBoundingClientRect();
+            const at = focusScroll({
+                focus: {
+                    left: box.left - stage.left + el.scrollLeft,
+                    top: box.top - stage.top + el.scrollTop,
+                    width: box.width,
+                    height: box.height,
+                },
+                viewport: { width: el.clientWidth, height: el.clientHeight },
+                content: { width: el.scrollWidth, height: el.scrollHeight },
+            });
+            el.scrollLeft = at.left;
+            el.scrollTop = at.top;
+        });
     });
     async function applyAutoZoom(v: AnimationView, subject: string, arrangement: string): Promise<void> {
         // Wait for the stage content to render and for ViewControls' persisted-zoom hydration to settle.

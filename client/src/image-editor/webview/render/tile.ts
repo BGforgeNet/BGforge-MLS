@@ -48,6 +48,54 @@ export function autoZoom(fillRatio: number, layoutScale: number): number {
     return Math.min(fillRatio * layoutScale, ZOOM_MAX);
 }
 
+/**
+ * How large the art is drawn relative to the cell the fit chose - what decides whether the tile has to
+ * grow to hold it (`tileBoxPx`).
+ *
+ * `fitting` pins the answer to the fitted size while a fit is SEARCHING. A tile grown to hold the art
+ * measures the same at every candidate the search tries, so a search that saw one would find nothing that
+ * fits, settle at the floor, and leave the tiles microscopic as soon as the reader zoomed back out.
+ *
+ * A named argument per scale rather than four positions: they are all numbers, so a transposed pair would
+ * compile and answer a plausible ratio.
+ */
+export function spriteScaleRatio(scales: {
+    zoom: number;
+    layoutScale: number;
+    fillRatio: number;
+    fitting: boolean;
+}): number {
+    if (scales.layoutScale <= 0) return 1;
+    const ratio = scales.zoom / scales.layoutScale;
+    return scales.fitting ? Math.min(ratio, scales.fillRatio) : ratio;
+}
+
+/**
+ * Where the stage looks when the layout no longer fits it: the focused tile, centred.
+ *
+ * A creature scaled past the size its whole wheel fits at needs a layout many times the stage, and neither
+ * end of that layout is where the art is - a compass rose leaves the middle of its own box empty (the tiles
+ * sit on the ring) and the corners emptier still. A stage left at the origin therefore shows blank space
+ * beside a sliver of one tile, where every stance looks like every other however different the art is.
+ *
+ * Centring ONE tile rather than the content is what fixes that: the same facing stays on screen across a
+ * change of stance, so switching visibly changes the picture. Clamped to the content, so the caller never
+ * asks for a position past its end - which the element would silently clamp anyway, leaving the number the
+ * code holds and the one the stage took disagreeing.
+ */
+export function focusScroll(box: {
+    focus: { left: number; top: number; width: number; height: number };
+    viewport: { width: number; height: number };
+    content: { width: number; height: number };
+}): { left: number; top: number } {
+    const on = (offset: number, size: number, viewport: number, content: number): number =>
+        Math.max(0, Math.min(offset + size / 2 - viewport / 2, content - viewport));
+    return {
+        left: on(box.focus.left, box.focus.width, box.viewport.width, box.content.width),
+        top: on(box.focus.top, box.focus.height, box.viewport.height, box.content.height),
+    };
+}
+
 /** Halvings of the range the fit search spends; 7 resolves it to within a couple of percent. */
 const FIT_SEARCH_STEPS = 7;
 
