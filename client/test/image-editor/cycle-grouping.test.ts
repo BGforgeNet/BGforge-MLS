@@ -64,7 +64,7 @@ describe("cycleGridHint", () => {
 describe("ieGroupOptionText", () => {
     test("combines the scheme name with the group's cycle range", () => {
         const blocks = [{ codes: ["WK"] as const }, { codes: ["SC"] as const }];
-        expect(ieGroupOptionText(blocks, 1)).toBe("SC - combat stance (cycles 8-15)");
+        expect(ieGroupOptionText(blocks, 1)).toBe("SC - combat ready (cycles 8-15)");
     });
 
     test("falls back to a numbered group without labels", () => {

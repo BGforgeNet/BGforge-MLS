@@ -134,7 +134,7 @@ describe("stancesOfMembers", () => {
     it("names each band of a file that packs several stances", () => {
         // MOGHG1's real shape: six 8-slot bands, five stored facings each.
         const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(6));
-        expect(stances.map((s) => s.label)).toEqual(["Walk", "Combat stance", "Stand", "Get hit", "Die", "Twitch"]);
+        expect(stances.map((s) => s.label)).toEqual(["Walk", "Combat ready", "Stand", "Get hit", "Die", "Twitch"]);
         expect(stances.map((s) => s.band)).toEqual([0, 1, 2, 3, 4, 5]);
         expect(stances.every((s) => s.resref === "MOGHG1")).toBe(true);
     });
@@ -192,8 +192,8 @@ describe("stancesOfMembers", () => {
         const anonymous = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8));
         const declared = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8), "monster_ankheg");
 
-        expect(anonymous.map((s) => s.label)).toEqual(["Slash", "Backslash or cast", "Jab or conjure"]);
-        expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Burrow"]);
+        expect(anonymous.map((s) => s.label)).toEqual(["Attack", "Attack or cast spell", "Attack or conjure spell"]);
+        expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Hide"]);
     });
 
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {

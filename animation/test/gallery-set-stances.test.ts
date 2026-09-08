@@ -142,7 +142,7 @@ describe("stance names", () => {
 
         expect(stances.map((stance) => stance.label)).toEqual([
             "Walk",
-            "Combat stance",
+            "Combat ready",
             "Stand",
             "Get hit",
             "Die",
@@ -393,9 +393,9 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
      *
      * The bound is a RATIO over the whole install rather than a list of the sections still missing, so a
      * newly-taught family tightens it without anyone editing an inventory. It was 358 unnamed stances when
-     * a reader found a red dragon listing fourteen numbered rows. What is left: the older character
-     * family's attack files, which carry a second band the scheme addresses nothing to, and `effect`,
-     * which the documentation gives no sequence layout at all.
+     * a reader found a red dragon listing fourteen numbered rows; what is left is `effect`, the one type
+     * the documentation gives no sequence layout at all, so this cannot reach zero and should not pretend
+     * it can.
      */
     it("names all but a small remainder of the install's stances", () => {
         const { sets, io } = install();
@@ -411,7 +411,7 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         }
         process.stdout.write(`  ${numbered.length}/${total} stances fall back to a number\n`);
         expect(total, "no stance was exercised, so the ratio below cannot fail").toBeGreaterThan(500);
-        expect(numbered.length / total).toBeLessThan(0.01);
+        expect(numbered.length / total).toBeLessThan(0.005);
     });
 
     it("gives every stance a band that actually holds facings", () => {
@@ -438,7 +438,7 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         expect(armour, `${set.code} declares no prefix`).toBeDefined();
         // Stance NAMES, not the block picker's coded form: a stance list spans a set's files and never
         // shows the code that addresses one inside a file.
-        const blocks = ["Die", "Twitch", "Stand (emerged)", "Stand (hidden)", "Emerge", "Burrow", "Slash", "Cast"];
+        const blocks = ["Die", "Twitch", "Stand (emerged)", "Stand (hidden)", "Emerge", "Hide", "Attack", "Cast spell"];
 
         const stances = setStances(set, armour!, io);
 

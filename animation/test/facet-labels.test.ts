@@ -54,16 +54,16 @@ describe("actionLabel", () => {
         const labels = [1, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((detail) => actionLabel({ kind: "misc", detail }));
 
         expect(labels).toEqual([
-            "Combat stance (1-handed)",
+            "Combat ready (1-handed)",
             "Walk",
             "Stand (1-handed)",
-            "Combat stance (2-handed)",
+            "Combat ready (2-handed)",
             "Get hit",
             "Die",
             "Twitch",
-            "Stand (2)",
-            "Stand (3)",
-            "Sleep (1)",
+            "Stand 2",
+            "Stand 3",
+            "Sleep 1",
         ]);
         expect(new Set(labels).size).toBe(labels.length);
         expect(actionLabel({ kind: "misc", detail: 3 })).toBe("Misc 3");

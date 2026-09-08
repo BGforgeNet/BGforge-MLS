@@ -28,25 +28,25 @@ import { type ModelledSection } from "./animation-schemes/layout";
  */
 const SEQUENCES = {
     WK: "walk",
-    SC: "combat stance",
+    SC: "combat ready",
     SD: "stand",
     GH: "get hit",
     DE: "die",
     TW: "twitch",
     SL: "sleep",
     GU: "get up",
-    // The published list distinguishes these by strike rather than numbering them, and single words are
-    // what let a shared band compose - a block the sources read as either A3 or SP has to read as one
-    // phrase ("jab or conjure"), which a name that is itself a disjunction cannot do.
-    A1: "slash",
-    A2: "backslash",
-    A3: "jab",
-    A4: "shoot",
-    A5: "attack 5",
-    CA: "cast",
-    SP: "conjure",
+    // Every attack code shares one word, and what tells two apart rides on the ENTRY: the same code means
+    // different things per family - `A2` is the second strike of a monster and a two-handed slash of a
+    // character - so a per-code name could only ever be right for one of them.
+    A1: "attack",
+    A2: "attack",
+    A3: "attack",
+    A4: "attack",
+    A5: "attack",
+    CA: "cast spell",
+    SP: "conjure spell",
     EMERGE: "emerge",
-    HIDE: "burrow",
+    HIDE: "hide",
 } as const satisfies Record<string, string>;
 
 export type SequenceCode = keyof typeof SEQUENCES;
@@ -71,8 +71,16 @@ interface NamedBlock {
     codes: readonly [SequenceCode, ...SequenceCode[]];
     /** Absent where the documentation names the block without pinning what it is - see `CAST_BLOCKS`. */
     id?: NeutralActionId;
-    /** The grip, weapon or repeat the block's own name pins, where it pins one. */
+    /**
+     * The grip, weapon or strike this block pins, where its family pins one - "Attack (slash)".
+     *
+     * Parenthesised, where `ordinal` is bare. That split is not cosmetic: a family that merely REPEATS a
+     * stance numbers it, and a family that distinguishes one names it, so the two read differently on
+     * purpose and cannot be collapsed into a single free string without losing which is which.
+     */
     detail?: string;
+    /** Which repeat of the stance this is, where a family ships several - "Stand 2". */
+    ordinal?: number;
     unused?: never;
 }
 
@@ -89,6 +97,7 @@ interface UnusedBlock {
     codes?: never;
     id?: never;
     detail?: never;
+    ordinal?: never;
 }
 
 function capitalized(name: string): string {
@@ -105,7 +114,8 @@ function joined(parts: readonly string[]): string {
 function words(group: IeGroup): string {
     if (group.codes === undefined) return "(unused)";
     const base = joined(group.codes.map((code) => SEQUENCES[code]));
-    return group.detail === undefined ? base : `${base} (${group.detail})`;
+    const numbered = group.ordinal === undefined ? base : `${base} ${group.ordinal}`;
+    return group.detail === undefined ? numbered : `${numbered} (${group.detail})`;
 }
 
 /** The block as a file's reader sees it: the codes that address it in the archive, then what it depicts. */
@@ -125,14 +135,14 @@ export function stanceName(group: IeGroup): string {
 // No `id`: the vocabulary's `spell` covers both halves precisely because the sources disagree about
 // which is which, so a block that IS one of the two is exactly the case it refuses to name.
 const CAST_BLOCKS: IeGroup[] = [
-    { codes: ["SP"], detail: "spell 1" },
-    { codes: ["CA"], detail: "spell 1" },
-    { codes: ["SP"], detail: "spell 2" },
-    { codes: ["CA"], detail: "spell 2" },
-    { codes: ["SP"], detail: "spell 3" },
-    { codes: ["CA"], detail: "spell 3" },
-    { codes: ["SP"], detail: "spell 4" },
-    { codes: ["CA"], detail: "spell 4" },
+    { codes: ["SP"], ordinal: 1 },
+    { codes: ["CA"], ordinal: 1 },
+    { codes: ["SP"], ordinal: 2 },
+    { codes: ["CA"], ordinal: 2 },
+    { codes: ["SP"], ordinal: 3 },
+    { codes: ["CA"], ordinal: 3 },
+    { codes: ["SP"], ordinal: 4 },
+    { codes: ["CA"], ordinal: 4 },
 ];
 
 /**
@@ -155,13 +165,13 @@ const MONSTER_G1: IeGroup[] = [
 
 /** The same family's `G2`, on the same prefix rule. */
 const MONSTER_G2: IeGroup[] = [
-    // No ordinals: the codes are distinct strikes, so the vocabulary already tells them apart. They used
-    // to read "attack 1".."attack 5", which numbered five things the published list gives names to.
+    // Numbered, not named: this family ships five interchangeable strikes and the reference browser
+    // numbers them too. A family that genuinely distinguishes its strikes carries `detail` instead.
     { codes: ["A1"], id: "attack" },
-    { codes: ["A2"], id: "attack" },
-    { codes: ["A3"], id: "attack" },
-    { codes: ["A4"], id: "attack" },
-    { codes: ["A5"], id: "attack" },
+    { codes: ["A2"], id: "attack", ordinal: 2 },
+    { codes: ["A3"], id: "attack", ordinal: 3 },
+    { codes: ["A4"], id: "attack", ordinal: 4 },
+    { codes: ["A5"], id: "attack", ordinal: 5 },
     { codes: ["SP"] },
     { codes: ["CA"] },
 ];
@@ -198,7 +208,11 @@ const WIDE_BODY: IeGroup[] = [
     { codes: ["TW"], id: "twitch" },
 ];
 
-const WIDE_ATTACKS: IeGroup[] = [{ codes: ["A1"], id: "attack" }, { codes: ["A2"], id: "attack" }, { codes: ["A3"] }];
+const WIDE_ATTACKS: IeGroup[] = [
+    { codes: ["A1"], id: "attack" },
+    { codes: ["A2"], id: "attack", ordinal: 2 },
+    { codes: ["A3"], ordinal: 3 },
+];
 
 const ANKHEG_G3: IeGroup[] = [
     { codes: ["A1"], id: "attack" },
@@ -219,6 +233,26 @@ const ANKHEG_G3: IeGroup[] = [
  * optional trailing "e" covers eastern *E.BAM companions. Block sets the documentation does not pin down
  * are deliberately absent rather than guessed - a numbered group is honest, a wrong name is not.
  */
+/**
+ * One character attack file, in the one- and two-band shapes the install ships it in.
+ *
+ * Two entries rather than one, because the table keys on block COUNT: some of these files carry a second
+ * band and some do not, and the entry for the two-band shape is the only place that can say the extra one
+ * is addressed by nothing. Without it those files listed a phantom stance apiece.
+ */
+function attackFile(
+    token: AttackToken,
+    codes: readonly [SequenceCode, ...SequenceCode[]],
+    strike: string,
+): Partial<Record<BlockKey, IeGroup[]>> {
+    const strikeBlock: IeGroup = { codes, id: "attack", detail: strike };
+    const padding: IeGroup = { unused: true };
+    return {
+        [`character_old/${token}/ie8/1`]: [strikeBlock],
+        [`character_old/${token}/ie8/2`]: [strikeBlock, padding],
+    };
+}
+
 /**
  * How a block layout is addressed: the file's sequence token, the band width, and how many blocks it has,
  * optionally narrowed by the animation's declared section.
@@ -272,14 +306,36 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
         { codes: ["TW"], id: "twitch" },
         // A repeat, not a grip: this family's later stands and sleeps are numbered variants of one stance,
         // where the nine-block table's `SD2` is the two-handed one. Same code, different qualifier.
-        { codes: ["SD"], id: "stand", detail: "2" },
-        { codes: ["SD"], id: "stand", detail: "3" },
-        { codes: ["SL"], id: "sleep", detail: "1" },
-        { codes: ["SL"], id: "sleep", detail: "2" },
+        { codes: ["SD"], id: "stand", ordinal: 2 },
+        { codes: ["SD"], id: "stand", ordinal: 3 },
+        { codes: ["SL"], id: "sleep", ordinal: 1 },
+        { codes: ["SL"], id: "sleep", ordinal: 2 },
     ],
 
     // Sections whose layout differs from the family the bare key names. Both burrowing schemes lay the
     // same blocks out - only the band width differs - so the two keys share one list.
+    // The older character family's body file, whose eight blocks the reference browser addresses at
+    // offsets 0/8/.../56. Its own G1 is shorter than the nine-block one above by folding sleep into the
+    // dying block - which the engine also plays backwards to stand the creature up again.
+    "character_old/g1/ie8/8": [
+        { codes: ["WK"], id: "walk" },
+        { codes: ["SC"], id: "ready", detail: "1-handed" },
+        { codes: ["SD"], id: "stand", detail: "1-handed" },
+        { codes: ["SC"], id: "ready", detail: "2-handed" },
+        { codes: ["SD"], id: "stand", detail: "2-handed" },
+        { codes: ["GH"], id: "get-hit" },
+        { codes: ["DE", "SL", "GU"] },
+        { codes: ["TW"], id: "twitch" },
+    ],
+    // The older character family's attack files. Each holds ONE addressed strike - the reference browser
+    // maps every one of them to a single sequence at the file's first block - and the second band some of
+    // them carry is padding the scheme never plays. Named per strike, since this family DOES distinguish
+    // them: `A1` is a one-handed slash here where a monster's `A1` is just its first attack.
+    ...attackFile("a1", ["A1"], "slash"),
+    ...attackFile("a2", ["A2"], "slash, 2-handed"),
+    ...attackFile("a3", ["A3"], "backslash"),
+    ...attackFile("a4", ["A4"], "backslash, 2-handed"),
+    ...attackFile("a5", ["A5"], "jab"),
     // The spell layer's own G1 stops one block short of the base it is drawn over, so it needs the prefix
     // said explicitly like every other shortened file of a family.
     "monster_layered_spell/g1/ie8/5": [
@@ -308,7 +364,7 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
     ],
     "monster_large/g2/ie8/2": [
         { codes: ["A1"], id: "attack" },
-        { codes: ["A2"], id: "attack" },
+        { codes: ["A2"], id: "attack", ordinal: 2 },
     ],
     "monster_large/g3/ie8/4": [
         { codes: ["A3"] },
@@ -387,7 +443,7 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
  * misc files.
  */
 const IE_SEQUENCE_TOKENS: readonly (readonly [SequenceToken, RegExp])[] = (
-    ["g1", "g2", "g3", "g4", "g5", "ca"] as const
+    ["g1", "g2", "g3", "g4", "g5", "ca", "a1", "a2", "a3", "a4", "a5", "a6"] as const
 ).map((token) => [token, new RegExp(`${token}\\d*$`)]);
 
 /**
@@ -430,7 +486,15 @@ type BandWidth = IeScheme | WideBand;
  * The tokens a file's name can end on, plus the stand-in for a section whose animation is one untokenised
  * file. Closed, so a key cannot name a token the lookup below never generates.
  */
-type SequenceToken = "g1" | "g2" | "g3" | "g4" | "g5" | "ca" | typeof SINGLE_FILE;
+type SequenceToken = "g1" | "g2" | "g3" | "g4" | "g5" | "ca" | AttackToken | typeof SINGLE_FILE;
+
+/**
+ * The character families name an attack file after the strike it holds rather than after a block group.
+ *
+ * Needed as tokens because such a file can carry a SECOND band the scheme addresses nothing to, and the
+ * only way to say so is a table entry - which needs a key, which needs a token.
+ */
+type AttackToken = "a1" | "a2" | "a3" | "a4" | "a5" | "a6";
 
 /**
  * The documented blocks of a multi-block file, from its sequence token and the block scheme, narrowed by
