@@ -106,10 +106,71 @@ function composedSource(
  * `taken` is what the set has already used: a scheme that names three attacks gives each source attack one
  * of them, rather than three files landing on the same name and two of them disappearing.
  */
+/**
+ * Whether two actions are the same animation: the same frames, played the same way.
+ *
+ * Same drawing files and same band is not enough on its own - a get-up shares the dying band and runs it
+ * backwards, which is a different animation and takes a file of its own.
+ */
+function sameAnimation(one: NeutralAction, other: NeutralAction): boolean {
+    return (
+        one.band === other.band &&
+        one.reversed === other.reversed &&
+        one.resrefs.length === other.resrefs.length &&
+        one.resrefs.every((resref, at) => resref === other.resrefs[at])
+    );
+}
+
+/**
+ * The already-written action this one is drawn from the same frames as.
+ *
+ * A source names more sequences than it has clips: an IE creature holds one pose to stand, to square up
+ * and while conjuring, and many families draw dying and sleeping from one band. Each is its own action -
+ * the source engine plays it for each - but there is one animation between them, so writing them
+ * separately puts identical art in several of the target's files under names it picks off a list. What
+ * that costs is not disk: the second name is the target's OTHER member of a pair, so a sleep lands on the
+ * fall the engine plays for half its deaths. Sharing the file states what the source actually had.
+ *
+ * Keyed on the animation rather than on the codes, because the two engines disagree about which
+ * distinctions exist at all - the target may have no name for the second action, and that is not a loss
+ * when its frames are already written.
+ */
+function sharesFileWith(action: NeutralAction, written: Iterable<NeutralAction>): NeutralAction | undefined {
+    for (const already of written) {
+        if (sameAnimation(already, action)) return already;
+    }
+    return undefined;
+}
+
+/**
+ * Every target code an action with art of its own could take.
+ *
+ * Two of a source's names can want ONE of the target's while only one of them has a clip behind it: a
+ * creature holds its standing pose while conjuring and casts from a file of its own, so both are spells
+ * where the target names a single spell-shaped animation. Taken in file order the standing pose claims it
+ * and the cast is dropped - the worst of the three outcomes, since the target then gets a critter that
+ * stands still to use things AND loses the animation it should have used. So a duplicate yields any code
+ * in this set; its own frames reach the output either way, through the file it shares.
+ *
+ * Deliberately over-inclusive: an original that ends up taking an earlier candidate still reserves its
+ * later ones here. That costs a duplicate a name it could have had, which writes one file fewer and loses
+ * nothing, where guessing the assignment ahead of itself could lose a clip.
+ */
+function codesWantedByOriginals(actions: readonly NeutralAction[], scheme: ActionScheme): ReadonlySet<string> {
+    const originals: NeutralAction[] = [];
+    const wanted = new Set<string>();
+    for (const action of actions) {
+        if (originals.some((other) => sameAnimation(other, action))) continue;
+        originals.push(action);
+        for (const candidate of encodeActionCodes(scheme, action.action)) wanted.add(candidate.code);
+    }
+    return wanted;
+}
+
 function codeFor(
     action: NeutralAction,
     scheme: ActionScheme,
-    taken: ReadonlySet<string>,
+    taken: ReadonlyMap<string, NeutralAction>,
 ): { code: string; detail: string } | undefined {
     for (const candidate of encodeActionCodes(scheme, action.action)) {
         if (!taken.has(candidate.code)) return { code: candidate.code, detail: candidate.detail };
@@ -166,7 +227,10 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
     for (const variant of set.variants) {
         // Per armour level, because the level is part of the name wherever a scheme has levels at all: a
         // set-wide tally would find level 2's walk code taken by level 1 and report it as unmappable.
-        const taken = new Set<string>();
+        // Keyed to the action that claimed each code, so a later one drawing the same animation can share
+        // its file rather than take the target's other name for the same thing (`sharesFileWith`).
+        const taken = new Map<string, NeutralAction>();
+        const wanted = codesWantedByOriginals(variant.actions, options.scheme);
         for (const [resref, packed] of filesOf(variant)) {
             // Assembled once for the whole group: every band of a file draws the same parts, so composing
             // per band would report the same assembly once per band of it.
@@ -194,13 +258,27 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                 const [member] = actions;
                 /* v8 ignore next -- a unit exists because an action put it there */
                 if (member === undefined) continue;
+                const shared = sharesFileWith(member, taken.values());
                 const named = codeFor(member, options.scheme, taken);
+                // A duplicate shares when the target has no name left for it, and yields when the name it
+                // would take is one an action with art of its own could use. It writes its own file only
+                // where the name costs nobody anything: a target naming a file per action wants both names
+                // written from one clip, because its engine finds a file by name and the second lookup
+                // would otherwise come back empty.
+                if (shared !== undefined && (named === undefined || wanted.has(named.code))) {
+                    stateOnce(
+                        "action-shares-target-file",
+                        member.label,
+                        `${member.label} is drawn from the same frames as ${shared.label}, so it shares that file`,
+                    );
+                    continue;
+                }
                 if (named === undefined) {
                     unmapped.push(member);
                     stateOnce("action-unmapped", member.label, `${member.label} has no counterpart in the target`);
                     continue;
                 }
-                taken.add(named.code);
+                taken.set(named.code, member);
                 if (named.detail !== "kept") {
                     stateOnce(
                         "action-code-detail",

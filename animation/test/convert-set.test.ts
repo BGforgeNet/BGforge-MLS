@@ -368,6 +368,98 @@ describe("converting a whole set", () => {
     });
 
     /**
+     * A get-up the source draws by running its dying band BACKWARDS has to be written backwards.
+     *
+     * The whole point of the neutral model is that a target is handed what an action DEPICTS, and this one
+     * depicts a creature standing up - a fact carried entirely by playback direction, since the frames are
+     * the death's. Every target that can name a get-up gives it a file of its own and plays it forwards, so
+     * copying the frames across writes a second death under the get-up's name: an animation that is wrong
+     * in the target game while every count, name and facing in the report reads correct.
+     */
+    it("writes a get-up drawn from a reversed band in reverse", () => {
+        const set = read({ CDMB1G1: packedBands(4, 8, [0, 1, 2, 3, 4]) }, { section: "character_old" });
+        const result = converted(set, IE_8_POINT_MIRRORED, { ...OPTIONS, scheme: "action-codes" });
+        const fileFor = (code: string): ReturnType<typeof parseBamV1> => {
+            const write = result.writes.find((row) => row.resref.endsWith(code));
+            if (write === undefined) throw new Error(`no ${code} file among ${result.writes.map((w) => w.resref)}`);
+            return parseBamV1(write.bytes);
+        };
+
+        const dying = fileFor("DE").sequences[0]?.frameRefs ?? [];
+        expect(dying.length, "the dying band drew nothing, so reversing it cannot be observed").toBeGreaterThan(1);
+        expect(fileFor("GU").sequences[0]?.frameRefs).toEqual(dying.toReversed());
+    });
+
+    /**
+     * A spellcast goes to the gesture Fallout plays when a critter uses something.
+     *
+     * Not the same ACTION - that engine has no spell - but the same shape: hands raised and worked in
+     * front of the body, which is what its combat AI plays for using an item. A converted critter needs
+     * something in that slot, and the source's cast is the nearest thing it has; dropping it leaves the
+     * slot empty and the art on the floor.
+     */
+    it("gives a spellcast the gesture Fallout plays when a critter uses something", () => {
+        const result = converted(read({ CDMB1CA: band() }), FALLOUT_FRM, {
+            ...OPTIONS,
+            prefix: "XYZBAS",
+            scheme: "fallout-critter",
+        });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZBAS1AL"]);
+    });
+
+    /**
+     * A scarce target name goes to the action with art of its own.
+     *
+     * Two of a source's actions can want one target code while only one of them has a clip behind it: a
+     * creature holds its standing pose while conjuring and has a cast of its own elsewhere, so both are
+     * spells and the target names exactly one. Taken in file order the standing pose wins, and the target
+     * gets a critter that stands still to use things while its actual cast is dropped - both files wrong
+     * from one ordering. The duplicate yields, because its frames are written either way.
+     */
+    it("gives a scarce target name to the action with art of its own, not to a duplicate", () => {
+        const set = read({ CDMB1G11: band(), CDMB1CA: band() });
+        const actions = set.variants[0]?.actions ?? [];
+        const walk = actions.find((action) => action.action.id === "walk");
+        const cast = actions.find((action) => action.action.id === "spell");
+        if (walk === undefined || cast === undefined) throw new Error("the fixture drew no walk and cast");
+        // A spell drawn from the walk's own band, ahead of the cast in the order the files are taken in.
+        const conjure = { ...walk, label: "Conjure spell", action: { ...walk.action, id: "spell" as const } };
+        const reordered: NeutralSet = {
+            ...set,
+            variants: [{ ...set.variants[0]!, actions: [walk, conjure, cast] }],
+        };
+
+        const result = converted(reordered, FALLOUT_FRM, { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZBAS1AB", "XYZBAS1AL"]);
+        expect(result.report.items.map((item) => item.detail)).toContain(
+            "Conjure spell is drawn from the same frames as Walk, so it shares that file",
+        );
+        expect(result.report.losses.map((loss) => loss.detail).join(" ")).not.toContain("Cast");
+    });
+
+    /**
+     * Sleeping and dying are ONE animation in Fallout, so the second of them is not a loss.
+     *
+     * The engine stores knockdown and death in a single range - whether the critter gets back up is game
+     * state, not art - and the IE families this fixture is shaped like already draw both from one band. So
+     * the sleep is the file the death already wrote: reporting it as having no counterpart says a move was
+     * dropped, when every frame of it is in the output.
+     */
+    it("shares one target file between two actions the target stores as one animation", () => {
+        const set = read({ CDMB1G1: packedBands(4, 8, [0, 1, 2, 3, 4]) }, { section: "character_old" });
+        const result = converted(set, FALLOUT_FRM, { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" });
+        const detail = (items: readonly { detail: string }[]): string => items.map((item) => item.detail).join("\n");
+
+        expect(detail(result.report.losses)).not.toContain("Sleep");
+        expect(detail(result.report.items)).toContain("Sleep is drawn from the same frames as Die");
+        // One file, not two: the second action must not claim a second code and write the art again.
+        expect(result.writes.filter((write) => write.resref.endsWith("BA"))).toHaveLength(1);
+        expect(result.writes.filter((write) => write.resref.endsWith("BB"))).toHaveLength(0);
+    });
+
+    /**
      * Fallout has no armour level on an animation - it ships each armoured look as its own critter, under
      * its own base name. So a character set's levels become that many bases rather than a refusal: the
      * alternative was the whole family being unconvertible, which is the one outcome that loses everything.

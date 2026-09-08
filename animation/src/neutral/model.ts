@@ -78,6 +78,15 @@ export interface NeutralAction {
     resrefs: readonly string[];
     /** Which band of those files, counting from zero. */
     band: number;
+    /**
+     * Set where the source draws this action by running its band BACKWARDS.
+     *
+     * Part of what the action DEPICTS, not a playback preference: a get-up sharing the dying band is the
+     * death reversed, and every target that can name a get-up gives it a file of its own played forwards.
+     * A target therefore has to be handed the frames in reverse, or it stores a second death under the
+     * get-up's name - wrong in the target game, with every count and label in the report reading correct.
+     */
+    reversed?: true;
     cycles: NeutralCycles;
 }
 

@@ -104,6 +104,7 @@ export function readNeutralSet(set: AnimationSet, io: StanceIo, options: Neutral
                 action: stance.action,
                 resrefs: drawn,
                 band: stance.band,
+                ...(stance.reversed === true ? { reversed: true as const } : {}),
                 cycles: cyclesOf(stance.slots, stance.confidence),
             });
         }

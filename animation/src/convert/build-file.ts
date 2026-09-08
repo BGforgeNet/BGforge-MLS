@@ -55,6 +55,18 @@ function adoptBand(pool: IndexedAnimation["frames"], sourceCount: number, band: 
 }
 
 /**
+ * A band's cycles in the order the action is PLAYED, which is what a target file stores.
+ *
+ * A source that draws an action by running its band backwards keeps one copy of the frames and reverses at
+ * playback; no target's naming can say that - each of them names one file played forwards - so the direction
+ * has to be baked into the frame order here. Per cycle, since a facing is its own clip.
+ */
+function played(cycles: readonly Sequence[], action: NeutralAction): Sequence[] {
+    if (action.reversed !== true) return [...cycles];
+    return cycles.map((cycle) => ({ ...cycle, frameRefs: cycle.frameRefs.toReversed() }));
+}
+
+/**
  * The file `actions` describe, rebuilt for `target` - undefined where the target's file layout is not
  * modelled here.
  *
@@ -73,7 +85,7 @@ export function buildTargetFile(
     const sequences: Sequence[] = [];
     for (const action of actions) {
         const band = retargetAction(source, action, target);
-        const cycles = adoptBand(frames, source.frames.length, band.animation);
+        const cycles = played(adoptBand(frames, source.frames.length, band.animation), action);
         // Cycles that are not facings keep the length and order the source gave them: a target's direction
         // slots mean nothing to them, and padding them into blocks would claim they are directions.
         if (action.cycles.kind !== "directional") {

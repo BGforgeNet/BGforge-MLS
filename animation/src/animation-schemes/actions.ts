@@ -130,13 +130,20 @@ const ACTION_CODES: readonly ActionEntry[] = [
  * pairs. Only the unarmed group is named here - every other first letter spells out a weapon, which a source
  * that never stated one cannot be filed under.
  *
- * The gaps are the point. A combat stance, a spell, a sleep and a post-death twitch have no counterpart in
- * that vocabulary at all, so they get no entry and the conversion reports them as actions that did not
- * travel - which is what the reader needs to know, where a nearest-looking code would hide it.
+ * The gaps are the point. A combat stance, a sleep and a post-death twitch have no counterpart in that
+ * vocabulary at all, so they get no entry and the conversion reports them as actions that did not travel -
+ * which is what the reader needs to know, where a nearest-looking code would hide it. Where such an action
+ * is drawn from frames another one already wrote, the writer says so rather than calling it lost.
  */
 const FALLOUT_CRITTER: readonly ActionEntry[] = [
     { code: "AA", id: "stand" },
     { code: "AB", id: "walk" },
+    // The hands-worked-in-front gesture this engine plays for USING something - a container, an item in
+    // combat. Not a spell, which it has no notion of; the same SHAPE, and the nearest thing a converted
+    // creature has to put in a slot it must fill. Its two neighbours are deliberately absent: the ground
+    // one is a crouch over a prone body, and the raised one is declared in the animation list and played
+    // from nowhere, so art written there would never be seen.
+    { code: "AL", id: "spell" },
     // Hit from the front, then from behind: a family whose chain draws the hit twice fills both.
     { code: "AO", id: "get-hit" },
     { code: "AP", id: "get-hit" },
@@ -147,6 +154,11 @@ const FALLOUT_CRITTER: readonly ActionEntry[] = [
     // Falling backwards, then forwards - the first two of the knockdown range.
     { code: "BA", id: "die" },
     { code: "BB", id: "die" },
+    // No entry for sleep, deliberately. This engine stores knockdown and death as ONE animation - which it
+    // was is decided by whether the critter gets back up - so a source that draws sleeping and dying from
+    // one band has already handed that animation over, and the writer shares the file it wrote. Naming the
+    // two fall codes here instead would let a source whose sleep is its OWN clip take the other one, and
+    // the target would then play a creature lying down asleep as half of its deaths.
     { code: "CH", id: "get-up" },
     { code: "CJ", id: "get-up" },
 ];

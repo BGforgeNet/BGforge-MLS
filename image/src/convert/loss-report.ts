@@ -24,6 +24,10 @@ export type LossKind =
     /** The two namings disagree on how finely an action is named - a grip the target does not distinguish,
      *  or a weapon it does and the source never stated. Informational: the art is untouched either way. */
     | "action-code-detail"
+    /** Two of the source's actions are ONE animation in the target, drawn from the same frames, so the
+     *  second is the file the first already wrote. Informational: nothing is dropped, and reporting it as
+     *  unmapped would claim a move was lost when every frame of it is in the output. */
+    | "action-shares-target-file"
     /** A member the source cut across several files was assembled into the one file the target writes.
      *  Informational: it is the picture the parts drew together, and none of it is discarded. */
     | "parts-composed"
@@ -54,6 +58,9 @@ const INFORMATIONAL: ReadonlySet<LossKind> = new Set<LossKind>([
     // A naming difference, not a data one: the art written is the art read, under a name whose precision
     // differs. Worth saying, never worth calling the conversion lossy.
     "action-code-detail",
+    // The output holds every frame of both actions - one file the target plays for both. Calling it a loss
+    // would mark a conversion lossy for having written exactly what the target's own engine stores.
+    "action-shares-target-file",
     // An assembly, not a degradation: the parts drew one picture and the output holds all of it.
     "parts-composed",
     // Structural, like the direction one above: there was no weapon member to carry, so this says something

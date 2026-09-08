@@ -148,8 +148,21 @@ describe("naming an action in a target scheme", () => {
          * file would be a quiet invention.
          */
         it("names nothing for the actions Fallout's critter scheme has no counterpart for", () => {
-            for (const code of ["SC", "SP", "SL", "TW"]) {
+            for (const code of ["SC", "SL", "TW"]) {
                 expect(encodeActionCodes("fallout-critter", decodeActionCode("action-codes", code))).toEqual([]);
+            }
+        });
+
+        /**
+         * A spell is the one of these with somewhere to go: Fallout plays a hands-worked-in-front gesture
+         * when a critter uses something, which is the same shape and a slot a converted creature must fill.
+         * One code, not the trio - see the table for why its two neighbours are refused.
+         */
+        it("names the use gesture for a spell, which is the nearest shape that engine has", () => {
+            for (const code of ["CA", "SP"]) {
+                expect(encodeActionCodes("fallout-critter", decodeActionCode("action-codes", code))).toEqual([
+                    { code: "AL", detail: "kept" },
+                ]);
             }
         });
     });
