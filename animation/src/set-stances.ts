@@ -12,7 +12,7 @@ import {
     type IeDirectionSlot,
     type IeScheme,
 } from "@bgforge/image/ie-direction";
-import { type PartTables, mergeParts } from "./animation-schemes/part-tables";
+import { type MergedTables, type PartTables, mergeParts } from "./animation-schemes/part-tables";
 import { type AnimationSet, armourLevels } from "./animation-index";
 import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
 import { decodeActionCode } from "./animation-schemes/actions";
@@ -102,6 +102,24 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
 }
 
 /**
+ * A file whose cycles fit no direction scheme, as ONE band holding all of them.
+ *
+ * Every stance is a band, so a member no scheme reads contributes no row and its art is unreachable - and a
+ * set whose only member reads that way could not be opened at all, refused with the message for an install
+ * that ships nothing. The effect families are where this lands: a gib splatter stores ten unrelated
+ * pictures, and no arrangement of facings divides them.
+ *
+ * The slots carry no facing, which is the reading rather than a gap in it. Cycles holding no art are left
+ * out, the same way `partitionBlocks` drops them, so an empty file still yields no stance.
+ */
+function wholeFileBand(merged: MergedTables): FileBands {
+    const slots: IeDirectionSlot[] = merged.sequences.flatMap((_, seqIndex) =>
+        merged.holdsArt[seqIndex] === true ? [{ seqIndex, facing: "none" as const }] : [],
+    );
+    return { bands: [slots], drawn: [slots.length > 0], scheme: undefined, confidence: "inferred" };
+}
+
+/**
  * Cut a member's cycles into direction bands.
  *
  * A set that declares its stride is banded at it; the rest fall back to reading the block structure,
@@ -142,7 +160,7 @@ function bandsOf(
             : { bands, drawn: drawn(bands), scheme: schemeForStride(stride), confidence: "declared" };
     }
     const analysis = interpretIeDirections(merged.sequences, merged.frameCount);
-    if (analysis === undefined) return undefined;
+    if (analysis === undefined) return wholeFileBand(merged);
     // `detected` is the interpreter's own strong fingerprint for the scheme it chose; without it the
     // facings are a reading of block structure, good enough to draw and not to write a target from.
     return {
@@ -207,6 +225,10 @@ export function setStances(set: AnimationSet, armour: number, io: StanceIo): Set
  * member is open, and an overlay's own files need not carry the structure to cut on (`bandsOverlaying`).
  * Undefined where the member overlays nothing, or where the base's bands are not all one width: a stride
  * cannot express those, and inventing one would cut the overlay somewhere the base does not.
+ *
+ * A base read as ONE whole-file band (`wholeFileBand`) would lend its cycle count as a stride, which is not
+ * one. Left unguarded: no overlay in the three measured installs sits over such a base, and a guard for a
+ * pairing no install ships would be untested code on the path every real overlay takes.
  */
 export function overlaidStride(
     set: AnimationSet,

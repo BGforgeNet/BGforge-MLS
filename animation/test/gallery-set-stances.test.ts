@@ -356,6 +356,58 @@ describe("setStances with a declared stride", () => {
     });
 });
 
+/**
+ * A file whose cycles are not facings at all.
+ *
+ * Every other reading here cuts a file into direction bands, and a set with no band has no stance - which
+ * is a set the viewer cannot open, over files the install ships. The effect families are where this lands:
+ * a gib splatter stores ten unrelated pictures, and no direction scheme divides them.
+ */
+describe("setStances over a file that is not directional", () => {
+    /** The shape of an effect set: one file that IS the animation, under no implemented scheme. */
+    function effectSet(): AnimationSet {
+        return {
+            id: 0x0100,
+            code: "CHUNKS",
+            name: "CHUNKS",
+            prefixByArmour: new Map([[1, "SPCHUNKS"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: undefined, reason: "not implemented" },
+            layout: "bare",
+            section: "effect",
+        };
+    }
+
+    const chunksIo = (bytes: Uint8Array): StanceIo => ({
+        exists: (resref) => resref === "SPCHUNKS",
+        read: (resref) => (resref === "SPCHUNKS" ? bytes : undefined),
+    });
+
+    it("offers the whole file as one stance, so its cycles are reachable", () => {
+        // Ten cycles divide into no scheme's bands, and the reading used to stop there: no band, no stance,
+        // and the set refused to open with the message for an install that ships nothing.
+        const stances = setStances(effectSet(), 1, chunksIo(multiCycle(4, 10)));
+
+        expect(stances).toHaveLength(1);
+        expect(stances[0]?.slots.map((slot) => slot.seqIndex)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    });
+
+    it("claims no facings for cycles that are not directions", () => {
+        // The reading is that there is NO reading - a converter writing a target's direction slots from
+        // these would be inventing them, and `inferred` plus a facing-less slot is what says so.
+        const [stance] = setStances(effectSet(), 1, chunksIo(multiCycle(4, 10)));
+
+        expect(stance?.slots.every((slot) => slot.facing === "none")).toBe(true);
+        expect(stance?.confidence).toBe("inferred");
+    });
+
+    it("still lists nothing for a file that holds no cycles at all", () => {
+        // The fallback is for a file whose cycles fit no band, never for one with nothing in it: a stance
+        // that draws no frame is the empty row the band filter exists to remove.
+        expect(setStances(effectSet(), 1, chunksIo(multiCycle(4, 0)))).toEqual([]);
+    });
+});
+
 /** Built per test, not in the describe body: `skipIf` still evaluates the body, so opening a game there
  *  throws during collection on every machine that has no install. */
 function install(): { sets: AnimationSet[]; io: StanceIo } {
@@ -371,19 +423,34 @@ function install(): { sets: AnimationSet[]; io: StanceIo } {
 }
 
 describe.skipIf(GAME === undefined)("setStances over a real install", () => {
-    it("resolves stances for most sets whose files the install ships", () => {
+    /**
+     * Every set the picker lists can be opened, at every armour level it offers.
+     *
+     * A viewer opens a set on its first stance, so a set resolving NONE cannot be opened at all - and it
+     * refuses with the message for an install that ships nothing, over files it is holding. That is what a
+     * reader met picking CHUNKS: ten cycles no direction scheme divides, so no band, so no stance.
+     *
+     * This asserted only that SOME sets resolved, which the failing set passes trivially. Every other
+     * assertion here measures the QUALITY of the rows a set produced - are they named, do they hold facings
+     * - and a set producing NO rows scores perfectly on all of them. Hence a count of the empties, which is
+     * the one shape that cannot be satisfied by absence.
+     *
+     * The levels are the ones the install DRAWS rather than the ones declared: a set whose files this
+     * install does not ship is a gap in the install, and the picker says so in its own words.
+     */
+    it("offers a stance for every set and armour level the install draws", () => {
         const { sets, io } = install();
-        let drawable = 0;
-        let resolved = 0;
+        const empty: string[] = [];
+        let levels = 0;
         for (const set of sets) {
-            const armour = firstArmour(set);
-            if (armour === undefined) continue;
-            drawable += 1;
-            if (setStances(set, armour, io).length > 0) resolved += 1;
+            for (const armour of drawnArmourLevels(set, io.exists)) {
+                levels += 1;
+                if (setStances(set, armour, io).length === 0) empty.push(`${set.name || set.code} armour ${armour}`);
+            }
         }
-        process.stdout.write(`  stances resolved for ${resolved}/${drawable} sets with a declared prefix\n`);
-        expect(drawable, "no set declared a prefix, so nothing was exercised").toBeGreaterThan(0);
-        expect(resolved).toBeGreaterThan(0);
+        process.stdout.write(`  ${levels} drawn armour levels, ${empty.length} offering no stance\n`);
+        expect(levels, "no level was exercised, so the assertion below cannot fail").toBeGreaterThan(500);
+        expect(empty).toEqual([]);
     });
 
     /**
