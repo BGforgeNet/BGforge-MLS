@@ -234,6 +234,21 @@ test("each sequence is centred on its own art, so a taller stance is not pushed 
     expect(topOf(tall, view.frames[1]!)).toBeCloseTo((tall.h - 100) / 2);
 });
 
+test("the art stays centred at the scale it is DRAWN, not only at the fitted one", () => {
+    // The measured defect: the reference centred the art at 1:1, but the stage draws it several times
+    // larger and a sprite scales about its ANCHOR - so a creature anchored low grew upward and left a band
+    // of empty tile under its feet (30px of a 174px tile, every tile, whatever the reader did). Falsified
+    // by dropping the scale from the reference: at 1:1 both readings agree, and this case then sits 40px
+    // above centre.
+    const frame = { width: 40, height: 100, offsetX: 20, offsetY: 90 };
+    const view = oneFrameView(frame);
+    const scale = 2;
+    const box = tileBoxPx(view, view.sequences, scale);
+    const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box, 1, scale);
+    expect(rect.top).toBeCloseTo((box.h - frame.height * scale) / 2);
+    expect(rect.left).toBeCloseTo((box.w - frame.width * scale) / 2);
+});
+
 test("the fill ratio is the room a centred sprite has left in its box", () => {
     // A 40x40 frame centred in the square: each side has (box - 40)/2 of margin, so the art reaches the
     // edges at box/40 - the scale the Fill button hands the reader, and now the one a fresh view opens at.
@@ -242,23 +257,21 @@ test("the fill ratio is the room a centred sprite has left in its box", () => {
     expect(spriteFillRatio(view, box)).toBeCloseTo(box.w / 40);
 });
 
-test("the fill ratio is bounded by the ANCHOR's own room, not by the art-to-box ratio", () => {
-    // The same 40x40 art centred in the same square, but anchored 300px below itself. The art is drawn at
-    // reference - anchor*scale, so it walks UP as the sprite grows and leaves through the top at
-    // refY/300 - far short of the box/40 the art-to-box ratio alone would allow. Falsified by measuring
-    // art against box (the case above then still passes, this one answers box/40).
-    const view = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 300 });
-    const box = tileBoxPx(view);
-    expect(spriteFillRatio(view, box)).toBeCloseTo(box.refY / 300);
-    expect(spriteFillRatio(view, box)).toBeLessThan(box.w / 40);
+test("an anchor far from the art costs the fill nothing, because the art is centred either way", () => {
+    // The same 40x40 art, anchored at its centre and then 300px below itself. Centring at the drawn scale
+    // takes the anchor out of the fit question entirely: what bounds the sprite is its own size against
+    // the tile, so both answer the same. Falsified by bounding the fill per anchor edge - the second then
+    // comes back a fraction of the first.
+    const centred = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
+    const offAnchor = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 300 });
+    expect(spriteFillRatio(offAnchor, tileBoxPx(offAnchor))).toBeCloseTo(spriteFillRatio(centred, tileBoxPx(centred)));
 });
 
-test("art nearly as large as its box has almost no room left", () => {
-    // The dragon: 500 of art in the square, anchored 480 down. Its top margin is (box - 500)/2, so the
-    // ceiling is (480 + that) / 480 - a few percent, not the several times a small sprite gets.
-    const view = oneFrameView({ width: 200, height: 500, offsetX: 100, offsetY: 480 });
+test("the fill ratio is set by the art's LONGER side, so the other one keeps its margin", () => {
+    // A sprite half as wide as it is tall fills the square's height and stays centred across its width.
+    const view = oneFrameView({ width: 100, height: 200, offsetX: 50, offsetY: 190 });
     const box = tileBoxPx(view);
-    expect(spriteFillRatio(view, box)).toBeCloseTo((480 + (box.h - 500) / 2) / 480);
+    expect(spriteFillRatio(view, box)).toBeCloseTo(box.h / 200);
 });
 
 test("the fill ratio of an animation that draws nothing is 1", () => {

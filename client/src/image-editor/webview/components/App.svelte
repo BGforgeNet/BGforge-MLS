@@ -219,11 +219,14 @@
     // What is ON SCREEN: the transport is sized against these and frames are fetched for these, never for
     // the file's whole cycle list (compass-layout.drawnSequences).
     const drawnCycles = $derived(drawnSequences(layoutMode, roseTiles, gridTiles));
-    // One square footprint for every animation, centred on what is DRAWN - so switching sequence moves the
-    // sprite to the middle of a tile that stays exactly where it was (anchor.tileBoxPx).
-    const tileBox = $derived(view ? tileBoxPx(view, drawnCycles) : DEFAULT_TILE_BOX);
-    // How far past the fitted size the art can be pushed before a frame leaves its tile: the Fill scale,
-    // and the automatic one. One number for both, so they cannot disagree about what fits.
+    // One square footprint for every animation, centred on what is DRAWN at the size it is drawn - so
+    // switching sequence moves the sprite to the middle of a tile that stays exactly where it was, and
+    // scaling the sprite keeps it there rather than walking it off its anchor (anchor.tileBoxPx).
+    const tileBox = $derived(
+        view ? tileBoxPx(view, drawnCycles, layoutScale > 0 ? zoom / layoutScale : 1) : DEFAULT_TILE_BOX,
+    );
+    // How far past the fitted size the art can be pushed before it leaves its tile: the Auto scale. Reads
+    // the box only for its size, which is constant, so this cannot chase the reference it feeds.
     const fillRatio = $derived(view ? spriteFillRatio(view, tileBox, drawnCycles) : 1);
 
     $effect(() => {

@@ -110,52 +110,23 @@ export function spriteRect(
 }
 
 /**
- * How many times the fitted size a sprite can be drawn at before it leaves its cell - what "fill" means.
+ * How many times the fitted size the drawn art can be shown at before it leaves its tile - what the Auto
+ * control asks for.
  *
- * NOT the art-to-cell ratio. The anchor is the pivot both scales turn on (`spriteRect`), and it is rarely
- * the middle of anything: a frame drawn at `reference*layout - anchor*sprite` walks across its cell as the
- * sprite grows, so a sprite anchored far below its own art runs out of room at the TOP long before its art
- * is as wide as the cell. Each frame contributes one bound per edge, all of them linear in the sprite
- * scale, and the tightest is the answer for the whole animation - no frame may clip, since a rose of one
- * creature has to keep every facing whole.
- *
- * Expressed relative to the layout scale, which every bound is proportional to: the cell and the reference
- * both grow with it, so the ratio is a property of the animation and its box alone.
+ * The art's own union against the tile, and nothing else. Where the ANCHOR sits does not enter: the
+ * reference follows the scale (`tileBoxPx`), so the art stays in the middle of its tile however large it
+ * is drawn, and an anchor far from the art no longer eats the room on one side. The longer side decides,
+ * since both have to fit; the other keeps its margin, split evenly.
  */
 export function spriteFillRatio(
     view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
     box: TileBox,
     drawn: readonly SequenceExtent[] = view.sequences,
 ): number {
-    let ratio = Infinity;
-    /** A `room / need` bound, ignored where the art does not extend that way (nothing to run out of). */
-    const bound = (room: number, need: number): void => {
-        if (need > 0) ratio = Math.min(ratio, room / need);
-    };
-    for (const seq of drawn) {
-        for (const ref of seq.frameRefs) {
-            const frame = view.frames[ref];
-            if (!frame) continue;
-            const a = {
-                sourceFormat: view.sourceFormat,
-                width: frame.width,
-                height: frame.height,
-                offsetX: frame.offsetX,
-                offsetY: frame.offsetY,
-                dirOffsetX: seq.dirOffsetX,
-                dirOffsetY: seq.dirOffsetY,
-            };
-            const point = referencePoint(view.sourceFormat, frame.height, box);
-            const { ax, ay } = offsetToAnchor(view.sourceFormat, a);
-            bound(point.x, ax);
-            bound(box.w - point.x, frame.width - ax);
-            bound(point.y, ay);
-            bound(box.h - point.y, frame.height - ay);
-        }
-    }
-    // Nothing drawable, or an animation whose every frame hangs off its anchor in one direction only: the
-    // fitted size is the only size there is anything to say about.
-    return Number.isFinite(ratio) ? ratio : 1;
+    const { spanX, spanY } = artExtents(view, drawn);
+    // Nothing drawable: the fitted size is the only size there is anything to say about.
+    if (spanX === undefined || spanY === undefined || spanX <= 0 || spanY <= 0) return 1;
+    return Math.min(box.w / spanX, box.h / spanY);
 }
 
 /** Extents are measured against a zero box, so the numbers come out relative to the reference point. */
@@ -183,16 +154,18 @@ const PROBE_BOX: TileBox = { w: 0, h: 0, refX: 0, refY: 0 };
 export function tileBoxPx(
     view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
     drawn: readonly SequenceExtent[] = view.sequences,
+    spriteScaleRatio = 1,
 ): TileBox {
     const { minX, minY, spanX, spanY } = artExtents(view, drawn);
     // Nothing referenced anything drawable, so there is no art to centre.
     if (spanX === undefined || spanY === undefined) return DEFAULT_TILE_BOX;
-    return {
-        w: TILE_BOX_PX,
-        h: TILE_BOX_PX,
-        refX: -minX + (TILE_BOX_PX - spanX) / 2,
-        refY: -minY + (TILE_BOX_PX - spanY) / 2,
-    };
+    // The art is drawn at `reference*layout - anchor*sprite`, so it scales about its ANCHOR: a reference
+    // that centres it at 1:1 no longer centres it once the sprite is drawn larger, and a creature anchored
+    // low drifts up and leaves a band of empty tile under its feet. Carrying the ratio of the two scales
+    // here keeps the middle of the art on the middle of the tile at whatever size it is shown; at 1:1 the
+    // term is 1 and this is the plain centring it generalises.
+    const centre = (min: number, span: number): number => TILE_BOX_PX / 2 - (min + span / 2) * spriteScaleRatio;
+    return { w: TILE_BOX_PX, h: TILE_BOX_PX, refX: centre(minX, spanX), refY: centre(minY, spanY) };
 }
 
 /** What a cycle has to say about where its art sits: which frames, and the band offset they carry. */
