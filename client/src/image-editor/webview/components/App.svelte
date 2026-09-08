@@ -428,10 +428,16 @@
         <p class="placeholder">Loading...</p>
     {/if}
 {:else}
-    {#if view && nameMeaning}
+    <!-- Shown for every view, not only the ones whose name decodes: this sits ABOVE the stage, so a
+         banner that came and went took 27px of stage height with it - and the stage's height is what the
+         tile fit measures, so switching to a stance whose filename happens to decode resized every tile
+         under the reader. The meaning is the part that varies; the file is always known. -->
+    {#if view}
         <header class="name-banner">
             <span class="name-banner-file">{view.basename}</span>
-            <span class="name-banner-meaning">{nameMeaning}</span>
+            {#if nameMeaning}
+                <span class="name-banner-meaning">{nameMeaning}</span>
+            {/if}
         </header>
     {/if}
     <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
