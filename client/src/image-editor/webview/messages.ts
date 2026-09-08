@@ -74,6 +74,13 @@ export interface SetView {
     /** Which direction band of the open file the stance is - what the stage draws, in place of its own pick. */
     band: number;
     /**
+     * Set where the open stance is its band drawn back to front.
+     *
+     * Getting up shares the dying band and the engine plays it in reverse, so the two rows differ only in
+     * playback direction: without this the stage would draw the same clip for both.
+     */
+    reversed?: true;
+    /**
      * The animation type the install declares for this set, where it declares one.
      *
      * Carried because several types pack different stances into the same sequence token, block scheme and

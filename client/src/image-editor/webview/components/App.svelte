@@ -219,6 +219,8 @@
      */
     const setDrivesBand = $derived(view?.set !== undefined);
     const drawnBand = $derived(view?.set?.band ?? roseGroup);
+    /** Whether the open stance is its band drawn back to front - a get-up shares the dying band. */
+    const reversed = $derived(view?.set?.reversed === true);
     const offeredGroupCount = $derived(setDrivesBand ? 0 : roseGroupCount);
     const clampedRoseGroup = $derived(Math.min(drawnBand, Math.max(0, roseGroupCount - 1)));
     const roseTiles = $derived.by((): RoseTile[] => {
@@ -314,7 +316,7 @@
         if (!playback) return 0;
         const frame = playback.frame;
         return drawnCycles.filter((sequence) => {
-            const ref = sequence.frameRefs[cycleFrameIndex(sequence.frameRefs.length, frame)];
+            const ref = sequence.frameRefs[cycleFrameIndex(sequence.frameRefs.length, frame, reversed)];
             return ref !== undefined && !loadedPixels.has(ref);
         }).length;
     });
@@ -323,7 +325,7 @@
     // advances.
     $effect(() => {
         if (!playback) return;
-        const wanted = framesToRequest(drawnCycles, playback.frame, requestedFrames);
+        const wanted = framesToRequest(drawnCycles, playback.frame, requestedFrames, reversed);
         if (wanted.length > 0) bridge.send({ type: "requestFrames", indices: wanted });
     });
 

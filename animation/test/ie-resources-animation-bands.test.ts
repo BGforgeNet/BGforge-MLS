@@ -192,7 +192,9 @@ describe("stancesOfMembers", () => {
         const anonymous = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8));
         const declared = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8), "monster_ankheg");
 
-        expect(anonymous.map((s) => s.label)).toEqual(["Attack", "Attack or cast spell", "Attack or conjure spell"]);
+        // The layered families' second and third blocks are each played for two sequences, so each is two
+        // rows over one band - which is what makes the two readings of this file differ in length as well.
+        expect(anonymous.map((s) => s.label)).toEqual(["Attack", "Attack", "Cast spell", "Attack", "Conjure spell"]);
         expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Hide"]);
     });
 
@@ -207,6 +209,27 @@ describe("stancesOfMembers", () => {
             "G2 - group 5",
         ]);
         expect(stances[0]?.slots).toHaveLength(10);
+    });
+
+    /**
+     * Getting up is the dying band reversed only where it SHARES that band. The fine monster family gives
+     * it a block of its own - the engine addresses that block directly, with no reversal - so a rule keyed
+     * on the sequence alone would play this family's get-up backwards.
+     */
+    it("plays a get-up block of its own forwards", () => {
+        const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(8, 9, "ie9"));
+        const getUp = stances.find((s) => s.label === "Get up");
+
+        expect(getUp?.band).toBe(7);
+        expect(getUp?.reversed).toBeUndefined();
+    });
+
+    it("plays a get-up sharing the dying band in reverse", () => {
+        const stances = stancesOfMembers([member("G1", "CDMB1G1")], () => bands(8), "character_old");
+        const shared = stances.filter((s) => s.band === 6);
+
+        expect(shared.map((s) => s.label)).toEqual(["Die", "Sleep", "Get up"]);
+        expect(shared.map((s) => s.reversed)).toEqual([undefined, undefined, true]);
     });
 
     it("carries every member's bands, in member order", () => {

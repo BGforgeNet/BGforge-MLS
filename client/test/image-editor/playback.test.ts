@@ -171,6 +171,18 @@ test("cycleFrameIndex answers 0 for a cycle with no frames rather than dividing 
     expect(cycleFrameIndex(0, 7)).toBe(0);
 });
 
+test("a reversed cycle runs from its last frame back to its first", () => {
+    // Getting up has no clip of its own: it is the dying band played backwards, so the timeline still
+    // advances forwards and the cycle is read from the other end.
+    expect(cycleFrameIndex(4, 0, true)).toBe(3);
+    expect(cycleFrameIndex(4, 3, true)).toBe(0);
+    expect(cycleFrameIndex(4, 4, true)).toBe(3);
+});
+
+test("a reversed cycle with no frames still answers 0", () => {
+    expect(cycleFrameIndex(0, 7, true)).toBe(0);
+});
+
 test("the timeline spans the longest cycle it is given", () => {
     expect(timelineFrameCount([{ frameRefs: [1, 2, 3] }, { frameRefs: [4] }])).toBe(3);
 });

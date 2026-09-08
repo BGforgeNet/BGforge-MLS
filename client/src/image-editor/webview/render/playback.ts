@@ -87,9 +87,14 @@ export function timelineFrameCount(sequences: readonly { readonly frameRefs: rea
  * facings need not agree, and the grid lays out a whole file at once. Wrapping is what the engine does with
  * a cycle - each loops at its own length - and it is the only reading under which a short cycle keeps
  * animating instead of freezing for the rest of the playthrough.
+ *
+ * `reversed` reads the cycle from its far end, for a stance the engine draws by running its band backwards
+ * - getting up has no clip of its own. The timeline still advances forwards, so wrapping is unchanged.
  */
-export function cycleFrameIndex(length: number, frame: number): number {
-    return length > 0 ? frame % length : 0;
+export function cycleFrameIndex(length: number, frame: number, reversed = false): number {
+    if (length <= 0) return 0;
+    const at = frame % length;
+    return reversed ? length - 1 - at : at;
 }
 
 /**

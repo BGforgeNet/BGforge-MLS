@@ -151,12 +151,33 @@ describe("convertOpenSet", () => {
 
     /**
      * A packed file, which is what most of an install ships: the two-letter family names one file per
-     * action, so the blocks come apart - and the blocks the documentation refuses to pin come back as
-     * named losses rather than as files under a guessed name.
+     * action, so the blocks come apart. Two of these three are played for an attack AND a spell, and the
+     * target cannot share a clip between its files - so each is written under both names rather than
+     * filed under one and lost to the other.
      */
-    it("reports what a packed file's unnamed blocks cost, beside the files it did write", () => {
+    it("writes a shared block under every action the target names it by", () => {
         const packed: AnimationSet = { ...SET, layout: "cycles" };
         const files: Record<string, Uint8Array> = { TSTBG2: packedBands(2, 3, [0, 1, 2, 3, 4]) };
+        const packedIo: StanceIo = {
+            exists: (resref) => Object.hasOwn(files, resref.toUpperCase()),
+            read: (resref) => files[resref.toUpperCase()],
+        };
+
+        const result = convertOpenSet(packed, packedIo, "tob", request);
+
+        expect(result.outcome).toBe("lossless");
+        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1", "NEWBA2", "NEWBCA", "NEWBA3", "NEWBSP"]);
+        expect(result.losses).toEqual([]);
+    });
+
+    /**
+     * The honesty half, at a block the documentation genuinely refuses to pin: the older monster family's
+     * second attack is documented as two different things, so nothing states what it depicts and no naming
+     * that carries meaning can file it. It comes back as a named loss rather than a file under a guess.
+     */
+    it("reports what a block nothing pins costs, beside the files it did write", () => {
+        const packed: AnimationSet = { ...SET, layout: "cycles", section: "monster_old" };
+        const files: Record<string, Uint8Array> = { TSTBG2: packedBands(2, 2, [0, 1, 2, 3, 4]) };
         const packedIo: StanceIo = {
             exists: (resref) => Object.hasOwn(files, resref.toUpperCase()),
             read: (resref) => files[resref.toUpperCase()],
@@ -168,10 +189,7 @@ describe("convertOpenSet", () => {
         expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1"]);
         // The action, not the file it came from: an armoured set draws the same action out of a file per
         // level, so naming one of them would pick a level arbitrarily. The source files are listed once.
-        expect(result.losses).toEqual([
-            "Attack or cast spell has no counterpart in the target",
-            "Attack or conjure spell has no counterpart in the target",
-        ]);
+        expect(result.losses).toEqual(["Attack has no counterpart in the target"]);
         // The informational half stays separate: nothing here is a reason to hesitate.
         expect(result.notes.some((note) => note.includes("loss"))).toBe(false);
     });

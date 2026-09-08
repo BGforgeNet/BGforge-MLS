@@ -125,11 +125,14 @@ interface OpenStance extends OpenAction {
 /**
  * How the webview addresses one stance.
  *
- * File AND band, because every band of a packed file carries the same resref - a key on the file alone
- * cannot tell the rows of a six-stance `G1` apart. Opaque to the webview, which only sends it back.
+ * File, band AND sequence. The file alone cannot tell the rows of a six-stance `G1` apart, and the band
+ * alone cannot tell apart the rows of a band the engine plays for several sequences - a dragon's stand,
+ * combat stance and conjure are one clip, so keying on the band selected whichever came first and the
+ * picture never changed. Opaque to the webview, which only sends it back.
  */
-export function stanceKey(stance: Pick<SetStance, "resref" | "band">): string {
-    return `${stance.resref}#${stance.band}`;
+export function stanceKey(stance: Pick<SetStance, "resref" | "band" | "code">): string {
+    const at = `${stance.resref}#${stance.band}`;
+    return stance.code === undefined ? at : `${at}/${stance.code}`;
 }
 
 /**
@@ -412,6 +415,7 @@ export function setView(state: AnimationSetState): SetView {
         })),
         stance: stanceKey(state.stance),
         band: state.band,
+        ...(state.stance.reversed === true ? { reversed: true as const } : {}),
         ...(state.set.section === undefined ? {} : { section: state.set.section }),
         ...bandsOf(state),
     };

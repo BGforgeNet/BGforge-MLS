@@ -101,6 +101,28 @@ describe("AnimationSetState", () => {
         expect(new Set(keys).size).toBe(keys.length);
     });
 
+    /**
+     * A band the engine plays for several sequences is a row per sequence, and they address the same
+     * cycles - so the file and the band together no longer name a row. The three-block attack file is the
+     * smallest shape that ships one: its second and third blocks each serve an attack and a spell.
+     */
+    it("keys two stances of one shared band apart", () => {
+        const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG2: baseFileBam(3) }));
+        const keys = state?.stances.map((stance) => stanceKey(stance)) ?? [];
+
+        expect(keys).toHaveLength(5);
+        expect(new Set(keys).size).toBe(keys.length);
+    });
+
+    it("selects the row a shared band's key names rather than the band's first row", () => {
+        const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG2: baseFileBam(3) }));
+        const spell = state?.stances[2];
+
+        expect(spell?.label).toBe("Cast spell");
+        expect(state?.select(stanceKey(spell!))).toBe("changed");
+        expect(state?.stance.label).toBe("Cast spell");
+    });
+
     it("moves the drawn band without reloading the model when the stance stays in one file", () => {
         const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(3) }));
         const model = state?.model;

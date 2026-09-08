@@ -11,10 +11,10 @@
  * two surfaces name the same block identically. Where neither pins a name, the band is numbered - the
  * same posture that table takes, and for the same reason.
  */
-import { type IeGroup, type WideBand, ieGroups, stanceName } from "../group-labels";
+import { type SequenceCode, type WideBand, blockSequences, ieGroups } from "../group-labels";
 import { type IeDirectionSlot, type IeScheme } from "@bgforge/image/ie-direction";
 import { type SchemeMember } from "./members";
-import { type NeutralActionRef } from "./actions";
+import { type NeutralActionId, type NeutralActionRef } from "./actions";
 
 /**
  * Sections whose files band at sixteen cycles rather than eight or nine.
@@ -105,6 +105,21 @@ export interface FileBands {
 export interface SetStance {
     /** What the sidebar shows. */
     label: string;
+    /**
+     * Which sequence of the band this row is, where the block table names one.
+     *
+     * A band the engine plays for several sequences is several rows over the same cycles, so the band index
+     * alone no longer identifies a row - this is what separates them. Absent on a numbered band, which names
+     * no sequence to be one of.
+     */
+    code?: SequenceCode;
+    /**
+     * Set where this stance is the band drawn back to front.
+     *
+     * Getting up is the dying band reversed, in every family that names it. Without this the row would be
+     * the dying row under another name, which is a worse answer than not offering it at all.
+     */
+    reversed?: true;
     /** What the member this band belongs to depicts - see `SchemeMember.action`. */
     action: NeutralActionRef;
     /** The file this band's cycles live in - what "open this" means, and what the bands were read from. */
@@ -185,34 +200,26 @@ export function stancesOfMembers(
             // undrawn ones - it is padding the format forces on the file, and it holds a frame per facing,
             // so only the declaration can rule it out.
             if (slots.length === 0 || file.drawn[band] !== true || groups?.[band]?.unused === true) continue;
-            stances.push({
-                label: bandLabel(member, blockName(groups?.[band]), band, file.bands.length),
-                action: bandAction(member.action, groups?.[band]),
-                resref: member.resref,
-                parts: member.parts,
-                band,
-                slots,
-                confidence: file.confidence,
-            });
+            const group = groups?.[band];
+            // One row per sequence the band is played for. A band the table does not name yields no
+            // sequences and so one nameless row, which is the numbered case.
+            const sequences = group === undefined ? [] : blockSequences(group);
+            for (const sequence of sequences.length === 0 ? [undefined] : sequences) {
+                stances.push({
+                    label: bandLabel(member, sequence?.name, band, file.bands.length),
+                    ...(sequence === undefined ? {} : { code: sequence.code }),
+                    ...(sequence?.reversed === true ? { reversed: true as const } : {}),
+                    action: bandAction(member.action, sequence?.id, group?.detail),
+                    resref: member.resref,
+                    parts: member.parts,
+                    band,
+                    slots,
+                    confidence: file.confidence,
+                });
+            }
         }
     }
     return stances;
-}
-
-/**
- * A single-band file is its own stance; a packed one takes the block's name, else a number.
- *
- * The block's name says nothing about WHICH file it came from, so a set drawing a second set of files
- * under the same scheme would name both runs identically - eight pairs of colliding labels on the
- * burrowing family, pointing at different files. Only that branch needs the layer: the other two lead
- * with the member's own name, which already carries it.
- *
- * The FILE never appears in any of the three: a stance list spans a set's files, and which one holds a
- * given stance is a convention of the naming family rather than anything a reader chose. The one exception
- * is the nameless band, where the file plus a position is all there is to identify it by.
- */
-function blockName(group: IeGroup | undefined): string | undefined {
-    return group === undefined ? undefined : stanceName(group);
 }
 
 /**
@@ -228,6 +235,18 @@ function blockScheme(file: FileBands, section: string | undefined): IeScheme | W
     return declaredStride(section) === WIDE_BAND_STRIDE ? "ie16" : undefined;
 }
 
+/**
+ * A single-band file is its own stance; a named band takes its sequence's name, else a number.
+ *
+ * That name says nothing about WHICH file it came from, so a set drawing a second set of files under the
+ * same scheme would name both runs identically - eight pairs of colliding labels on the burrowing family,
+ * pointing at different files. Only that branch needs the layer: the other two lead with the member's own
+ * name, which already carries it.
+ *
+ * The FILE never appears in any of the three: a stance list spans a set's files, and which one holds a
+ * given stance is a convention of the naming family rather than anything a reader chose. The one exception
+ * is the nameless band, where the file plus a position is all there is to identify it by.
+ */
 function bandLabel(member: SchemeMember, name: string | undefined, band: number, bandCount: number): string {
     // The block table first, whatever the band COUNT. Answering from the member as soon as a file holds one
     // band skipped the table for exactly the files that most need it: a tiled creature stores its walk in a
@@ -238,20 +257,15 @@ function bandLabel(member: SchemeMember, name: string | undefined, band: number,
 }
 
 /**
- * What a band depicts.
+ * What one row depicts.
  *
- * A packed file's name says which FILE the block lives in, and the block table says what the block is -
- * so where the table names it, the band's own meaning beats the file's. That is the difference between a
+ * A packed file's name says which FILE the block lives in, and the block table says what the row is - so
+ * where the table pins it, the row's own meaning beats the file's. That is the difference between a
  * converter that can file a walk under the target's walk and one that only knows the file was `G1`. The
  * code stays the file's: within its own scheme this band goes back where it came from, and the file is
- * where that is.
+ * where that is. `detail` is the BLOCK's, since it qualifies the band rather than one sequence of it.
  */
-function bandAction(file: NeutralActionRef, group: IeGroup | undefined): NeutralActionRef {
-    if (group?.id === undefined) return file;
-    return {
-        scheme: file.scheme,
-        id: group.id,
-        code: file.code,
-        ...(group.detail === undefined ? {} : { detail: group.detail }),
-    };
+function bandAction(file: NeutralActionRef, id: NeutralActionId | undefined, detail?: string): NeutralActionRef {
+    if (id === undefined) return file;
+    return { scheme: file.scheme, id, code: file.code, ...(detail === undefined ? {} : { detail }) };
 }

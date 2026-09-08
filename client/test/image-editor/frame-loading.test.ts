@@ -92,6 +92,12 @@ describe("framesNeededFor", () => {
     it("does not repeat a frame the sequence shows twice in a row", () => {
         expect(framesNeededFor([10, 10, 10], 0)).toEqual([10]);
     });
+
+    it("prefetches backwards for a cycle the stance plays in reverse", () => {
+        // A get-up stance draws its band back to front, so the frame after the one on screen is the one
+        // BEFORE it in the cycle - prefetching forwards would ask for the frame it just left.
+        expect(framesNeededFor([10, 11, 12, 13], 1, true)).toEqual([12, 11]);
+    });
 });
 
 describe("framesToRequest", () => {

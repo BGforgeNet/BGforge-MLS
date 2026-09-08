@@ -408,6 +408,71 @@ describe("setStances over a file that is not directional", () => {
     });
 });
 
+/**
+ * A band the engine plays for more than one sequence.
+ *
+ * The huge split-part families share one clip across several stances - a dragon holds the same pose to
+ * stand, to square up and while conjuring - and the picker used to name such a band by joining them, so the
+ * reader met a row called "Stand, combat ready or conjure spell". That is a sentence about the FILE, not a
+ * stance anyone asked to see; the reference browser lists a row per sequence and never has to write one.
+ */
+describe("setStances over a band several sequences share", () => {
+    /** The dragons' shape: a stance group per file family, each tiled across a grid, nine cycles to a band. */
+    function dragonSet(): AnimationSet {
+        return {
+            id: 0x1200,
+            code: "MDR1",
+            name: "DRAGON_RED",
+            prefixByArmour: new Map([[1, "MDR1"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            layout: "pieces",
+            section: "multi_new",
+        };
+    }
+
+    /** An archive holding one stance group's tiles and nothing else, so a test names the group it means. */
+    const dragonIo = (group: number, bytes: Uint8Array): StanceIo => {
+        const holds = (resref: string): boolean => resref.startsWith(`MDR1${group}`);
+        return { exists: holds, read: (resref) => (holds(resref) ? bytes : undefined) };
+    };
+
+    it("offers a row per sequence rather than one row naming them all", () => {
+        const stances = setStances(dragonSet(), 1, dragonIo(2, multiCycle(4, 27)));
+
+        expect(stances.map((stance) => stance.label)).toEqual(["Stand", "Combat ready", "Conjure spell"]);
+    });
+
+    it("points every row of a shared band at the same band", () => {
+        const stances = setStances(dragonSet(), 1, dragonIo(2, multiCycle(4, 27)));
+
+        expect(stances.map((stance) => stance.band)).toEqual([0, 0, 0]);
+    });
+
+    it("gives each row the action its own sequence depicts", () => {
+        const stances = setStances(dragonSet(), 1, dragonIo(2, multiCycle(4, 27)));
+
+        expect(stances.map((stance) => stance.action.id)).toEqual(["stand", "ready", "spell"]);
+    });
+
+    it("lists the body file's shared band as its three separate stances", () => {
+        const stances = setStances(dragonSet(), 1, dragonIo(4, multiCycle(4, 45)));
+
+        expect(stances.map((stance) => stance.label)).toEqual(["Get hit", "Die", "Sleep", "Get up", "Twitch"]);
+    });
+
+    /**
+     * Getting up is the dying band run backwards - the engine has no clip of its own for it. A row that drew
+     * it forwards would be the die row under another name, which is worse than the joined label it replaces:
+     * that at least told the reader the three shared one clip.
+     */
+    it("marks the getting-up row as its band played in reverse", () => {
+        const stances = setStances(dragonSet(), 1, dragonIo(4, multiCycle(4, 45)));
+
+        expect(stances.filter((stance) => stance.reversed === true).map((stance) => stance.label)).toEqual(["Get up"]);
+    });
+});
+
 /** Built per test, not in the describe body: `skipIf` still evaluates the body, so opening a game there
  *  throws during collection on every machine that has no install. */
 function install(): { sets: AnimationSet[]; io: StanceIo } {
@@ -451,6 +516,41 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         process.stdout.write(`  ${levels} drawn armour levels, ${empty.length} offering no stance\n`);
         expect(levels, "no level was exercised, so the assertion below cannot fail").toBeGreaterThan(500);
         expect(empty).toEqual([]);
+    });
+
+    /**
+     * A get-up is drawn backwards only where it SHARES the dying band.
+     *
+     * Both halves ship: the dragons have no get-up clip and the engine runs their death in reverse, while
+     * the fine monster scheme gives Melissan a get-up block of its own and plays it forwards. A rule keyed
+     * on the sequence alone satisfies the first and plays the second backwards, and nothing else here would
+     * see it - the row is present, named and drawable either way. Hence the pairing with a dying row on the
+     * same band, which is the property that actually differs, plus a floor on each population so the check
+     * cannot pass over an install that ships neither.
+     */
+    it("reverses a get-up only where it shares the band it is drawn from", () => {
+        const { sets, io } = install();
+        const stray: string[] = [];
+        let reversed = 0;
+        let forward = 0;
+        for (const set of sets) {
+            for (const armour of drawnArmourLevels(set, io.exists)) {
+                const stances = setStances(set, armour, io);
+                for (const stance of stances.filter((row) => row.label === "Get up")) {
+                    const shares = stances.some(
+                        (row) => row.resref === stance.resref && row.band === stance.band && row.label === "Die",
+                    );
+                    if (stance.reversed === true) reversed += 1;
+                    else forward += 1;
+                    if ((stance.reversed === true) !== shares) {
+                        stray.push(`${set.name || set.code} ${stance.resref}#${stance.band}`);
+                    }
+                }
+            }
+        }
+        expect(stray).toEqual([]);
+        expect(reversed, "no shared get-up was exercised").toBeGreaterThan(0);
+        expect(forward, "no get-up of its own was exercised").toBeGreaterThan(0);
     });
 
     /**

@@ -38,7 +38,9 @@
     const shownFacing = $derived(facing ?? seq.facing);
 
     // Playback holds one shared frame index; a shorter sequence wraps at its own length (playback.ts).
-    const frameRef = $derived(seq.frameRefs[cycleFrameIndex(seq.frameRefs.length, frame)]);
+    // Read off the open stance rather than taken as a prop: it is a property of what is being drawn, and
+    // every layout above this passes the same view through untouched.
+    const frameRef = $derived(seq.frameRefs[cycleFrameIndex(seq.frameRefs.length, frame, view.set?.reversed)]);
     const frameView = $derived(frameRef === undefined ? undefined : view.frames[frameRef]);
     const bytes = $derived(frameRef === undefined ? undefined : loadedPixels.get(frameRef));
 

@@ -11,7 +11,7 @@
  * drift the first time a label was reworded.
  */
 import { type IeScheme } from "@bgforge/image/ie-direction";
-import { type NeutralActionId } from "./animation-schemes/actions";
+import { type NeutralActionId, decodeActionCode } from "./animation-schemes/actions";
 import { type ModelledSection } from "./animation-schemes/layout";
 
 /**
@@ -110,12 +110,79 @@ function joined(parts: readonly string[]): string {
     return `${parts.slice(0, -1).join(", ")} or ${parts[parts.length - 1]}`;
 }
 
+/**
+ * The block's own qualifiers around a name.
+ *
+ * They qualify the BAND, so a shared band carries them on every sequence it is played for rather than on
+ * one of them.
+ */
+function qualified(base: string, group: NamedBlock): string {
+    const numbered = group.ordinal === undefined ? base : `${base} ${group.ordinal}`;
+    return group.detail === undefined ? numbered : `${numbered} (${group.detail})`;
+}
+
 /** What the block depicts, as words: the vocabulary's name per code, plus whatever the block qualifies. */
 function words(group: IeGroup): string {
     if (group.codes === undefined) return "(unused)";
-    const base = joined(group.codes.map((code) => SEQUENCES[code]));
-    const numbered = group.ordinal === undefined ? base : `${base} ${group.ordinal}`;
-    return group.detail === undefined ? numbered : `${numbered} (${group.detail})`;
+    return qualified(joined(group.codes.map((code) => SEQUENCES[code])), group);
+}
+
+/**
+ * Whether the engine draws this sequence by running the block backwards.
+ *
+ * Only getting up, and only where it SHARES the dying block: with no clip of its own, the engine plays the
+ * death back to front. A family that gives it a block of its own addresses that block directly and plays it
+ * forwards - the fine monster scheme does exactly this, so a rule keyed on the code alone would play that
+ * whole family's get-up backwards.
+ */
+function reversedSequence(group: NamedBlock, code: SequenceCode): boolean {
+    return code === "GU" && group.codes.includes("DE");
+}
+
+/** One sequence of a block, as a stance list names it. */
+export interface BlockSequence {
+    /** Which of the block's codes this row is - what tells two rows of one band apart. */
+    code: SequenceCode;
+    /** What the stance list shows. */
+    name: string;
+    /** What it depicts, where the block or the code pins it. */
+    id?: NeutralActionId;
+    /** Set where the band is drawn back to front - see `reversedSequence`. */
+    reversed?: true;
+}
+
+/**
+ * A block as the rows of a stance list: one per sequence the engine plays the band for.
+ *
+ * Several, where a band is shared - a dragon holds one pose to stand, to square up and while conjuring, and
+ * a reader picking a stance asks for one of those, not for the sentence naming all three. `blockLabel` keeps
+ * the joined form, because a block picker over one file is showing what the FILE holds.
+ */
+export function blockSequences(group: IeGroup): BlockSequence[] {
+    if (group.codes === undefined) return [];
+    return group.codes.map((code) => {
+        const id = sequenceId(group, code);
+        return {
+            code,
+            name: capitalized(qualified(SEQUENCES[code], group)),
+            ...(id === undefined ? {} : { id }),
+            ...(reversedSequence(group, code) ? { reversed: true as const } : {}),
+        };
+    });
+}
+
+/**
+ * What one sequence of a block depicts.
+ *
+ * A block naming ONE sequence keeps what the block itself declares, an absence included: the burrower's
+ * hidden stand refuses the `stand` its emerged twin already carries, and deriving an id from the code would
+ * put it back. A SHARED band declares nothing - there is no single answer to declare - so each row falls
+ * back to what its own code means, which is the only per-row statement available.
+ */
+function sequenceId(group: NamedBlock, code: SequenceCode): NeutralActionId | undefined {
+    if (group.codes.length === 1) return group.id;
+    const { id } = decodeActionCode("action-codes", code);
+    return id === "unpinned" ? undefined : id;
 }
 
 /** The block as a file's reader sees it: the codes that address it in the archive, then what it depicts. */
@@ -287,7 +354,9 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
         { codes: ["DE"], id: "die" },
         { codes: ["TW"], id: "twitch" },
     ],
-    // The second and third blocks are each documented as one of two things, so neither is pinned.
+    // The second and third blocks are each played for an attack AND a spell - one clip serving both, the
+    // same sharing the wide families do. Neither takes an `id`, since no one term covers a pair like that;
+    // each ROW takes the meaning of its own code.
     "g2/ie8/3": [{ codes: ["A1"], id: "attack" }, { codes: ["A2", "CA"] }, { codes: ["A3", "SP"] }],
     // Fine-scheme monster (unsplit G1/G2) and character G1, plus the shorter files of the same family.
     "g1/ie9/8": MONSTER_G1,
