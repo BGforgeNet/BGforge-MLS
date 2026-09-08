@@ -5,24 +5,9 @@
  * rose draws a stance, and a set document opens one as the model it edits. Building it twice would give
  * the two views separate decode and compose paths for the same picture.
  */
-import { type Game } from "@bgforge/binary";
 import { type StanceIo } from "@bgforge/animation";
 import { composeParts } from "@bgforge/image";
 import { ImageDocumentModel } from "./document-model";
-
-/** Reads a set's members out of an open game, treating an unreadable member as a missing one. */
-export function stanceIo(game: Game): StanceIo {
-    const read = (resref: string): Uint8Array | undefined => {
-        if (!game.canRead(resref, "bam")) return undefined;
-        try {
-            return game.read(resref, "bam");
-        } catch {
-            // One unreadable member is a missing row, not a dead page - the posture the index takes too.
-            return undefined;
-        }
-    };
-    return { exists: (resref) => game.canRead(resref, "bam"), read };
-}
 
 /**
  * One member of a set: the file it names, or the four quarters of an oversized creature composed into one

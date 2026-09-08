@@ -22,11 +22,12 @@ import {
     schemeForStride,
     setMembers,
     setTitle,
+    stanceIo,
 } from "@bgforge/animation";
 import { type IeScheme } from "@bgforge/image/ie-direction";
 import { type ImageDocumentModel } from "./document-model";
 import { type SetView } from "./webview/messages";
-import { stanceIo, stanceModel } from "./stance-model";
+import { stanceModel } from "./stance-model";
 
 /**
  * What a set address resolves to, or why it does not.

@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
 import { type AnimationSet, buildAnimationIndex, firstArmour } from "../src/animation-index";
 import { tableForFlavour } from "../src/animation-tables";
-import { drawnArmourLevels, setMembers, setStances, type StanceIo } from "../src/set-stances";
+import { drawnArmourLevels, setMembers, setStances, stanceIo, type StanceIo } from "../src/set-stances";
+import type { GameHandle } from "../src/game-handle";
 import { bandedPair, multiCycle, skeletonBands } from "../../image/test/bam-fixtures.ts";
 
 const GAME = process.env.BGFORGE_IE_GAME;
@@ -160,6 +161,35 @@ describe("setMembers", () => {
     it("names one member per action for a character set", () => {
         const members = setMembers(characterSet(), 1, (resref) => resref === "CDMB1G1");
         expect(members.map((member) => member.resref)).toEqual(["CDMB1G1"]);
+    });
+});
+
+/**
+ * What the io does with a member it cannot read. Both surfaces that draw a set - the gallery's rose and the
+ * editor's set document - read through it, so an archive that throws has to degrade the same way for both:
+ * a missing row, not a dead page.
+ */
+describe("stanceIo over an open game", () => {
+    /** A partial handle: the io touches only these two methods, where a real game is archive machinery. */
+    function gameOf(over: Partial<Pick<GameHandle, "canRead" | "read">>): Pick<GameHandle, "canRead" | "read"> {
+        return { canRead: () => true, read: () => multiCycle(4, 8), ...over };
+    }
+
+    it("reads a member the archive holds", () => {
+        expect(stanceIo(gameOf({})).read("TSTBG1")).toBeDefined();
+    });
+
+    it("reads nothing for a member the archive does not hold", () => {
+        expect(stanceIo(gameOf({ canRead: () => false })).read("TSTBG1")).toBeUndefined();
+    });
+
+    it("reads nothing for a member the archive holds but cannot serve", () => {
+        const game = gameOf({
+            read: () => {
+                throw new Error("corrupt archive entry");
+            },
+        });
+        expect(stanceIo(game).read("TSTBG1")).toBeUndefined();
     });
 });
 

@@ -26,10 +26,25 @@ import {
 import { layerLabel } from "./animation-schemes/layers";
 import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 import { actionLabel } from "./facet-labels";
+import type { GameHandle } from "./game-handle";
 
 export interface StanceIo {
     exists(resref: string): boolean;
     read(resref: string): Uint8Array | undefined;
+}
+
+/** Reads a set's members out of an open game, treating an unreadable member as a missing one. */
+export function stanceIo(game: Pick<GameHandle, "canRead" | "read">): StanceIo {
+    const read = (resref: string): Uint8Array | undefined => {
+        if (!game.canRead(resref, "bam")) return undefined;
+        try {
+            return game.read(resref, "bam");
+        } catch {
+            // One unreadable member is a missing row, not a dead page - the posture the index takes too.
+            return undefined;
+        }
+    };
+    return { exists: (resref) => game.canRead(resref, "bam"), read };
 }
 
 /**

@@ -1,14 +1,15 @@
 /**
- * What a stance does with a member it cannot read.
+ * What a stance does with a member that will not parse.
  *
- * Both surfaces that draw a set - the gallery's rose and the editor's set document - go through here, so a
- * member that throws or will not parse has to degrade the same way for both: a missing row, not a dead page.
+ * Both surfaces that draw a set - the gallery's rose and the editor's set document - go through here, so an
+ * unusable member has to degrade the same way for both: a missing row, not a dead page. The archive-side
+ * half of that (a member the game cannot serve at all) is stanceIo's, and tested with it in @bgforge/animation.
  */
 import { describe, expect, it } from "vitest";
 import type { Game } from "@bgforge/binary";
-import { type SetStance } from "@bgforge/animation";
+import { type SetStance, stanceIo } from "@bgforge/animation";
 import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "@bgforge/image";
-import { stanceIo, stanceModel } from "../../src/image-editor/stance-model";
+import { stanceModel } from "../../src/image-editor/stance-model";
 
 function bam(): Uint8Array {
     const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
@@ -38,21 +39,6 @@ function stanceOf(parts: string[]): SetStance {
         confidence: "inferred",
     };
 }
-
-describe("stanceIo", () => {
-    it("reads nothing for a member the archive does not hold", () => {
-        expect(stanceIo(fakeGame({ canRead: () => false })).read("TSTBG1")).toBeUndefined();
-    });
-
-    it("reads nothing for a member the archive holds but cannot serve", () => {
-        const game = fakeGame({
-            read: () => {
-                throw new Error("corrupt archive entry");
-            },
-        });
-        expect(stanceIo(game).read("TSTBG1")).toBeUndefined();
-    });
-});
 
 describe("stanceModel", () => {
     it("draws a single-file stance", () => {

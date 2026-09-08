@@ -11,6 +11,7 @@
  * Usage:
  *   pnpm anim-probe <gameDir> set <id|name>...     what the index resolved: section, layout, prefixes
  *   pnpm anim-probe <gameDir> members <id|name>... the files each set draws, per armour level
+ *   pnpm anim-probe <gameDir> cycles <id|name>...  how many frames each stance's cycles hold, per band
  *   pnpm anim-probe <gameDir> ini <id>...          the animation's own declaration, verbatim fields
  *   pnpm anim-probe <gameDir> exists <resref>...   whether the archive holds these BAMs
  *   pnpm anim-probe <gameDir> files <prefix>       every BAM whose name starts with the prefix
@@ -25,18 +26,39 @@ import { openGame } from "../../../binary/src/index";
 import { parseAnimationIni } from "../../src/animation-ini";
 import { buildAnimationIndex, animationIdHex, setTitle, type AnimationSet } from "../../src/animation-index";
 import { tableForFlavour } from "../../src/animation-tables";
-import { drawnArmourLevels, setMembers } from "../../src/set-stances";
+import { drawnArmourLevels, setMembers, setStances, stanceIo } from "../../src/set-stances";
 import { layerLabel } from "../../src/animation-schemes/layers";
+import { mergeParts, type PartTables } from "../../src/animation-schemes/part-tables";
+import { readBamV1Tables } from "@bgforge/image";
+import type { SequenceShape } from "@bgforge/image/ie-direction";
 
 const [gameDir, verb, ...args] = process.argv.slice(2);
 if (gameDir === undefined || verb === undefined) {
-    process.stderr.write("usage: anim-probe <gameDir> <set|members|ini|exists|files> <arg>...\n");
+    process.stderr.write("usage: anim-probe <gameDir> <set|members|cycles|ini|exists|files> <arg>...\n");
     process.exit(2);
 }
 
 const game = openGame(gameDir);
 if (game === undefined) throw new Error(`no Infinity Engine install at ${gameDir}`);
-const exists = (resref: string): boolean => game.canRead(resref, "bam");
+// The same reader the gallery draws through, so "this member is missing" means here what it means there.
+const io = stanceIo(game);
+const exists = io.exists;
+
+/** A member's cycle table, merged across the files it draws from - the reading the band reader takes. */
+function mergedCycles(parts: readonly string[]): { sequences: SequenceShape[]; holdsArt: boolean[] } {
+    const tables: PartTables[] = [];
+    for (const resref of parts) {
+        const bytes = io.read(resref);
+        if (bytes === undefined) continue;
+        try {
+            tables.push(readBamV1Tables(bytes));
+        } catch {
+            // One unreadable part is a lost piece, not a dead row - the posture setStances takes too.
+        }
+    }
+    const merged = mergeParts(tables);
+    return { sequences: merged?.sequences ?? [], holdsArt: merged?.holdsArt ?? [] };
+}
 
 /** Built once and only where a verb needs it: indexing an install parses every declaration it ships. */
 let cached: AnimationSet[] | undefined;
@@ -83,6 +105,47 @@ switch (verb) {
                     console.log(`  armour ${level}:`);
                     for (const member of setMembers(set, level, exists)) {
                         console.log(`    ${member.label.padEnd(28)} ${member.parts.join(" ")}`);
+                    }
+                }
+            }
+        }
+        break;
+    }
+    case "cycles": {
+        for (const token of args) {
+            for (const set of resolve(token)) {
+                console.log(`${animationIdHex(set.id)} ${setTitle(set)}`);
+                for (const level of drawnArmourLevels(set, exists)) {
+                    console.log(`  armour ${level}:`);
+                    const stances = setStances(set, level, io);
+                    for (const member of setMembers(set, level, exists)) {
+                        const { sequences, holdsArt } = mergedCycles(member.parts);
+                        const files = member.parts.join("+");
+                        console.log(`    ${member.label.padEnd(24)} ${files}  ${sequences.length} cycles`);
+                        const banded = new Set<number>();
+                        for (const stance of stances.filter((row) => row.resref === member.resref)) {
+                            const at = stance.slots.map((slot) => slot.seqIndex);
+                            for (const cycle of at) banded.add(cycle);
+                            const frames = stance.slots
+                                .map((slot) => `${slot.facing}:${sequences[slot.seqIndex]?.frameRefs.length ?? 0}`)
+                                .join(" ");
+                            const range = at.length === 0 ? "-" : `${Math.min(...at)}-${Math.max(...at)}`;
+                            console.log(
+                                `      band ${stance.band} ${stance.label.padEnd(28)} cycles ${range.padEnd(7)} ${frames}`,
+                            );
+                        }
+                        // Most files this addresses no stance to are carrying the band skeleton their family
+                        // forces on every member, so the count alone is the honest line; only a cycle that
+                        // DRAWS out there is worth reading, and it means a picture the panel cannot reach.
+                        const loose = sequences.map((_, cycle) => cycle).filter((cycle) => !banded.has(cycle));
+                        const drawn = loose.filter((cycle) => holdsArt[cycle] === true);
+                        if (loose.length > 0) {
+                            const listed = drawn.map((cycle) => `${cycle}:${sequences[cycle]?.frameRefs.length ?? 0}`);
+                            const detail = drawn.length === 0 ? "" : `: ${listed.join(" ")}`;
+                            console.log(
+                                `      outside its bands  ${loose.length} cycles, ${drawn.length} holding art${detail}`,
+                            );
+                        }
                     }
                 }
             }

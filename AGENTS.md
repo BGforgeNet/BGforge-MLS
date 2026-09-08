@@ -27,10 +27,11 @@ Pick the cheapest tool that answers the actual question.
   (`-O1`/`-O2`, `--keep`), about a second. Not the corpus sweep - that answers "did anything regress" and belongs at
   close-out. Full loop: `compilers/ssl/AGENTS.md`.
 - **"What does this install say about animation X?"** ->
-  `pnpm anim-probe <gameDir> <set|members|ini|exists|files> <arg>...` (an id is hex with or without `0x`; a name
-  matches `ANIMATE.IDS`/`ANISND.IDS`). Answers through the same index and resolvers the gallery uses, so its answer
-  and the panel's cannot disagree - which a throwaway script re-deriving the naming rules can. Not a substitute for
-  a gallery drive.
+  `pnpm anim-probe <gameDir> <set|members|cycles|ini|exists|files> <arg>...` (an id is hex with or without `0x`; a
+  name matches `ANIMATE.IDS`/`ANISND.IDS`). `cycles` reports each stance's own frame counts per facing, which is what
+  answers "how long is this animation" without a drive. Answers through the same index and resolvers the gallery
+  uses, so its answer and the panel's cannot disagree - which a throwaway script re-deriving the naming rules can.
+  Not a substitute for a gallery drive.
 - **Any visual/CSS/layout change to the binary editor** -> render it, do not reason about the cascade blind. Run
   order: `pnpm -C binary build` (only if `binary/src` changed) -> `pnpm exec tsx binary-editor/test/harness/build.mts`
   (after any webview/Svelte/`styles.css` edit) -> one of the `render-*.mts` drivers in that same directory

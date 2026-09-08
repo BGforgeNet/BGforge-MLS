@@ -36,6 +36,7 @@ const REQUIRED_VALUE_EXPORTS = [
     "replacementPaletteNames",
     "setMembers",
     "setTile",
+    "stanceIo",
     // The neutral model
     "readNeutralSet",
     // Conversion
