@@ -5,7 +5,7 @@ import {
     referenceMarkerPercent,
     spriteFillRatio,
     spriteRect,
-    tileBoxPx,
+    TILE_BOX,
     type TileBox,
 } from "../../src/image-editor/webview/render/anchor";
 
@@ -166,160 +166,81 @@ const oneFrameView = (frame: { width: number; height: number; offsetX: number; o
     sequences: [{ frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
 });
 
-/** Where the art of `view`'s only frame lands inside its box - the reading every case below is about. */
-function artTopLeft(frame: { width: number; height: number; offsetX: number; offsetY: number }) {
-    const box = tileBoxPx(oneFrameView(frame));
-    const tl = frameTopLeft({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box);
-    return { box, ...tl };
-}
-
-test("every tile is the same square, whatever it holds", () => {
-    // The reader's complaint: a box that hugged its own sprite resized under them on every action switch.
-    const small = tileBoxPx(oneFrameView({ width: 30, height: 30, offsetX: 15, offsetY: 15 }));
-    const large = tileBoxPx(oneFrameView({ width: 190, height: 199, offsetX: 95, offsetY: 99 }));
-    expect(small.w).toBe(small.h);
-    expect([large.w, large.h]).toEqual([small.w, small.h]);
+test("every animation gets the same tile, with the anchor a quarter of the way up it", () => {
+    // The whole placement rule: one square, the sprite's ground point at a fixed spot in it. Nothing about
+    // the art enters, so no switch of action, sequence or animation can move the tile or the feet in it.
+    expect(TILE_BOX.w).toBe(TILE_BOX.h);
+    expect(TILE_BOX.refX).toBeCloseTo(TILE_BOX.w / 2);
+    expect(TILE_BOX.refY).toBeCloseTo(TILE_BOX.h * 0.75);
 });
 
-test("the art is centred in the box however far its anchor sits from it", () => {
-    // Same 40x40 sprite, anchored at its centre and then 300px above itself. The anchor decides where the
-    // REFERENCE goes; the art lands in the middle either way, which is what stops a sprite sitting in a
-    // corner of a box sized for something else. Falsified by seeding the box from the anchor - the
-    // off-anchor case then lands hundreds of px from centre.
-    const centred = artTopLeft({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
-    const offAnchor = artTopLeft({ width: 40, height: 40, offsetX: 20, offsetY: 300 });
-    const middle = (centred.box.w - 40) / 2;
-    expect([centred.x, centred.y]).toEqual([middle, middle]);
-    expect([offAnchor.x, offAnchor.y]).toEqual([middle, middle]);
-    // The reference itself is where the sprite's own data puts it, which for the second is below the box.
-    expect(offAnchor.box.refY).toBeGreaterThan(offAnchor.box.h);
+test("the marker draws where the anchor is placed, a quarter of the way up", () => {
+    expect(referenceMarkerPercent("bam", 62, TILE_BOX)).toEqual({ x: 50, y: 75 });
 });
 
-test("a frame the sequences never reference does not move the art", () => {
-    const small = { width: 30, height: 30, offsetX: 15, offsetY: 15 };
-    const huge = { width: 400, height: 400, offsetX: 200, offsetY: 200 };
-    const view = {
-        sourceFormat: "bam" as const,
-        frames: [small, huge],
-        sequences: [{ frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
-    };
-    expect(tileBoxPx(view)).toEqual(tileBoxPx(oneFrameView(small)));
+test("a sprite standing on its anchor gets the three quarters of the tile above it", () => {
+    // A true ground-point sprite: 100 tall, anchored at its own bottom. Nothing of it is below the feet,
+    // so what bounds it is the room ABOVE - the 75% of the tile the placement reserves for a body.
+    const view = oneFrameView({ width: 40, height: 100, offsetX: 20, offsetY: 99 });
+    expect(spriteFillRatio(view, TILE_BOX)).toBeCloseTo(TILE_BOX.refY / 99);
 });
 
-test("each sequence is centred on its own art, so a taller stance is not pushed off centre by a shorter one", () => {
-    // The reader's second point: the reference is fixed for a whole file today, so a band whose art sits
-    // high is drawn high in every tile while the space its sibling needs stays empty at the feet. Centring
-    // per DRAWN cycle moves it between sequences - and only between them, since one cycle's own frames
-    // share one reading.
-    const view = {
-        sourceFormat: "bam" as const,
-        frames: [
-            // Anchored at its own centre, then anchored near its feet: only an anchor that sits
-            // off-centre in the art moves the reference, which is the shape a standing creature has.
-            { width: 40, height: 40, offsetX: 20, offsetY: 20 },
-            { width: 40, height: 100, offsetX: 20, offsetY: 90 },
-        ],
-        sequences: [
-            { frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
-            { frameRefs: [1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
-        ],
-    };
-    const short = tileBoxPx(view, [view.sequences[0]!]);
-    const tall = tileBoxPx(view, [view.sequences[1]!]);
-    expect(short.refY).not.toBe(tall.refY);
-    // Each is centred on the art it actually draws.
-    const topOf = (box: ReturnType<typeof tileBoxPx>, frame: (typeof view.frames)[number]) =>
-        frameTopLeft({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box).y;
-    expect(topOf(short, view.frames[0]!)).toBeCloseTo((short.h - 40) / 2);
-    expect(topOf(tall, view.frames[1]!)).toBeCloseTo((tall.h - 100) / 2);
-});
-
-test("the art stays centred at the scale it is DRAWN, not only at the fitted one", () => {
-    // The measured defect: the reference centred the art at 1:1, but the stage draws it several times
-    // larger and a sprite scales about its ANCHOR - so a creature anchored low grew upward and left a band
-    // of empty tile under its feet (30px of a 174px tile, every tile, whatever the reader did). Falsified
-    // by dropping the scale from the reference: at 1:1 both readings agree, and this case then sits 40px
-    // above centre.
-    const frame = { width: 40, height: 100, offsetX: 20, offsetY: 90 };
-    const view = oneFrameView(frame);
-    const scale = 2;
-    const box = tileBoxPx(view, view.sequences, scale);
-    const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box, 1, scale);
-    expect(rect.top).toBeCloseTo((box.h - frame.height * scale) / 2);
-    expect(rect.left).toBeCloseTo((box.w - frame.width * scale) / 2);
-});
-
-test("the fill ratio is the room a centred sprite has left in its box", () => {
-    // A 40x40 frame centred in the square: each side has (box - 40)/2 of margin, so the art reaches the
-    // edges at box/40 - the scale the Fill button hands the reader, and now the one a fresh view opens at.
+test("art hanging BELOW the anchor is bounded by the quarter tile under the feet", () => {
+    // An IE creature's stored centre sits in its body, with shadow below it. That overhang has only the
+    // bottom quarter to live in, and for a centre-anchored sprite it is the tighter of the four bounds.
     const view = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
-    const box = tileBoxPx(view);
-    expect(spriteFillRatio(view, box)).toBeCloseTo(box.w / 40);
+    expect(spriteFillRatio(view, TILE_BOX)).toBeCloseTo((TILE_BOX.h - TILE_BOX.refY) / 20);
 });
 
-test("an anchor far from the art costs the fill nothing, because the art is centred either way", () => {
-    // The same 40x40 art, anchored at its centre and then 300px below itself. Centring at the drawn scale
-    // takes the anchor out of the fit question entirely: what bounds the sprite is its own size against
-    // the tile, so both answer the same. Falsified by bounding the fill per anchor edge - the second then
-    // comes back a fraction of the first.
-    const centred = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
-    const offAnchor = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 300 });
-    expect(spriteFillRatio(offAnchor, tileBoxPx(offAnchor))).toBeCloseTo(spriteFillRatio(centred, tileBoxPx(centred)));
-});
-
-test("the fill ratio is set by the art's LONGER side, so the other one keeps its margin", () => {
-    // A sprite half as wide as it is tall fills the square's height and stays centred across its width.
-    const view = oneFrameView({ width: 100, height: 200, offsetX: 50, offsetY: 190 });
-    const box = tileBoxPx(view);
-    expect(spriteFillRatio(view, box)).toBeCloseTo(box.h / 200);
+test("the fill ratio takes the tightest side, so no frame of the sequence clips", () => {
+    // A wide sprite whose width runs out before its height does. Falsified by taking any single axis.
+    const view = oneFrameView({ width: 400, height: 40, offsetX: 200, offsetY: 20 });
+    expect(spriteFillRatio(view, TILE_BOX)).toBeCloseTo(TILE_BOX.refX / 200);
 });
 
 test("the fill ratio of an animation that draws nothing is 1", () => {
     const view = { sourceFormat: "bam" as const, frames: [], sequences: [] };
-    expect(spriteFillRatio(view, tileBoxPx(view))).toBe(1);
+    expect(spriteFillRatio(view, TILE_BOX)).toBe(1);
 });
 
-test("a frame whose anchor is outside the box is still drawn wholly inside it", () => {
-    // The property that has to survive centring on the ART rather than on the anchor: whatever the anchor
-    // does, the drawing lands in the tile. Falsified by centring on the reference instead - the art then
-    // leaves the box entirely for this sprite.
-    const frame = { width: 40, height: 40, offsetX: 20, offsetY: 300 };
-    const box = tileBoxPx(oneFrameView(frame));
-    const tl = frameTopLeft({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box);
-    expect(tl.x).toBeGreaterThanOrEqual(0);
-    expect(tl.y).toBeGreaterThanOrEqual(0);
-    expect(tl.x + frame.width).toBeLessThanOrEqual(box.w);
-    expect(tl.y + frame.height).toBeLessThanOrEqual(box.h);
-});
-
-test("a frame is drawn fully inside the box its own animation sized", () => {
-    // The property the box exists for, stated directly: whatever the anchor does, the art fits.
-    const frame = { width: 200, height: 500, offsetX: 100, offsetY: 480 };
-    const box = tileBoxPx(oneFrameView(frame));
-    const tl = frameTopLeft({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box);
-    expect(tl.x).toBeGreaterThanOrEqual(0);
-    expect(tl.y).toBeGreaterThanOrEqual(0);
-    expect(tl.x + frame.width).toBeLessThanOrEqual(box.w);
-    expect(tl.y + frame.height).toBeLessThanOrEqual(box.h);
+test("at the fill scale every frame of the sequence is inside its tile", () => {
+    // What the fill ratio promises, stated at the consumer: no facing and no frame clips at the scale a
+    // view opens on. Two frames reaching opposite ways from one anchor, so a bound taken on either alone
+    // would let the other out.
+    const view = {
+        sourceFormat: "bam" as const,
+        frames: [
+            { width: 40, height: 100, offsetX: 20, offsetY: 99 }, // stands on its anchor
+            { width: 60, height: 80, offsetX: 30, offsetY: 10 }, // hangs below it
+        ],
+        sequences: [{ frameRefs: [0, 1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
+    };
+    const scale = spriteFillRatio(view, TILE_BOX);
+    for (const frame of view.frames) {
+        const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, TILE_BOX, 1, scale);
+        expect(rect.left).toBeGreaterThanOrEqual(-0.001);
+        expect(rect.top).toBeGreaterThanOrEqual(-0.001);
+        expect(rect.left + rect.width).toBeLessThanOrEqual(TILE_BOX.w + 0.001);
+        expect(rect.top + rect.height).toBeLessThanOrEqual(TILE_BOX.h + 0.001);
+    }
 });
 
 test("the marker lands on the same sprite pixel whatever shape the tile is", () => {
-    // The invariant the box has to preserve: `frameTopLeft` and the marker both come from the same
-    // reference, so the marker's offset INTO the frame is the anchor and nothing else. An asymmetric box
-    // is what makes this falsifiable - under the old square tile every reference was the centre, so a
-    // sign error in refX/refY would have looked identical.
+    // `frameTopLeft` and the marker both come from the same reference, so the marker's offset INTO the
+    // frame is the anchor and nothing else. A tile whose reference is NOT its centre is what makes this
+    // falsifiable - a sign error in refX/refY would look identical on a centred one.
     const frame = { width: 200, height: 500, offsetX: 100, offsetY: 480 };
     const anchorInFrame = (box: TileBox): { x: number; y: number } => {
         const tl = frameTopLeft({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box);
         const pct = referenceMarkerPercent("bam", frame.height, box);
         return { x: (pct.x / 100) * box.w - tl.x, y: (pct.y / 100) * box.h - tl.y };
     };
-    const tight = anchorInFrame(tileBoxPx(oneFrameView(frame)));
-    const square = anchorInFrame({ w: 960, h: 960, refX: 480, refY: 480 });
-    expect(tight.x).toBeCloseTo(frame.offsetX);
-    expect(tight.y).toBeCloseTo(frame.offsetY);
-    expect(square.x).toBeCloseTo(tight.x);
-    expect(square.y).toBeCloseTo(tight.y);
+    const offCentre = anchorInFrame(TILE_BOX);
+    const centred = anchorInFrame({ w: 960, h: 960, refX: 480, refY: 480 });
+    expect(offCentre.x).toBeCloseTo(frame.offsetX);
+    expect(offCentre.y).toBeCloseTo(frame.offsetY);
+    expect(centred.x).toBeCloseTo(offCentre.x);
+    expect(centred.y).toBeCloseTo(offCentre.y);
 });
 
 test("BAMC uses the same tile-centre anchor as BAM", () => {

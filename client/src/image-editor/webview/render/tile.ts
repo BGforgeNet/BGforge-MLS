@@ -75,19 +75,14 @@ export async function fitZoomByMeasuring(
 }
 
 /**
- * What a view is auto-fitted FOR - everything that changes the drawn composite's footprint.
+ * Which ANIMATION is on the stage - what the sprite scale is fitted for, once, when it opens.
  *
- * The stage is mounted once and a selection arrives as another view, so the fit has to be told when it
- * is looking at a new picture: a different set (a small creature inheriting a dragon's fit is drawn
- * microscopic, which is the report), a different action, a different direction block, or the same
- * cycles packed into the other layout. What is NOT in here is the reader's own controls - zoom,
- * background, marker - and the armour level, which redraws one creature's own equipment at its size.
+ * The stage is mounted once and a selection arrives as another view, so the fit has to be told when a
+ * different creature has arrived: without that, a small one inheriting a dragon's scale is drawn
+ * microscopic, which is the report this started from. Deliberately blind to everything else - action,
+ * sequence, direction block, layout, armour, and the reader's own controls - because a zoom that changed
+ * under them on every switch is what the fixed tile exists to prevent.
  */
-export function zoomSubject(
-    view: { basename: string; set?: { id: number; action: string } },
-    block: number,
-    layout: string,
-): string {
-    const drawn = view.set === undefined ? `file:${view.basename}` : `set:${view.set.id}/${view.set.action}`;
-    return `${drawn}#${block}@${layout}`;
+export function zoomSubject(view: { basename: string; set?: { id: number } }): string {
+    return view.set === undefined ? `file:${view.basename}` : `set:${view.set.id}`;
 }

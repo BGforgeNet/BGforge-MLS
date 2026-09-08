@@ -32,7 +32,7 @@
     import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
-    import { DEFAULT_TILE_BOX, spriteFillRatio, tileBoxPx } from "../render/anchor";
+    import { spriteFillRatio, TILE_BOX } from "../render/anchor";
     import { fitZoomByMeasuring, zoomSubject, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
@@ -129,10 +129,9 @@
     // `zoom` scales the ART inside those cells, so raising it grows sprites in place rather than growing
     // the whole layout off the stage, which is what left a small creature unreadable.
     let layoutScale = $state(1);
+    // Whatever it is last set to: by Auto, by a preset, by the slider, or by a freshly opened animation.
+    // Nothing else writes it, which is what makes it survive a change of action or sequence.
     let zoom = $state(1);
-    // A zoom the READER chose, kept through every set, action and sequence switch until they press Auto.
-    // Undefined means the automatic choice, which is to fill the tile.
-    let pinnedZoom = $state<number | undefined>();
     // eslint-disable-next-line prefer-const -- reassigned via onBackgroundChange in the ViewControls markup
     let background = $state<Background>("transparent");
     // Backdrop is PER TILE (each frame keeps its own checkered/green square), delivered as a CSS
@@ -219,15 +218,9 @@
     // What is ON SCREEN: the transport is sized against these and frames are fetched for these, never for
     // the file's whole cycle list (compass-layout.drawnSequences).
     const drawnCycles = $derived(drawnSequences(layoutMode, roseTiles, gridTiles));
-    // One square footprint for every animation, centred on what is DRAWN at the size it is drawn - so
-    // switching sequence moves the sprite to the middle of a tile that stays exactly where it was, and
-    // scaling the sprite keeps it there rather than walking it off its anchor (anchor.tileBoxPx).
-    const tileBox = $derived(
-        view ? tileBoxPx(view, drawnCycles, layoutScale > 0 ? zoom / layoutScale : 1) : DEFAULT_TILE_BOX,
-    );
-    // How far past the fitted size the art can be pushed before it leaves its tile: the Auto scale. Reads
-    // the box only for its size, which is constant, so this cannot chase the reference it feeds.
-    const fillRatio = $derived(view ? spriteFillRatio(view, tileBox, drawnCycles) : 1);
+    // How far past the fitted size the art can be pushed before it leaves its tile: what Auto asks for,
+    // and what a freshly opened animation is drawn at.
+    const fillRatio = $derived(view ? spriteFillRatio(view, TILE_BOX) : 1);
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -345,21 +338,29 @@
         });
     });
 
-    // Auto-fit: the cell grid is sized so the whole composite fills the stage, and the sprite then fills
-    // its cell (spriteFillRatio). Runs once per SUBJECT (zoomSubject: what is drawn, not how the reader
-    // has set the controls), so any change of footprint re-fits - unless the reader has picked a zoom of
-    // their own, which then survives every switch until they press Auto again. Never reads `playback`,
-    // so a per-frame write cannot re-trigger it.
+    /**
+     * Two fits, on different triggers.
+     *
+     * The GRID is fitted whenever the arrangement changes - another direction block, or the other layout -
+     * because that changes how many tiles are on the stage and nothing else can keep them on it. The
+     * SPRITE is fitted only when a different animation opens: switching action or sequence leaves the
+     * reader's zoom exactly where they left it, which is the whole point of a tile that does not move.
+     *
+     * The two are independent because a tile's size is the box times the layout scale and a canvas is
+     * absolutely positioned inside it (animation-tiles.css) - so the sprite scale cannot change the
+     * footprint the grid fit is measuring. Neither reads `playback`, so a per-frame write cannot
+     * re-trigger them.
+     */
     let zoomedSubject: string | undefined;
+    let fittedArrangement: string | undefined;
     $effect(() => {
         const v = view;
         if (!v) return;
-        // Reads the block and layout too, so picking another sequence or switching to the grid re-fits -
-        // both change the footprint without replacing the view.
-        const subject = zoomSubject(v, roseGroup, layoutMode);
-        if (subject !== zoomedSubject) void applyAutoZoom(v, subject);
+        const subject = zoomSubject(v);
+        const arrangement = `${subject}#${roseGroup}@${layoutMode}`;
+        if (arrangement !== fittedArrangement) void applyAutoZoom(v, subject, arrangement);
     });
-    async function applyAutoZoom(v: AnimationView, subject: string): Promise<void> {
+    async function applyAutoZoom(v: AnimationView, subject: string, arrangement: string): Promise<void> {
         // Wait for the stage content to render and for ViewControls' persisted-zoom hydration to settle.
         await svelteTick();
         if (view !== v || !stageEl) return;
@@ -370,20 +371,17 @@
         const availH = stageEl.clientHeight - parseFloat(stageStyle.paddingTop) - parseFloat(stageStyle.paddingBottom);
         // Not laid out yet (e.g. opened in a hidden tab): leave unmarked so a later view can retry.
         if (!(content instanceof HTMLElement) || availW <= 0 || availH <= 0) return;
-        zoomedSubject = subject;
-        // Both callbacks go inert once the subject has moved on - a block or layout change replaces it
+        fittedArrangement = arrangement;
+        // Both callbacks go inert once the arrangement has moved on - a block or layout change replaces it
         // without replacing the view - so a search still unwinding cannot write a scale chosen for a
         // picture that has left the stage.
-        const current = (): boolean => view === v && zoomedSubject === subject;
+        const current = (): boolean => view === v && fittedArrangement === arrangement;
         const fitted = await fitZoomByMeasuring(
             ZOOM_MAX,
             ZOOM_MIN,
             async (next) => {
                 if (!current()) return;
                 layoutScale = next;
-                // The art follows the cell while the reader has not said otherwise, so the fit search
-                // measures the same picture the stage will settle on.
-                zoom = spriteFor(next);
                 await svelteTick();
             },
             () => {
@@ -392,17 +390,9 @@
                 return now.width <= availW && now.height <= availH;
             },
         );
-        if (current()) zoom = spriteFor(fitted);
-    }
-    /**
-     * The sprite scale for a cell at this layout scale.
-     *
-     * Filling the tile is the default (the Auto control), so a creature is drawn as large as its tile
-     * allows rather than at a power-of-two rung that can leave most of it empty. A zoom the reader chose
-     * themselves is kept verbatim through every switch instead - `pinnedZoom` holds it, Auto releases it.
-     */
-    function spriteFor(scale: number): number {
-        return pinnedZoom ?? fillRatio * scale;
+        if (!current() || subject === zoomedSubject) return;
+        zoomedSubject = subject;
+        zoom = fillRatio * fitted;
     }
 </script>
 
@@ -442,7 +432,7 @@
                         frame={playback.frame}
                         {layoutScale}
                         spriteScale={zoom}
-                        {tileBox}
+                        tileBox={TILE_BOX}
                         {showOffsetMarker}
                     />
                 {:else}
@@ -453,7 +443,7 @@
                         frame={playback.frame}
                         {layoutScale}
                         spriteScale={zoom}
-                        {tileBox}
+                        tileBox={TILE_BOX}
                         {showOffsetMarker}
                         columns={cycleColumns}
                     />
@@ -499,15 +489,9 @@
             <ViewControls
                 {zoom}
                 fillZoom={fillRatio * layoutScale}
-                zoomMode={pinnedZoom === undefined ? "auto" : "manual"}
                 {background}
                 {showOffsetMarker}
-                onZoomChange={(z, mode) => {
-                    zoom = z;
-                    // Auto IS the automatic choice, so asking for it again releases the pin rather than
-                    // freezing this animation's fill value onto every one opened after it.
-                    pinnedZoom = mode === "auto" ? undefined : z;
-                }}
+                onZoomChange={(z) => (zoom = z)}
                 onBackgroundChange={(b) => (background = b)}
                 onToggleOffsetMarker={() => (showOffsetMarker = !showOffsetMarker)}
                 {viewState}

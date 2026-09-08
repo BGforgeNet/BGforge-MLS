@@ -38,12 +38,25 @@ export interface TileBox {
     refY: number;
 }
 
-/** The empty tile, for a surface with nothing loaded to centre in it. */
-export const DEFAULT_TILE_BOX: TileBox = {
+/**
+ * How much of the tile is kept BELOW the anchor - room for the shadow and overhang an IE creature carries
+ * under its ground point, and for the ground to read as ground rather than as the edge of a box.
+ */
+const FEET_HEIGHT_FRACTION = 0.25;
+
+/**
+ * The tile every frame is drawn in: one square, with the sprite's ground point at a fixed spot in it.
+ *
+ * A constant, not a measurement. Sizing or centring the tile per animation meant it moved whenever the
+ * reader changed action or sequence, and every rule that placed the art by measuring it had a scale at
+ * which it stopped holding. A fixed anchor cannot: the feet are a quarter of the way up every tile of
+ * every animation, so the only thing a switch changes is the picture standing on them.
+ */
+export const TILE_BOX: TileBox = {
     w: TILE_BOX_PX,
     h: TILE_BOX_PX,
     refX: TILE_BOX_PX / 2,
-    refY: TILE_BOX_PX / 2,
+    refY: TILE_BOX_PX * (1 - FEET_HEIGHT_FRACTION),
 };
 
 // The reference point for a frame of the given height. Exhaustive by SourceFormat: a new format must
@@ -111,105 +124,48 @@ export function spriteRect(
 
 /**
  * How many times the fitted size the drawn art can be shown at before it leaves its tile - what the Auto
- * control asks for.
+ * control asks for, and what a freshly opened animation is drawn at.
  *
- * The art's own union against the tile, and nothing else. Where the ANCHOR sits does not enter: the
- * reference follows the scale (`tileBoxPx`), so the art stays in the middle of its tile however large it
- * is drawn, and an anchor far from the art no longer eats the room on one side. The longer side decides,
- * since both have to fit; the other keeps its margin, split evenly.
+ * The anchor is fixed in the tile and the art hangs off it, so each frame gets one bound per edge: the
+ * room on that side against how far the art reaches that way. A ground-anchored sprite is therefore
+ * bounded by the room above the feet, and one with shadow below it by the quarter tile beneath.
+ *
+ * The tightest bound over the WHOLE FILE, not over the cycles on screen. A rose of one creature has to
+ * keep every facing whole, and the scale is chosen once when the animation opens and then left alone - so
+ * a sequence that reaches further than the one being looked at has to fit at it too, or picking it later
+ * would push the sprite over its neighbours.
  */
 export function spriteFillRatio(
     view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
     box: TileBox,
-    drawn: readonly SequenceExtent[] = view.sequences,
 ): number {
-    const { spanX, spanY } = artExtents(view, drawn);
-    // Nothing drawable: the fitted size is the only size there is anything to say about.
-    if (spanX === undefined || spanY === undefined || spanX <= 0 || spanY <= 0) return 1;
-    return Math.min(box.w / spanX, box.h / spanY);
-}
-
-/** Extents are measured against a zero box, so the numbers come out relative to the reference point. */
-const PROBE_BOX: TileBox = { w: 0, h: 0, refX: 0, refY: 0 };
-
-/**
- * The tile the DRAWN cycles are centred in: always TILE_BOX_PX square, with the reference placed so their
- * art lands in the middle of it.
- *
- * Two separate decisions. The SIZE is constant (see TILE_BOX_PX) so the background a reader is looking at
- * never resizes under them. The REFERENCE is per drawn cycle: a file's stances differ in height, and one
- * reference for the whole file drew the tall ones flush against the top while the room the short ones
- * needed sat empty at the feet. Centring is computed from the cycles PASSED, so it moves when the reader
- * picks another sequence and holds still while one plays - every frame of a cycle shares one reading.
- *
- * Both reference formulas are `ref + <box-independent term>`, so a frame's position relative to the
- * reference does not depend on the box: measuring against a zero box is exact, and the result cannot feed
- * back into itself.
- *
- * The ART alone is centred. The reference is a coordinate that may fall OUTSIDE the box: a sprite's ground
- * point can sit well clear of its art, and centring on it would push the drawing off the tile entirely.
- * The offset marker still draws there, since a tile does not clip (animation-tiles.css); it is diagnostic,
- * and outside the box is where that animation genuinely puts it.
- */
-export function tileBoxPx(
-    view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
-    drawn: readonly SequenceExtent[] = view.sequences,
-    spriteScaleRatio = 1,
-): TileBox {
-    const { minX, minY, spanX, spanY } = artExtents(view, drawn);
-    // Nothing referenced anything drawable, so there is no art to centre.
-    if (spanX === undefined || spanY === undefined) return DEFAULT_TILE_BOX;
-    // The art is drawn at `reference*layout - anchor*sprite`, so it scales about its ANCHOR: a reference
-    // that centres it at 1:1 no longer centres it once the sprite is drawn larger, and a creature anchored
-    // low drifts up and leaves a band of empty tile under its feet. Carrying the ratio of the two scales
-    // here keeps the middle of the art on the middle of the tile at whatever size it is shown; at 1:1 the
-    // term is 1 and this is the plain centring it generalises.
-    const centre = (min: number, span: number): number => TILE_BOX_PX / 2 - (min + span / 2) * spriteScaleRatio;
-    return { w: TILE_BOX_PX, h: TILE_BOX_PX, refX: centre(minX, spanX), refY: centre(minY, spanY) };
-}
-
-/** What a cycle has to say about where its art sits: which frames, and the band offset they carry. */
-type SequenceExtent = Pick<AnimationView["sequences"][number], "frameRefs" | "dirOffsetX" | "dirOffsetY">;
-
-function artExtents(
-    view: Pick<AnimationView, "sourceFormat" | "frames">,
-    sequences: readonly SequenceExtent[],
-): {
-    minX: number;
-    minY: number;
-    spanX: number | undefined;
-    spanY: number | undefined;
-} {
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    for (const seq of sequences) {
+    const drawn = view.sequences;
+    let ratio = Infinity;
+    /** A `room / reach` bound, ignored where the art does not extend that way - nothing to run out of. */
+    const bound = (room: number, reach: number): void => {
+        if (reach > 0) ratio = Math.min(ratio, room / reach);
+    };
+    for (const seq of drawn) {
         for (const ref of seq.frameRefs) {
             const frame = view.frames[ref];
             if (!frame) continue;
-            const rel = frameTopLeft(
-                {
-                    sourceFormat: view.sourceFormat,
-                    width: frame.width,
-                    height: frame.height,
-                    offsetX: frame.offsetX,
-                    offsetY: frame.offsetY,
-                    dirOffsetX: seq.dirOffsetX,
-                    dirOffsetY: seq.dirOffsetY,
-                },
-                PROBE_BOX,
-            );
-            minX = Math.min(minX, rel.x);
-            maxX = Math.max(maxX, rel.x + frame.width);
-            minY = Math.min(minY, rel.y);
-            maxY = Math.max(maxY, rel.y + frame.height);
+            const point = referencePoint(view.sourceFormat, frame.height, box);
+            const { ax, ay } = offsetToAnchor(view.sourceFormat, {
+                width: frame.width,
+                height: frame.height,
+                offsetX: frame.offsetX,
+                offsetY: frame.offsetY,
+                dirOffsetX: seq.dirOffsetX,
+                dirOffsetY: seq.dirOffsetY,
+            });
+            bound(point.x, ax);
+            bound(box.w - point.x, frame.width - ax);
+            bound(point.y, ay);
+            bound(box.h - point.y, frame.height - ay);
         }
     }
-    if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
-        return { minX: 0, minY: 0, spanX: undefined, spanY: undefined };
-    }
-    return { minX, minY, spanX: Math.ceil(maxX - minX), spanY: Math.ceil(maxY - minY) };
+    // Nothing drawable: the fitted size is the only size there is anything to say about.
+    return Number.isFinite(ratio) ? ratio : 1;
 }
 
 /**

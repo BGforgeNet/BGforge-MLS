@@ -63,29 +63,18 @@ test("a nine-tile creature stance shrinks to a third, not to the floor", async (
 const walk = { basename: "MDKNG1", set: { id: 0x2300, action: "MDKNG1" } };
 const attack = { basename: "MDKNG2", set: { id: 0x2300, action: "MDKNG2" } };
 
-test("a different set is a different subject", () => {
+test("another creature is another subject, so it is fitted rather than inheriting the last one's scale", () => {
     const dragon = { basename: "MDR11100", set: { id: 0x1200, action: "MDR11100" } };
-    expect(zoomSubject(dragon, 0, "rose")).not.toBe(zoomSubject(walk, 0, "rose"));
+    expect(zoomSubject(dragon)).not.toBe(zoomSubject(walk));
 });
 
-test("a different action is a different subject - its cycles need not fit where the last one did", () => {
-    expect(zoomSubject(attack, 0, "rose")).not.toBe(zoomSubject(walk, 0, "rose"));
+test("another ACTION of the same creature is the same subject - the reader's zoom is left alone", () => {
+    // The whole point of the fixed tile: G1 and G2 stand in tiles of one size at one anchor, so there is
+    // nothing to re-fit between them. Falsified by keying on the action - this then reports two subjects.
+    expect(zoomSubject(attack)).toBe(zoomSubject(walk));
 });
 
-test("a different direction block is a different subject", () => {
-    expect(zoomSubject(walk, 1, "rose")).not.toBe(zoomSubject(walk, 0, "rose"));
-});
-
-test("rose and grid are different subjects - the grid packs the same cycles into another footprint", () => {
-    expect(zoomSubject(walk, 0, "grid")).not.toBe(zoomSubject(walk, 0, "rose"));
-});
-
-test("the same drawing is the same subject, so a reader's own zoom is not overwritten under them", () => {
-    expect(zoomSubject(walk, 0, "rose")).toBe(zoomSubject(walk, 0, "rose"));
-});
-
-test("a file opened on its own is keyed by name, and still by block and layout", () => {
-    expect(zoomSubject({ basename: "SPGLYPH" }, 0, "rose")).not.toBe(zoomSubject({ basename: "SPFIRE" }, 0, "rose"));
-    expect(zoomSubject({ basename: "SPGLYPH" }, 0, "rose")).toBe(zoomSubject({ basename: "SPGLYPH" }, 0, "rose"));
-    expect(zoomSubject({ basename: "SPGLYPH" }, 2, "rose")).not.toBe(zoomSubject({ basename: "SPGLYPH" }, 0, "rose"));
+test("a file opened on its own is keyed by its name", () => {
+    expect(zoomSubject({ basename: "SPGLYPH" })).not.toBe(zoomSubject({ basename: "SPFIRE" }));
+    expect(zoomSubject({ basename: "SPGLYPH" })).toBe(zoomSubject({ basename: "SPGLYPH" }));
 });

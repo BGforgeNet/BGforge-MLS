@@ -22,21 +22,12 @@
     /** Persisted subset of the view choices, read/written through `vscode.getState()`/`setState()`. */
     interface PersistedViewState {
         zoom: number;
-        /**
-         * Whether that zoom was a scale the reader asked for or the automatic fill.
-         *
-         * Carried because restoring the NUMBER alone would pin it: a panel last left filling would reopen
-         * frozen at whatever the last animation happened to fill at. State written before this field
-         * existed can only have come from a reader's own click, which is what its absence means.
-         */
-        zoomMode?: "manual" | "auto";
         background: Background;
     }
 
     const {
         zoom,
         fillZoom,
-        zoomMode,
         background,
         showOffsetMarker,
         onZoomChange,
@@ -45,24 +36,21 @@
         viewState,
     }: {
         zoom: number;
-        /** The scale at which the drawn animation exactly fills its cell - what the Fill button sets. */
+        /** The scale at which the drawn animation fills its tile - what the Auto button sets. */
         fillZoom: number;
-        /** Whether `zoom` is a scale the reader pinned or the automatic fill. */
-        zoomMode: "manual" | "auto";
         background: Background;
         showOffsetMarker: boolean;
-        /** `mode` says whether the reader asked for a scale of their own or for the automatic fill. */
-        onZoomChange: (zoom: number, mode: "manual" | "auto") => void;
+        onZoomChange: (zoom: number) => void;
         onBackgroundChange: (background: Background) => void;
         onToggleOffsetMarker: () => void;
         viewState?: { get: () => unknown; set: (state: unknown) => void };
     } = $props();
 
     /**
-     * The scale at which the sprite exactly fills its cell, which is above the ladder's top wherever the
-     * cell has room to spare - a small creature's cell is floored at a size several times its art. So the
-     * slider's top is the fill point rather than a constant: a control that cannot represent the value it
-     * is showing would snap the reader's own choice back on the next drag.
+     * The scale at which the sprite fills its tile, which is above the ladder's top for any creature small
+     * against the tile it stands in. So the slider's top is the fill point rather than a constant: a
+     * control that cannot represent the value it is showing would snap the reader's choice back on the
+     * next drag.
      */
     const fill = $derived(Math.max(ZOOM_MIN, fillZoom));
     const zoomCeiling = $derived(Math.max(ZOOM_MAX, fill));
@@ -81,10 +69,9 @@
     $effect(() => {
         const persisted = viewState?.get();
         if (!isRecord(persisted)) return;
-        // A zoom the reader chose reopens pinned to it; one left filling reopens filling, which is why
-        // the mode is persisted beside the number.
-        const mode = persisted.zoomMode === "auto" ? "auto" : "manual";
-        if (typeof persisted.zoom === "number") onZoomChange(clampZoom(persisted.zoom), mode);
+        // The animation opening fits the sprite itself, so a restored zoom only holds until then; it is
+        // the backdrop this is really keeping across a reload.
+        if (typeof persisted.zoom === "number") onZoomChange(clampZoom(persisted.zoom));
         if (isBackground(persisted.background)) onBackgroundChange(persisted.background);
     });
 
@@ -92,16 +79,14 @@
         viewState?.set(next);
     }
 
-    function handleZoomChange(next: number, mode: "manual" | "auto" = "manual"): void {
-        onZoomChange(next, mode);
-        persist({ zoom: next, zoomMode: mode, background });
+    function handleZoomChange(next: number): void {
+        onZoomChange(next);
+        persist({ zoom: next, background });
     }
 
     function handleBackgroundChange(next: Background): void {
         onBackgroundChange(next);
-        // Carries the zoom mode too: writing the number alone would drop it, and the panel would reopen
-        // pinned to a fill value because someone changed the backdrop.
-        persist({ zoom, zoomMode, background: next });
+        persist({ zoom, background: next });
     }
 </script>
 
@@ -137,7 +122,7 @@
             class:active={isAuto}
             aria-pressed={isAuto}
             title="Largest scale at which the whole animation still fits its tile - what a view opens at, and what it returns to on every switch"
-            onclick={() => handleZoomChange(fill, "auto")}
+            onclick={() => handleZoomChange(fill)}
         >
             Auto
         </button>
