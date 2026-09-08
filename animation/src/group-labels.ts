@@ -52,6 +52,13 @@ const SEQUENCES = {
 export type SequenceCode = keyof typeof SEQUENCES;
 
 /**
+ * Re-exported because this module is what a browser bundle reaches for the naming vocabulary, and the
+ * strikes behind `A1`-`A9` are one table two surfaces read - the block labels below, and the webview's
+ * decode of a filename. Keeping a second copy over there is how the two came to name `A1` differently.
+ */
+export { decodeActionCode } from "./animation-schemes/actions";
+
+/**
  * One block of a packed file.
  *
  * Two shapes and no third: a block either names the sequences the engine plays it for, or declares that
@@ -310,9 +317,11 @@ const ANKHEG_G3: IeGroup[] = [
 function attackFile(
     token: AttackToken,
     codes: readonly [SequenceCode, ...SequenceCode[]],
-    strike: string,
 ): Partial<Record<BlockKey, IeGroup[]>> {
-    const strikeBlock: IeGroup = { codes, id: "attack", detail: strike };
+    // Which strike a numbered attack depicts is the naming table's fact, and it is the same fact whether a
+    // reader is looking at this family's blocks or at a character file's name - so it is read from there
+    // rather than spelled a second time here, where the two wordings would drift apart unnoticed.
+    const strikeBlock: IeGroup = { codes, id: "attack", detail: decodeActionCode("character", codes[0]).detail };
     const padding: IeGroup = { unused: true };
     return {
         [`character_old/${token}/ie8/1`]: [strikeBlock],
@@ -400,11 +409,11 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
     // maps every one of them to a single sequence at the file's first block - and the second band some of
     // them carry is padding the scheme never plays. Named per strike, since this family DOES distinguish
     // them: `A1` is a one-handed slash here where a monster's `A1` is just its first attack.
-    ...attackFile("a1", ["A1"], "slash"),
-    ...attackFile("a2", ["A2"], "slash, 2-handed"),
-    ...attackFile("a3", ["A3"], "backslash"),
-    ...attackFile("a4", ["A4"], "backslash, 2-handed"),
-    ...attackFile("a5", ["A5"], "jab"),
+    ...attackFile("a1", ["A1"]),
+    ...attackFile("a2", ["A2"]),
+    ...attackFile("a3", ["A3"]),
+    ...attackFile("a4", ["A4"]),
+    ...attackFile("a5", ["A5"]),
     // The spell layer's own G1 stops one block short of the base it is drawn over, so it needs the prefix
     // said explicitly like every other shortened file of a family.
     "monster_layered_spell/g1/ie8/5": [

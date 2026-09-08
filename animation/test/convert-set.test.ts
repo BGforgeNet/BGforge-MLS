@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FALLOUT_PALETTE, parseBamV1, parseFrm, serializeBamV1 } from "@bgforge/image";
+import { DEFAULT_FALLOUT_PALETTE, type Facing, parseBamV1, parseFrm, serializeBamV1 } from "@bgforge/image";
 import { type AnimationSet } from "../src/animation-index";
 import { type StanceIo } from "../src/set-stances";
 import { readNeutralSet } from "../src/neutral/read";
@@ -8,10 +8,13 @@ import { FALLOUT_FRM, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED } from "../src/conv
 import { type ConversionOptions, convertSet } from "../src/convert/convert";
 import { decodeActionCode } from "../src/animation-schemes/actions";
 import { bandedPair, multiCycle, packedBands } from "../../image/test/bam-fixtures.ts";
-import { CLERIC_MALE_GNOME_SET } from "./ie-game-fixtures";
+import { CLERIC_MALE_GNOME_SET, directional, setWithActions } from "./ie-game-fixtures";
 
 /** A west-arc band: five drawn facings and three the engine mirrors, which is the stored IE shape. */
 const band = () => bandedPair(4, [0, 1, 2, 3, 4]);
+
+/** The five facings an eight-point set stores, the other three being mirrors of these. */
+const WEST_ARC_8: Facing[] = ["S", "SW", "W", "NW", "N"];
 
 function setOf(over: Partial<AnimationSet> = {}): AnimationSet {
     return { ...CLERIC_MALE_GNOME_SET, ...over };
@@ -76,14 +79,16 @@ describe("converting a whole set", () => {
 
     it("reports an action the target's scheme has no name for, and writes nothing for it", () => {
         // A completeness loss rather than a per-pixel one: the art is intact and the target simply has
-        // nowhere to file it, which is worse hidden than stated. `A7` is the case: it ships, and what it
-        // depicts is documented nowhere, so no other scheme can be told where to put it.
-        const result = converted(read({ CDMB1A7: band(), CDMB1A1: band() }), IE_8_POINT_MIRRORED, {
+        // nowhere to file it, which is worse hidden than stated. A combat stance is the case here: Fallout
+        // spells the weapon into a code's first letter, so every candidate for one names a weapon the
+        // source never stated, while the walk beside it has a code of its own.
+        const result = converted(read({ CDMB1G1: band(), CDMB1G11: band() }), FALLOUT_FRM, {
             ...OPTIONS,
-            scheme: "action-codes",
+            prefix: "XYZBAS",
+            scheme: "fallout-critter",
         });
 
-        expect(result.writes.map((write) => write.resref)).toEqual(["XYZA1"]);
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZBAS1AB"]);
         expect(result.report.losses.map((loss) => loss.kind)).toContain("action-unmapped");
     });
 
@@ -586,16 +591,17 @@ describe("converting a whole set", () => {
      * a paragraph the reader had to parse to find the one fact in it.
      */
     it("refuses a conversion the target can name nothing in, naming the actions once", () => {
-        const result = convertSet(read({ CDMB1A7: band(), CDMB1A8: band() }), IE_8_POINT_MIRRORED, {
-            ...OPTIONS,
-            scheme: "action-codes",
-        });
+        // Bands nothing names: the block tables cover the documented layouts, and a file laid out like none
+        // of them keeps numbered groups whose meaning nobody has stated. That is the whole population this
+        // sentence is written for - every code a NAMED family ships is pinned.
+        const set = setWithActions([directional("Misc 5", WEST_ARC_8, "G5"), directional("Misc 6", WEST_ARC_8, "G6")]);
+        const result = convertSet(set, IE_8_POINT_MIRRORED, { ...OPTIONS, scheme: "action-codes" });
         const reason = result.outcome === "refused" ? result.reason : "";
 
         expect(result).toMatchObject({ outcome: "refused" });
         // Unpinned throughout, so the reason says the source never stated what these are.
         expect(reason).toContain("Nothing states what this set's actions depict");
-        expect(reason).toContain("Attack 7, Attack 8");
+        expect(reason).toContain("Misc 5, Misc 6");
         expect(reason).not.toContain("counterpart");
     });
 

@@ -5,7 +5,8 @@
  * and the conversion notes. The tables spell them for a parser - an armour LEVEL, an action struct - and
  * neither is what a control should say.
  */
-import { type Action, characterMiscBlock } from "./animation-schemes/character";
+import { decodeActionCode } from "./animation-schemes/actions";
+import { type Action, characterActionCode, characterMiscBlock } from "./animation-schemes/character";
 import { stanceName } from "./group-labels";
 
 const ARMOUR_LABELS: Record<number, string> = {
@@ -21,8 +22,14 @@ export function armourLabel(level: number): string {
 
 export function actionLabel(action: Action): string {
     switch (action.kind) {
-        case "attack":
-            return `Attack ${action.detail}`;
+        case "attack": {
+            // A set with a weapon ships all nine, so the digit alone gives the picker nine rows nothing
+            // tells apart. Named for the strike, in the naming table's own words so this and the file-name
+            // banner say the same thing. The family's code space is open, so one it does not name keeps
+            // its number.
+            const { detail } = decodeActionCode("character", characterActionCode(action));
+            return detail === undefined ? `Attack ${action.detail}` : `Attack (${detail})`;
+        }
         case "cast":
             return "Cast";
         case "misc": {

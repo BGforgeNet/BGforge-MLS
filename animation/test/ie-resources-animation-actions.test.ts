@@ -7,13 +7,30 @@ import {
 } from "../src/animation-schemes/actions";
 
 describe("reading a scheme's action code", () => {
-    it("reads a character attack as an attack with the grip its name pins", () => {
+    it("reads a character attack as an attack with the strike its name pins", () => {
         expect(decodeActionCode("character", "A5")).toEqual({
             scheme: "character",
             id: "attack",
             code: "A5",
-            detail: "1-handed thrust",
+            detail: "jab",
         });
+    });
+
+    /**
+     * The nine attacks are three strikes across three weapon holds, and the last row is the one the
+     * published naming leaves out: both reference implementations read `A7` and `A9` as a dual-wielder's,
+     * and they split on `A8` - one calls it that row's backslash, the other a generic overhead used for
+     * throwing weapons. Taken as the backslash, which keeps the three-by-three shape the codes fall into.
+     */
+    it("reads the undocumented attacks as the dual-wield row of the same three strikes", () => {
+        const strike = (code: string) => decodeActionCode("character", code).detail;
+
+        expect([strike("A7"), strike("A8"), strike("A9")]).toEqual([
+            "slash, two-weapon",
+            "backslash, two-weapon",
+            "jab, two-weapon",
+        ]);
+        expect(decodeActionCode("character", "A7").id).toBe("attack");
     });
 
     it("reads an action-code scheme's ranged attack as a shot", () => {
@@ -24,9 +41,9 @@ describe("reading a scheme's action code", () => {
     });
 
     it("leaves a code the documentation does not pin unpinned, keeping it verbatim", () => {
-        // A7 ships in both installs and the published naming details only A1-A6, so what it depicts is
-        // exactly what nothing has stated.
-        expect(decodeActionCode("character", "A7")).toEqual({ scheme: "character", id: "unpinned", code: "A7" });
+        // The misc digits run G1 then G11-G19, so nothing in either install is named G5 and nothing states
+        // what one would depict. That open space is the family's, not a gap in the table.
+        expect(decodeActionCode("character", "G5")).toEqual({ scheme: "character", id: "unpinned", code: "G5" });
     });
 
     /**
@@ -80,8 +97,8 @@ describe("naming an action in a target scheme", () => {
     });
 
     it("drops a detail the target's names do not carry", () => {
-        const overhead = decodeActionCode("character", "A1");
-        expect(encodeActionCodes("action-codes", overhead)).toEqual([
+        const slash = decodeActionCode("character", "A1");
+        expect(encodeActionCodes("action-codes", slash)).toEqual([
             { code: "A1", detail: "dropped" },
             { code: "A2", detail: "dropped" },
             { code: "A3", detail: "dropped" },
@@ -118,8 +135,8 @@ describe("naming an action in a target scheme", () => {
     });
 
     it("carries an unpinned code within its own scheme and nowhere else", () => {
-        const misc = decodeActionCode("character", "A7");
-        expect(encodeActionCodes("character", misc)).toEqual([{ code: "A7", detail: "kept" }]);
+        const misc = decodeActionCode("character", "G5");
+        expect(encodeActionCodes("character", misc)).toEqual([{ code: "G5", detail: "kept" }]);
         expect(encodeActionCodes("action-codes", misc)).toEqual([]);
     });
 

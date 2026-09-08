@@ -62,7 +62,7 @@ describe("the companion notes file", () => {
         });
 
         // An unpinned code stands bare, which is the same statement the vocabulary makes about it.
-        expect(notes).toContain("- Actions: A5 (attack, 1-handed thrust), CA (spell), G13");
+        expect(notes).toContain("- Actions: A5 (attack, jab), CA (spell), G13");
     });
 
     it("says so in one line when nothing was lost", () => {

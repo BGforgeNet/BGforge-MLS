@@ -38,7 +38,31 @@ describe("actionLabel", () => {
             actionLabel({ kind: "cast" }),
             actionLabel({ kind: "shoot", weapon: "bow" }),
             actionLabel({ kind: "paperdoll" }),
-        ]).toEqual(["Attack 2", "Cast", "Shoot (bow)", "Inventory"]);
+        ]).toEqual(["Attack (slash, 2-handed)", "Cast", "Shoot (bow)", "Inventory"]);
+    });
+
+    /**
+     * A set with a weapon ships all nine attacks, so the digit alone leaves the picker nine rows a reader
+     * cannot choose between. Every one is DISTINCT, for the same reason the misc files below are: they land
+     * as consecutive rows, and two reading alike leaves the reader picking by position.
+     */
+    it("names each attack for the strike it draws, distinctly", () => {
+        const labels = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((detail) => actionLabel({ kind: "attack", detail }));
+
+        expect(labels).toEqual([
+            "Attack (slash)",
+            "Attack (slash, 2-handed)",
+            "Attack (backslash)",
+            "Attack (backslash, 2-handed)",
+            "Attack (jab)",
+            "Attack (jab, 2-handed)",
+            "Attack (slash, two-weapon)",
+            "Attack (backslash, two-weapon)",
+            "Attack (jab, two-weapon)",
+        ]);
+        expect(new Set(labels).size).toBe(labels.length);
+        // The family's code space is open at both ends, so one the table does not name keeps its number.
+        expect(actionLabel({ kind: "attack", detail: 10 })).toBe("Attack 10");
     });
 
     /**

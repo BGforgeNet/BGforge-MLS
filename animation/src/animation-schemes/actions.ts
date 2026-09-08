@@ -64,22 +64,32 @@ interface ActionEntry {
 }
 
 /**
- * `<race><gender><class><armour><action>`: attacks carry a grip, shots a weapon, `INV` is the inventory
+ * `<race><gender><class><armour><action>`: attacks carry a strike, shots a weapon, `INV` is the inventory
  * paperdoll.
+ *
+ * The nine attacks are one grid - three strikes across three ways of holding a weapon - which is how both
+ * reference implementations index them, and it is the shape that decides the last row. The published
+ * naming stops at `A6` and calls the first strike an overhead; the engine reimplementations call it a
+ * slash and reserve "overhead" for something else, so their word is used here. `A7`-`A9` are documented
+ * nowhere: the two readings agree that `A7` and `A9` are a dual-wielder's, and split on `A8`, one calling
+ * it that row's backslash and the other a generic overhead played for throwing weapons. Taken as the
+ * backslash, so the grid stays a grid; nothing observed distinguishes the two readings.
  *
  * The `G` family is documented only as "misc", which reads as unpinnable - but every one of those files
  * carries the same eleven-band skeleton and draws the band its digit names, and what THAT band depicts the
  * block table pins. So each misc file is named for its own band: measured per file across a classic and an
- * Enhanced install, and the two independent readings agree. `A7`-`A9` ship without their grips documented
- * and stay unpinned, which is what the family's genuinely unnamed space looks like.
+ * Enhanced install, and the two independent readings agree.
  */
 const CHARACTER: readonly ActionEntry[] = [
-    { code: "A1", id: "attack", detail: "1-handed overhead" },
-    { code: "A2", id: "attack", detail: "2-handed overhead" },
-    { code: "A3", id: "attack", detail: "1-handed backslash" },
-    { code: "A4", id: "attack", detail: "2-handed backslash" },
-    { code: "A5", id: "attack", detail: "1-handed thrust" },
-    { code: "A6", id: "attack", detail: "2-handed thrust" },
+    { code: "A1", id: "attack", detail: "slash" },
+    { code: "A2", id: "attack", detail: "slash, 2-handed" },
+    { code: "A3", id: "attack", detail: "backslash" },
+    { code: "A4", id: "attack", detail: "backslash, 2-handed" },
+    { code: "A5", id: "attack", detail: "jab" },
+    { code: "A6", id: "attack", detail: "jab, 2-handed" },
+    { code: "A7", id: "attack", detail: "slash, two-weapon" },
+    { code: "A8", id: "attack", detail: "backslash, two-weapon" },
+    { code: "A9", id: "attack", detail: "jab, two-weapon" },
     { code: "CA", id: "spell" },
     { code: "SA", id: "shoot", detail: "bow" },
     { code: "SS", id: "shoot", detail: "sling" },

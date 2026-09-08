@@ -117,7 +117,7 @@ describe("describeAnimationName - BAM", () => {
     });
 
     it("decodes the character-animation scheme", () => {
-        expect(bam("chmf4a5.bam")).toBe("human male fighter, plate mail - attack (1-handed thrust)");
+        expect(bam("chmf4a5.bam")).toBe("human male fighter, plate mail - attack (jab)");
         expect(bam("cimt1sx.bam")).toBe("halfling male thief/bard, no armor - shoot (crossbow)");
         expect(bam("cefw3w.bam")).toBe("elf female mage, robe - walk");
         expect(bam("cdmc2sxe.bam")).toBe("dwarf/gnome male cleric, leather - shoot (crossbow), east-facing half");
@@ -132,9 +132,10 @@ describe("describeAnimationName - BAM", () => {
         expect(bam("cefc4sx.bam")).toBe("elf female cleric, plate mail - shoot (crossbow)");
     });
 
-    it("decodes the two-weapon and throwing attack details", () => {
-        expect(bam("chmf4a7.bam")).toBe("human male fighter, plate mail - attack (two-weapon)");
-        expect(bam("chmf4a9.bam")).toBe("human male fighter, plate mail - attack (two-weapon, variant)");
+    it("decodes the dual-wield attack details the published naming leaves out", () => {
+        expect(bam("chmf4a7.bam")).toBe("human male fighter, plate mail - attack (slash, two-weapon)");
+        expect(bam("chmf4a8.bam")).toBe("human male fighter, plate mail - attack (backslash, two-weapon)");
+        expect(bam("chmf4a9.bam")).toBe("human male fighter, plate mail - attack (jab, two-weapon)");
     });
 
     it("decodes the two-letter cast action", () => {

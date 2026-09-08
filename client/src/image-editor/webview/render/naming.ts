@@ -1,3 +1,4 @@
+import { decodeActionCode } from "@bgforge/animation/group-labels";
 import type { SourceFormat } from "@bgforge/image";
 import type { IeScheme } from "@bgforge/image/ie-direction";
 import type { SequenceView } from "../messages";
@@ -12,7 +13,8 @@ import type { SequenceView } from "../messages";
  *   anim_names.md), cross-checked against how the Fallout engine builds a critter art suffix from an
  *   animation id and weapon type, and against its animation id ordering.
  * - BAM: IESDP "Avatar Naming Schemes" appendix (appendices/avatarnaming.htm), and the per-animation
- *   naming schemes in IESDP's creature-animation INI reference.
+ *   naming schemes in IESDP's creature-animation INI reference. What an action code depicts comes from
+ *   the shared naming table instead, which reaches past where that appendix stops.
  */
 export function describeAnimationName(view: {
     basename: string;
@@ -210,17 +212,6 @@ const BAM_CHAR_ACTIONS: Record<string, string> = {
     s: "shoot",
     w: "walk",
 };
-const BAM_ATTACK_DETAIL: Record<string, string> = {
-    1: "1-handed overhead",
-    2: "2-handed overhead",
-    3: "1-handed backslash",
-    4: "2-handed backslash",
-    5: "1-handed thrust",
-    6: "2-handed thrust",
-    7: "two-weapon",
-    8: "throwing",
-    9: "two-weapon, variant",
-};
 /** Shoot detail: which ranged weapon the animation is for. */
 const BAM_SHOOT_DETAIL: Record<string, string> = { a: "bow", s: "sling", x: "crossbow" };
 /**
@@ -289,7 +280,9 @@ const EAST_NOTE = ", east-facing half";
 // digit (bare G1 included), and cast/walk take none. Anything else is not this scheme.
 // null = valid with nothing to add; undefined = reject the match.
 function charSchemeDetail(action: string, detail: string): string | null | undefined {
-    if (action === "a") return BAM_ATTACK_DETAIL[detail];
+    // The strike from the naming table rather than a copy of it, so this banner and the stance picker
+    // name an attack alike; a digit it does not name is not this scheme, same as any other bad detail.
+    if (action === "a") return decodeActionCode("character", `A${detail}`).detail;
     if (action === "s") return BAM_SHOOT_DETAIL[detail];
     if (action === "g") return BAM_CHAR_G_DETAIL[detail];
     return detail === "" ? null : undefined;
