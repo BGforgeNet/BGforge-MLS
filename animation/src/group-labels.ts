@@ -12,6 +12,7 @@
  */
 import { type IeScheme } from "@bgforge/image/ie-direction";
 import { type NeutralActionId } from "./animation-schemes/actions";
+import { type ModelledSection } from "./animation-schemes/layout";
 
 /**
  * The engine's whole sequence vocabulary, and the word each code is shown as.
@@ -218,7 +219,19 @@ const ANKHEG_G3: IeGroup[] = [
  * optional trailing "e" covers eastern *E.BAM companions. Block sets the documentation does not pin down
  * are deliberately absent rather than guessed - a numbered group is honest, a wrong name is not.
  */
-const IE_SEQUENCE_NAMES: Record<string, IeGroup[]> = {
+/**
+ * How a block layout is addressed: the file's sequence token, the band width, and how many blocks it has,
+ * optionally narrowed by the animation's declared section.
+ *
+ * Typed rather than left as `string` because a key that matches nothing FIRES nothing - a mistyped section
+ * or token is not a lookup failure anyone sees, it is a family that quietly keeps numbering its stances.
+ * That is exactly how this table came to be missing nine sections at once.
+ */
+type BlockKey =
+    | `${SequenceToken}/${BandWidth}/${number}`
+    | `${ModelledSection}/${SequenceToken}/${BandWidth}/${number}`;
+
+const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
     "ca/ie8/8": CAST_BLOCKS,
     "ca/ie9/8": CAST_BLOCKS,
     "g1/ie8/9": [
@@ -373,10 +386,9 @@ const IE_SEQUENCE_NAMES: Record<string, IeGroup[]> = {
  * rather than numbers of their own - which is the same reading the character scheme already takes of its
  * misc files.
  */
-const IE_SEQUENCE_TOKENS: readonly (readonly [string, RegExp])[] = ["g1", "g2", "g3", "g4", "g5", "ca"].map((token) => [
-    token,
-    new RegExp(`${token}\\d*$`),
-]);
+const IE_SEQUENCE_TOKENS: readonly (readonly [SequenceToken, RegExp])[] = (
+    ["g1", "g2", "g3", "g4", "g5", "ca"] as const
+).map((token) => [token, new RegExp(`${token}\\d*$`)]);
 
 /**
  * One documented block layout, addressed by what identifies it rather than by a filename.
@@ -385,8 +397,8 @@ const IE_SEQUENCE_TOKENS: readonly (readonly [string, RegExp])[] = ["g1", "g2", 
  * what that file depicts is what that block depicts, and reading it from here keeps one statement of it.
  */
 export function ieBlocks(
-    token: string,
-    scheme: IeScheme | WideBand,
+    token: SequenceToken,
+    scheme: BandWidth,
     count: number,
     section?: string,
 ): IeGroup[] | undefined {
@@ -394,9 +406,11 @@ export function ieBlocks(
     // stated per family by the entries below - searching upward for any longer table with the same token
     // and scheme instead lends one family's names to another, which is what a nine-block `ie9` file
     // borrowing the eleven-block character layout looked like.
-    const structural = `${token}/${scheme}/${count}`;
-    const declared = section === undefined ? undefined : IE_SEQUENCE_NAMES[`${section}/${structural}`];
-    return declared ?? IE_SEQUENCE_NAMES[structural];
+    const structural = `${token}/${scheme}/${count}` as const;
+    // The SECTION is whatever the install declared, so it is a plain string here and the narrowed key type
+    // cannot describe it. The cast is on the lookup only: writing the table is still checked.
+    const bySection = section === undefined ? undefined : (`${section}/${structural}` as BlockKey);
+    return (bySection === undefined ? undefined : IE_SEQUENCE_NAMES[bySection]) ?? IE_SEQUENCE_NAMES[structural];
 }
 
 /**
@@ -408,6 +422,15 @@ export function ieBlocks(
  * scheme here because that is all the scheme ever contributed to the key.
  */
 export type WideBand = "ie16";
+
+/** Every band width a key can name - the block schemes, plus the one no scheme covers. */
+type BandWidth = IeScheme | WideBand;
+
+/**
+ * The tokens a file's name can end on, plus the stand-in for a section whose animation is one untokenised
+ * file. Closed, so a key cannot name a token the lookup below never generates.
+ */
+type SequenceToken = "g1" | "g2" | "g3" | "g4" | "g5" | "ca" | typeof SINGLE_FILE;
 
 /**
  * The documented blocks of a multi-block file, from its sequence token and the block scheme, narrowed by
@@ -457,4 +480,4 @@ function blocksNamed(
 }
 
 /** The token stand-in for a section whose animation is a single untokenised file. */
-const SINGLE_FILE = "-";
+const SINGLE_FILE = "-" as const;

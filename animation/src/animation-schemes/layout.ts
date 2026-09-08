@@ -56,7 +56,7 @@ export type Layout =
  * Sections whose layout never varies. `monster` is deliberately absent - it takes two, and `layoutOf` reads
  * the declaration that separates them.
  */
-const FIXED: Readonly<Record<string, Layout>> = {
+const FIXED = {
     character: "character",
     character_old: "characterOld",
     town_static: "bare",
@@ -82,7 +82,16 @@ const FIXED: Readonly<Record<string, Layout>> = {
     // section does not settle the layout and the archive has to.
     multi_new: "mixed",
     monster_icewind: "actionsOrCycles",
-};
+} as const satisfies Readonly<Record<string, Layout>>;
+
+/**
+ * Every section this project models, from the table above plus the one that reads a declaration.
+ *
+ * Derived rather than restated: it exists so a table KEYED by section can be typed on it, and a hand-kept
+ * second list would let a key name a section this file does not - which is invisible, because a key that
+ * matches nothing simply never fires.
+ */
+export type ModelledSection = keyof typeof FIXED | "monster";
 
 /**
  * The layout an animation uses, or undefined for a section nothing here covers.
@@ -101,5 +110,7 @@ const FIXED: Readonly<Record<string, Layout>> = {
 export function layoutOf(section: string | undefined, splitBams?: boolean): Layout | undefined {
     if (section === undefined) return undefined;
     if (section === "monster") return splitBams === true ? "quadrant" : "cycles";
-    return FIXED[section];
+    // An install may declare a section this project does not model - a mod's own, or one from a game the
+    // tables do not cover - so the lookup stays open and answers undefined for it.
+    return (FIXED as Readonly<Record<string, Layout>>)[section];
 }
