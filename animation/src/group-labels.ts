@@ -347,7 +347,11 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
         { codes: ["SC"], id: "ready", detail: "2-handed" },
         { codes: ["SD"], id: "stand", detail: "2-handed" },
         { codes: ["GH"], id: "get-hit" },
-        { codes: ["DE"], id: "die" },
+        // The older character family at its longer length: sleeping gets a band of its own here, where the
+        // eight-block file below folds it into the death. Getting up does not follow it - the reference
+        // browser addresses the get-up at the dying band for the whole family, and the sleep this length
+        // splits out is a single frame per facing with nothing in it to run backwards.
+        { codes: ["DE", "GU"] },
         { codes: ["TW"], id: "twitch" },
         { codes: ["SL"], id: "sleep" },
     ],

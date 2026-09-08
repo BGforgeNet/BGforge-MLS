@@ -156,12 +156,15 @@ describe("stancesOfMembers", () => {
         // distinguishes grips can file on - so it travels with the band rather than staying in the label.
         const stances = stancesOfMembers([member("G1", "CDMB1G1")], () => bands(9));
 
+        // Ten rows for nine bands: the dying one is played for the get-up as well, and neither carries a
+        // grip - only the four stances this family distinguishes by how the weapon is held do.
         expect(stances.map((s) => s.action.detail)).toEqual([
             undefined,
             "1-handed",
             "1-handed",
             "2-handed",
             "2-handed",
+            undefined,
             undefined,
             undefined,
             undefined,
@@ -235,6 +238,19 @@ describe("stancesOfMembers", () => {
 
         expect(lying.map((stance) => stance.label)).toEqual(["Sleep 1", "Get up 1", "Sleep 2", "Get up 2"]);
         expect(lying.map((stance) => stance.reversed)).toEqual([undefined, true, undefined, true]);
+    });
+
+    /**
+     * The older character family ships its `G1` at two lengths, and the longer one splits sleeping out of
+     * the dying band into a still of its own. The get-up stays on the DEATH either way - the reference
+     * browser addresses it at that offset for the whole family, and a one-frame pose has no reverse.
+     */
+    it("keeps that family's get-up on the death when its sleep has a band of its own", () => {
+        const stances = stancesOfMembers([member("G1", "UELM1G1")], () => bands(9), "character_old");
+
+        expect(stances.filter((stance) => stance.band === 6).map((stance) => stance.label)).toEqual(["Die", "Get up"]);
+        expect(stances.find((stance) => stance.label === "Get up")?.reversed).toBe(true);
+        expect(stances.find((stance) => stance.label === "Sleep")?.band).toBe(8);
     });
 
     it("plays a get-up sharing the dying band in reverse", () => {
