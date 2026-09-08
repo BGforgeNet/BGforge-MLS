@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { type IeScheme } from "@bgforge/image/ie-direction";
-import { type IeGroup, blockLabel, ieGroups, stanceName } from "../src/group-labels";
+import { type IeGroup, blockLabel, blockSequences, ieGroups } from "../src/group-labels";
 
 /** Just the block names, which is what most of these assert on. */
 function labelsOf(basename: string, count: number, scheme?: IeScheme, section?: string): string[] | undefined {
@@ -109,12 +109,12 @@ describe("ieGroups", () => {
  * name, where the code is the cross-reference to an archive listing. Storing both strings would let one be
  * reworded without the other, which is what composing them from `code` and `name` prevents.
  */
-describe("blockLabel and stanceName", () => {
+describe("blockLabel and blockSequences", () => {
     test("keep the code for a file's own reader and drop it for a stance list", () => {
         const walk = ieGroups("mogrg1.bam", 6, "ie8")?.[0];
 
         expect(walk && blockLabel(walk)).toBe("WK - walk");
-        expect(walk && stanceName(walk)).toBe("Walk");
+        expect(walk && blockSequences(walk)[0]?.name).toBe("Walk");
     });
 
     // A block the documentation names without a code reads the same either way - there is no code to drop -
@@ -123,6 +123,6 @@ describe("blockLabel and stanceName", () => {
         const conjure = ieGroups("usar1ca.bam", 8, "ie8")?.[0];
 
         expect(conjure && blockLabel(conjure)).toBe("SP - conjure spell 1");
-        expect(conjure && stanceName(conjure)).toBe("Conjure spell 1");
+        expect(conjure && blockSequences(conjure)[0]?.name).toBe("Conjure spell 1");
     });
 });

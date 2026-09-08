@@ -137,13 +137,14 @@ function words(group: IeGroup): string {
 /**
  * Whether the engine draws this sequence by running the block backwards.
  *
- * Only getting up, and only where it SHARES the dying block: with no clip of its own, the engine plays the
- * death back to front. A family that gives it a block of its own addresses that block directly and plays it
- * forwards - the fine monster scheme does exactly this, so a rule keyed on the code alone would play that
- * whole family's get-up backwards.
+ * Only getting up, and only where it SHARES a block: with no clip of its own, the engine plays whatever put
+ * the creature on the floor back to front - the death for the families that fold sleeping into it, the
+ * lying-down band for the character one. A family that gives the get-up a block of its own addresses that
+ * block directly and plays it forwards - the fine monster scheme does exactly this, so a rule keyed on the
+ * code alone would play that whole family's get-up backwards.
  */
 function reversedSequence(group: NamedBlock, code: SequenceCode): boolean {
-    return code === "GU" && group.codes.includes("DE");
+    return code === "GU" && group.codes.length > 1;
 }
 
 /** One sequence of a block, as a stance list names it. */
@@ -195,11 +196,6 @@ function sequenceId(group: NamedBlock, code: SequenceCode): NeutralActionId | un
 /** The block as a file's reader sees it: the codes that address it in the archive, then what it depicts. */
 export function blockLabel(group: IeGroup): string {
     return group.codes === undefined ? "(unused)" : `${group.codes.join("/")} - ${words(group)}`;
-}
-
-/** The block as a stance list names it - no code, because that list spans files rather than reading one. */
-export function stanceName(group: IeGroup): string {
-    return capitalized(words(group));
 }
 
 // The FIRST block of each pair is the conjure loop played while casting, the SECOND the one-shot
@@ -386,8 +382,12 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
         // where the nine-block table's `SD2` is the two-handed one. Same code, different qualifier.
         { codes: ["SD"], id: "stand", ordinal: 2 },
         { codes: ["SD"], id: "stand", ordinal: 3 },
-        { codes: ["SL"], id: "sleep", ordinal: 1 },
-        { codes: ["SL"], id: "sleep", ordinal: 2 },
+        // Lying down, and standing back up by running the same band backwards - the reference browser
+        // addresses the get-up at both of these offsets under its reversed marker. The other
+        // reimplementation reads the first as a get-up played FORWARD and leaves sleeping no band at all;
+        // taken as the shared pair, which is the only reading that gives both directions a clip.
+        { codes: ["SL", "GU"], id: "sleep", ordinal: 1 },
+        { codes: ["SL", "GU"], id: "sleep", ordinal: 2 },
     ],
 
     // Sections whose layout differs from the family the bare key names. Both burrowing schemes lay the

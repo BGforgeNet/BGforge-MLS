@@ -224,6 +224,19 @@ describe("stancesOfMembers", () => {
         expect(getUp?.reversed).toBeUndefined();
     });
 
+    /**
+     * The character family has no get-up clip either: it lies the creature down in two bands and stands it
+     * back up by running one of them backwards, which the reference browser addresses at those same two
+     * offsets under its reversed marker. So the pair a get-up shares is not always the death.
+     */
+    it("plays a character's get-up as its own lying-down band reversed", () => {
+        const stances = stancesOfMembers([member("G19", "CHMW1G19")], () => bands(11, 9, "ie9"));
+        const lying = stances.filter((stance) => stance.band >= 9);
+
+        expect(lying.map((stance) => stance.label)).toEqual(["Sleep 1", "Get up 1", "Sleep 2", "Get up 2"]);
+        expect(lying.map((stance) => stance.reversed)).toEqual([undefined, true, undefined, true]);
+    });
+
     it("plays a get-up sharing the dying band in reverse", () => {
         const stances = stancesOfMembers([member("G1", "CDMB1G1")], () => bands(8), "character_old");
         const shared = stances.filter((s) => s.band === 6);

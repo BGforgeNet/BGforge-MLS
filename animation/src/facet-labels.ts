@@ -7,7 +7,7 @@
  */
 import { decodeActionCode } from "./animation-schemes/actions";
 import { type Action, characterActionCode, characterMiscBlock } from "./animation-schemes/character";
-import { stanceName } from "./group-labels";
+import { blockSequences } from "./group-labels";
 
 const ARMOUR_LABELS: Record<number, string> = {
     1: "None",
@@ -34,12 +34,14 @@ export function actionLabel(action: Action): string {
             return "Cast";
         case "misc": {
             // A misc file's digit is a position in the band skeleton its family shares, so the control says
-            // what that block depicts rather than repeating the number already in the filename. The block's
-            // own stance name, so the two surfaces name it identically, and DISTINCT per file - these land
-            // in the picker as consecutive rows, and the neutral vocabulary would call three of them stands.
-            // The family's code space is open, so one the table does not name keeps its number.
+            // what that block depicts rather than repeating the number already in the filename. The FIRST
+            // sequence of that block, not the list of them: two of these bands are also played backwards to
+            // stand the creature up, and a file is named for the clip it holds rather than for every way
+            // the engine runs it. Distinct per file either way, which the neutral vocabulary would not be -
+            // it calls three of them stands. A digit the table does not name keeps its number.
             const block = characterMiscBlock(action.detail);
-            return block === undefined ? `Misc ${action.detail}` : stanceName(block);
+            const [primary] = block === undefined ? [] : blockSequences(block);
+            return primary === undefined ? `Misc ${action.detail}` : primary.name;
         }
         case "shoot":
             return `Shoot (${action.weapon})`;
