@@ -16,7 +16,7 @@
     }
 
     function clampZoom(z: number): number {
-        return Math.min(Math.max(z, ZOOM_MIN), zoomCeiling);
+        return Math.min(Math.max(z, ZOOM_MIN), ZOOM_MAX);
     }
 
     /** Persisted subset of the view choices, read/written through `vscode.getState()`/`setState()`. */
@@ -46,14 +46,8 @@
         viewState?: { get: () => unknown; set: (state: unknown) => void };
     } = $props();
 
-    /**
-     * The scale at which the sprite fills its tile, which is above the ladder's top for any creature small
-     * against the tile it stands in. So the slider's top is the fill point rather than a constant: a
-     * control that cannot represent the value it is showing would snap the reader's choice back on the
-     * next drag.
-     */
-    const fill = $derived(Math.max(ZOOM_MIN, fillZoom));
-    const zoomCeiling = $derived(Math.max(ZOOM_MAX, fill));
+    /** What Auto would choose - already capped to this control's own range (tile.autoZoom). */
+    const fill = $derived(clampZoom(fillZoom));
     const isAuto = $derived(Math.abs(zoom - fill) < 0.001);
 
     function isRecord(v: unknown): v is Record<string, unknown> {
@@ -96,7 +90,7 @@
         <input
             type="range"
             min={ZOOM_MIN}
-            max={zoomCeiling}
+            max={ZOOM_MAX}
             step={ZOOM_STEP}
             value={zoom}
             oninput={(e) => handleZoomChange(clampZoom(Number(e.currentTarget.value)))}

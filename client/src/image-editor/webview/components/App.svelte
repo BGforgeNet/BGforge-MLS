@@ -33,7 +33,7 @@
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
     import { DEFAULT_TILE_BOX, spriteFillRatio, tileBoxPx } from "../render/anchor";
-    import { fitZoomByMeasuring, zoomSubject, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
+    import { autoZoom, fitZoomByMeasuring, zoomSubject, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
     import CompassRose from "./CompassRose.svelte";
@@ -397,7 +397,7 @@
         );
         if (!current() || subject === zoomedSubject) return;
         zoomedSubject = subject;
-        zoom = fillRatio * fitted;
+        zoom = autoZoom(fillRatio, fitted);
     }
 </script>
 
@@ -493,7 +493,7 @@
             {/if}
             <ViewControls
                 {zoom}
-                fillZoom={fillRatio * layoutScale}
+                fillZoom={autoZoom(fillRatio, layoutScale)}
                 {background}
                 {showOffsetMarker}
                 onZoomChange={(z) => (zoom = z)}

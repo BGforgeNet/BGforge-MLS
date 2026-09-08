@@ -1,5 +1,11 @@
 import { expect, test } from "vitest";
-import { fitZoomByMeasuring, zoomSubject, ZOOM_MAX, ZOOM_MIN } from "../../src/image-editor/webview/render/tile";
+import {
+    autoZoom,
+    fitZoomByMeasuring,
+    zoomSubject,
+    ZOOM_MAX,
+    ZOOM_MIN,
+} from "../../src/image-editor/webview/render/tile";
 
 /**
  * A stand-in for the real stage: `count` uniform tiles of `tileBase` laid out by a wrapping grid, which
@@ -62,6 +68,17 @@ test("a nine-tile creature stance shrinks to a third, not to the floor", async (
 
 const walk = { basename: "MDKNG1", set: { id: 0x2300, action: "MDKNG1" } };
 const attack = { basename: "MDKNG2", set: { id: 0x2300, action: "MDKNG2" } };
+
+test("auto fills the tile where the art is large enough to need most of it", () => {
+    // The knight: a shade over 1:1 of its tile at the layout scale it is drawn.
+    expect(autoZoom(3.5, 0.34)).toBeCloseTo(1.19);
+});
+
+test("auto stops at the top of the control, however much room a small sprite has", () => {
+    // The rat measured 683% of its tile before this - a sprite blown up that far is more block than
+    // picture, and it was a scale the presets could not even offer.
+    expect(autoZoom(20, 0.34)).toBe(ZOOM_MAX);
+});
 
 test("another creature is another subject, so it is fitted rather than inheriting the last one's scale", () => {
     const dragon = { basename: "MDR11100", set: { id: 0x1200, action: "MDR11100" } };

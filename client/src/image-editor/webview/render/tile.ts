@@ -35,6 +35,17 @@ export const ZOOM_STEP = 0.05;
  */
 export const ZOOM_PRESETS = [0.25, 0.5, 1, 2, 4];
 
+/**
+ * What Auto settles on: the scale that fills the tile, but never past the control's own top.
+ *
+ * A small creature's tile is many times its art - a rat can fill one at nearly 700% - and blown up that
+ * far a sprite is more block than picture. Capping keeps the automatic choice inside the range the presets
+ * and the slider offer, so what a reader is handed is always something they could have asked for.
+ */
+export function autoZoom(fillRatio: number, layoutScale: number): number {
+    return Math.min(fillRatio * layoutScale, ZOOM_MAX);
+}
+
 /** Halvings of the range the fit search spends; 7 resolves it to within a couple of percent. */
 const FIT_SEARCH_STEPS = 7;
 
