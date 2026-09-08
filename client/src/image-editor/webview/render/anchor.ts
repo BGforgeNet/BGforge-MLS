@@ -3,7 +3,7 @@ import type { SourceFormat } from "@bgforge/image";
 // re-exports the png/bamc codecs (Node Buffer/zlib) which crash a browser webview bundle on load.
 import { offsetToAnchor } from "@bgforge/image/frame-anchor";
 import type { AnimationView } from "../messages";
-import { TILE_BASE_PX } from "./tile";
+import { TILE_BOX_PX } from "./tile";
 
 /**
  * Where a frame's top-left corner sits (unzoomed px) within its tile: topLeft = referencePoint - anchor,
@@ -23,13 +23,13 @@ import { TILE_BASE_PX } from "./tile";
 /**
  * A tile's footprint (unzoomed px) and where the anchor reference point sits INSIDE it.
  *
- * A rectangle with an explicit reference rather than a square centred on one: art is routinely far to one
- * side of its anchor - an IE creature's ground point can sit hundreds of pixels below the sprite - and a
- * square big enough to reach it in every direction is several times the area the frames occupy. Every
- * layout is sized from this, so that surplus is paid again per tile across a whole rose or grid.
+ * The footprint is one constant square (TILE_BOX_PX); what varies is the REFERENCE, which is placed to
+ * centre whatever is drawn. Art is routinely far to one side of its anchor - an IE creature's ground point
+ * can sit hundreds of pixels below the sprite - so the reference is carried explicitly rather than assumed
+ * to be the middle, and it may land outside the box entirely.
  *
- * What has to hold is only that the reference lands at the SAME spot in every tile of an animation, which
- * an explicit `refX`/`refY` gives directly; the square shape was never what aligned them.
+ * What has to hold is only that the reference lands at the SAME spot in every tile drawing the same
+ * cycles, which an explicit `refX`/`refY` gives directly.
  */
 export interface TileBox {
     w: number;
@@ -38,12 +38,12 @@ export interface TileBox {
     refY: number;
 }
 
-/** The floor tile, for a surface with nothing loaded to measure. */
+/** The empty tile, for a surface with nothing loaded to centre in it. */
 export const DEFAULT_TILE_BOX: TileBox = {
-    w: TILE_BASE_PX,
-    h: TILE_BASE_PX,
-    refX: TILE_BASE_PX / 2,
-    refY: TILE_BASE_PX / 2,
+    w: TILE_BOX_PX,
+    h: TILE_BOX_PX,
+    refX: TILE_BOX_PX / 2,
+    refY: TILE_BOX_PX / 2,
 };
 
 // The reference point for a frame of the given height. Exhaustive by SourceFormat: a new format must
@@ -125,13 +125,14 @@ export function spriteRect(
 export function spriteFillRatio(
     view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
     box: TileBox,
+    drawn: readonly SequenceExtent[] = view.sequences,
 ): number {
     let ratio = Infinity;
     /** A `room / need` bound, ignored where the art does not extend that way (nothing to run out of). */
     const bound = (room: number, need: number): void => {
         if (need > 0) ratio = Math.min(ratio, room / need);
     };
-    for (const seq of view.sequences) {
+    for (const seq of drawn) {
         for (const ref of seq.frameRefs) {
             const frame = view.frames[ref];
             if (!frame) continue;
@@ -161,53 +162,46 @@ export function spriteFillRatio(
 const PROBE_BOX: TileBox = { w: 0, h: 0, refX: 0, refY: 0 };
 
 /**
- * The smallest tile (unzoomed px, each side floored at TILE_BASE_PX) that contains every frame of every
- * sequence at its anchored position - the tile STRETCHES for oversized sprites rather than clipping them
- * or zooming out, and the union across the whole animation is what stops a sprite shifting between frames.
+ * The tile the DRAWN cycles are centred in: always TILE_BOX_PX square, with the reference placed so their
+ * art lands in the middle of it.
+ *
+ * Two separate decisions. The SIZE is constant (see TILE_BOX_PX) so the background a reader is looking at
+ * never resizes under them. The REFERENCE is per drawn cycle: a file's stances differ in height, and one
+ * reference for the whole file drew the tall ones flush against the top while the room the short ones
+ * needed sat empty at the feet. Centring is computed from the cycles PASSED, so it moves when the reader
+ * picks another sequence and holds still while one plays - every frame of a cycle shares one reading.
  *
  * Both reference formulas are `ref + <box-independent term>`, so a frame's position relative to the
  * reference does not depend on the box: measuring against a zero box is exact, and the result cannot feed
  * back into itself.
  *
- * The ART alone sets the extents. The reference is a coordinate that may fall OUTSIDE the box: a sprite's
- * ground point can sit well clear of its art, and spanning to it made a tile hundreds of px tall to hold a
- * few dozen of drawing - dead space every layout then pays per tile, and the rose pays it as radius. The
- * offset marker still draws there, since a tile does not clip (animation-tiles.css); it is diagnostic, and
- * outside the box is where that animation genuinely puts it.
+ * The ART alone is centred. The reference is a coordinate that may fall OUTSIDE the box: a sprite's ground
+ * point can sit well clear of its art, and centring on it would push the drawing off the tile entirely.
+ * The offset marker still draws there, since a tile does not clip (animation-tiles.css); it is diagnostic,
+ * and outside the box is where that animation genuinely puts it.
  */
-export function tileBoxPx(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): TileBox {
-    const { minX, minY, spanX, spanY } = artExtents(view);
-    // Nothing referenced anything drawable, so there are no extents to size from.
+export function tileBoxPx(
+    view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
+    drawn: readonly SequenceExtent[] = view.sequences,
+): TileBox {
+    const { minX, minY, spanX, spanY } = artExtents(view, drawn);
+    // Nothing referenced anything drawable, so there is no art to centre.
     if (spanX === undefined || spanY === undefined) return DEFAULT_TILE_BOX;
-    // Padding a side up to the floor is split evenly, so a small sprite stays where a bigger one would be
-    // rather than jumping to a corner of its minimum tile.
-    const pad = (span: number): number => Math.max(0, TILE_BASE_PX - span) / 2;
     return {
-        w: Math.max(TILE_BASE_PX, spanX),
-        h: Math.max(TILE_BASE_PX, spanY),
-        refX: -minX + pad(spanX),
-        refY: -minY + pad(spanY),
+        w: TILE_BOX_PX,
+        h: TILE_BOX_PX,
+        refX: -minX + (TILE_BOX_PX - spanX) / 2,
+        refY: -minY + (TILE_BOX_PX - spanY) / 2,
     };
 }
 
-/**
- * How much the animation actually DRAWS, unzoomed and unfloored - the union of every referenced frame at
- * its anchored position.
- *
- * The tile box floors each side at TILE_BASE_PX so a small sprite keeps a workable cell, which makes the
- * box a bad measure of the art: the stage sizes a sprite against the room its cell really has, and a 16px
- * rat in a 96px box would otherwise be read as already filling it.
- */
-export function artSpanPx(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): {
-    w: number;
-    h: number;
-} {
-    const { spanX, spanY } = artExtents(view);
-    return { w: spanX ?? TILE_BASE_PX, h: spanY ?? TILE_BASE_PX };
-}
+/** What a cycle has to say about where its art sits: which frames, and the band offset they carry. */
+type SequenceExtent = Pick<AnimationView["sequences"][number], "frameRefs" | "dirOffsetX" | "dirOffsetY">;
 
-/** Shared by both so the box and the art it holds can never be measured from different traversals. */
-function artExtents(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): {
+function artExtents(
+    view: Pick<AnimationView, "sourceFormat" | "frames">,
+    sequences: readonly SequenceExtent[],
+): {
     minX: number;
     minY: number;
     spanX: number | undefined;
@@ -217,7 +211,7 @@ function artExtents(view: Pick<AnimationView, "sourceFormat" | "frames" | "seque
     let maxX = -Infinity;
     let minY = Infinity;
     let maxY = -Infinity;
-    for (const seq of view.sequences) {
+    for (const seq of sequences) {
         for (const ref of seq.frameRefs) {
             const frame = view.frames[ref];
             if (!frame) continue;

@@ -142,15 +142,14 @@ select {
 .zoom-presets {
     justify-content: flex-start;
 }
-/* The zoom ladder is ONE row of equal columns, however many levels it holds: as a wrapping flex row the
-   last level dropped onto a line of its own, which reads as a stray control rather than as part of the
-   set. Auto-flow columns take the count from the content, so the ladder can gain a level without a
-   second statement of how many there are. The labels are four characters at most, so they fit a track
-   that a worded button would not. */
+/* The zoom levels are a block of equal columns, three to a row. Equal because they are one set of
+   alternatives; three because six of them on one row are wider than this panel, and a grid track does not
+   shrink below its label - the row then pushed the whole column sideways and clipped every label in it. A
+   count that divides the levels evenly is what keeps the last one from sitting alone on a line of its own,
+   which reads as a stray control rather than as part of the set. */
 .zoom-presets {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
 }
 .zoom-presets .bg-option {
     padding-inline: 0.25rem;

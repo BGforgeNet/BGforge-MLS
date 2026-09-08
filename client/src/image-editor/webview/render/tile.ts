@@ -1,10 +1,17 @@
 /**
- * The fixed unzoomed footprint (px) each frame is centered within. Shared so every layout sizes its
- * cells uniformly (CompassRose derives its circle radius from it, CycleGrid its cell size) and every
- * frame anchors at the same on-screen point regardless of its own width/height (FrameCanvas centers
- * within it).
+ * The unzoomed footprint every tile has, whatever it holds: one square, the same for every animation.
+ *
+ * Square and CONSTANT rather than sized to the art. A box that hugged its own sprite resized whenever the
+ * reader changed action, which moved the background under them and re-fitted the layout for a picture of
+ * the same creature. With one box, the on-screen cell depends only on the stage and how many tiles are in
+ * it, so switching action or facing leaves the grid exactly where it was.
+ *
+ * The value is a free parameter, not a limit: the cell is this scaled by the layout fit, and the art
+ * inside it is scaled separately (see spriteFillRatio), so what a reader sees is set by those two and not
+ * by this number. It is a round size above the largest sprites the corpus holds, which keeps a typical
+ * creature a fraction of its box rather than the other way round.
  */
-export const TILE_BASE_PX = 96;
+export const TILE_BOX_PX = 512;
 
 /**
  * The zoom ladder, defined here beside the auto-zoom that has to respect it - the control and the
@@ -18,12 +25,13 @@ export const ZOOM_MIN = 0.1;
 export const ZOOM_MAX = 4;
 export const ZOOM_STEP = 0.05;
 /**
- * One-click levels, ascending - and the ladder the automatic fit walks down.
+ * One-click levels, ascending.
  *
  * Every rung is a power of two, which is what keeps a sprite crisp: the canvas holds the frame at native
  * resolution and CSS scales it with `image-rendering: pixelated`, so a whole-number factor maps each
  * source pixel to an exact block and a halving averages a whole block down. The fractional zooms between
- * them render some source pixels wider than others, which reads as a ragged sprite.
+ * them render some source pixels wider than others, which reads as a ragged sprite - which is the trade a
+ * reader makes when they take Fill (the default) over one of these.
  */
 export const ZOOM_PRESETS = [0.25, 0.5, 1, 2, 4];
 
@@ -64,22 +72,6 @@ export async function fitZoomByMeasuring(
     }
     await apply(lo);
     return lo;
-}
-
-/**
- * The sprite scale a freshly fitted subject starts at: the largest ladder rung the room allows.
- *
- * The cell grid is fitted to the stage continuously - a cell is a plain rectangle, and stopping it on a
- * rung would leave the stage part empty for nothing. The ART inside it is what has to stay pixel-exact
- * (ZOOM_PRESETS), so it takes a rung. `room` is what the cell really has for it (`spriteFillRatio`, which
- * measures against the anchor rather than the art's own size), so the automatic choice and the Fill
- * control read the same number and cannot disagree about what fits.
- *
- * Below the smallest rung nothing is crisp anyway, so an oversized sprite takes the plain ratio that
- * fits rather than overflowing the cell the grid reserved for it.
- */
-export function snapToLadder(room: number): number {
-    return ZOOM_PRESETS.findLast((preset) => preset <= room) ?? room;
 }
 
 /**

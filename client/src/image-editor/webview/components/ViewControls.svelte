@@ -22,12 +22,21 @@
     /** Persisted subset of the view choices, read/written through `vscode.getState()`/`setState()`. */
     interface PersistedViewState {
         zoom: number;
+        /**
+         * Whether that zoom was a scale the reader asked for or the automatic fill.
+         *
+         * Carried because restoring the NUMBER alone would pin it: a panel last left filling would reopen
+         * frozen at whatever the last animation happened to fill at. State written before this field
+         * existed can only have come from a reader's own click, which is what its absence means.
+         */
+        zoomMode?: "manual" | "auto";
         background: Background;
     }
 
     const {
         zoom,
         fillZoom,
+        zoomMode,
         background,
         showOffsetMarker,
         onZoomChange,
@@ -38,9 +47,12 @@
         zoom: number;
         /** The scale at which the drawn animation exactly fills its cell - what the Fill button sets. */
         fillZoom: number;
+        /** Whether `zoom` is a scale the reader pinned or the automatic fill. */
+        zoomMode: "manual" | "auto";
         background: Background;
         showOffsetMarker: boolean;
-        onZoomChange: (zoom: number) => void;
+        /** `mode` says whether the reader asked for a scale of their own or for the automatic fill. */
+        onZoomChange: (zoom: number, mode: "manual" | "auto") => void;
         onBackgroundChange: (background: Background) => void;
         onToggleOffsetMarker: () => void;
         viewState?: { get: () => unknown; set: (state: unknown) => void };
@@ -54,7 +66,7 @@
      */
     const fill = $derived(Math.max(ZOOM_MIN, fillZoom));
     const zoomCeiling = $derived(Math.max(ZOOM_MAX, fill));
-    const isFill = $derived(Math.abs(zoom - fill) < 0.001);
+    const isAuto = $derived(Math.abs(zoom - fill) < 0.001);
 
     function isRecord(v: unknown): v is Record<string, unknown> {
         return typeof v === "object" && v !== null;
@@ -69,7 +81,10 @@
     $effect(() => {
         const persisted = viewState?.get();
         if (!isRecord(persisted)) return;
-        if (typeof persisted.zoom === "number") onZoomChange(clampZoom(persisted.zoom));
+        // A zoom the reader chose reopens pinned to it; one left filling reopens filling, which is why
+        // the mode is persisted beside the number.
+        const mode = persisted.zoomMode === "auto" ? "auto" : "manual";
+        if (typeof persisted.zoom === "number") onZoomChange(clampZoom(persisted.zoom), mode);
         if (isBackground(persisted.background)) onBackgroundChange(persisted.background);
     });
 
@@ -77,14 +92,16 @@
         viewState?.set(next);
     }
 
-    function handleZoomChange(next: number): void {
-        onZoomChange(next);
-        persist({ zoom: next, background });
+    function handleZoomChange(next: number, mode: "manual" | "auto" = "manual"): void {
+        onZoomChange(next, mode);
+        persist({ zoom: next, zoomMode: mode, background });
     }
 
     function handleBackgroundChange(next: Background): void {
         onBackgroundChange(next);
-        persist({ zoom, background: next });
+        // Carries the zoom mode too: writing the number alone would drop it, and the panel would reopen
+        // pinned to a fill value because someone changed the backdrop.
+        persist({ zoom, zoomMode, background: next });
     }
 </script>
 
@@ -117,12 +134,12 @@
         <button
             type="button"
             class="bg-option"
-            class:active={isFill}
-            aria-pressed={isFill}
-            title="Largest scale at which the whole animation still fits its tile - off the pixel-exact ladder"
-            onclick={() => handleZoomChange(fill)}
+            class:active={isAuto}
+            aria-pressed={isAuto}
+            title="Largest scale at which the whole animation still fits its tile - what a view opens at, and what it returns to on every switch"
+            onclick={() => handleZoomChange(fill, "auto")}
         >
-            Fill
+            Auto
         </button>
     </div>
     <div class="view-field" role="radiogroup" aria-label="Background">
