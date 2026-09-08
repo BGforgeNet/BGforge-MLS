@@ -80,12 +80,16 @@ test("roseGeometry widens the circle when the facings are closer together", () =
         facings.flatMap((f) => (compassPosition(f) ? [{ pos: compassPosition(f)! }] : []));
     const octagon = roseGeometry(at(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]));
     const westArc = roseGeometry(at(["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"]));
-    // 45 degrees apart keeps the established radius; 22.5 degrees needs a bigger circle or the tiles
-    // overlap - the chord between neighbours must stay at least one tile wide.
-    expect(octagon.radiusTiles).toBeCloseTo(1.5);
+    // Each takes exactly the radius its own tightest gap needs: neighbours a tile apart and no further,
+    // since the wheel is 2r+1 tiles tall and every extra tenth of a radius comes off the sprites.
+    expect(octagon.radiusTiles).toBeCloseTo(1 / (2 * Math.sin(Math.PI / 8)));
     expect(westArc.radiusTiles).toBeGreaterThan(2.5);
-    const chord = 2 * westArc.radiusTiles * Math.sin(Math.PI / 16);
-    expect(chord).toBeGreaterThanOrEqual(1);
+    for (const [rose, gap] of [
+        [octagon, Math.PI / 4],
+        [westArc, Math.PI / 8],
+    ] as const) {
+        expect(2 * rose.radiusTiles * Math.sin(gap / 2)).toBeCloseTo(1);
+    }
 });
 
 test("roseGeometry fits the box to the tiles present, so a half-populated rose is not half dead space", () => {

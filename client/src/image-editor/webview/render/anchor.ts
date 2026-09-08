@@ -38,25 +38,12 @@ export interface TileBox {
     refY: number;
 }
 
-/**
- * How much of the tile is kept BELOW the anchor - room for the shadow and overhang an IE creature carries
- * under its ground point, and for the ground to read as ground rather than as the edge of a box.
- */
-const FEET_HEIGHT_FRACTION = 0.25;
-
-/**
- * The tile every frame is drawn in: one square, with the sprite's ground point at a fixed spot in it.
- *
- * A constant, not a measurement. Sizing or centring the tile per animation meant it moved whenever the
- * reader changed action or sequence, and every rule that placed the art by measuring it had a scale at
- * which it stopped holding. A fixed anchor cannot: the feet are a quarter of the way up every tile of
- * every animation, so the only thing a switch changes is the picture standing on them.
- */
-export const TILE_BOX: TileBox = {
+/** The empty tile, for a surface with nothing loaded to place in it. */
+export const DEFAULT_TILE_BOX: TileBox = {
     w: TILE_BOX_PX,
     h: TILE_BOX_PX,
     refX: TILE_BOX_PX / 2,
-    refY: TILE_BOX_PX * (1 - FEET_HEIGHT_FRACTION),
+    refY: TILE_BOX_PX / 2,
 };
 
 // The reference point for a frame of the given height. Exhaustive by SourceFormat: a new format must
@@ -123,49 +110,95 @@ export function spriteRect(
 }
 
 /**
- * How many times the fitted size the drawn art can be shown at before it leaves its tile - what the Auto
- * control asks for, and what a freshly opened animation is drawn at.
+ * How many times the fitted size the animation can be shown at before it leaves its tile - what Auto asks
+ * for, and what a freshly opened animation is drawn at.
  *
- * The anchor is fixed in the tile and the art hangs off it, so each frame gets one bound per edge: the
- * room on that side against how far the art reaches that way. A ground-anchored sprite is therefore
- * bounded by the room above the feet, and one with shadow below it by the quarter tile beneath.
+ * The art's own union against the tile, and nothing else: the anchor lands wherever centring that union
+ * puts it (`tileBoxPx`), so where it sits inside the art costs the sprite nothing. The longer side of the
+ * union decides, since both have to fit; the other keeps its margin, split evenly.
  *
- * The tightest bound over the WHOLE FILE, not over the cycles on screen. A rose of one creature has to
- * keep every facing whole, and the scale is chosen once when the animation opens and then left alone - so
- * a sequence that reaches further than the one being looked at has to fit at it too, or picking it later
- * would push the sprite over its neighbours.
+ * Measured over the WHOLE FILE, not the cycles on screen. The scale is chosen once when the animation
+ * opens and then left alone, so a sequence that reaches further than the one being looked at has to fit at
+ * it too - otherwise picking it later would push the sprite over its neighbours.
  */
 export function spriteFillRatio(
     view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
     box: TileBox,
 ): number {
-    const drawn = view.sequences;
-    let ratio = Infinity;
-    /** A `room / reach` bound, ignored where the art does not extend that way - nothing to run out of. */
-    const bound = (room: number, reach: number): void => {
-        if (reach > 0) ratio = Math.min(ratio, room / reach);
-    };
-    for (const seq of drawn) {
+    const { spanX, spanY } = artExtents(view);
+    // Nothing drawable: the fitted size is the only size there is anything to say about.
+    if (spanX === undefined || spanY === undefined || spanX <= 0 || spanY <= 0) return 1;
+    return Math.min(box.w / spanX, box.h / spanY);
+}
+
+/** Extents are measured against a zero box, so the numbers come out relative to the reference point. */
+const PROBE_BOX: TileBox = { w: 0, h: 0, refX: 0, refY: 0 };
+
+/**
+ * The tile an animation is drawn in: one constant square, with the reference placed so the art lands in
+ * the middle of it at the size it is being drawn.
+ *
+ * Two decisions, both per ANIMATION and neither per sequence. The SIZE is constant (TILE_BOX_PX) so the
+ * background never resizes under the reader. The REFERENCE centres the whole file's art - every cycle, not
+ * the one on screen - so switching sequence or action moves nothing at all: the tile stays, the anchor
+ * stays, and only the picture standing on it changes.
+ *
+ * The art is drawn at `reference*layout - anchor*sprite`, so it scales about its ANCHOR: a reference that
+ * centred it at 1:1 would stop centring it at any other zoom, and a creature anchored low would drift up
+ * and leave a band of dead tile under its feet. Carrying the ratio of the two scales holds the middle of
+ * the art on the middle of the tile at whatever size it is shown; at 1:1 the term is 1.
+ *
+ * The reference is a coordinate, and may land outside the box: a sprite's ground point can sit well clear
+ * of its art. The offset marker still draws there, since a tile does not clip (animation-tiles.css); it is
+ * diagnostic, and outside the tile is where that animation genuinely puts it.
+ */
+export function tileBoxPx(
+    view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">,
+    spriteScaleRatio = 1,
+): TileBox {
+    const { minX, minY, spanX, spanY } = artExtents(view);
+    if (spanX === undefined || spanY === undefined) return DEFAULT_TILE_BOX;
+    const centre = (min: number, span: number): number => TILE_BOX_PX / 2 - (min + span / 2) * spriteScaleRatio;
+    return { w: TILE_BOX_PX, h: TILE_BOX_PX, refX: centre(minX, spanX), refY: centre(minY, spanY) };
+}
+
+/** The union of every frame the animation references, at its anchored position, relative to the anchor. */
+function artExtents(view: Pick<AnimationView, "sourceFormat" | "frames" | "sequences">): {
+    minX: number;
+    minY: number;
+    spanX: number | undefined;
+    spanY: number | undefined;
+} {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const seq of view.sequences) {
         for (const ref of seq.frameRefs) {
             const frame = view.frames[ref];
             if (!frame) continue;
-            const point = referencePoint(view.sourceFormat, frame.height, box);
-            const { ax, ay } = offsetToAnchor(view.sourceFormat, {
-                width: frame.width,
-                height: frame.height,
-                offsetX: frame.offsetX,
-                offsetY: frame.offsetY,
-                dirOffsetX: seq.dirOffsetX,
-                dirOffsetY: seq.dirOffsetY,
-            });
-            bound(point.x, ax);
-            bound(box.w - point.x, frame.width - ax);
-            bound(point.y, ay);
-            bound(box.h - point.y, frame.height - ay);
+            const rel = frameTopLeft(
+                {
+                    sourceFormat: view.sourceFormat,
+                    width: frame.width,
+                    height: frame.height,
+                    offsetX: frame.offsetX,
+                    offsetY: frame.offsetY,
+                    dirOffsetX: seq.dirOffsetX,
+                    dirOffsetY: seq.dirOffsetY,
+                },
+                PROBE_BOX,
+            );
+            minX = Math.min(minX, rel.x);
+            maxX = Math.max(maxX, rel.x + frame.width);
+            minY = Math.min(minY, rel.y);
+            maxY = Math.max(maxY, rel.y + frame.height);
         }
     }
-    // Nothing drawable: the fitted size is the only size there is anything to say about.
-    return Number.isFinite(ratio) ? ratio : 1;
+    if (!Number.isFinite(minX) || !Number.isFinite(minY)) {
+        return { minX: 0, minY: 0, spanX: undefined, spanY: undefined };
+    }
+    return { minX, minY, spanX: Math.ceil(maxX - minX), spanY: Math.ceil(maxY - minY) };
 }
 
 /**

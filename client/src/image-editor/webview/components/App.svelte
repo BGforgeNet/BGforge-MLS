@@ -32,7 +32,7 @@
     import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
-    import { spriteFillRatio, TILE_BOX } from "../render/anchor";
+    import { DEFAULT_TILE_BOX, spriteFillRatio, tileBoxPx } from "../render/anchor";
     import { fitZoomByMeasuring, zoomSubject, ZOOM_MAX, ZOOM_MIN } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
@@ -218,9 +218,14 @@
     // What is ON SCREEN: the transport is sized against these and frames are fetched for these, never for
     // the file's whole cycle list (compass-layout.drawnSequences).
     const drawnCycles = $derived(drawnSequences(layoutMode, roseTiles, gridTiles));
+    // One tile per ANIMATION - constant size, art centred in it at whatever scale it is drawn - so no
+    // switch of action or sequence moves the tile, the anchor, or the picture's place in it.
+    const tileBox = $derived(
+        view ? tileBoxPx(view, layoutScale > 0 ? zoom / layoutScale : 1) : DEFAULT_TILE_BOX,
+    );
     // How far past the fitted size the art can be pushed before it leaves its tile: what Auto asks for,
     // and what a freshly opened animation is drawn at.
-    const fillRatio = $derived(view ? spriteFillRatio(view, TILE_BOX) : 1);
+    const fillRatio = $derived(view ? spriteFillRatio(view, tileBox) : 1);
 
     $effect(() => {
         return bridge.onMessage((m) => {
@@ -432,7 +437,7 @@
                         frame={playback.frame}
                         {layoutScale}
                         spriteScale={zoom}
-                        tileBox={TILE_BOX}
+                        {tileBox}
                         {showOffsetMarker}
                     />
                 {:else}
@@ -443,7 +448,7 @@
                         frame={playback.frame}
                         {layoutScale}
                         spriteScale={zoom}
-                        tileBox={TILE_BOX}
+                        {tileBox}
                         {showOffsetMarker}
                         columns={cycleColumns}
                     />

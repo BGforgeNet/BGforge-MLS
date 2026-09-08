@@ -71,8 +71,14 @@ export interface RoseGeometry {
     centers: { x: number; y: number }[];
 }
 
-/** Historical radius, and the floor: the sparser schemes keep the spacing they have always had. */
-const MIN_RADIUS_TILES = 1.5;
+/**
+ * The floor, for a rose too sparse for the no-overlap condition to say anything - a lone facing, or two.
+ *
+ * Not the spacing itself: every populated scheme takes the radius its own tightest gap needs, which is
+ * what puts the sprites as large as the stage allows. The wheel is `2r + 1` tiles tall, so a floor above
+ * that condition costs tile size on every rose it applies to and buys only air between the tiles.
+ */
+const MIN_RADIUS_TILES = 1;
 
 export function roseGeometry(tiles: readonly { pos: RosePosition }[]): RoseGeometry {
     const angles = tiles.map((t) => Math.atan2(t.pos.dy, t.pos.dx)).sort((a, b) => a - b);

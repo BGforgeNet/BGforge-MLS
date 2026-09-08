@@ -5,7 +5,7 @@ import {
     referenceMarkerPercent,
     spriteFillRatio,
     spriteRect,
-    TILE_BOX,
+    tileBoxPx,
     type TileBox,
 } from "../../src/image-editor/webview/render/anchor";
 
@@ -166,62 +166,90 @@ const oneFrameView = (frame: { width: number; height: number; offsetX: number; o
     sequences: [{ frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
 });
 
-test("every animation gets the same tile, with the anchor a quarter of the way up it", () => {
-    // The whole placement rule: one square, the sprite's ground point at a fixed spot in it. Nothing about
-    // the art enters, so no switch of action, sequence or animation can move the tile or the feet in it.
-    expect(TILE_BOX.w).toBe(TILE_BOX.h);
-    expect(TILE_BOX.refX).toBeCloseTo(TILE_BOX.w / 2);
-    expect(TILE_BOX.refY).toBeCloseTo(TILE_BOX.h * 0.75);
+test("every animation gets the same square tile", () => {
+    const small = tileBoxPx(oneFrameView({ width: 30, height: 30, offsetX: 15, offsetY: 15 }));
+    const large = tileBoxPx(oneFrameView({ width: 190, height: 199, offsetX: 95, offsetY: 99 }));
+    expect(small.w).toBe(small.h);
+    expect([large.w, large.h]).toEqual([small.w, small.h]);
 });
 
-test("the marker draws where the anchor is placed, a quarter of the way up", () => {
-    expect(referenceMarkerPercent("bam", 62, TILE_BOX)).toEqual({ x: 50, y: 75 });
+test("the anchor lands wherever centring the art puts it, at any scale", () => {
+    // The placement rule: the art sits in the middle of the tile, and the ground point goes where that
+    // leaves it - so a creature with shadow below its anchor gets the whole tile to grow into rather than
+    // the share above a fixed line. Falsified by dropping the scale term: at 2x this then sits 40px high.
+    const frame = { width: 40, height: 100, offsetX: 20, offsetY: 90 };
+    const view = oneFrameView(frame);
+    for (const scale of [1, 2, 5]) {
+        const box = tileBoxPx(view, scale);
+        const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box, 1, scale);
+        expect(rect.top).toBeCloseTo((box.h - frame.height * scale) / 2);
+        expect(rect.left).toBeCloseTo((box.w - frame.width * scale) / 2);
+    }
 });
 
-test("a sprite standing on its anchor gets the three quarters of the tile above it", () => {
-    // A true ground-point sprite: 100 tall, anchored at its own bottom. Nothing of it is below the feet,
-    // so what bounds it is the room ABOVE - the 75% of the tile the placement reserves for a body.
-    const view = oneFrameView({ width: 40, height: 100, offsetX: 20, offsetY: 99 });
-    expect(spriteFillRatio(view, TILE_BOX)).toBeCloseTo(TILE_BOX.refY / 99);
+test("the fill ratio is the tile against the art's longer side", () => {
+    // A sprite half as wide as it is tall fills the square's height and keeps its margin across the width.
+    const view = oneFrameView({ width: 100, height: 200, offsetX: 50, offsetY: 190 });
+    const box = tileBoxPx(view);
+    expect(spriteFillRatio(view, box)).toBeCloseTo(box.h / 200);
 });
 
-test("art hanging BELOW the anchor is bounded by the quarter tile under the feet", () => {
-    // An IE creature's stored centre sits in its body, with shadow below it. That overhang has only the
-    // bottom quarter to live in, and for a centre-anchored sprite it is the tighter of the four bounds.
-    const view = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
-    expect(spriteFillRatio(view, TILE_BOX)).toBeCloseTo((TILE_BOX.h - TILE_BOX.refY) / 20);
+test("where the anchor sits inside the art costs the sprite nothing", () => {
+    // The same art anchored at its centre and then 300px below itself. Centring the art at the drawn scale
+    // takes the anchor out of the size question: both fill the tile equally. Falsified by bounding the
+    // fill per anchor edge, which answers a fraction of this for the second.
+    const centred = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 20 });
+    const offAnchor = oneFrameView({ width: 40, height: 40, offsetX: 20, offsetY: 300 });
+    expect(spriteFillRatio(offAnchor, tileBoxPx(offAnchor))).toBeCloseTo(spriteFillRatio(centred, tileBoxPx(centred)));
 });
 
-test("the fill ratio takes the tightest side, so no frame of the sequence clips", () => {
-    // A wide sprite whose width runs out before its height does. Falsified by taking any single axis.
-    const view = oneFrameView({ width: 400, height: 40, offsetX: 200, offsetY: 20 });
-    expect(spriteFillRatio(view, TILE_BOX)).toBeCloseTo(TILE_BOX.refX / 200);
+test("the whole FILE is what fits, not the cycle on screen", () => {
+    // The scale is chosen once, when the animation opens, and switching sequence must not resize anything -
+    // so a taller cycle nobody is looking at still has to fit. Falsified by measuring one cycle: the answer
+    // then doubles and picking the second sequence would push the sprite over its neighbours.
+    const view = {
+        sourceFormat: "bam" as const,
+        frames: [
+            { width: 40, height: 100, offsetX: 20, offsetY: 50 },
+            { width: 40, height: 200, offsetX: 20, offsetY: 100 },
+        ],
+        sequences: [
+            { frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
+            { frameRefs: [1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
+        ],
+    };
+    const box = tileBoxPx(view);
+    expect(spriteFillRatio(view, box)).toBeCloseTo(box.h / 200);
 });
 
 test("the fill ratio of an animation that draws nothing is 1", () => {
     const view = { sourceFormat: "bam" as const, frames: [], sequences: [] };
-    expect(spriteFillRatio(view, TILE_BOX)).toBe(1);
+    expect(spriteFillRatio(view, tileBoxPx(view))).toBe(1);
 });
 
-test("at the fill scale every frame of the sequence is inside its tile", () => {
-    // What the fill ratio promises, stated at the consumer: no facing and no frame clips at the scale a
-    // view opens on. Two frames reaching opposite ways from one anchor, so a bound taken on either alone
-    // would let the other out.
+test("at the fill scale every frame of the animation is inside its tile", () => {
+    // What the fill ratio promises, stated at the consumer: nothing clips at the scale a view opens on.
+    // Two frames reaching opposite ways from one anchor, so a bound taken on either alone lets the other
+    // out - and they are in different sequences, which is what the file-wide measurement is for.
     const view = {
         sourceFormat: "bam" as const,
         frames: [
             { width: 40, height: 100, offsetX: 20, offsetY: 99 }, // stands on its anchor
             { width: 60, height: 80, offsetX: 30, offsetY: 10 }, // hangs below it
         ],
-        sequences: [{ frameRefs: [0, 1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 }],
+        sequences: [
+            { frameRefs: [0], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
+            { frameRefs: [1], facing: "none" as const, dirOffsetX: 0, dirOffsetY: 0 },
+        ],
     };
-    const scale = spriteFillRatio(view, TILE_BOX);
+    const scale = spriteFillRatio(view, tileBoxPx(view));
+    const box = tileBoxPx(view, scale);
     for (const frame of view.frames) {
-        const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, TILE_BOX, 1, scale);
+        const rect = spriteRect({ sourceFormat: "bam", ...frame, dirOffsetX: 0, dirOffsetY: 0 }, box, 1, scale);
         expect(rect.left).toBeGreaterThanOrEqual(-0.001);
         expect(rect.top).toBeGreaterThanOrEqual(-0.001);
-        expect(rect.left + rect.width).toBeLessThanOrEqual(TILE_BOX.w + 0.001);
-        expect(rect.top + rect.height).toBeLessThanOrEqual(TILE_BOX.h + 0.001);
+        expect(rect.left + rect.width).toBeLessThanOrEqual(box.w + 0.001);
+        expect(rect.top + rect.height).toBeLessThanOrEqual(box.h + 0.001);
     }
 });
 
@@ -235,7 +263,7 @@ test("the marker lands on the same sprite pixel whatever shape the tile is", () 
         const pct = referenceMarkerPercent("bam", frame.height, box);
         return { x: (pct.x / 100) * box.w - tl.x, y: (pct.y / 100) * box.h - tl.y };
     };
-    const offCentre = anchorInFrame(TILE_BOX);
+    const offCentre = anchorInFrame(tileBoxPx(oneFrameView(frame)));
     const centred = anchorInFrame({ w: 960, h: 960, refX: 480, refY: 480 });
     expect(offCentre.x).toBeCloseTo(frame.offsetX);
     expect(offCentre.y).toBeCloseTo(frame.offsetY);
