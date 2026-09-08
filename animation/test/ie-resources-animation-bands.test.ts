@@ -192,7 +192,7 @@ describe("stancesOfMembers", () => {
         const anonymous = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8));
         const declared = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8), "monster_ankheg");
 
-        expect(anonymous.map((s) => s.label)).toEqual(["Attack", "Attack or cast", "Attack or spell"]);
+        expect(anonymous.map((s) => s.label)).toEqual(["Slash", "Backslash or cast", "Jab or conjure"]);
         expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Burrow"]);
     });
 

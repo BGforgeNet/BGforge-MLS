@@ -17,9 +17,9 @@ describe("ieGroups", () => {
     test("names usar1ca's 8 blocks from the CA scheme, and the E-companion identically", () => {
         const labels = labelsOf("usar1ca.bam", 8, "ie8");
         // Engine playback order: loop first, release second per pair.
-        expect(labels?.[0]).toBe("Conjure spell 1 (loop)");
-        expect(labels?.[1]).toBe("Cast spell 1 (release)");
-        expect(labels?.[7]).toBe("Cast spell 4 (release)");
+        expect(labels?.[0]).toBe("SP - conjure (spell 1)");
+        expect(labels?.[1]).toBe("CA - cast (spell 1)");
+        expect(labels?.[7]).toBe("CA - cast (spell 4)");
         expect(labelsOf("USAR1CAE.BAM", 8, "ie8")).toEqual(labels);
     });
 
@@ -31,10 +31,10 @@ describe("ieGroups", () => {
     // The same token and block count mean different things under the two schemes, so the scheme is part
     // of the key: nine blocks of eight is the coarse character set, nine blocks of nine is not it.
     test("names the fine-scheme block sets", () => {
-        expect(labelAt(ieGroups("mtrog2.bam", 7, "ie9"), 0)).toBe("A1 - attack 1");
-        expect(labelAt(ieGroups("mtrog2.bam", 7, "ie9"), 6)).toBe("CA - cast (release)");
+        expect(labelAt(ieGroups("mtrog2.bam", 7, "ie9"), 0)).toBe("A1 - slash");
+        expect(labelAt(ieGroups("mtrog2.bam", 7, "ie9"), 6)).toBe("CA - cast");
         expect(labelAt(ieGroups("wqlh4g1.bam", 11, "ie9"), 0)).toBe("WK - walk");
-        expect(labelAt(ieGroups("wqnh5ca.bam", 8, "ie9"), 1)).toBe("Cast spell 1 (release)");
+        expect(labelAt(ieGroups("wqnh5ca.bam", 8, "ie9"), 1)).toBe("CA - cast (spell 1)");
     });
 
     test("does not lend one scheme's block names to the other", () => {
@@ -50,14 +50,14 @@ describe("ieGroups", () => {
     // Three sections pack a different trio into a three-block eight-wide G2, so the structural key alone
     // hands two of them the third's names.
     test("lets the declared section override a colliding structural key", () => {
-        expect(labelAt(ieGroups("makhg2.bam", 3, "ie8"), 1)).toBe("A2/CA - attack or cast");
+        expect(labelAt(ieGroups("makhg2.bam", 3, "ie8"), 1)).toBe("A2/CA - backslash or cast");
         expect(labelAt(ieGroups("makhg2.bam", 3, "ie8", "monster_ankheg"), 1)).toBe("EMERGE - emerge");
         expect(labelAt(ieGroups("moghg2.bam", 3, "ie8", "monster_old"), 2)).toBe("CA - cast");
     });
 
     test("keeps a section's names across the band width its mirror flag chooses", () => {
-        expect(labelsOf("makhg3.bam", 2, "ie8", "monster_ankheg")).toEqual(["A1 - attack", "CA - cast"]);
-        expect(labelsOf("makhg3.bam", 2, "ie9", "monster_ankheg")).toEqual(["A1 - attack", "CA - cast"]);
+        expect(labelsOf("makhg3.bam", 2, "ie8", "monster_ankheg")).toEqual(["A1 - slash", "CA - cast"]);
+        expect(labelsOf("makhg3.bam", 2, "ie9", "monster_ankheg")).toEqual(["A1 - slash", "CA - cast"]);
     });
 
     // The burrowing G1 opens on a block no sequence addresses, which is the one thing a numbered fallback
@@ -91,7 +91,7 @@ describe("ieGroups", () => {
     // those files still carries the family's whole skeleton.
     test("gives a split file its family's block names", () => {
         expect(labelAt(ieGroups("chmb1g15.bam", 11, "ie9"), 5)).toBe("DE - die");
-        expect(labelAt(ieGroups("meaeg21.bam", 7, "ie9"), 1)).toBe("A2 - attack 2");
+        expect(labelAt(ieGroups("meaeg21.bam", 7, "ie9"), 1)).toBe("A2 - backslash");
         expect(labelAt(ieGroups("meaeg11e.bam", 6, "ie9"), 0)).toBe("WK - walk");
     });
 
@@ -122,7 +122,7 @@ describe("blockLabel and stanceName", () => {
     test("agree on a block the scheme gives no code", () => {
         const conjure = ieGroups("usar1ca.bam", 8, "ie8")?.[0];
 
-        expect(conjure && blockLabel(conjure)).toBe("Conjure spell 1 (loop)");
-        expect(conjure && stanceName(conjure)).toBe("Conjure spell 1 (loop)");
+        expect(conjure && blockLabel(conjure)).toBe("SP - conjure (spell 1)");
+        expect(conjure && stanceName(conjure)).toBe("Conjure (spell 1)");
     });
 });

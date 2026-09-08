@@ -63,10 +63,7 @@ describe("cycleGridHint", () => {
 
 describe("ieGroupOptionText", () => {
     test("combines the scheme name with the group's cycle range", () => {
-        const blocks = [
-            { code: "WK", name: "walk" },
-            { code: "SC", name: "combat stance" },
-        ];
+        const blocks = [{ codes: ["WK"] as const }, { codes: ["SC"] as const }];
         expect(ieGroupOptionText(blocks, 1)).toBe("SC - combat stance (cycles 8-15)");
     });
 
@@ -89,29 +86,25 @@ describe("offeredGroups", () => {
      * a sequence nothing can play, which the burrowing family opens on.
      */
     test("leaves out a block the scheme addresses no sequence to", () => {
-        const blocks = [
-            { name: "(unused)", unused: true as const },
-            { code: "DE", name: "die" },
-            { code: "TW", name: "twitch" },
-        ];
+        const blocks = [{ unused: true as const }, { codes: ["DE"] as const }, { codes: ["TW"] as const }];
 
         expect(offeredGroups(3, blocks)).toEqual([1, 2]);
     });
 
     // The index addresses the block in the FILE, so dropping one must not renumber the rest.
     test("keeps each block's own index", () => {
-        const blocks = [{ name: "a" }, { name: "(unused)", unused: true as const }, { name: "b" }];
+        const blocks = [{ codes: ["A1"] as const }, { unused: true as const }, { codes: ["A2"] as const }];
 
         expect(offeredGroups(3, blocks)).toEqual([0, 2]);
     });
 
     test("offers every block where the scheme matched none, and where none is unused", () => {
         expect(offeredGroups(3, undefined)).toEqual([0, 1, 2]);
-        expect(offeredGroups(2, [{ name: "a" }, { name: "b" }])).toEqual([0, 1]);
+        expect(offeredGroups(2, [{ codes: ["A1"] as const }, { codes: ["A2"] as const }])).toEqual([0, 1]);
     });
 
     /** The block table can be shorter than the file: a shorter file carries a prefix of the layout. */
     test("offers a block the table says nothing about", () => {
-        expect(offeredGroups(3, [{ name: "a" }])).toEqual([0, 1, 2]);
+        expect(offeredGroups(3, [{ codes: ["A1"] as const }])).toEqual([0, 1, 2]);
     });
 });

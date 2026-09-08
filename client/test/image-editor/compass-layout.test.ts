@@ -305,10 +305,7 @@ test("firstDrawnBlock skips a block the scheme addresses no sequence to", () => 
     view.sequences = view.sequences.map((sequence) => ({ ...sequence, frameRefs: [1] }));
 
     expect(firstDrawnBlock(view, interpretation)).toBe(0);
-    const blocks = [
-        { name: "(unused)", unused: true as const },
-        { code: "WK", name: "walk" },
-    ];
+    const blocks = [{ unused: true as const }, { codes: ["WK"] as const }];
     expect(firstDrawnBlock(view, interpretation, blocks)).toBe(1);
 });
 

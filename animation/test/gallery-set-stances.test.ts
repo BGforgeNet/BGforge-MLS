@@ -386,6 +386,34 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         expect(resolved).toBeGreaterThan(0);
     });
 
+    /**
+     * A stance list is supposed to read like a reference browser's - Walk, Die, Attack. A row saying
+     * "G2 - group 1" means the block table has not been taught that layout, and nothing else reports it:
+     * the numbered form is a legal label, so every other assertion here passes straight over it.
+     *
+     * The bound is a RATIO over the whole install rather than a list of the sections still missing, so a
+     * newly-taught family tightens it without anyone editing an inventory. It was 358 unnamed stances when
+     * a reader found a red dragon listing fourteen numbered rows; the sections still short are the ones
+     * whose band WIDTH is read wrong (`monster_icewind`) and the one the documentation gives no sequence
+     * layout at all (`effect`).
+     */
+    it("names all but a small remainder of the install's stances", () => {
+        const { sets, io } = install();
+        const numbered: string[] = [];
+        let total = 0;
+        for (const set of sets) {
+            const armour = firstArmour(set);
+            if (armour === undefined) continue;
+            for (const stance of setStances(set, armour, io)) {
+                total += 1;
+                if (/ - group \d+$/.test(stance.label)) numbered.push(`${set.name || set.code}: ${stance.label}`);
+            }
+        }
+        process.stdout.write(`  ${numbered.length}/${total} stances fall back to a number\n`);
+        expect(total, "no stance was exercised, so the ratio below cannot fail").toBeGreaterThan(500);
+        expect(numbered.length / total).toBeLessThan(0.05);
+    });
+
     it("gives every stance a band that actually holds facings", () => {
         const { sets, io } = install();
         for (const set of sets) {
@@ -408,16 +436,9 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         if (set === undefined) return; // an install without the section proves nothing either way
         const armour = firstArmour(set);
         expect(armour, `${set.code} declares no prefix`).toBeDefined();
-        const blocks = [
-            "DE - die",
-            "TW - twitch",
-            "SD - stand (emerged)",
-            "SD - stand (hidden)",
-            "EMERGE - emerge",
-            "HIDE - burrow",
-            "A1 - attack",
-            "CA - cast",
-        ];
+        // Stance NAMES, not the block picker's coded form: a stance list spans a set's files and never
+        // shows the code that addresses one inside a file.
+        const blocks = ["Die", "Twitch", "Stand (emerged)", "Stand (hidden)", "Emerge", "Burrow", "Slash", "Cast"];
 
         const stances = setStances(set, armour!, io);
 

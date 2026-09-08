@@ -11,7 +11,7 @@
  * two surfaces name the same block identically. Where neither pins a name, the band is numbered - the
  * same posture that table takes, and for the same reason.
  */
-import { type IeGroup, ieGroups, stanceName } from "../group-labels";
+import { type IeGroup, type WideBand, ieGroups, stanceName } from "../group-labels";
 import { type IeDirectionSlot, type IeScheme } from "@bgforge/image/ie-direction";
 import { type SchemeMember } from "./members";
 import { type NeutralActionRef } from "./actions";
@@ -176,7 +176,9 @@ export function stancesOfMembers(
         const file = bandsFor(member, member.overlays === undefined ? undefined : banded.get(member.overlays));
         if (file === undefined) continue;
         banded.set(member.resref, file);
-        const groups = ieGroups(member.resref, file.bands.length, file.scheme, section);
+        // The resref first, then the member's own label: a split-part file carries its stance group in the
+        // middle of its name, where no trailing-token match can reach it, and the label is that group.
+        const groups = ieGroups([member.resref, member.label], file.bands.length, blockScheme(file, section), section);
         for (const [band, slots] of file.bands.entries()) {
             // The index is kept as it stands: a filtered band is still where it was in the file, and that
             // position is what addresses it there. A band the scheme addresses no sequence to goes with the
@@ -213,10 +215,26 @@ function blockName(group: IeGroup | undefined): string | undefined {
     return group === undefined ? undefined : stanceName(group);
 }
 
+/**
+ * Which block table to look this file up in.
+ *
+ * The file's own scheme, or - for the three sections whose bands are sixteen cycles wide - the width, which
+ * no eight-slot scheme covers. Derived from the same declaration that made the band wide rather than from
+ * the slots read back, so a coarse reading that folds sixteen slots into eight facings still finds its
+ * table. Kept out of `FileBands.scheme`, which is a real block scheme and travels to the webview as one.
+ */
+function blockScheme(file: FileBands, section: string | undefined): IeScheme | WideBand | undefined {
+    if (file.scheme !== undefined) return file.scheme;
+    return declaredStride(section) === WIDE_BAND_STRIDE ? "ie16" : undefined;
+}
+
 function bandLabel(member: SchemeMember, name: string | undefined, band: number, bandCount: number): string {
+    // The block table first, whatever the band COUNT. Answering from the member as soon as a file holds one
+    // band skipped the table for exactly the files that most need it: a tiled creature stores its walk in a
+    // file of its own, so the walk kept the file's name and a dragon's list opened on a row reading "G1".
+    if (name !== undefined) return member.layer === undefined ? name : `${name} (${member.layer})`;
     if (bandCount === 1) return member.name;
-    if (name === undefined) return `${member.label} - group ${band + 1}`;
-    return member.layer === undefined ? name : `${name} (${member.layer})`;
+    return `${member.label} - group ${band + 1}`;
 }
 
 /**

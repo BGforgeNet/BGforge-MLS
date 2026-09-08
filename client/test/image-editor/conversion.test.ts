@@ -169,8 +169,8 @@ describe("convertOpenSet", () => {
         // The action, not the file it came from: an armoured set draws the same action out of a file per
         // level, so naming one of them would pick a level arbitrarily. The source files are listed once.
         expect(result.losses).toEqual([
-            "Attack or cast has no counterpart in the target",
-            "Attack or spell has no counterpart in the target",
+            "Backslash or cast has no counterpart in the target",
+            "Jab or conjure has no counterpart in the target",
         ]);
         // The informational half stays separate: nothing here is a reason to hesitate.
         expect(result.notes.some((note) => note.includes("loss"))).toBe(false);
