@@ -10,7 +10,7 @@
  * module keeps the webview-only presentation heuristics (grid columns, option text).
  */
 import { ieBlockSize, type IeScheme } from "@bgforge/image/ie-direction";
-import { type IeGroup } from "@bgforge/animation/group-labels";
+import { type IeGroup, blockLabel } from "@bgforge/animation/group-labels";
 
 export interface CycleGridAnalysis {
     /** More cycles than a single directional set can hold (>8) - so it is NOT one direction rose but
@@ -64,7 +64,11 @@ export function cycleGridHint(cycleCount: number, analysis: CycleGridAnalysis): 
 export function ieGroupOptionText(blocks: readonly IeGroup[] | undefined, index: number, scheme?: IeScheme): string {
     const stride = ieBlockSize(scheme) ?? MAX_SINGLE_DIRECTION_SET;
     const first = index * stride;
-    return `${blocks?.[index]?.label ?? `Group ${index + 1}`} (cycles ${first}-${first + stride - 1})`;
+    const block = blocks?.[index];
+    // The code-carrying form, not a stance list's: both callers here are showing a reader the blocks of a
+    // file they named, so the code that addresses one in an archive listing is what they came for.
+    const name = block === undefined ? `Group ${index + 1}` : blockLabel(block);
+    return `${name} (cycles ${first}-${first + stride - 1})`;
 }
 
 /**

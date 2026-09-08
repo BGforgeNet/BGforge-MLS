@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
 import { type Frame, type IndexedAnimation, type Rgba, encodeBamc, serializeBamV1 } from "@bgforge/image";
-import { AnimationSetState, createAnimationSetSource, setView } from "../../src/image-editor/set-document";
+import { AnimationSetState, createAnimationSetSource, setView, stanceKey } from "../../src/image-editor/set-document";
 import type { Game } from "@bgforge/binary";
 
 function palette(): Rgba[] {
@@ -76,13 +76,39 @@ describe("AnimationSetState", () => {
     });
 
     /**
-     * A creature file packs several direction bands, and the editor already has a control for choosing
-     * between them. Listing one action per band offers that choice twice - and, since every band of a file
-     * carries the same resref, gives the picker duplicate keys for rows it cannot tell apart.
+     * One row per STANCE, spanning the set's files. Which file holds a given stance is a convention of the
+     * naming family - the same creature ships as ten single-band files under one and three packed ones
+     * under another - so a reader choosing a file first is being asked about packaging, not about what
+     * they want to see. The file is still the unit a model and a save work in; it just is not a choice.
      */
-    it("offers one action per file, however many direction bands the file packs", () => {
+    it("offers one stance per direction band, across every file the set draws", () => {
+        const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(3), TSTBG2: baseFileBam(2) }));
+
+        expect(state?.stances.map((stance) => [stance.resref, stance.band])).toEqual([
+            ["TSTBG1", 0],
+            ["TSTBG1", 1],
+            ["TSTBG1", 2],
+            ["TSTBG2", 0],
+            ["TSTBG2", 1],
+        ]);
+    });
+
+    /** Every band of a file shares its resref, so the file alone cannot address a row. */
+    it("keys each stance by its file AND its band", () => {
         const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(3) }));
-        expect(state?.actions.map((action) => action.resref)).toEqual(["TSTBG1"]);
+        const keys = state?.stances.map((stance) => stanceKey(stance)) ?? [];
+
+        expect(new Set(keys).size).toBe(keys.length);
+    });
+
+    it("moves the drawn band without reloading the model when the stance stays in one file", () => {
+        const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(3) }));
+        const model = state?.model;
+
+        expect(state?.select(stanceKey({ resref: "TSTBG1", band: 2 }))).toBe("changed");
+        expect(state?.band).toBe(2);
+        // The same object, not merely an equal one: a reload would discard the reader's unsaved edits.
+        expect(state?.model).toBe(model);
     });
 
     /**
@@ -102,50 +128,50 @@ describe("AnimationSetState", () => {
         expect(AnimationSetState.open(setOf(), fakeIo({}))).toBeUndefined();
     });
 
-    it("swaps the model when another action is selected", () => {
+    it("swaps the model when a stance in another file is selected", () => {
         const io = fakeIo({ TSTBG1: baseFileBam(1, 0), TSTBG2: baseFileBam(1, 100) });
         const state = AnimationSetState.open(setOf(), io);
         const before = drawnPixel(state!);
 
-        expect(state?.select("TSTBG2")).toBe("changed");
+        expect(state?.select("TSTBG2#0")).toBe("changed");
         expect(state?.action.resref).toBe("TSTBG2");
         expect(drawnPixel(state!)).not.toBe(before);
         expect(drawnPixel(state!)).toBe(101);
     });
 
-    it("keeps the open action when asked for one the set does not name", () => {
+    it("keeps the open stance when asked for one the set does not name", () => {
         const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(1) }));
 
-        expect(state?.select("TSTBCA")).toBe("refused");
+        expect(state?.select("TSTBCA#0")).toBe("refused");
         expect(state?.action.resref).toBe("TSTBG1");
     });
 
     /** Showing what is already shown is not a failure, and reporting it as one puts an error in the way. */
-    it("reports re-picking the open action and the open armour as no change, not as a refusal", () => {
+    it("reports re-picking the open stance and the open armour as no change, not as a refusal", () => {
         const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(1) }));
 
-        expect(state?.select("TSTBG1")).toBe("unchanged");
+        expect(state?.select("TSTBG1#0")).toBe("unchanged");
         expect(state?.selectArmour(1)).toBe("unchanged");
     });
 
-    it("keeps the open action when the one asked for will not parse", () => {
+    it("keeps the open stance when the file it sits in will not parse", () => {
         const io = fakeIo({ TSTBG1: baseFileBam(1), TSTBG2: new Uint8Array([1, 2, 3, 4]) });
         const state = AnimationSetState.open(setOf(), io);
 
-        expect(state?.select("TSTBG2")).toBe("refused");
+        expect(state?.select("TSTBG2#0")).toBe("refused");
         expect(state?.action.resref).toBe("TSTBG1");
     });
 
-    it("builds each action's model once, however often it is reselected", () => {
+    it("builds each file's model once, however often its stances are reselected", () => {
         const io = fakeIo({ TSTBG1: baseFileBam(1), TSTBG2: baseFileBam(1) });
         const state = AnimationSetState.open(setOf(), io);
-        state?.select("TSTBG2");
-        // Counted from here rather than from zero: resolving the action list reads every member's cycle
+        state?.select("TSTBG2#0");
+        // Counted from here rather than from zero: resolving the stance list reads every member's cycle
         // table, so an absolute count would measure that pass rather than the model cache.
         const settled = io.reads.length;
 
-        state?.select("TSTBG1");
-        state?.select("TSTBG2");
+        state?.select("TSTBG1#0");
+        state?.select("TSTBG2#0");
 
         expect(io.reads.length).toBe(settled);
     });
@@ -211,7 +237,7 @@ describe("AnimationSetState", () => {
         expect(state?.armours).toEqual([1, 2]);
         expect(state?.selectArmour(2)).toBe("changed");
         expect(state?.armour).toBe(2);
-        expect(state?.actions.map((action) => action.resref)).toEqual(["TSTCG2"]);
+        expect(state?.stances.map((stance) => stance.resref)).toEqual(["TSTCG2"]);
     });
 
     /**
@@ -322,12 +348,45 @@ describe("setView", () => {
                 { level: 2, label: "Leather" },
             ],
             armour: 1,
-            actions: [
-                { label: "G1", resref: "TSTBG1" },
-                { label: "G2", resref: "TSTBG2" },
+            // One band each, so each file IS one stance and takes the file's own name - this family names
+            // files rather than stances, and its suffix is the only name such a band has.
+            stances: [
+                { key: "TSTBG1#0", label: "G1", title: "TSTBG1, band 1" },
+                { key: "TSTBG2#0", label: "G2", title: "TSTBG2, band 1" },
             ],
-            action: "TSTBG1",
+            stance: "TSTBG1#0",
+            band: 0,
         });
+    });
+
+    /**
+     * The file is out of the picker but not out of the editor: a save writes the BAM the open stance lives
+     * in, so the reader has to be able to find out which one that is before they edit it.
+     */
+    it("names the files a stance draws, for the row's tooltip", () => {
+        const io = fakeIo({ TSTBG1: baseFileBam(2), TSTBG1E: baseFileBam(2) });
+        const state = AnimationSetState.open(setOf(), io);
+
+        expect(setView(state!).stances.map((stance) => stance.title)).toEqual([
+            "TSTBG1 + TSTBG1E, band 1",
+            "TSTBG1 + TSTBG1E, band 2",
+        ]);
+    });
+
+    /**
+     * A tiled set composes its picture from a file per grid cell per facing - the red dragon's opening
+     * stance draws 81. Listing them is not a tooltip, it is a wall, and the reader wants to know which
+     * animation they are editing rather than to read an inventory of it.
+     */
+    it("counts the rest rather than listing every file of a stance drawn from many", () => {
+        const quarters: Record<string, Uint8Array> = {};
+        for (const quadrant of [1, 2, 3, 4]) {
+            quarters[`TSTBG1${quadrant}`] = baseFileBam(1);
+            quarters[`TSTBG1${quadrant}E`] = baseFileBam(1);
+        }
+        const state = AnimationSetState.open(setOf({ layout: "quadrant" }), fakeIo(quarters));
+
+        expect(setView(state!).stances[0]?.title).toBe("TSTBG11 and 7 more files, band 1");
     });
 
     it("falls back to the id for a set the install names in no table", () => {

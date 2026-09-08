@@ -210,7 +210,7 @@ describe("opening an animation set", () => {
         expect(readFileMock).not.toHaveBeenCalled();
     });
 
-    it("swaps the shown action, and reports a refusal for one the set does not draw", async () => {
+    it("swaps the shown stance, and reports a refusal for one the set does not draw", async () => {
         const document = await ImageEditorDocument.open(
             setUri("1234"),
             undefined,
@@ -218,10 +218,10 @@ describe("opening an animation set", () => {
             setSource(() => found(SET, ioFor(twoMembers()))),
         );
 
-        expect(document.selectSetAction("TSTBG2")).toBe("changed");
-        expect(document.toView().set?.action).toBe("TSTBG2");
-        expect(document.selectSetAction("TSTBCA")).toBe("refused");
-        expect(document.toView().set?.action).toBe("TSTBG2");
+        expect(document.selectSetStance("TSTBG2#0")).toBe("changed");
+        expect(document.toView().set?.stance).toBe("TSTBG2#0");
+        expect(document.selectSetStance("TSTBCA#0")).toBe("refused");
+        expect(document.toView().set?.stance).toBe("TSTBG2#0");
     });
 
     /**
@@ -245,7 +245,7 @@ describe("opening an animation set", () => {
         expect(document.setState?.action.resref).toBe("TSTB1100");
         expect(activePalette(document)[1]).toEqual({ r: 11, g: 11, b: 11, a: 255 });
 
-        expect(document.selectSetAction("TSTB2100")).toBe("changed");
+        expect(document.selectSetStance("TSTB2100#0")).toBe("changed");
         expect(activePalette(document)[1]).toEqual({ r: 22, g: 22, b: 22, a: 255 });
     });
 
@@ -276,7 +276,7 @@ describe("opening an animation set", () => {
 
         expect(document.setState).toBeUndefined();
         expect(document.toView().set).toBeUndefined();
-        expect(document.selectSetAction("TSTBG1")).toBe("refused");
+        expect(document.selectSetStance("TSTBG1#0")).toBe("refused");
         expect(document.selectSetArmour(2)).toBe("refused");
     });
 
@@ -354,7 +354,7 @@ describe("opening an animation set", () => {
         const source = setSource(() => found(SET, ioFor(twoMembers())));
         const document = await ImageEditorDocument.open(setUri("1234"), undefined, undefined, source);
         document.applyMetaPatch({ transparentIndex: 3 });
-        document.selectSetAction("TSTBG2");
+        document.selectSetStance("TSTBG2#0");
         document.applyMetaPatch({ transparentIndex: 5 });
 
         const backup = document.backup();
@@ -365,7 +365,7 @@ describe("opening an animation set", () => {
         const restored = await ImageEditorDocument.open(setUri("1234"), backup, undefined, source);
         expect(restored.setSaveWrites()?.map((write) => write.uri.path)).toEqual(["/tstbg1.bam", "/tstbg2.bam"]);
         expect(restored.animation.meta.transparentIndex).toBe(3);
-        restored.selectSetAction("TSTBG2");
+        restored.selectSetStance("TSTBG2#0");
         expect(restored.animation.meta.transparentIndex).toBe(5);
     });
 

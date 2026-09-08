@@ -1,12 +1,14 @@
 /**
- * An animation set as an editable document: one set, one armour level, one action open at a time.
+ * An animation set as an editable document: one set, one armour level, one stance open at a time.
  *
  * The editor shows a set through exactly the model it shows a single file through, so every control it
- * already has - zoom, rose, direction group, transport, save - keeps working unchanged. What a set adds is
- * the two pickers around that model, and the state they read is here.
+ * already has - zoom, rose, transport, save - keeps working unchanged. What a set adds is the two pickers
+ * around that model, and the state they read is here. It also TAKES one: a set names the direction band
+ * itself, so the block picker a lone file keeps is a choice this surface has already made.
  *
- * Members load per action rather than up front: a character set at one armour is roughly twenty BAM files
- * and a tiled set far more, and the editor draws one of them at a time.
+ * Models load per file rather than up front: a character set at one armour is roughly twenty BAM files and
+ * a tiled set far more, and the editor draws one of them at a time. The stance LIST is eager, because it
+ * costs cycle tables rather than pixels.
  */
 import { type Game } from "@bgforge/binary";
 import { isBamc } from "@bgforge/image";
@@ -14,6 +16,7 @@ import {
     type AnimationIndexResolver,
     type AnimationSet,
     type SchemeMember,
+    type SetStance,
     type StanceIo,
     armourLabel,
     drawnArmourLevels,
@@ -21,6 +24,7 @@ import {
     overlaidStride,
     schemeForStride,
     setMembers,
+    setStances,
     setTitle,
     stanceIo,
 } from "@bgforge/animation";
@@ -90,21 +94,42 @@ export function createAnimationSetSource(deps: {
 export type SetPick = "changed" | "unchanged" | "refused";
 
 /**
- * One armour level's resolved actions.
+ * One armour level, resolved: the files it draws and the stances those hold.
  *
- * Actions are MEMBERS - one per file - not stances: a creature file packs several direction bands, and the
- * editor already has a control for picking between those. Listing stances here would offer the same choice
- * twice, and their resrefs collide, so a picker keyed on one could not address a row.
+ * Both, because they answer different questions. A MEMBER is a file - the unit a model is decoded from and
+ * a save is written to. A STANCE is a direction band inside one, which is what the reader picks: a set
+ * spreads its stances over its files by a convention of its naming family, and the same creature ships as
+ * ten single-band files under one family and three packed ones under another.
+ *
+ * The stance list is resolved with the level rather than lazily, because it takes a whole set's cycle
+ * TABLES and not its pixels: banding a character set's two dozen files costs a fraction of decoding the one
+ * the reader lands on, which stays lazy below.
  */
 interface ArmourLevel {
     level: number;
     actions: SchemeMember[];
+    stances: SetStance[];
 }
 
 /** One loaded member: the action it stands for, and the model the editor draws and edits. */
 interface OpenAction {
     action: SchemeMember;
     model: ImageDocumentModel;
+}
+
+/** What the editor has open: a band, the file it sits in, and that file's model. */
+interface OpenStance extends OpenAction {
+    stance: SetStance;
+}
+
+/**
+ * How the webview addresses one stance.
+ *
+ * File AND band, because every band of a packed file carries the same resref - a key on the file alone
+ * cannot tell the rows of a six-stance `G1` apart. Opaque to the webview, which only sends it back.
+ */
+export function stanceKey(stance: Pick<SetStance, "resref" | "band">): string {
+    return `${stance.resref}#${stance.band}`;
 }
 
 /**
@@ -127,22 +152,36 @@ function modelFor(io: StanceIo, models: MemberModels, action: SchemeMember): Ima
     return model;
 }
 
+/** The member a stance's band lives in, or undefined where this level no longer draws that file. */
+function memberOf(level: ArmourLevel, stance: SetStance): SchemeMember | undefined {
+    return level.actions.find((action) => action.resref === stance.resref);
+}
+
+/** One stance opened: its band, its file's member, and that file's decoded model. */
+function openStance(io: StanceIo, models: MemberModels, level: ArmourLevel, stance: SetStance): OpenStance | undefined {
+    const action = memberOf(level, stance);
+    if (action === undefined) return undefined;
+    const model = modelFor(io, models, action);
+    return model === undefined ? undefined : { stance, action, model };
+}
+
 /**
- * The first action of `level` whose files parse, with its model.
+ * The first stance of `level` whose files parse, with its model.
  *
- * Not simply the first action: the member list is resolved against the archive's index, which says a file
- * is there without saying it can be decoded - and an action that cannot be drawn is not one to open on.
+ * Not simply the first stance: the band reader answers off the cycle tables, which say a file has the
+ * structure without saying every frame in it decodes - and a stance that cannot be drawn is not one to
+ * open on.
  */
-function firstDrawn(io: StanceIo, models: MemberModels, level: ArmourLevel): OpenAction | undefined {
-    for (const action of level.actions) {
-        const model = modelFor(io, models, action);
-        if (model !== undefined) return { action, model };
+function firstDrawn(io: StanceIo, models: MemberModels, level: ArmourLevel): OpenStance | undefined {
+    for (const stance of level.stances) {
+        const open = openStance(io, models, level, stance);
+        if (open !== undefined) return open;
     }
     return undefined;
 }
 
 function resolveLevel(set: AnimationSet, io: StanceIo, level: number): ArmourLevel {
-    return { level, actions: setMembers(set, level, io.exists) };
+    return { level, actions: setMembers(set, level, io.exists), stances: setStances(set, level, io) };
 }
 
 export class AnimationSetState {
@@ -150,7 +189,7 @@ export class AnimationSetState {
     private readonly io: StanceIo;
     private readonly models: MemberModels;
     private current: ArmourLevel;
-    private open: OpenAction;
+    private open: OpenStance;
     /** Resolved once at open: the archive answer costs a lookup per action per level. */
     private readonly levels: readonly number[];
 
@@ -159,7 +198,7 @@ export class AnimationSetState {
         io: StanceIo,
         models: MemberModels,
         level: ArmourLevel,
-        open: OpenAction,
+        open: OpenStance,
         levels: readonly number[],
     ) {
         this.set = set;
@@ -211,11 +250,21 @@ export class AnimationSetState {
         return this.current.level;
     }
 
-    /** The actions this armour level draws, in the order the picker should list them. */
-    get actions(): readonly SchemeMember[] {
-        return this.current.actions;
+    /** Every stance this armour level draws, in the order the picker should list them. */
+    get stances(): readonly SetStance[] {
+        return this.current.stances;
     }
 
+    get stance(): SetStance {
+        return this.open.stance;
+    }
+
+    /** Which direction band of the open file is showing - what the stage draws. */
+    get band(): number {
+        return this.open.stance.band;
+    }
+
+    /** The FILE the open stance lives in: what a save writes, and what a palette is looked up against. */
     get action(): SchemeMember {
         return this.open.action;
     }
@@ -225,18 +274,20 @@ export class AnimationSetState {
     }
 
     /**
-     * Show the action `resref` names.
+     * Show the stance `key` names - see `stanceKey`.
      *
-     * Refused where this level does not name it, or where its files will not parse: the document must keep
-     * a model either way, so the open action stays and the caller reports what happened.
+     * Refused where this level does not name it, or where its file will not parse: the document must keep
+     * a model either way, so the open stance stays and the caller reports what happened.
      */
-    select(resref: string): SetPick {
-        if (resref === this.open.action.resref) return "unchanged";
-        const action = this.current.actions.find((candidate) => candidate.resref === resref);
-        if (action === undefined) return "refused";
-        const model = modelFor(this.io, this.models, action);
-        if (model === undefined) return "refused";
-        this.open = { action, model };
+    select(key: string): SetPick {
+        if (key === stanceKey(this.open.stance)) return "unchanged";
+        const stance = this.current.stances.find((candidate) => stanceKey(candidate) === key);
+        if (stance === undefined) return "refused";
+        const open = openStance(this.io, this.models, this.current, stance);
+        if (open === undefined) return "refused";
+        // "changed" is about the STANCE, not the model: two bands of one packed file share a model, so
+        // moving between them changes what is drawn while the picture being edited stays the same object.
+        this.open = open;
         return "changed";
     }
 
@@ -288,25 +339,25 @@ export class AnimationSetState {
                 .find((candidate) => candidate.resref === resref);
         if (action === undefined) return;
         this.models.set(resref, { action, model });
-        if (this.open.action.resref === resref) this.open = { action, model };
+        // The open BAND is unaffected - the restore swaps the file's pixels, not which stance is showing.
+        if (this.open.action.resref === resref) this.open = { ...this.open, action, model };
     }
 
     /**
      * Re-read this level's members from the game, dropping every cached model.
      *
-     * Stays on the open action where it still draws, since a revert should not move the picker. False -
+     * Stays on the open stance where it still draws, since a revert should not move the picker. False -
      * keeping what is loaded - when nothing draws any more: the document must hold a model either way, and
      * a set whose files have just been removed is better shown stale than blank.
      */
     reload(): boolean {
         this.models.clear();
         const resolved = resolveLevel(this.set, this.io, this.current.level);
-        const same = resolved.actions.find((candidate) => candidate.resref === this.open.action.resref);
-        const model = same === undefined ? undefined : modelFor(this.io, this.models, same);
+        const key = stanceKey(this.open.stance);
+        const same = resolved.stances.find((candidate) => stanceKey(candidate) === key);
         const open =
-            same !== undefined && model !== undefined
-                ? { action: same, model }
-                : firstDrawn(this.io, this.models, resolved);
+            (same === undefined ? undefined : openStance(this.io, this.models, resolved, same)) ??
+            firstDrawn(this.io, this.models, resolved);
         if (open === undefined) return false;
         this.current = resolved;
         this.open = open;
@@ -314,7 +365,7 @@ export class AnimationSetState {
     }
 
     /**
-     * Show `level`'s actions, opening on the first that draws. Refused - leaving the open level alone -
+     * Show `level`'s stances, opening on the first that draws. Refused - leaving the open level alone -
      * where the set does not declare that level or this install ships none of its files.
      */
     selectArmour(level: number): SetPick {
@@ -329,15 +380,38 @@ export class AnimationSetState {
     }
 }
 
-/** What the editor's two set controls read: the level and action lists, and which of each is open. */
+/**
+ * Where the stance's art actually lives, for the row's tooltip.
+ *
+ * The band is counted from one here and from zero everywhere else: this string is the one place a reader
+ * sees it, and a picker whose first row says "band 0" reads as an off-by-one rather than as a convention.
+ *
+ * A stance drawn from more than a handful of files is COUNTED rather than listed - a tiled set composes
+ * one picture from a file per grid cell per facing, and the red dragon's opening stance draws 81 of them.
+ */
+const TITLE_FILES = 2;
+
+function stanceTitle(stance: SetStance): string {
+    const [first, ...rest] = stance.parts;
+    const files =
+        stance.parts.length <= TITLE_FILES ? stance.parts.join(" + ") : `${first} and ${rest.length} more files`;
+    return `${files}, band ${stance.band + 1}`;
+}
+
+/** What the editor's set controls read: the level and stance lists, and which of each is open. */
 export function setView(state: AnimationSetState): SetView {
     return {
         id: state.set.id,
         title: setTitle(state.set),
         armours: state.armours.map((level) => ({ level, label: armourLabel(level) })),
         armour: state.armour,
-        actions: state.actions.map((action) => ({ label: action.label, resref: action.resref })),
-        action: state.action.resref,
+        stances: state.stances.map((stance) => ({
+            key: stanceKey(stance),
+            label: stance.label,
+            title: stanceTitle(stance),
+        })),
+        stance: stanceKey(state.stance),
+        band: state.band,
         ...(state.set.section === undefined ? {} : { section: state.set.section }),
         ...bandsOf(state),
     };

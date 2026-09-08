@@ -65,9 +65,13 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
             // its armour levels remain separate members, as they are for every character set.
             const mirrored = `${resref}E`;
             const parts = exists(mirrored) ? [resref, mirrored] : [resref];
+            // Name and label alike: this scheme's own action names ARE the stance ("Cast", "Shoot (bow)"),
+            // and a misc file takes the name of the one band it draws, so neither form carries a code.
+            const label = actionLabel(action);
             return [
                 {
-                    label: actionLabel(action),
+                    label,
+                    name: label,
                     action: decodeActionCode("character", characterActionCode(action)),
                     resref,
                     parts,

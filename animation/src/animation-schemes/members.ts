@@ -18,8 +18,16 @@ import { type NeutralActionRef, decodeActionCode } from "./actions";
 import { type Layout } from "./layout";
 
 export interface SchemeMember {
-    /** What a picker shows: the suffix, or the resref itself where the layout has no suffix. */
+    /** What identifies the FILE: the suffix, or the resref itself where the layout has no suffix. */
     label: string;
+    /**
+     * What a stance list calls this member where the member IS one stance.
+     *
+     * Differs from `label` only for the family that names a file after the stance it holds: there the label
+     * leads with the code, which identifies the file in an archive listing, and the name is the stance
+     * alone. Both come off one table at one site, so neither can drift from the other.
+     */
+    name: string;
     /**
      * What this member depicts, decoded from the code its name carries.
      *
@@ -58,6 +66,7 @@ export interface SchemeMember {
 /** A member before the archive has been asked which of its files exist. */
 interface MemberShape {
     label: string;
+    name: string;
     action: NeutralActionRef;
     parts: readonly string[];
 }
@@ -103,6 +112,12 @@ function actionLabel(code: string): string {
     return name === undefined ? code : `${code} - ${name}`;
 }
 
+/** `Walk` where the code is pinned - a stance list names the stance, never the file it sits in. */
+function actionName(code: string): string {
+    const name = ACTION_CODES[code];
+    return name === undefined ? code : name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 const QUADRANTS = [1, 2, 3, 4] as const;
 
 /** Stance groups a tiled animation can carry, and the 3x3 grid each one's picture is cut into. */
@@ -119,7 +134,9 @@ const TILE_CYCLES = [0, 1, 2].flatMap((tens) => TILES.map((_, at) => `${tens}${a
 
 /** A member of the cycle-numbered family: the digits are its name, and nothing pins what they depict. */
 function cycleMember(label: string, parts: readonly string[]): MemberShape {
-    return { label, action: decodeActionCode("cycle-numbers", label), parts };
+    // Name and label alike: this family's suffix names the FILE, so there is no stance name to differ from
+    // it - the stances such a file holds are its bands, and the block table names those.
+    return { label, name: label, action: decodeActionCode("cycle-numbers", label), parts };
 }
 
 /**
@@ -139,7 +156,7 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
         case "bare":
             // The file IS the animation, so it carries no action code at all - the empty one, which names
             // the file back as the bare resref when a set is written.
-            return [{ label: resref, action: decodeActionCode("cycle-numbers", ""), parts: [resref] }];
+            return [{ label: resref, name: resref, action: decodeActionCode("cycle-numbers", ""), parts: [resref] }];
         case "cycles":
             return CYCLES.map((cycle) => cycleMember(cycle, withEast(`${resref}${cycle}`)));
         case "quadrant":
@@ -164,6 +181,7 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
         case "actions":
             return Object.keys(ACTION_CODES).map((code) => ({
                 label: actionLabel(code),
+                name: actionName(code),
                 action: decodeActionCode("action-codes", code),
                 parts: withEast(`${resref}${code}`),
             }));
@@ -207,8 +225,17 @@ export function schemeMembers(
         const first = parts[0];
         if (first === undefined) return [];
         // The layer does not change what the member DEPICTS - that is still what its cycle code says - so
-        // it rides in the label, and beside it as a field for the consumers that build their own.
-        const label = layer === undefined ? member.label : `${member.label} (${layer})`;
-        return [{ label, action: member.action, resref: first, parts, ...(layer === undefined ? {} : { layer }) }];
+        // it rides in both display forms, and beside them as a field for the consumers that build their own.
+        const suffixed = (text: string): string => (layer === undefined ? text : `${text} (${layer})`);
+        return [
+            {
+                label: suffixed(member.label),
+                name: suffixed(member.name),
+                action: member.action,
+                resref: first,
+                parts,
+                ...(layer === undefined ? {} : { layer }),
+            },
+        ];
     });
 }

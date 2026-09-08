@@ -4,7 +4,7 @@ import { type AnimationSet, buildAnimationIndex, firstArmour } from "../src/anim
 import { tableForFlavour } from "../src/animation-tables";
 import { drawnArmourLevels, setMembers, setStances, stanceIo, type StanceIo } from "../src/set-stances";
 import type { GameHandle } from "../src/game-handle";
-import { bandedPair, multiCycle, skeletonBands } from "../../image/test/bam-fixtures.ts";
+import { bandedPair, multiCycle, packedBands, skeletonBands } from "../../image/test/bam-fixtures.ts";
 
 const GAME = process.env.BGFORGE_IE_GAME;
 
@@ -110,6 +110,61 @@ describe("setStances over the character layouts", () => {
             "NW",
             "N",
         ]);
+    });
+});
+
+/**
+ * What the stance picker reads. One list spans a set's files, so a row names the STANCE and never the file
+ * it happens to live in: the file boundary is a packaging convention of the naming family, and the same
+ * creature ships as ten single-band files under one family and three packed ones under another.
+ *
+ * The two-letter code stays out of it. It names a file for a reader holding an archive listing, which is
+ * what the block picker over a lone BAM still shows - see `blockLabel`.
+ */
+describe("stance names", () => {
+    function ioFor(files: Record<string, Uint8Array>): StanceIo {
+        return { exists: (resref) => Object.hasOwn(files, resref), read: (resref) => files[resref] };
+    }
+
+    /** The packed shape: one file, six direction blocks, and the block table saying what each depicts. */
+    it("names each block of a packed file, not the file", () => {
+        const set: AnimationSet = {
+            id: 0x1234,
+            code: "MOGH",
+            name: "OGRE_MAGE",
+            prefixByArmour: new Map([[1, "MOGH"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            layout: "cycles",
+        };
+
+        const stances = setStances(set, 1, ioFor({ MOGHG1: packedBands(4, 6, [0, 1, 2, 3, 4]) }));
+
+        expect(stances.map((stance) => stance.label)).toEqual([
+            "Walk",
+            "Combat stance",
+            "Stand",
+            "Get hit",
+            "Die",
+            "Twitch",
+        ]);
+    });
+
+    /** The other shape: the stance IS the file, and its suffix is what the family names it by. */
+    it("names a single-band file for what it depicts rather than for its suffix", () => {
+        const set: AnimationSet = {
+            id: 0xe900,
+            code: "MSAL",
+            name: "SALAMANDER_FIRE",
+            prefixByArmour: new Map([[1, "MSAL"]]),
+            paperdollPrefix: undefined,
+            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            layout: "actions",
+        };
+
+        const stances = setStances(set, 1, ioFor({ MSALWK: multiCycle(4, 8), MSALDE: multiCycle(4, 8) }));
+
+        expect(stances.map((stance) => stance.label)).toEqual(["Die", "Walk"]);
     });
 });
 

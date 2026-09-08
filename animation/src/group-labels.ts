@@ -15,7 +15,18 @@ import { type NeutralActionId } from "./animation-schemes/actions";
 
 /** One block of a packed file: what a picker shows, and what the block depicts where that is pinned. */
 export interface IeGroup {
-    label: string;
+    /**
+     * The scheme's own two-letter code for the block, where it has one.
+     *
+     * Stored apart from the name because two surfaces want different halves of the same fact: the stance
+     * list names the STANCE and the file it lives in is a packaging detail, while the block picker over a
+     * lone BAM is showing a reader the blocks of a file they opened by name, for whom the code is the
+     * cross-reference to an archive listing. Composing the pair beats storing both strings, which would
+     * drift the first time one was reworded.
+     */
+    code?: string;
+    /** Lower case, so `blockLabel` can compose the code form and `stanceName` the sentence one. */
+    name: string;
     /** Absent where the documentation names the block without pinning what it is - see `CAST_BLOCKS`. */
     id?: NeutralActionId;
     /** The grip the block's own name pins, where it pins one. */
@@ -31,6 +42,20 @@ export interface IeGroup {
     unused?: true;
 }
 
+function capitalized(name: string): string {
+    return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** The block as a file's reader sees it: the code that addresses it in the archive, then what it depicts. */
+export function blockLabel(group: IeGroup): string {
+    return group.code === undefined ? capitalized(group.name) : `${group.code} - ${group.name}`;
+}
+
+/** The block as a stance list names it - no code, because that list spans files rather than reading one. */
+export function stanceName(group: IeGroup): string {
+    return capitalized(group.name);
+}
+
 // The FIRST block of each pair is the conjure loop played while casting, the SECOND the one-shot
 // release (engine playback order; note IESDP's CA/SP block names invert it). Both schemes lay their
 // cast files out this way - only the block size differs - so the two keys share one list.
@@ -38,14 +63,14 @@ export interface IeGroup {
 // No `id`: the vocabulary's `spell` covers both halves precisely because the sources disagree about
 // which is which, so a block that IS one of the two is exactly the case it refuses to name.
 const CAST_BLOCKS: IeGroup[] = [
-    { label: "Conjure spell 1 (loop)" },
-    { label: "Cast spell 1 (release)" },
-    { label: "Conjure spell 2 (loop)" },
-    { label: "Cast spell 2 (release)" },
-    { label: "Conjure spell 3 (loop)" },
-    { label: "Cast spell 3 (release)" },
-    { label: "Conjure spell 4 (loop)" },
-    { label: "Cast spell 4 (release)" },
+    { name: "conjure spell 1 (loop)" },
+    { name: "cast spell 1 (release)" },
+    { name: "conjure spell 2 (loop)" },
+    { name: "cast spell 2 (release)" },
+    { name: "conjure spell 3 (loop)" },
+    { name: "cast spell 3 (release)" },
+    { name: "conjure spell 4 (loop)" },
+    { name: "cast spell 4 (release)" },
 ];
 
 /**
@@ -56,25 +81,25 @@ const CAST_BLOCKS: IeGroup[] = [
  * stated once.
  */
 const MONSTER_G1: IeGroup[] = [
-    { label: "WK - walk", id: "walk" },
-    { label: "SC - combat stance", id: "ready" },
-    { label: "SD - stand", id: "stand" },
-    { label: "GH - get hit", id: "get-hit" },
-    { label: "DE - die", id: "die" },
-    { label: "TW - twitch", id: "twitch" },
-    { label: "SL - sleep", id: "sleep" },
-    { label: "GU - get up", id: "get-up" },
+    { code: "WK", name: "walk", id: "walk" },
+    { code: "SC", name: "combat stance", id: "ready" },
+    { code: "SD", name: "stand", id: "stand" },
+    { code: "GH", name: "get hit", id: "get-hit" },
+    { code: "DE", name: "die", id: "die" },
+    { code: "TW", name: "twitch", id: "twitch" },
+    { code: "SL", name: "sleep", id: "sleep" },
+    { code: "GU", name: "get up", id: "get-up" },
 ];
 
 /** The same family's `G2`, on the same prefix rule. */
 const MONSTER_G2: IeGroup[] = [
-    { label: "A1 - attack 1", id: "attack" },
-    { label: "A2 - attack 2", id: "attack" },
-    { label: "A3 - attack 3", id: "attack" },
-    { label: "A4 - attack 4", id: "attack" },
-    { label: "A5 - attack 5", id: "attack" },
-    { label: "SP - conjure spell (loop)" },
-    { label: "CA - cast (release)" },
+    { code: "A1", name: "attack 1", id: "attack" },
+    { code: "A2", name: "attack 2", id: "attack" },
+    { code: "A3", name: "attack 3", id: "attack" },
+    { code: "A4", name: "attack 4", id: "attack" },
+    { code: "A5", name: "attack 5", id: "attack" },
+    { code: "SP", name: "conjure spell (loop)" },
+    { code: "CA", name: "cast (release)" },
 ];
 
 // The burrowing family's three files. Its `G1` opens on a block no sequence addresses - the first stance
@@ -82,24 +107,24 @@ const MONSTER_G2: IeGroup[] = [
 // whose name is merely unknown. EMERGE and HIDE carry no `id`: the neutral vocabulary has no member for
 // going to ground, and inventing one would put a word in every converter's mouth.
 const ANKHEG_G1: IeGroup[] = [
-    { label: "(unused)", unused: true },
-    { label: "DE - die", id: "die" },
-    { label: "TW - twitch", id: "twitch" },
-    { label: "SD - stand (emerged)", id: "stand" },
+    { name: "(unused)", unused: true },
+    { code: "DE", name: "die", id: "die" },
+    { code: "TW", name: "twitch", id: "twitch" },
+    { code: "SD", name: "stand (emerged)", id: "stand" },
 ];
 const ANKHEG_G2: IeGroup[] = [
     // Unpinned: this is the burrower's second standing block, the one it holds underground. Both reference
     // implementations name it a stand rather than a combat stance, and it cannot take the `stand` id the
     // emerged block above already carries.
-    { label: "SD - stand (hidden)" },
-    { label: "EMERGE - emerge" },
-    { label: "HIDE - burrow" },
+    { code: "SD", name: "stand (hidden)" },
+    { code: "EMERGE", name: "emerge" },
+    { code: "HIDE", name: "burrow" },
 ];
 const ANKHEG_G3: IeGroup[] = [
-    { label: "A1 - attack", id: "attack" },
+    { code: "A1", name: "attack", id: "attack" },
     // Pinned, unlike the paired cast blocks above: those refuse an id because the sources disagree about
     // which half is which, and a lone cast block has no half to be confused with.
-    { label: "CA - cast", id: "spell" },
+    { code: "CA", name: "cast", id: "spell" },
 ];
 
 /**
@@ -118,29 +143,29 @@ const IE_SEQUENCE_NAMES: Record<string, IeGroup[]> = {
     "ca/ie8/8": CAST_BLOCKS,
     "ca/ie9/8": CAST_BLOCKS,
     "g1/ie8/9": [
-        { label: "WK - walk", id: "walk" },
-        { label: "SC1 - combat stance (1-h)", id: "ready", detail: "1-handed" },
-        { label: "SD1 - stand (1-h)", id: "stand", detail: "1-handed" },
-        { label: "SC2 - combat stance (2-h)", id: "ready", detail: "2-handed" },
-        { label: "SD2 - stand (2-h)", id: "stand", detail: "2-handed" },
-        { label: "GH - get hit", id: "get-hit" },
-        { label: "DE - die", id: "die" },
-        { label: "TW - twitch", id: "twitch" },
-        { label: "SL - sleep", id: "sleep" },
+        { code: "WK", name: "walk", id: "walk" },
+        { code: "SC1", name: "combat stance (1-h)", id: "ready", detail: "1-handed" },
+        { code: "SD1", name: "stand (1-h)", id: "stand", detail: "1-handed" },
+        { code: "SC2", name: "combat stance (2-h)", id: "ready", detail: "2-handed" },
+        { code: "SD2", name: "stand (2-h)", id: "stand", detail: "2-handed" },
+        { code: "GH", name: "get hit", id: "get-hit" },
+        { code: "DE", name: "die", id: "die" },
+        { code: "TW", name: "twitch", id: "twitch" },
+        { code: "SL", name: "sleep", id: "sleep" },
     ],
     "g1/ie8/6": [
-        { label: "WK - walk", id: "walk" },
-        { label: "SC - combat stance", id: "ready" },
-        { label: "SD - stand", id: "stand" },
-        { label: "GH - get hit", id: "get-hit" },
-        { label: "DE - die", id: "die" },
-        { label: "TW - twitch", id: "twitch" },
+        { code: "WK", name: "walk", id: "walk" },
+        { code: "SC", name: "combat stance", id: "ready" },
+        { code: "SD", name: "stand", id: "stand" },
+        { code: "GH", name: "get hit", id: "get-hit" },
+        { code: "DE", name: "die", id: "die" },
+        { code: "TW", name: "twitch", id: "twitch" },
     ],
     // The second and third blocks are each documented as one of two things, so neither is pinned.
     "g2/ie8/3": [
-        { label: "A1 - attack", id: "attack" },
-        { label: "A2/CA - attack or cast" },
-        { label: "A3/SP - attack or spell" },
+        { code: "A1", name: "attack", id: "attack" },
+        { code: "A2/CA", name: "attack or cast" },
+        { code: "A3/SP", name: "attack or spell" },
     ],
     // Fine-scheme monster (unsplit G1/G2) and character G1, plus the shorter files of the same family.
     "g1/ie9/8": MONSTER_G1,
@@ -150,17 +175,17 @@ const IE_SEQUENCE_NAMES: Record<string, IeGroup[]> = {
     "g2/ie9/6": MONSTER_G2.slice(0, 6),
     "g2/ie9/5": MONSTER_G2.slice(0, 5),
     "g1/ie9/11": [
-        { label: "WK - walk", id: "walk" },
-        { label: "SC1 - combat stance (1-h)", id: "ready", detail: "1-handed" },
-        { label: "SD1 - stand (1-h)", id: "stand", detail: "1-handed" },
-        { label: "SC2 - combat stance (2-h)", id: "ready", detail: "2-handed" },
-        { label: "GH - get hit", id: "get-hit" },
-        { label: "DE - die", id: "die" },
-        { label: "TW - twitch", id: "twitch" },
-        { label: "SD2 - stand 2", id: "stand" },
-        { label: "SD3 - stand 3", id: "stand" },
-        { label: "SL1 - sleep 1", id: "sleep" },
-        { label: "SL2 - sleep 2", id: "sleep" },
+        { code: "WK", name: "walk", id: "walk" },
+        { code: "SC1", name: "combat stance (1-h)", id: "ready", detail: "1-handed" },
+        { code: "SD1", name: "stand (1-h)", id: "stand", detail: "1-handed" },
+        { code: "SC2", name: "combat stance (2-h)", id: "ready", detail: "2-handed" },
+        { code: "GH", name: "get hit", id: "get-hit" },
+        { code: "DE", name: "die", id: "die" },
+        { code: "TW", name: "twitch", id: "twitch" },
+        { code: "SD2", name: "stand 2", id: "stand" },
+        { code: "SD3", name: "stand 3", id: "stand" },
+        { code: "SL1", name: "sleep 1", id: "sleep" },
+        { code: "SL2", name: "sleep 2", id: "sleep" },
     ],
 
     // Sections whose layout differs from the family the bare key names. Both burrowing schemes lay the
@@ -176,32 +201,35 @@ const IE_SEQUENCE_NAMES: Record<string, IeGroup[]> = {
     // two, the layout addressing a stance by position. `A3` stays unpinned wherever it appears: the code
     // list gives it two meanings, and the action table takes the same posture on it.
     "monster_old/g2/ie8/3": [
-        { label: "A1 - attack", id: "attack" },
-        { label: "A3 - jab or shoot" },
-        { label: "CA - cast", id: "spell" },
+        { code: "A1", name: "attack", id: "attack" },
+        { code: "A3", name: "jab or shoot" },
+        { code: "CA", name: "cast", id: "spell" },
     ],
-    "monster_old/g2/ie8/2": [{ label: "A1 - attack", id: "attack" }, { label: "A3 - jab or shoot" }],
+    "monster_old/g2/ie8/2": [
+        { code: "A1", name: "attack", id: "attack" },
+        { code: "A3", name: "jab or shoot" },
+    ],
     "monster_large/g1/ie8/3": [
-        { label: "SD - stand", id: "stand" },
-        { label: "SC - combat stance", id: "ready" },
-        { label: "WK - walk", id: "walk" },
+        { code: "SD", name: "stand", id: "stand" },
+        { code: "SC", name: "combat stance", id: "ready" },
+        { code: "WK", name: "walk", id: "walk" },
     ],
     "monster_large/g2/ie8/2": [
-        { label: "A1 - attack", id: "attack" },
-        { label: "A2 - attack", id: "attack" },
+        { code: "A1", name: "attack", id: "attack" },
+        { code: "A2", name: "attack", id: "attack" },
     ],
     "monster_large/g3/ie8/4": [
-        { label: "A3 - jab or shoot" },
-        { label: "GH - get hit", id: "get-hit" },
-        { label: "DE - die", id: "die" },
-        { label: "TW - twitch", id: "twitch" },
+        { code: "A3", name: "jab or shoot" },
+        { code: "GH", name: "get hit", id: "get-hit" },
+        { code: "DE", name: "die", id: "die" },
+        { code: "TW", name: "twitch", id: "twitch" },
     ],
     "ambient_static/g1/ie8/5": [
-        { label: "SC - combat stance", id: "ready" },
-        { label: "SD - stand", id: "stand" },
-        { label: "GH - get hit", id: "get-hit" },
-        { label: "DE - die", id: "die" },
-        { label: "TW - twitch", id: "twitch" },
+        { code: "SC", name: "combat stance", id: "ready" },
+        { code: "SD", name: "stand", id: "stand" },
+        { code: "GH", name: "get hit", id: "get-hit" },
+        { code: "DE", name: "die", id: "die" },
+        { code: "TW", name: "twitch", id: "twitch" },
     ],
 };
 

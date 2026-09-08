@@ -11,7 +11,7 @@
  * two surfaces name the same block identically. Where neither pins a name, the band is numbered - the
  * same posture that table takes, and for the same reason.
  */
-import { type IeGroup, ieGroups } from "../group-labels";
+import { type IeGroup, ieGroups, stanceName } from "../group-labels";
 import { type IeDirectionSlot, type IeScheme } from "@bgforge/image/ie-direction";
 import { type SchemeMember } from "./members";
 import { type NeutralActionRef } from "./actions";
@@ -184,7 +184,7 @@ export function stancesOfMembers(
             // so only the declaration can rule it out.
             if (slots.length === 0 || file.drawn[band] !== true || groups?.[band]?.unused === true) continue;
             stances.push({
-                label: bandLabel(member, groups?.[band]?.label, band, file.bands.length),
+                label: bandLabel(member, blockName(groups?.[band]), band, file.bands.length),
                 action: bandAction(member.action, groups?.[band]),
                 resref: member.resref,
                 parts: member.parts,
@@ -203,10 +203,18 @@ export function stancesOfMembers(
  * The block's name says nothing about WHICH file it came from, so a set drawing a second set of files
  * under the same scheme would name both runs identically - eight pairs of colliding labels on the
  * burrowing family, pointing at different files. Only that branch needs the layer: the other two lead
- * with the member's own label, which already carries it.
+ * with the member's own name, which already carries it.
+ *
+ * The FILE never appears in any of the three: a stance list spans a set's files, and which one holds a
+ * given stance is a convention of the naming family rather than anything a reader chose. The one exception
+ * is the nameless band, where the file plus a position is all there is to identify it by.
  */
+function blockName(group: IeGroup | undefined): string | undefined {
+    return group === undefined ? undefined : stanceName(group);
+}
+
 function bandLabel(member: SchemeMember, name: string | undefined, band: number, bandCount: number): string {
-    if (bandCount === 1) return member.label;
+    if (bandCount === 1) return member.name;
     if (name === undefined) return `${member.label} - group ${band + 1}`;
     return member.layer === undefined ? name : `${name} (${member.layer})`;
 }

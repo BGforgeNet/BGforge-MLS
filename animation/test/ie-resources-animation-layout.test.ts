@@ -102,6 +102,7 @@ describe("schemeMembers", () => {
         expect(members).toEqual([
             {
                 label: "G1 (weapon overlay)",
+                name: "G1 (weapon overlay)",
                 action: cycleAction("G1"),
                 resref: "MOGMSG1",
                 parts: ["MOGMSG1", "MOGMSG1E"],
@@ -113,13 +114,13 @@ describe("schemeMembers", () => {
     it("offers the resref itself where the layout carries no suffix", () => {
         expect(schemeMembers("bare", "SNOMC", has("SNOMC"))).toEqual([
             // No suffix means no action code: the empty one, which names the file back as the bare resref.
-            { label: "SNOMC", action: cycleAction(""), resref: "SNOMC", parts: ["SNOMC"] },
+            { label: "SNOMC", name: "SNOMC", action: cycleAction(""), resref: "SNOMC", parts: ["SNOMC"] },
         ]);
     });
 
     it("offers only the cycles the install ships", () => {
         expect(schemeMembers("cycles", "MOGH", has("MOGHG1"))).toEqual([
-            { label: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1"] },
+            { label: "G1", name: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1"] },
         ]);
     });
 
@@ -127,7 +128,7 @@ describe("schemeMembers", () => {
     // member listing only the base file draws whatever the base pads those slots with.
     it("draws a cycle's eastern twin as part of the same member", () => {
         expect(schemeMembers("cycles", "MOGH", has("MOGHG1", "MOGHG1E"))).toEqual([
-            { label: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1", "MOGHG1E"] },
+            { label: "G1", name: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1", "MOGHG1E"] },
         ]);
         expect(schemeMembers("actions", "METN", has("METNWK", "METNWKE"))[0]?.parts).toEqual(["METNWK", "METNWKE"]);
     });
@@ -137,6 +138,7 @@ describe("schemeMembers", () => {
         expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"))).toEqual([
             {
                 label: "G1",
+                name: "G1",
                 action: cycleAction("G1"),
                 resref: "MWYVG11",
                 parts: ["MWYVG11", "MWYVG12", "MWYVG13", "MWYVG14"],
@@ -157,7 +159,7 @@ describe("schemeMembers", () => {
     it("keeps a quadrant member the install has only some quarters of", () => {
         // Drawing three quarters beats dropping the animation from the list entirely.
         expect(schemeMembers("quadrant", "MWYV", has("MWYVG11", "MWYVG13"))).toEqual([
-            { label: "G1", action: cycleAction("G1"), resref: "MWYVG11", parts: ["MWYVG11", "MWYVG13"] },
+            { label: "G1", name: "G1", action: cycleAction("G1"), resref: "MWYVG11", parts: ["MWYVG11", "MWYVG13"] },
         ]);
     });
 
@@ -169,12 +171,14 @@ describe("schemeMembers", () => {
         expect(schemeMembers("actions", "METN", has("METNWK", "METNDE"))).toEqual([
             {
                 label: "DE - die",
+                name: "Die",
                 action: { scheme: "action-codes", id: "die", code: "DE" },
                 resref: "METNDE",
                 parts: ["METNDE"],
             },
             {
                 label: "WK - walk",
+                name: "Walk",
                 action: { scheme: "action-codes", id: "walk", code: "WK" },
                 resref: "METNWK",
                 parts: ["METNWK"],
@@ -191,11 +195,12 @@ describe("schemeMembers", () => {
 
     it("takes whichever family the files answer for, where the section mixes two", () => {
         expect(schemeMembers("mixed", "MTAN", has("MTANG11", "MTANG12"))).toEqual([
-            { label: "G1", action: cycleAction("G1"), resref: "MTANG11", parts: ["MTANG11", "MTANG12"] },
+            { label: "G1", name: "G1", action: cycleAction("G1"), resref: "MTANG11", parts: ["MTANG11", "MTANG12"] },
         ]);
         expect(schemeMembers("mixed", "METN", has("METNWK"))).toEqual([
             {
                 label: "WK - walk",
+                name: "Walk",
                 action: { scheme: "action-codes", id: "walk", code: "WK" },
                 resref: "METNWK",
                 parts: ["METNWK"],
@@ -222,6 +227,7 @@ describe("action code names", () => {
         expect(schemeMembers("actions", "METN", has("METNWK"))).toEqual([
             {
                 label: "WK - walk",
+                name: "Walk",
                 action: { scheme: "action-codes", id: "walk", code: "WK" },
                 resref: "METNWK",
                 parts: ["METNWK"],
@@ -230,12 +236,14 @@ describe("action code names", () => {
         expect(schemeMembers("actions", "METN", has("METNDE", "METNGH"))).toEqual([
             {
                 label: "DE - die",
+                name: "Die",
                 action: { scheme: "action-codes", id: "die", code: "DE" },
                 resref: "METNDE",
                 parts: ["METNDE"],
             },
             {
                 label: "GH - get hit",
+                name: "Get hit",
                 action: { scheme: "action-codes", id: "get-hit", code: "GH" },
                 resref: "METNGH",
                 parts: ["METNGH"],
@@ -251,6 +259,7 @@ describe("action code names", () => {
             // is the disputed part, not whether it is one.
             {
                 label: "CA",
+                name: "CA",
                 action: { scheme: "action-codes", id: "spell", code: "CA" },
                 resref: "METNCA",
                 parts: ["METNCA"],
@@ -259,6 +268,7 @@ describe("action code names", () => {
         expect(schemeMembers("actions", "METN", has("METNA3"))).toEqual([
             {
                 label: "A3",
+                name: "A3",
                 action: { scheme: "action-codes", id: "attack", code: "A3" },
                 resref: "METNA3",
                 parts: ["METNA3"],
@@ -269,7 +279,7 @@ describe("action code names", () => {
     it("keeps the cycle and quadrant layouts on their file suffixes", () => {
         // G-files pack several stances, so the FILE has no single stance name - the bands do.
         expect(schemeMembers("cycles", "MOGH", has("MOGHG1"))).toEqual([
-            { label: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1"] },
+            { label: "G1", name: "G1", action: cycleAction("G1"), resref: "MOGHG1", parts: ["MOGHG1"] },
         ]);
     });
 });

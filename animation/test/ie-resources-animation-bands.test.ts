@@ -10,9 +10,14 @@ import {
 import { decodeActionCode } from "../src/animation-schemes/actions";
 import { type SchemeMember } from "../src/animation-schemes/members";
 
-/** A member as the two-letter naming family produces one; the code is what its label leads with. */
-function member(label: string, resref: string): SchemeMember {
-    return { label, action: decodeActionCode("action-codes", label.slice(0, 2)), resref, parts: [resref] };
+/**
+ * A member as the two-letter naming family produces one; the code is what its label leads with.
+ *
+ * `name` defaults to the label, which is what every layout but that one does - only the action-code family
+ * names a file after the stance it holds, so only there do the two forms differ.
+ */
+function member(label: string, resref: string, name = label): SchemeMember {
+    return { label, name, action: decodeActionCode("action-codes", label.slice(0, 2)), resref, parts: [resref] };
 }
 
 /** One band of `count` slots; the facings themselves do not matter to the naming. */
@@ -110,10 +115,12 @@ describe("bandsOverlaying", () => {
 
 describe("stancesOfMembers", () => {
     it("keeps a single-band file on the member's own name", () => {
-        const stances = stancesOfMembers([member("WK - walk", "METNWK")], () => bands(1));
+        // The member's NAME, not its label: the label leads with the code that finds the file in an
+        // archive listing, and a stance list is not reading a file.
+        const stances = stancesOfMembers([member("WK - walk", "METNWK", "Walk")], () => bands(1));
         expect(stances).toEqual([
             {
-                label: "WK - walk",
+                label: "Walk",
                 action: { scheme: "action-codes", id: "walk", code: "WK" },
                 resref: "METNWK",
                 parts: ["METNWK"],
@@ -127,14 +134,7 @@ describe("stancesOfMembers", () => {
     it("names each band of a file that packs several stances", () => {
         // MOGHG1's real shape: six 8-slot bands, five stored facings each.
         const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(6));
-        expect(stances.map((s) => s.label)).toEqual([
-            "WK - walk",
-            "SC - combat stance",
-            "SD - stand",
-            "GH - get hit",
-            "DE - die",
-            "TW - twitch",
-        ]);
+        expect(stances.map((s) => s.label)).toEqual(["Walk", "Combat stance", "Stand", "Get hit", "Die", "Twitch"]);
         expect(stances.map((s) => s.band)).toEqual([0, 1, 2, 3, 4, 5]);
         expect(stances.every((s) => s.resref === "MOGHG1")).toBe(true);
     });
@@ -183,7 +183,7 @@ describe("stancesOfMembers", () => {
     it("drops a band the scheme addresses no sequence to", () => {
         const stances = stancesOfMembers([member("G1", "MAKHG1")], () => bands(4, 8), "monster_ankheg");
 
-        expect(stances.map((s) => s.label)).toEqual(["DE - die", "TW - twitch", "SD - stand (emerged)"]);
+        expect(stances.map((s) => s.label)).toEqual(["Die", "Twitch", "Stand (emerged)"]);
         // The index is the band's address in the file, so dropping the first one must not renumber the rest.
         expect(stances.map((s) => s.band)).toEqual([1, 2, 3]);
     });
@@ -192,12 +192,8 @@ describe("stancesOfMembers", () => {
         const anonymous = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8));
         const declared = stancesOfMembers([member("G2", "MAKHG2")], () => bands(3, 8), "monster_ankheg");
 
-        expect(anonymous.map((s) => s.label)).toEqual([
-            "A1 - attack",
-            "A2/CA - attack or cast",
-            "A3/SP - attack or spell",
-        ]);
-        expect(declared.map((s) => s.label)).toEqual(["SD - stand (hidden)", "EMERGE - emerge", "HIDE - burrow"]);
+        expect(anonymous.map((s) => s.label)).toEqual(["Attack", "Attack or cast", "Attack or spell"]);
+        expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Burrow"]);
     });
 
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {
@@ -233,12 +229,12 @@ describe("stancesOfMembers", () => {
         const stances = stancesOfMembers([base, overlay], () => bands(4, 8), "monster_ankheg");
 
         expect(stances.map((s) => s.label)).toEqual([
-            "DE - die",
-            "TW - twitch",
-            "SD - stand (emerged)",
-            "DE - die (second piece)",
-            "TW - twitch (second piece)",
-            "SD - stand (emerged) (second piece)",
+            "Die",
+            "Twitch",
+            "Stand (emerged)",
+            "Die (second piece)",
+            "Twitch (second piece)",
+            "Stand (emerged) (second piece)",
         ]);
     });
 

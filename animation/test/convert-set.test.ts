@@ -519,7 +519,7 @@ describe("converting a whole set", () => {
 
         expect(result).toMatchObject({ outcome: "refused" });
         expect(reason).toContain("no counterpart");
-        expect(reason).toContain("WK - walk");
+        expect(reason).toContain("Walk");
     });
 
     it("refuses a set with nothing in it rather than naming an empty list", () => {

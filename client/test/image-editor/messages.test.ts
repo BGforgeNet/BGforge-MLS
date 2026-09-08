@@ -17,7 +17,7 @@ test("accepts valid messages", () => {
     expect(isWebviewToHost({ type: "requestFrames", indices: [0, 3] })).toBe(true);
     // The set controls: two picks carrying a value, and the set picker, which carries none because the
     // list it offers is the host's.
-    expect(isWebviewToHost({ type: "selectSetAction", resref: "CDMB1G1" })).toBe(true);
+    expect(isWebviewToHost({ type: "selectSetStance", key: "CDMB1G1#0" })).toBe(true);
     expect(isWebviewToHost({ type: "selectSetArmour", level: 2 })).toBe(true);
     expect(isWebviewToHost({ type: "pickSet" })).toBe(true);
     // The conversion mode: opening it carries nothing, planning carries the target, and only the run

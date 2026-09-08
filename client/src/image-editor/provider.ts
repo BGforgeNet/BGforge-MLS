@@ -370,11 +370,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 this.post(channel, { type: "frames", indices: answered.map((a) => a.index), frames, pixels });
                 break;
             }
-            case "selectSetAction":
+            case "selectSetStance":
             case "selectSetArmour": {
                 const pick =
-                    message.type === "selectSetAction"
-                        ? document.selectSetAction(message.resref)
+                    message.type === "selectSetStance"
+                        ? document.selectSetStance(message.key)
                         : document.selectSetArmour(message.level);
                 if (pick === "changed") {
                     this.postToDocumentPanels(document, { type: "init", view: initialView(document) });

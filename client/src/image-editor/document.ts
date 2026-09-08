@@ -548,19 +548,21 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     /**
-     * Show another action of the open set. Refused for a file document, and for an action the set does not
+     * Show another stance of the open set. Refused for a file document, and for a stance the set does not
      * draw - the caller reposts the view either way, so a refused pick snaps the control back to what is
      * actually open rather than leaving it showing a choice that did not take.
      */
-    selectSetAction(resref: string): SetPick {
+    selectSetStance(key: string): SetPick {
         const state = this.setState;
         if (state === undefined) return "refused";
-        const pick = state.select(resref);
+        const pick = state.select(key);
+        // Two stances of one packed file share a model, so this is often the model already open -
+        // `useModel` returns on that, which is what keeps a move between bands off the reader's edits.
         if (pick === "changed") this.useModel(state.model);
         return pick;
     }
 
-    /** Show another armour level of the open set, on its first action that draws. Refused as above. */
+    /** Show another armour level of the open set, on its first stance that draws. Refused as above. */
     selectSetArmour(level: number): SetPick {
         const state = this.setState;
         if (state === undefined) return "refused";

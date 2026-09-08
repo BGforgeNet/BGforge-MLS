@@ -46,24 +46,24 @@ describe("actionLabel", () => {
      * the control says what the file shows rather than repeating the digit already in its name, in the
      * block's own words so the two surfaces name it identically.
      *
-     * Every label is DISTINCT, and that is a requirement rather than an observation: the view lists these by
-     * label and sends the string back, so two files sharing one name would collide. A term-based name does
-     * exactly that - three of these blocks are stands.
+     * Every name is DISTINCT, and that is a requirement rather than an observation: these arrive in the
+     * stance picker as consecutive rows, and two reading alike leave the reader picking between them by
+     * position. Naming them from the neutral vocabulary does exactly that - three of these are stands.
      */
     it("names a misc file for its own block, distinctly, and numbers one nothing names", () => {
         const labels = [1, 11, 12, 13, 14, 15, 16, 17, 18, 19].map((detail) => actionLabel({ kind: "misc", detail }));
 
         expect(labels).toEqual([
-            "SC1 - combat stance (1-h)",
-            "WK - walk",
-            "SD1 - stand (1-h)",
-            "SC2 - combat stance (2-h)",
-            "GH - get hit",
-            "DE - die",
-            "TW - twitch",
-            "SD2 - stand 2",
-            "SD3 - stand 3",
-            "SL1 - sleep 1",
+            "Combat stance (1-h)",
+            "Walk",
+            "Stand (1-h)",
+            "Combat stance (2-h)",
+            "Get hit",
+            "Die",
+            "Twitch",
+            "Stand 2",
+            "Stand 3",
+            "Sleep 1",
         ]);
         expect(new Set(labels).size).toBe(labels.length);
         expect(actionLabel({ kind: "misc", detail: 3 })).toBe("Misc 3");

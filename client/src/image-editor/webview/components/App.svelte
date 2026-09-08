@@ -202,7 +202,17 @@
         groupSeededView = v;
         roseGroup = seed;
     });
-    const clampedRoseGroup = $derived(Math.min(roseGroup, Math.max(0, roseGroupCount - 1)));
+    /**
+     * Which band is on the stage.
+     *
+     * A SET answers this from its stance picker, which spans the set's files and so already names the
+     * band - a second control here would be the same choice asked twice, and the two could disagree. A
+     * lone file has no such list, so it keeps its own block picker below.
+     */
+    const setDrivesBand = $derived(view?.set !== undefined);
+    const drawnBand = $derived(view?.set?.band ?? roseGroup);
+    const offeredGroupCount = $derived(setDrivesBand ? 0 : roseGroupCount);
+    const clampedRoseGroup = $derived(Math.min(drawnBand, Math.max(0, roseGroupCount - 1)));
     const roseTiles = $derived.by((): RoseTile[] => {
         if (!view) return [];
         if (facingLayout?.mode === "compass") return facingLayout.tiles;
@@ -362,7 +372,7 @@
         const v = view;
         if (!v) return;
         const subject = zoomSubject(v);
-        const arrangement = `${subject}#${roseGroup}@${layoutMode}`;
+        const arrangement = `${subject}#${drawnBand}@${layoutMode}`;
         if (arrangement !== fittedArrangement) void applyAutoZoom(v, subject, arrangement);
     });
     async function applyAutoZoom(v: AnimationView, subject: string, arrangement: string): Promise<void> {
@@ -472,7 +482,7 @@
                     set={view?.set ?? null}
                     showChoice={showSetChoice !== false}
                     onArmourChange={(level) => bridge.send({ type: "selectSetArmour", level })}
-                    onActionChange={(resref) => bridge.send({ type: "selectSetAction", resref })}
+                    onStanceChange={(key) => bridge.send({ type: "selectSetStance", key })}
                     onPickSet={() => bridge.send({ type: "pickSet" })}
                     onConvert={() => bridge.send({ type: "beginConversion" })}
                 />
@@ -505,7 +515,7 @@
                 <LayoutModeControls
                     mode={layoutMode}
                     onModeChange={(m) => (layoutChoice = m)}
-                    groupCount={roseGroupCount}
+                    groupCount={offeredGroupCount}
                     group={clampedRoseGroup}
                     groupBlocks={roseBlockNames}
                     scheme={ieRose?.scheme}

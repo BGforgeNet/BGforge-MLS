@@ -35,6 +35,7 @@ const REQUIRED_VALUE_EXPORTS = [
     "overlaidStride",
     "replacementPaletteNames",
     "setMembers",
+    "setStances",
     "setTile",
     "stanceIo",
     // The neutral model

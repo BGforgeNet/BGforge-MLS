@@ -61,9 +61,18 @@ export interface SetView {
      */
     armours: { level: number; label: string }[];
     armour: number;
-    /** The actions this armour level draws; `resref` is what a pick posts back. */
-    actions: { label: string; resref: string }[];
-    action: string;
+    /**
+     * Every stance this armour level draws, across all its files - one flat list, in the order to show it.
+     *
+     * Flat because the file boundary is a convention of the naming family rather than anything the reader
+     * chose: the same creature ships as ten single-band files under one family and three packed ones under
+     * another, so a picker for the file would be asking about packaging. `key` is what a pick posts back
+     * and is opaque here; `title` names the files the stance draws, which is what a save writes.
+     */
+    stances: { key: string; label: string; title: string }[];
+    stance: string;
+    /** Which direction band of the open file the stance is - what the stage draws, in place of its own pick. */
+    band: number;
     /**
      * The animation type the install declares for this set, where it declares one.
      *
@@ -208,8 +217,9 @@ export type WebviewToHost =
     | { type: "setCreature"; resref: string | null }
     // Frames whose pixels the open did not carry, asked for as the view comes to need them.
     | { type: "requestFrames"; indices: number[] }
-    // Set documents only: which action and which armour level of the open set to show.
-    | { type: "selectSetAction"; resref: string }
+    // Set documents only: which stance and which armour level of the open set to show. The key is the
+    // host's own (see `stanceKey`) - the webview holds it opaquely and sends back the one it was given.
+    | { type: "selectSetStance"; key: string }
     | { type: "selectSetArmour"; level: number }
     // Set documents only: offer the install's sets and open the one chosen. The list is the host's to
     // show - an install declares hundreds, and the host's own quick pick is already a search over them.
@@ -287,8 +297,8 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
             return typeof m.mode === "string" && IMPORT_MODES.has(m.mode);
         case "requestFrames":
             return Array.isArray(m.indices) && m.indices.every((i) => typeof i === "number");
-        case "selectSetAction":
-            return typeof m.resref === "string";
+        case "selectSetStance":
+            return typeof m.key === "string";
         case "selectSetArmour":
             return typeof m.level === "number";
         case "runtimeError":
