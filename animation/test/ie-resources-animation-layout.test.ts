@@ -30,8 +30,14 @@ describe("layoutOf", () => {
         expect(layoutOf("monster", undefined)).toBe("cycles");
     });
 
-    it("lets the archive decide for the section that genuinely mixes layouts", () => {
-        expect(layoutOf("monster_icewind", undefined)).toBe("mixed");
+    /**
+     * The archive still decides between this section's two layouts - but NOT the quadrant one, which its
+     * own definition never names. Two sets share the `MTAN` prefix, a demon of this section and a tiled
+     * one, and probing quadrants put the tiled set's thirty-six bands in the demon's stance picker: the
+     * same neighbour trap the wide-band family below already documents.
+     */
+    it("lets the archive decide for the section that mixes, without probing a neighbour's quadrants", () => {
+        expect(layoutOf("monster_icewind", undefined)).toBe("actionsOrCycles");
     });
 
     /**

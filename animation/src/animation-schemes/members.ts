@@ -185,6 +185,11 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
                 action: decodeActionCode("action-codes", code),
                 parts: withEast(`${resref}${code}`),
             }));
+        case "actionsOrCycles":
+            // No quadrant candidate, deliberately - see the `actionsOrCycles` layout for the neighbour
+            // whose files it resolved. Cycles first, since the few animations that ship them ship nothing
+            // else, and an action-code probe on the same prefix costs only lookups.
+            return [...candidates("cycles", resref), ...candidates("actions", resref)];
         case "mixed":
             // TODO: the id range above the tiled dragons numbers a THIRD digit after the quadrant -
             // `<resref>G<group><quadrant><variant>` - and none of the candidates below generates it. Measured

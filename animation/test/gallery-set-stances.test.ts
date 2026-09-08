@@ -393,9 +393,9 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
      *
      * The bound is a RATIO over the whole install rather than a list of the sections still missing, so a
      * newly-taught family tightens it without anyone editing an inventory. It was 358 unnamed stances when
-     * a reader found a red dragon listing fourteen numbered rows; the sections still short are the ones
-     * whose band WIDTH is read wrong (`monster_icewind`) and the one the documentation gives no sequence
-     * layout at all (`effect`).
+     * a reader found a red dragon listing fourteen numbered rows. What is left: the older character
+     * family's attack files, which carry a second band the scheme addresses nothing to, and `effect`,
+     * which the documentation gives no sequence layout at all.
      */
     it("names all but a small remainder of the install's stances", () => {
         const { sets, io } = install();
@@ -411,7 +411,7 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         }
         process.stdout.write(`  ${numbered.length}/${total} stances fall back to a number\n`);
         expect(total, "no stance was exercised, so the ratio below cannot fail").toBeGreaterThan(500);
-        expect(numbered.length / total).toBeLessThan(0.05);
+        expect(numbered.length / total).toBeLessThan(0.01);
     });
 
     it("gives every stance a band that actually holds facings", () => {

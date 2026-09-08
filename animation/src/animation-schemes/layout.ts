@@ -40,7 +40,17 @@ export type Layout =
      * has `split_bams`. Offering both candidate sets and letting the archive answer is resolution, not
      * classification: the resref is the animation's own, so a name that resolves is that animation's file.
      */
-    | "mixed";
+    | "mixed"
+    /**
+     * Action-code files, or the cycle-numbered ones a few animations of the same section ship instead.
+     *
+     * Narrower than `mixed` by exactly the quadrant candidate, and that exclusion is the point: this
+     * section's own definition names action-code files, and a quadrant probe on the same prefix resolves
+     * whatever a NEIGHBOURING quadrant animation stores under it. Two sets share `MTAN` - a demon of this
+     * section and a tiled one - and probing put the tiled one's thirty-six bands in the demon's picker.
+     * The same trap the wide-band family already documents.
+     */
+    | "actionsOrCycles";
 
 /**
  * Sections whose layout never varies. `monster` is deliberately absent - it takes two, and `layoutOf` reads
@@ -71,7 +81,7 @@ const FIXED: Readonly<Record<string, Layout>> = {
     // Not `pieces`, though most of its animations tile: one of them ships quadrant files instead, so the
     // section does not settle the layout and the archive has to.
     multi_new: "mixed",
-    monster_icewind: "mixed",
+    monster_icewind: "actionsOrCycles",
 };
 
 /**
