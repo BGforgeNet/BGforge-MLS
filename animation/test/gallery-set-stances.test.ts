@@ -519,6 +519,42 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
     });
 
     /**
+     * No stance of a set appears twice.
+     *
+     * The character family splits one skeleton across ten files and ships each carrying its neighbours'
+     * bands as copies, so a list keyed on "any band holding art" offered one death once per file that
+     * happened to carry it - three identical rows a reader chose between by position. Nothing else here
+     * sees that: every one of those rows is present, named, and drawable.
+     *
+     * Asserted for the character family, which is the one that splits a skeleton this way. The monster
+     * families repeat a label for their own reason - several interchangeable strikes, of which the block
+     * tables number all but the first - so they are counted and reported rather than folded in here: a
+     * gate that quietly dropped them would report this one clean while saying nothing about that.
+     */
+    it("offers each stance of a character set once", () => {
+        const { sets, io } = install();
+        const repeated: string[] = [];
+        let elsewhere = 0;
+        let listed = 0;
+        for (const set of sets) {
+            const character = set.scheme.kind === "character";
+            for (const armour of drawnArmourLevels(set, io.exists)) {
+                const labels = setStances(set, armour, io).map((stance) => stance.label);
+                if (character) listed += labels.length;
+                const seen = new Set<string>();
+                for (const label of labels) {
+                    if (!seen.has(label)) seen.add(label);
+                    else if (character) repeated.push(`${set.name || set.code} ${armour}: ${label}`);
+                    else elsewhere += 1;
+                }
+            }
+        }
+        process.stdout.write(`  ${listed} character stances, ${elsewhere} repeats in the other families\n`);
+        expect(repeated).toEqual([]);
+        expect(listed, "no character stance was exercised, so the assertion above cannot fail").toBeGreaterThan(1000);
+    });
+
+    /**
      * A get-up is drawn backwards only where it SHARES the dying band.
      *
      * Both halves ship: the dragons have no get-up clip and the engine runs their death in reverse, while

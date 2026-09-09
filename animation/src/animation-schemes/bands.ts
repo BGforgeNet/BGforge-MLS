@@ -187,6 +187,10 @@ export function stancesOfMembers(
     // Members arrive base-first (`setMembers` appends the layers), and a layer whose base was dropped
     // falls back to its own files rather than vanishing with it.
     const banded = new Map<string, FileBands>();
+    // Which bands some file of this set is NAMED for. A band no name claims is reachable only through
+    // whatever file happens to draw it - the character skeleton runs one band past its last named file -
+    // so only a claimed band is dropped from the files that merely carry a copy of it.
+    const claimed = new Set(members.flatMap((row) => (row.ownBand === undefined ? [] : [row.ownBand])));
     for (const member of members) {
         const file = bandsFor(member, member.overlays === undefined ? undefined : banded.get(member.overlays));
         if (file === undefined) continue;
@@ -194,12 +198,20 @@ export function stancesOfMembers(
         // The resref first, then the member's own label: a split-part file carries its stance group in the
         // middle of its name, where no trailing-token match can reach it, and the label is that group.
         const groups = ieGroups([member.resref, member.label], file.bands.length, blockScheme(file, section), section);
+        // The band this file is named for, kept only where the file actually draws it. A file whose cycles
+        // did not band into the skeleton its name assumes has nothing at that position, and filtering to it
+        // would drop the member entirely - so the surplus rows are the better failure of the two.
+        const own = member.ownBand !== undefined && file.drawn[member.ownBand] === true ? member.ownBand : undefined;
         for (const [band, slots] of file.bands.entries()) {
             // The index is kept as it stands: a filtered band is still where it was in the file, and that
             // position is what addresses it there. A band the scheme addresses no sequence to goes with the
             // undrawn ones - it is padding the format forces on the file, and it holds a frame per facing,
             // so only the declaration can rule it out.
             if (slots.length === 0 || file.drawn[band] !== true || groups?.[band]?.unused === true) continue;
+            // A file of a shared skeleton yields its own band, and of the rest only the ones no sibling is
+            // named for: a claimed band here is a copy of art the file named for it already offers, so
+            // listing it puts one clip in the list several times with nothing to choose between the rows.
+            if (own !== undefined && band !== own && claimed.has(band)) continue;
             const group = groups?.[band];
             // One row per sequence the band is played for. A band the table does not name yields no
             // sequences and so one nameless row, which is the numbered case.

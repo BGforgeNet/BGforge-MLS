@@ -228,6 +228,51 @@ describe("stancesOfMembers", () => {
     });
 
     /**
+     * The character family splits one eleven-band skeleton across ten files, and the install ships each of
+     * them carrying its neighbours' bands too - the same cycle range at the same frame count, so the art is
+     * a copy rather than a second clip. Listing every band that holds art therefore offers one death once
+     * per file that happens to carry it, and a reader picking between those rows is picking at random.
+     */
+    it("leaves a band of a shared skeleton to the file named for it", () => {
+        const hit = { ...member("G14", "CHMB1G14"), ownBand: 4 };
+        const dying = { ...member("G15", "CHMB1G15"), ownBand: 5 };
+        const stances = stancesOfMembers([hit, dying], () => bands(11, 9, "ie9"));
+
+        // The two bands both files carry: each keeps the one it is named for and leaves the other alone,
+        // where before this every file carrying a copy offered it. The bands neither claims are not the
+        // subject and stay with whoever draws them.
+        const contested = stances.filter((stance) => stance.band === 4 || stance.band === 5);
+
+        expect(contested.map((stance) => `${stance.resref} ${stance.label}`)).toEqual([
+            "CHMB1G14 Get hit",
+            "CHMB1G15 Die",
+        ]);
+    });
+
+    /**
+     * The skeleton runs one band past its last named file - there is no `G20` - so nothing claims that
+     * band and the file drawing it is the only way to reach it. Dropping every band but a file's own would
+     * lose it outright, which is the failure the surplus rows were never in danger of.
+     */
+    it("keeps a drawn band no file of the set is named for", () => {
+        const sleeping = { ...member("G19", "CHMB1G19"), ownBand: 9 };
+        const stances = stancesOfMembers([sleeping], () => bands(11, 9, "ie9"));
+
+        expect(stances.filter((stance) => stance.band === 10).map((stance) => stance.label)).toEqual([
+            "Sleep 2",
+            "Get up 2",
+        ]);
+    });
+
+    it("keeps every band of a file that declares none of them its own", () => {
+        // The cast file is the other shape: eight bands, no sibling carrying any of them, and each one a
+        // different clip. A filter keyed on the family rather than on the file would empty it.
+        const stances = stancesOfMembers([member("CA", "CHMB1CA")], () => bands(8, 9, "ie9"));
+
+        expect(stances).toHaveLength(8);
+    });
+
+    /**
      * The character family has no get-up clip either: it lies the creature down in two bands and stands it
      * back up by running one of them backwards, which the reference browser addresses at those same two
      * offsets under its reversed marker. So the pair a get-up shares is not always the death.

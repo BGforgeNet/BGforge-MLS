@@ -14,7 +14,12 @@ import {
 } from "@bgforge/image/ie-direction";
 import { type MergedTables, type PartTables, mergeParts } from "./animation-schemes/part-tables";
 import { type AnimationSet, armourLevels } from "./animation-index";
-import { characterActionCode, characterActions, characterMember } from "./animation-schemes/character";
+import {
+    characterActionCode,
+    characterActions,
+    characterMember,
+    characterOwnBand,
+} from "./animation-schemes/character";
 import { decodeActionCode } from "./animation-schemes/actions";
 import {
     type FileBands,
@@ -57,7 +62,13 @@ export function stanceIo(game: Pick<GameHandle, "canRead" | "read">): StanceIo {
  */
 export function setMembers(set: AnimationSet, armour: number, exists: (resref: string) => boolean): SchemeMember[] {
     if (set.scheme.kind === "character") {
-        return characterActions(set, armour, exists).flatMap((action) => {
+        const actions = characterActions(set, armour, exists);
+        // A set draws the misc skeleton one of two ways: packed into a single file holding every band, or
+        // split across one file per band with each carrying its neighbours' bands as copies. Only the split
+        // one shares, and the archive is what says which - a lone misc file holds the whole skeleton and
+        // has to offer all of it, where a file with siblings offers the band it is named for.
+        const split = actions.filter((action) => action.kind === "misc").length > 1;
+        return actions.flatMap((action) => {
             const resref = characterMember(set, armour, action, exists);
             if (resref === undefined) return [];
             // A character action is one file. The older layout ships a second one holding the facings
@@ -68,13 +79,15 @@ export function setMembers(set: AnimationSet, armour: number, exists: (resref: s
             // Name and label alike: this scheme's own action names ARE the stance ("Cast", "Shoot (bow)"),
             // and a misc file takes the name of the one band it draws, so neither form carries a code.
             const label = actionLabel(action);
+            const code = characterActionCode(action);
             return [
                 {
                     label,
                     name: label,
-                    action: decodeActionCode("character", characterActionCode(action)),
+                    action: decodeActionCode("character", code),
                     resref,
                     parts,
+                    ...(split && characterOwnBand(code) !== undefined ? { ownBand: characterOwnBand(code) } : {}),
                 },
             ];
         });

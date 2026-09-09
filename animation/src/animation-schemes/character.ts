@@ -158,6 +158,17 @@ const CAST_BANDS = 8;
 /** The release half of the first spell: what a source that names one spell action is written as. */
 const CAST_BAND = 1;
 
+/**
+ * Which band of the shared skeleton the file naming `code` is FOR, where it shares one.
+ *
+ * Only the misc files do: ten of them carry the same eleven bands and the digit picks one. Undefined for
+ * every other code, the cast file included - its eight bands are eight different clips that no sibling
+ * carries, so all of them are its own.
+ */
+export function characterOwnBand(code: string): number | undefined {
+    return MISC_BAND[code];
+}
+
 /** How the file naming `code` is laid out. Anything the skeletons do not cover is a single band. */
 export function characterFileLayout(code: string): CharacterFileLayout {
     const misc = MISC_BAND[code];

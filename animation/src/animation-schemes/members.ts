@@ -61,6 +61,15 @@ export interface SchemeMember {
      * so, which is why the relation is declared here rather than re-derived from the two labels.
      */
     overlays?: string;
+    /**
+     * The one band of a SHARED skeleton this file is named for - absent where the file's bands are its own.
+     *
+     * A family that splits one skeleton across several files ships each of them carrying its neighbours'
+     * bands as well, holding the same cycles at the same frame counts. Every one of those bands draws, so
+     * a stance list keyed on that alone offers the same clip once per file that happens to carry it. This
+     * says which of them the file is FOR, and the surplus stays reachable through the file that owns it.
+     */
+    ownBand?: number;
 }
 
 /** A member before the archive has been asked which of its files exist. */
