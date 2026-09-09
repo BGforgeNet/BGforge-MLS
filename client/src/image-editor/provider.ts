@@ -244,7 +244,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
     /** Persist a document in place - the write behind both the tab's save and the gallery's. */
     async saveDocument(document: ImageEditorDocument): Promise<void> {
-        await this.writeSave(document, document.saveUri);
+        await this.writeSave(document, document.saveUri, { inPlace: true });
     }
 
     async resolveCustomEditor(
@@ -529,9 +529,11 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
 
             // Save As auto-names its destination instead of showing a dialog, so overwrite consent
             // needs its own gate. In-place targets are exempt: BAMC's .bam collision is a deliberate
-            // re-encode of the source (see saveAsTargetPath), and a split set's combined <base>.frm
-            // is overwrite-by-design (see document.saveUri).
-            const inPlace = targetPath === document.uri.fsPath || targetPath === document.saveUri.fsPath;
+            // re-encode of the source (see saveAsTargetPath), and an IE pair's base member is what a
+            // save writes anyway. A split set is NOT exempt: nothing writes its combined <base>.frm any
+            // more, so one already there belongs to whoever made it and gets the usual prompt.
+            const inPlace =
+                targetPath === document.uri.fsPath || (!document.isFrSplit && targetPath === document.saveUri.fsPath);
             if (!inPlace && !(await this.confirmOverwrite([targetPath]))) return;
 
             if (target === "apng" || target === "png-directory") {
@@ -1011,9 +1013,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     }
 
     async saveCustomDocument(document: ImageEditorDocument, _token: vscode.CancellationToken): Promise<void> {
-        // A Fallout .fr0-.fr5 split set saves to the combined <base>.frm (document.saveUri), never
-        // back to the opened .frN member; the six split files are left untouched.
-        await this.writeSave(document, document.saveUri);
+        await this.writeSave(document, document.saveUri, { inPlace: true });
     }
 
     async saveCustomDocumentAs(
@@ -1038,9 +1038,21 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         return backupHandle(context.destination);
     }
 
-    private async writeSave(document: ImageEditorDocument, destination: vscode.Uri): Promise<void> {
-        // An IE base/east pair saves in place by splitting back into its two member files; a Save As
-        // to another destination falls through and writes the single combined form instead.
+    /**
+     * `inPlace` says this is the document saving itself rather than a Save As naming a destination.
+     * Only the split-set arm needs it: a set's address is a `<base>.frm` no member write ever touches,
+     * so a Save As aimed there is indistinguishable by address from an in-place save and would write
+     * six files instead of the one named. A pair and a set address their real files, so for them the
+     * destination still answers it.
+     */
+    private async writeSave(
+        document: ImageEditorDocument,
+        destination: vscode.Uri,
+        options: { inPlace?: boolean } = {},
+    ): Promise<void> {
+        // A document combined from several files - an IE base/east pair, a Fallout `.fr0`-`.fr5` set -
+        // saves in place by splitting back into those members; a Save As writes the single combined
+        // form instead, which is the whole difference between saving this document and exporting it.
         if (destination.toString() === document.saveUri.toString()) {
             const setWrites = document.setSaveWrites();
             if (setWrites !== undefined) {
@@ -1055,6 +1067,16 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 // was saved, and this says how much of the game it touched.
                 const count = setWrites.length;
                 vscode.window.setStatusBarMessage(`Saved ${count} animation ${count === 1 ? "file" : "files"}`, 3000);
+                return;
+            }
+            const frSplitWrites = options.inPlace === true ? document.frSplitSaveWrites() : undefined;
+            if (frSplitWrites !== undefined) {
+                // Sequential by design: every `.frN` lands before the `.pal` sidecar, which comes last
+                // so a crash never leaves a palette describing members that were never rewritten.
+                for (const write of frSplitWrites) {
+                    // eslint-disable-next-line no-await-in-loop
+                    await vscode.workspace.fs.writeFile(write.uri, write.bytes);
+                }
                 return;
             }
             const pairWrites = document.pairSaveWrites();

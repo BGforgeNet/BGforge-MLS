@@ -33,6 +33,7 @@ export { readBmpPalette, readBmpRgba } from "./bmp/parse.ts";
 export { parseFrm } from "./frm/parse.ts";
 export { serializeFrm } from "./frm/serialize.ts";
 export { combineFrmDirections } from "./frm/combine.ts";
+export { splitFrmDirections } from "./frm/split.ts";
 export { parseBamV1 } from "./bam/parse.ts";
 // Thumbnail-shaped read: the tables without the pixels, then only the frames the caller names.
 export { decodeBamV1Frames, readBamV1Tables } from "./bam/selective.ts";

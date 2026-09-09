@@ -18,6 +18,8 @@ import {
     readBamV2Structure,
     readBmpPalette,
     serializeBamV1,
+    serializeFrm,
+    splitFrmDirections,
     splitIeBamBlocks,
     splitIeBamPair,
 } from "@bgforge/image";
@@ -74,7 +76,7 @@ function serializeBamAs(animation: IndexedAnimation, format: BamFormat): Uint8Ar
 export class ImageEditorDocument implements vscode.CustomDocument {
     readonly uri: vscode.Uri;
     // True when the document was opened from a Fallout `.fr0`-`.fr5` split set: it is combined on
-    // load and saved back to a single `<base>.frm` (see fr-split.ts and the provider's save path).
+    // load and cut back into those six members on save (see fr-split.ts and frSplitSaveWrites).
     readonly isFrSplit: boolean;
     // Set when the document was opened from an IE base/east BAM pair (see ie-pair.ts): the pair is
     // combined on load into one full-rose animation and split back into both files on save.
@@ -256,10 +258,10 @@ export class ImageEditorDocument implements vscode.CustomDocument {
     }
 
     /**
-     * What an in-place save writes to: the combined `<base>.frm` for a split set, the base member for
-     * an IE pair (the provider splits a pair save across both members), else the source. A split-set
-     * save deliberately overwrites any pre-existing `<base>.frm` without prompting - the split members
-     * are the source of truth for that basename.
+     * The identity an in-place save is addressed by: the combined `<base>.frm` for a split set, the
+     * base member for an IE pair, else the source. Neither multi-file form actually writes this file -
+     * the provider recognises the address and splits the save across the real members instead - but
+     * both need one name to be the document's own, and a set of six or a pair has no other.
      *
      * A URI rather than a path so the write lands back where the document was read from; only the
      * Fallout split set, which exists on a real filesystem by definition, names a `file:` path itself.
@@ -289,6 +291,33 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             { uri: this.iePair.baseUri, bytes: serializeBamAs(split.base, this.iePair.baseFormat) },
             { uri: this.iePair.eastUri, bytes: serializeBamAs(split.east, this.iePair.eastFormat) },
         ];
+    }
+
+    /**
+     * In-place save writes for a Fallout split set: the combined animation cut back into its six
+     * `<base>.fr0`-`.fr5` members, then the `<base>.pal` sidecar the set is read alongside. Undefined
+     * for a document not opened from a split set.
+     *
+     * A facing the animation draws nothing for is skipped rather than written frameless: an absent
+     * member is how an incomplete set on disk reaches the editor, and writing one would add a file the
+     * set never had. A combined `<base>.frm` an earlier version of this editor wrote is left alone -
+     * it is a user file, and deleting one on save is not this editor's call.
+     */
+    frSplitSaveWrites(): ResourceWrite[] | undefined {
+        if (!this.isFrSplit) return undefined;
+        const indexed = this.model.indexedAnimation();
+        // A split set is FRM, which carries a palette index per pixel; a true-colour model cannot arise.
+        if (indexed === undefined) throw new Error("A true-colour animation has no .fr0-.fr5 members to split.");
+        const paths = frSplitSiblingPaths(this.uri.fsPath);
+        const writes = splitFrmDirections(indexed).flatMap((file, d): ResourceWrite[] => {
+            const target = paths[d];
+            if (target === undefined || file.frames.length === 0) return [];
+            return [{ uri: vscode.Uri.file(target), bytes: serializeFrm(file) }];
+        });
+        const sidecarBytes = this.model.sidecarBytes();
+        if (sidecarBytes === undefined) return writes;
+        const sidecarUri = vscode.Uri.file(sidecarPalPath(frSplitCombinedPath(this.uri.fsPath)));
+        return [...writes, { uri: sidecarUri, bytes: sidecarBytes }];
     }
 
     /**

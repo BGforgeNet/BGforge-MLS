@@ -48,6 +48,7 @@ const REQUIRED_VALUE_EXPORTS = [
     "parseFrm",
     "serializeFrm",
     "combineFrmDirections",
+    "splitFrmDirections",
     "parseBamV1",
     "decodeBamV1Frames",
     "readBamV1Tables",
