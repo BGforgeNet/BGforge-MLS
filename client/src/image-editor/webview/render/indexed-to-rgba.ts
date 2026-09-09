@@ -5,7 +5,9 @@ export type Background = "transparent" | "checkered" | "green";
 // The classic transparent-green used by Infinity Engine BAM editors, offered as a background choice.
 export const GREEN = "#00ff00";
 
-const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 0 };
+// Opaque, because the packer below now reads this entry's own alpha: a short palette's missing indices
+// must stay opaque black rather than becoming invisible.
+const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 255 };
 
 /**
  * One palette flattened into 256 pre-packed RGBA words, alpha already resolved for the transparent index.
@@ -20,8 +22,11 @@ export type PaletteLut = Uint32Array;
 
 /**
  * Pack a palette into the lookup the pixel loop reads: the transparent index gets alpha 0, every other
- * entry is opaque, and a missing entry is opaque black. Background compositing (checkerboard/green) is a
- * view-layer CSS concern, never baked in.
+ * entry keeps its own alpha, and a missing entry is opaque black. Background compositing
+ * (checkerboard/green) is a view-layer CSS concern, never baked in.
+ *
+ * Per-entry alpha is only ever other than 255 for a BAM v1 palette from an Enhanced Edition, which
+ * stores transparency levels for interface art; the transparent INDEX still wins over it.
  *
  * The words are filled through a BYTE view of the same buffer, so each word carries r,g,b,a in memory
  * order on either endianness - the same order `putImageData` reads them back in.
@@ -35,7 +40,7 @@ export function paletteLut(palette: readonly Rgba[], transparentIndex: number): 
         bytes[o] = color.r;
         bytes[o + 1] = color.g;
         bytes[o + 2] = color.b;
-        bytes[o + 3] = i === transparentIndex ? 0 : 255;
+        bytes[o + 3] = i === transparentIndex ? 0 : color.a;
     }
     return lut;
 }

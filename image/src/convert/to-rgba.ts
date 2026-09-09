@@ -12,11 +12,13 @@ export function convertToRgba(anim: IndexedAnimation): RgbaAnimation {
     const transparent = transparentIndexOf(anim.meta);
     // One RGBA quadruple per palette slot, resolved once rather than per pixel. The transparent slot
     // holds a real colour on disk (the games park green there), which must never be painted.
+    // An entry's own alpha is carried through: BAM v1 palettes store per-entry transparency for
+    // Enhanced Edition interface art, and every other source resolves to 255 anyway.
     const table = new Uint8Array(256 * 4);
     for (let i = 0; i < 256; i++) {
         const colour = anim.palette[i];
         if (i === transparent || colour === undefined) continue;
-        table.set([colour.r, colour.g, colour.b, 255], i * 4);
+        table.set([colour.r, colour.g, colour.b, colour.a], i * 4);
     }
 
     const frames: RgbaFrame[] = anim.frames.map((frame) => {

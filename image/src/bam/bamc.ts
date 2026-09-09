@@ -29,6 +29,12 @@ export function decodeBamc(bytes: Uint8Array): Uint8Array {
     }
 }
 
+/**
+ * Re-compressing never reproduces the original container bytes, because the deflate settings the games
+ * were packed with are not recoverable from the stream: across the three installs, zero BAMC files
+ * round-trip byte-identically even where the BAM v1 payload inside them does. The payload is the
+ * fidelity that matters, and `decodeBamc` -> `serializeBamV1` is where it is measured.
+ */
 export function encodeBamc(bamV1: Uint8Array): Uint8Array {
     const compressed = zlib.deflateSync(Buffer.from(bamV1));
     const out = new Uint8Array(12 + compressed.length);

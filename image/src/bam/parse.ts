@@ -2,6 +2,19 @@ import { type IndexedAnimation, type Frame, type Rgba, type Sequence, emptyPalet
 import { directionLayoutOf, interpretIeDirections } from "../model/ie-direction.ts";
 import { MAX_ANIMATION_PIXELS, MAX_FRAME_PIXELS } from "../limits.ts";
 
+/**
+ * A palette entry's stored fourth byte, as an alpha value.
+ *
+ * The classic engines do not read this byte and their files leave it zero; the Enhanced Editions read
+ * it for interface art, where `00h` means fully opaque so those files keep working, and `01h`-`FFh` are
+ * transparency levels. Taking the byte literally would therefore blank every classic BAM, so zero maps
+ * to opaque rather than to transparent. The cost is that a stored `FFh` and a stored `00h` both arrive
+ * as 255 and are written back as `00h` - see the palette write in `serialize.ts`.
+ */
+function alphaOf(stored: number): number {
+    return stored === 0 ? 255 : stored;
+}
+
 // RLE decode that also reports how many source bytes were consumed, so the caller can
 // capture the exact on-disk frame-data slice for rawEncoding (byte-identical re-serialize).
 function decodeRleTracked(
@@ -72,10 +85,10 @@ export function readV1Tables(bytes: Uint8Array): BamV1Tables {
     const paletteOffset = view.getUint32(0x10, le);
     const frameLutOffset = view.getUint32(0x14, le);
 
-    // Palette (BGRA -> Rgba, alpha forced opaque for v1). The on-disk palette section is not
-    // always a full 256 entries: real files often store only the colors actually used, sized as
-    // (frameLutOffset - paletteOffset) / 4. Start from emptyPalette() so the model's 256-entry
-    // contract holds regardless, and overwrite the entries the file actually provides.
+    // Palette (BGRA -> Rgba). The on-disk palette section is not always a full 256 entries: real
+    // files often store only the colors actually used, sized as (frameLutOffset - paletteOffset) / 4.
+    // Start from emptyPalette() so the model's 256-entry contract holds regardless, and overwrite the
+    // entries the file actually provides.
     const storedCount = Math.max(0, Math.min(256, Math.floor((frameLutOffset - paletteOffset) / 4)));
     if (storedCount > 0 && paletteOffset + storedCount * 4 > bytes.byteLength) {
         throw new Error("parseBamV1: palette out of range");
@@ -83,7 +96,12 @@ export function readV1Tables(bytes: Uint8Array): BamV1Tables {
     const palette: Rgba[] = emptyPalette();
     for (let i = 0; i < storedCount; i++) {
         const p = paletteOffset + i * 4;
-        palette[i] = { b: view.getUint8(p), g: view.getUint8(p + 1), r: view.getUint8(p + 2), a: 255 };
+        palette[i] = {
+            b: view.getUint8(p),
+            g: view.getUint8(p + 1),
+            r: view.getUint8(p + 2),
+            a: alphaOf(view.getUint8(p + 3)),
+        };
     }
 
     // Frames.
@@ -124,7 +142,10 @@ export function readV1Tables(bytes: Uint8Array): BamV1Tables {
         const e = cycleEntryOffset + c * 4;
         const lutCount = view.getUint16(e + 0x00, le);
         const lutStart = view.getUint16(e + 0x02, le);
-        if (frameLutOffset + (lutStart + lutCount) * 2 > bytes.byteLength) {
+        // An empty cycle reads no lookup entries, so its start is never dereferenced and a value past
+        // the table is unreachable rather than out of range. Shipped files park a 0xFFFF sentinel there
+        // (BGEE's MGO2SCE and MGO2SDE), which a bounds check on start+count refuses for no reason.
+        if (lutCount > 0 && frameLutOffset + (lutStart + lutCount) * 2 > bytes.byteLength) {
             throw new Error(`parseBamV1: cycle ${c} frame lookup table out of range`);
         }
         const frameRefs: number[] = [];

@@ -19,6 +19,20 @@ test("frameToRgba keeps the transparent pixel's palette rgb, only forcing alpha 
     expect([rgba[0], rgba[1], rgba[2], rgba[3]]).toEqual([12, 34, 56, 0]);
 });
 
+test("frameToRgba draws a palette entry's own transparency rather than forcing it opaque", () => {
+    // Enhanced Edition interface art stores per-entry transparency; drawing it opaque hides it.
+    const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 9, g: 9, b: 9, a: 255 }));
+    palette[5] = { r: 10, g: 20, b: 30, a: 0x77 };
+    const rgba = frameToRgba(Uint8Array.from([5]), 1, 1, paletteLut(palette, 0));
+    expect([rgba[0], rgba[1], rgba[2], rgba[3]]).toEqual([10, 20, 30, 0x77]);
+});
+
+test("the transparent index still wins over a palette entry's own alpha", () => {
+    const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 9, g: 9, b: 9, a: 0x77 }));
+    const rgba = frameToRgba(Uint8Array.from([0]), 1, 1, paletteLut(palette, 0));
+    expect(rgba[3]).toBe(0);
+});
+
 test("frameToRgba returns a buffer of length width*height*4", () => {
     const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
     const pixels = Uint8Array.from([1, 2, 3, 4, 5, 6]);

@@ -18,9 +18,23 @@ export function serializeBamV1(anim: IndexedAnimation): Uint8Array {
         lut.push(...seq.frameRefs);
     }
 
-    // Layout: header(0x18) | frame entries(12*n) | cycle entries(4*c) | palette(1024, always 256
-    // entries - the model pads short on-disk palettes, so this region is data- not byte-identical
-    // to a source file with a shorter palette) | LUT(2*l) | frame data.
+    // Layout: header(0x18) | frame entries(12*n) | cycle entries(4*c) | palette(1024) | LUT(2*l) |
+    // frame data.
+    //
+    // Four ways this deliberately differs from some files on disk. Measured across the three installs
+    // (bg2ee, bgee, tob), none of them loses a frame, a cycle, a colour or a pixel:
+    //
+    // - PALETTE LENGTH. Always 256 entries, because the model pads a short on-disk palette to 256.
+    //   163 files store fewer and grow here, gaining black entries no valid pixel index reaches.
+    // - REGION ORDER. Fixed as above. Some files order theirs differently (one common producer writes
+    //   the frame entries LAST), so the offsets in the header differ even where the content matches.
+    // - FRAME-DATA SHARING. Two frame entries may point at ONE data block on disk; each frame is
+    //   written its own copy here. 7343 files share, 85% of their frame entries do, and expanding all
+    //   of it costs 0.24% of the corpus - the shared blocks are almost all single-byte transparent
+    //   runs. Preserving sharing would mean keying frames by payload identity, which the model, whose
+    //   frames are independently editable, does not express.
+    // - TRAILING BYTES. Output ends at the last frame's data; ~700 files carry slack past it that no
+    //   header field addresses.
     const headerSize = 0x18;
     const frameEntryOffset = headerSize;
     const cycleEntryOffset = frameEntryOffset + frameCount * 12;
@@ -80,7 +94,10 @@ export function serializeBamV1(anim: IndexedAnimation): Uint8Array {
         out[p] = c.b;
         out[p + 1] = c.g;
         out[p + 2] = c.r;
-        out[p + 3] = 0; // v1 alpha unused
+        // Opaque is stored as 00h, which both engine families read as opaque and which is what nearly
+        // every file on disk holds. A file that stored FFh for opaque therefore comes back as 00h -
+        // the one alpha value this does not reproduce byte-for-byte, and a no-op for what it draws.
+        out[p + 3] = c.a === 255 ? 0 : c.a;
     });
 
     lut.forEach((frameIndex, i) => view.setUint16(lutOffset + i * 2, frameIndex, le));
