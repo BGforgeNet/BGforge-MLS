@@ -555,14 +555,20 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
     });
 
     /**
-     * A get-up is drawn backwards only where it SHARES the dying band.
+     * A get-up is drawn backwards only where it SHARES the band it comes from.
      *
      * Both halves ship: the dragons have no get-up clip and the engine runs their death in reverse, while
      * the fine monster scheme gives Melissan a get-up block of its own and plays it forwards. A rule keyed
      * on the sequence alone satisfies the first and plays the second backwards, and nothing else here would
-     * see it - the row is present, named and drawable either way. Hence the pairing with a dying row on the
-     * same band, which is the property that actually differs, plus a floor on each population so the check
-     * cannot pass over an install that ships neither.
+     * see it - the row is present, named and drawable either way. Hence the pairing with another sequence
+     * on the same band, which is the property that actually differs, plus a floor on each population so the
+     * check cannot pass over an install that ships neither.
+     *
+     * Selected on what the row DEPICTS, which is the only property every family states. Measured against
+     * this install: matching the label "Get up" reaches 57 rows, since a family shipping the stance twice
+     * numbers both; matching the sequence code reaches 629 but drops every family naming a FILE per action,
+     * whose single-band rows carry no code at all. Either key reads as covered while walking a fraction of
+     * the population - the failure a guard over a corpus is least able to show you.
      */
     it("reverses a get-up only where it shares the band it is drawn from", () => {
         const { sets, io } = install();
@@ -572,9 +578,12 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         for (const set of sets) {
             for (const armour of drawnArmourLevels(set, io.exists)) {
                 const stances = setStances(set, armour, io);
-                for (const stance of stances.filter((row) => row.label === "Get up")) {
+                for (const stance of stances.filter((row) => row.action.id === "get-up")) {
+                    // Any OTHER row over the same band of the same file. Not "a dying row": the family that
+                    // lies a creature down shares its get-up with a sleep, so keying on the death would
+                    // report every one of those as a stray.
                     const shares = stances.some(
-                        (row) => row.resref === stance.resref && row.band === stance.band && row.label === "Die",
+                        (row) => row !== stance && row.resref === stance.resref && row.band === stance.band,
                     );
                     if (stance.reversed === true) reversed += 1;
                     else forward += 1;
@@ -584,6 +593,7 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
                 }
             }
         }
+        process.stdout.write(`  ${reversed} get-ups drawn in reverse, ${forward} drawn forwards\n`);
         expect(stray).toEqual([]);
         expect(reversed, "no shared get-up was exercised").toBeGreaterThan(0);
         expect(forward, "no get-up of its own was exercised").toBeGreaterThan(0);
