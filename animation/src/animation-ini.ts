@@ -91,6 +91,20 @@ export function declaredFamily(ini: AnimationIni): string | undefined {
     return ini.section;
 }
 
+/**
+ * What an install would write to declare a family: the header, and the type where the header alone cannot
+ * say which family it is.
+ *
+ * The inverse of `declaredFamily`, and the reason it exists: `monster_layered_spell` is this project's
+ * name for the family, not a header any install writes, so a declaration naming it declares a family
+ * nothing recognises. Every other family is its own header, and nothing here invents a type for it - an
+ * absent key reads as "not declared" rather than as a default.
+ */
+export function declarationFor(family: string): { section: string; animationType?: number } {
+    if (family === "monster_layered_spell") return { section: "monster_layered", animationType: LAYERED_SPELL_TYPE };
+    return { section: family };
+}
+
 function hex(value: string | undefined): number | undefined {
     if (value === undefined) return undefined;
     const parsed = Number.parseInt(value, 16);

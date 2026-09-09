@@ -240,3 +240,46 @@
     font: inherit;
     color: var(--vscode-foreground);
 }
+
+/* ---- bb-dialog (themed modal via the Dialog primitive wrapper) ----
+ * Centred over a dimmed page rather than floated against a trigger: a dialog has no anchor, and its
+ * decisions are the ones the surface behind it should stop competing for. The panel reuses
+ * .bb-popup-content for the shared surface rules and overrides the popup max-height, which is sized for a
+ * dropdown list rather than for a panel of controls. */
+.bb-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.5);
+}
+.bb-dialog {
+    position: fixed;
+    z-index: 61;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Wide enough for the longest layout label, and bounded so a small editor pane still shows the whole
+       panel; the body scrolls rather than the panel growing past the viewport. */
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: min(40rem, calc(100vh - 2rem));
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    gap: 0.6rem;
+}
+.bb-dialog-title {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+.bb-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    min-height: 0;
+}
+.bb-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}

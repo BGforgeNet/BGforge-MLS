@@ -47,6 +47,52 @@ export interface SequenceView {
 }
 
 /**
+ * What the Save As dialog may offer for the open set, decided host-side.
+ *
+ * All of it is a property of the SET rather than an answer to opening the dialog, so it travels with the
+ * view: the dialog has to be able to draw itself, including saying that a geometry is unreachable, before
+ * anything is picked. Host-side for the same reason the labels above are - the schemes and the naming
+ * table are the animation package's, and a webview copy would drift on the first edit.
+ */
+export interface SetSaveOptionsView {
+    /**
+     * The direction geometries this set's own facings can fill.
+     *
+     * The radios show every geometry and DISABLE the ones absent here, rather than hiding them: a reader
+     * asking why they cannot write sixteen directions is answered by a greyed control with a reason, not
+     * by a control that was never drawn. Empty for a set whose cycles are not directions at all.
+     */
+    geometries: { directions: 8 | 16; storeEast: boolean }[];
+    /** The naming families an Infinity Engine set can be written under, with their labels. */
+    namings: { id: string; label: string }[];
+    /**
+     * The families a declaration can name, spelled for a reader.
+     *
+     * A list rather than a box to type in: a declaration names one of these, and a header no engine reads
+     * declares nothing. The set's own header leads the list where this project has no spelling for it,
+     * since an INI section is an install's vocabulary and a closed picker would refuse to write such a set
+     * back as it was read.
+     */
+    sections: { id: string; label: string }[];
+    /**
+     * The set's own shape, which the dialog opens on.
+     *
+     * Leaving these alone is what "write it as it stands" means, and changing any of them is what makes a
+     * save a retarget - which is how the dialog decides whether to ask for a stem and an id at all. A
+     * field is absent where the set has no such shape: a directionless ambient has no geometry, and a
+     * layout the naming table does not cover has no family.
+     */
+    source: { directions?: 8 | 16; storeEast: boolean; naming?: string };
+    /**
+     * The game's own override folder, which is where a save can land instead of a folder of the reader's.
+     *
+     * Named rather than merely offered: "the game's override folder" is not a destination a reader can
+     * check, and the whole point of showing it is that they can.
+     */
+    overridePath: string;
+}
+
+/**
  * The animation set a document is showing, when it was opened on one rather than on a single file.
  *
  * Absent for a file, which is what the two extra controls key off: everything else in the view is the
@@ -89,6 +135,19 @@ export interface SetView {
      */
     section?: string;
     /**
+     * The same section spelled for a reader, for the header band.
+     *
+     * Labelled host-side like the armour levels and stances above, so the webview holds no naming table
+     * of its own. Absent exactly when `section` is: a set whose install declared no family has nothing to
+     * say here rather than a default worth showing.
+     */
+    familyLabel?: string;
+    /**
+     * The whole sentence behind that label: which engine declares this, under what token, and what its
+     * files look like. Composed host-side for the same reason the label is.
+     */
+    familyTitle?: string;
+    /**
      * How this set's files divide into direction bands, where its declared type settles that.
      *
      * Resolved host-side for the same reason the labels above are: the answer is a property of the
@@ -98,6 +157,8 @@ export interface SetView {
      * block table therefore cannot name.
      */
     bands?: { stride: number; scheme?: IeScheme; coarse?: true };
+    /** What the Save As dialog may offer for this set - see `SetSaveOptionsView`. */
+    saveOptions: SetSaveOptionsView;
 }
 
 interface AnimationViewBase {
@@ -111,6 +172,15 @@ interface AnimationViewBase {
     // category from the art directory (art/critters, art/scenery, ...) - see render/naming.ts.
     dirName?: string;
     sourceFormat: SourceFormat;
+    /**
+     * How many files on disk this one picture was combined from.
+     *
+     * One for an ordinary file. Two for an IE base and its eastern twin, six for a Fallout `.fr0`-`.fr5`
+     * split set, and whatever a set member's own composition names. Carried because it is not readable
+     * from the animation: a combined base/east pair looks exactly like a file that stored all eight
+     * facings itself, and the difference is what the header tells the reader.
+     */
+    composedFiles: number;
     /** Present only for a document opened on a whole animation set. */
     set?: SetView;
 }
@@ -134,6 +204,19 @@ export interface RgbaAnimationView extends AnimationViewBase {
 }
 
 export type AnimationView = IndexedAnimationView | RgbaAnimationView;
+
+/**
+ * The fields only the DOCUMENT can answer: where the file sits, how many files were combined into it,
+ * and which set it belongs to. The model is deliberately path-free and knows none of them.
+ */
+type DocumentOwned = "dirName" | "composedFiles" | "set";
+
+/**
+ * The view as the model builds it - everything but the three above, which `ImageEditorDocument.toView`
+ * adds. Stated as a type rather than defaulted in the model, so the model cannot state a composition it
+ * has no way of knowing.
+ */
+export type ModelAnimationView = Omit<IndexedAnimationView, DocumentOwned> | Omit<RgbaAnimationView, DocumentOwned>;
 
 /**
  * Lay every frame's pixels end to end in ONE ArrayBuffer and record each frame's span.
@@ -213,11 +296,16 @@ export type WebviewToHost =
     | { type: "save" } // in-place save, original format (routes to VS Code's native save)
     | { type: "editMeta"; patch: MetaPatch }
     | { type: "setExternalPalette"; enabled: boolean } // FRM only
+    // On a SET document this writes every member of every armour level into a folder the reader chooses,
+    // not the stance on screen - a set's scope is the set. `frm` is refused there and belongs to the
+    // conversion mode instead, which is what asks for the name and id a Fallout critter set needs.
     | { type: "saveAs"; target: SaveAsTarget; paletteMode?: "sidecar" | "nearest" }
     // Design choice: PNG-directory is the only import path. APNG stays export/preview-only - it round-trips
     // poorly (a single flat sequence, no offsets/facings, palette re-quantized), and ingesting an
     // externally-authored single APNG is out of scope for now. Re-add a `kind` field here to restore it;
     // the library decoder (importApng in image/src/io/apng-io.ts, not on the package barrel) is still present.
+    // A folder carrying a set manifest imports across every member it names; one of that folder's own
+    // member directories is an ordinary PNG directory and imports as the single animation it is.
     | { type: "import"; mode: "replace" | "append" }
     // The install's creatures, for choosing whose colours to draw an IE creature animation in.
     | { type: "requestCreatures" }
@@ -232,33 +320,135 @@ export type WebviewToHost =
     // show - an install declares hundreds, and the host's own quick pick is already a search over them.
     | { type: "pickSet" }
     /**
-     * Set documents only: the conversion mode.
+     * Set documents only: the Save As dialog.
      *
-     * `beginConversion` asks the host what it can convert into and what to offer as the name and id;
-     * `planConversion` asks what a target would cost, which is the whole point of the mode - a set is
-     * many files, so the reader has to see the outcome before committing to it; `runConversion` writes,
-     * once, after the host has asked where.
+     * `beginSaveAs` asks the host for the defaults its name and id boxes open on; `planSave` asks what
+     * the chosen settings would cost, which is the whole point of showing a dialog rather than writing -
+     * a set is many files, so the reader has to see the outcome before committing to it; `chooseSaveFolder`
+     * opens the host's folder picker WHILE the dialog is up, so where it lands is one of the things the
+     * dialog shows rather than a question sprung after Save; `runSave` writes, once.
+     *
+     * What the dialog can OFFER is not asked for here: it travels with the view, because the offer is a
+     * property of the open set and the dialog has to be able to say when there is nothing to offer.
      */
-    | { type: "beginConversion" }
-    | { type: "planConversion"; profileId: string }
-    | { type: "runConversion"; request: ConversionRequestView }
+    | { type: "beginSaveAs" }
+    | { type: "chooseSaveFolder" }
+    | { type: "planSave"; request: SaveRequestView }
+    | { type: "runSave"; request: SaveRequestView }
     | { type: "runtimeError"; message: string; stack?: string };
 
-/** The reader's choices for a conversion, as the webview holds them. */
-export interface ConversionRequestView {
-    profileId: string;
+/**
+ * Everything the Save As dialog holds, as one request.
+ *
+ * ONE shape for both the planning and the running of a save, so what the dialog previewed and what it
+ * writes cannot come apart. Whether this is a straight write or a retarget is DERIVED from it rather than
+ * chosen: a request whose geometry and naming match the set's own writes it as it stands under its own
+ * resrefs, and any other is a conversion that mints new names.
+ */
+export interface SaveRequestView {
+    /** What is written. `bam` and `frm` carry the engine's own shape; the other two are image exports. */
+    format: "bam" | "frm" | "apng" | "png-directory";
+    /** BAM only: v2 keeps true colour in PVRZ pages, v1 is the palette-indexed container. */
+    bamVersion: 1 | 2;
+    /** BAM v1 only: whether the container is compressed (BAMC). */
+    compressed: boolean;
+    directions: 8 | 16;
+    /** Whether the eastern facings are written, or left for the engine to mirror - see `SaveGeometry`. */
+    storeEast: boolean;
+    /** What the written files are called. Ignored where the save is not a retarget. */
+    naming: string;
+    /**
+     * BAM v2 only: the first `MOS<nnnn>.PVRZ` page the frames are written into.
+     *
+     * Absent until the reader states one, and never defaulted - a number the game's own archives already
+     * use surfaces as corrupted graphics at runtime, and only the person doing the install knows which
+     * range their mod owns. The plan says when it is needed; Save waits for it.
+     */
+    basePage?: number;
+    /**
+     * Fallout only: what to do where the source's six rotations are not the same length.
+     *
+     * An FRM header carries one frames-per-direction for all six, so the difference has to be resolved in
+     * the data. Asked only where there IS one - the plan says so - because for a source whose rotations
+     * already agree the question has no answer that changes a file.
+     */
+    unevenRotations?: "hold" | "clip" | "wrap";
+    /** The stem a retarget names its files from. Empty asks for the source's own. */
     prefix: string;
+    /** The id a retarget is to be declared under. */
     targetId: number;
+    /** The section a retarget is to be declared as, which the notes state. */
+    section: string;
     notes: boolean;
+    /** The game's own override folder, or a folder the reader picked in the dialog. */
+    destination: "override" | "folder";
+    /**
+     * The folder chosen for the `folder` destination, absent until one is.
+     *
+     * Chosen from inside the dialog rather than by a picker sprung after Save: where a dozen to eighty
+     * files land is one of the things the reader is deciding, so it belongs beside the file names that
+     * show what will be in it.
+     */
+    folder?: string;
 }
 
-function isValidConversionRequest(request: unknown): request is ConversionRequestView {
+/**
+ * A request's identity, for matching a plan to the settings it answers.
+ *
+ * Stated once and read by both ends: the host echoes it and the dialog compares it, so "is this the answer
+ * to what is on screen" has one definition rather than a host key and a webview key that agree until one of
+ * them gains a field.
+ */
+export function saveRequestKey(request: SaveRequestView): string {
+    return [
+        request.format,
+        request.bamVersion,
+        request.compressed,
+        request.basePage ?? "",
+        request.folder ?? "",
+        request.unevenRotations ?? "",
+        request.directions,
+        request.storeEast,
+        request.naming,
+        request.prefix,
+        request.targetId,
+        request.section,
+        request.notes,
+        request.destination,
+    ].join(" ");
+}
+
+/**
+ * Whether a PVRZ page number is one the writer can use: a whole number inside the four digits the
+ * `MOS<nnnn>.PVRZ` name holds. Stated once, so the dialog gates Save on the same rule the host validates.
+ */
+export function isValidBasePage(page: number): boolean {
+    return Number.isInteger(page) && page >= 0 && page <= 9999;
+}
+
+const SAVE_FORMATS = new Set(["bam", "frm", "apng", "png-directory"]);
+const UNEVEN_ROTATIONS = new Set(["hold", "clip", "wrap"]);
+
+function isValidSaveRequest(request: unknown): request is SaveRequestView {
     return (
         isRecord(request) &&
-        typeof request.profileId === "string" &&
+        typeof request.format === "string" &&
+        SAVE_FORMATS.has(request.format) &&
+        (request.bamVersion === 1 || request.bamVersion === 2) &&
+        typeof request.compressed === "boolean" &&
+        (request.basePage === undefined ||
+            (typeof request.basePage === "number" && isValidBasePage(request.basePage))) &&
+        (request.folder === undefined || typeof request.folder === "string") &&
+        (request.unevenRotations === undefined ||
+            (typeof request.unevenRotations === "string" && UNEVEN_ROTATIONS.has(request.unevenRotations))) &&
+        (request.directions === 8 || request.directions === 16) &&
+        typeof request.storeEast === "boolean" &&
+        typeof request.naming === "string" &&
         typeof request.prefix === "string" &&
         typeof request.targetId === "number" &&
-        typeof request.notes === "boolean"
+        typeof request.section === "string" &&
+        typeof request.notes === "boolean" &&
+        (request.destination === "override" || request.destination === "folder")
     );
 }
 
@@ -282,12 +472,12 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
         case "save":
         case "requestCreatures":
         case "pickSet":
-        case "beginConversion":
+        case "beginSaveAs":
+        case "chooseSaveFolder":
             return true;
-        case "planConversion":
-            return typeof m.profileId === "string";
-        case "runConversion":
-            return isValidConversionRequest(m.request);
+        case "planSave":
+        case "runSave":
+            return isValidSaveRequest(m.request);
         case "setCreature":
             return m.resref === null || typeof m.resref === "string";
         case "editMeta":
@@ -331,33 +521,89 @@ export type HostToWebview =
     /** The palette the view should draw with: a creature's resolved colours, or the animation's own when
      *  `creature` is absent. A view state - the document's own palette is never changed by it. */
     | { type: "palette"; palette: Rgba[]; creature?: string }
-    /** What the conversion mode can offer, sent once when the reader opens it. */
-    | { type: "conversionSetup"; setup: ConversionSetupView }
-    /** What converting into the chosen target would cost, and how many files it would write. */
-    | { type: "conversionPlan"; plan: ConversionPlanView }
+    /** The defaults the Save As dialog opens its name and id boxes on, sent when the reader opens it. */
+    | { type: "saveAsSetup"; setup: SaveAsSetupView }
+    /** What the chosen settings would write, where, and what they would cost. */
+    | { type: "savePlan"; plan: SavePlanView }
+    /** The folder the reader picked, or absent where they dismissed the picker without choosing one. */
+    | { type: "saveFolder"; path?: string }
     | { type: "error"; message: string };
 
-/** The targets on offer, and what to fill the name and id boxes with before the reader touches them. */
-export interface ConversionSetupView {
-    profiles: { id: string; label: string }[];
+/**
+ * What the Save As dialog opens on. The destinations are NOT here - they travel with the view, because
+ * what a set can be written into is a property of the set rather than an answer to opening a dialog.
+ */
+export interface SaveAsSetupView {
+    /**
+     * Which set these defaults belong to.
+     *
+     * Self-describing because the answer is asynchronous and the reader can move between sets while it is
+     * in flight: without it the dialog seeded on the id CHANGING and took whatever answer was on hand,
+     * which was the previous creature's stem and id.
+     */
+    id: number;
+    /** The stem to offer, which is the source's own. */
     prefix: string;
+    /** An id free among those the source's install declares. */
     targetId: number;
+    /** The section to offer, which is the source's own where the install declared one. */
+    section: string;
 }
 
 /**
- * A planned conversion, as the panel draws it.
+ * A planned save, as the dialog draws it: what would be written, where, and what it would cost.
  *
- * `files` is a count rather than the names: the names follow the reader's chosen stem, which would mean
- * re-reading and re-converting the whole set on every keystroke to keep a list honest.
+ * The file NAMES rather than a count, because a count answers none of the questions a reader asks of a
+ * save - whether the stem took, whether the names are the ones the target expects, whether an existing
+ * file is about to be replaced. Capped at `shown`, with `files` carrying the whole total, since a
+ * character set is ninety-six names and a tiled one far more.
  */
-export interface ConversionPlanView {
-    profileId: string;
+export interface SavePlanView {
+    /**
+     * Which request this answers - `saveRequestKey` of it.
+     *
+     * A plan is a round trip and the reader keeps moving controls, so the answer on screen can be one
+     * request behind. Without this the dialog could only take whatever arrived last as the answer to what
+     * it is showing, which left Save enabled against a preview of different settings.
+     */
+    for: string;
     outcome: "refused" | "lossless" | "lossy";
     /** Present only on a refusal, and then it is the whole answer. */
     reason?: string;
     losses: string[];
     notes: string[];
+    /** Every file the save would write, in write order, truncated to what the dialog can show. */
+    shown: string[];
+    /** How many it would write in total, which `shown` may be shorter than. */
     files: number;
+    /** Where they would land, named so the reader can check it rather than trust a word. */
+    destination: string;
+    /**
+     * Whether this save rewrites the set for another shape rather than writing it as it stands.
+     *
+     * Derived host-side from the request against the set's own geometry and naming, so the dialog and the
+     * writer cannot disagree about which one is happening - and it is what decides whether the stem, the
+     * id and the section are asked for at all.
+     */
+    retarget: boolean;
+    /**
+     * Whether this save takes a first PVRZ page number at all.
+     *
+     * A property of the save, not of what has been filled in yet: keyed on whether one is still MISSING,
+     * the field vanished the moment the reader typed into it. Answered host-side because only the host
+     * knows whether the members bring pages of their own, and asked in the dialog rather than after the
+     * folder picker - every question a save has belongs to the decision, not to the moment the reader
+     * thought they had already made it.
+     */
+    needsBasePage: boolean;
+    /**
+     * Whether this save has rotations of differing length to resolve.
+     *
+     * Answered host-side because only a run of the conversion knows: the source's facings are what differ,
+     * and by how much. The control is drawn only when this is true, since for a source whose rotations
+     * already agree every answer writes the same six files.
+     */
+    unevenRotations: boolean;
 }
 
 /** One creature the picker offers. `matches` marks the ones that actually use the open animation. */

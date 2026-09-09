@@ -10,6 +10,7 @@
  * different layouts, and `split_bams` says which - true for every one of the 67 that quadrant, false for all
  * 7 that do not, with no exceptions across a shipped install.
  */
+import { type ActionScheme } from "./actions";
 
 export type Layout =
     /** `<prefix><armour><action>` - the character scheme, whose members vary per armour level. */
@@ -83,6 +84,34 @@ const FIXED = {
     multi_new: "mixed",
     monster_icewind: "actionsOrCycles",
 } as const satisfies Readonly<Record<string, Layout>>;
+
+/**
+ * The naming family a layout's files already follow, or undefined where the writer has none for it.
+ *
+ * What a set is ALREADY named under, so a save can offer "as it stands" and tell a genuine retarget from
+ * one. A `Record<Layout, ...>` so a new layout is a compile error here rather than a set the dialog
+ * quietly treats as unnamed.
+ *
+ * The three undefined ones are real gaps and not oversights: the writer produces one file shape, cycle
+ * blocks in a BAM, and its schemes all append a suffix. A quadrant splits each cycle across four files, a
+ * tiled family writes a grid per facing, and a bare layout is the resref alone - none of which it can
+ * emit, so a set stored that way cannot be written back in its own shape at all.
+ */
+const LAYOUT_NAMING = {
+    character: "character",
+    characterOld: "character",
+    actions: "action-codes",
+    actionsOrCycles: "action-codes",
+    cycles: "cycle-numbers",
+    bare: undefined,
+    quadrant: undefined,
+    pieces: undefined,
+    mixed: undefined,
+} as const satisfies Readonly<Record<Layout, ActionScheme | undefined>>;
+
+export function namingForLayout(layout: Layout | undefined): ActionScheme | undefined {
+    return layout === undefined ? undefined : LAYOUT_NAMING[layout];
+}
 
 /**
  * Every section this project models, from the table above plus the one that reads a declaration.

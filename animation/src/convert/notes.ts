@@ -12,6 +12,7 @@
  * "cleric" out of `CLERIC_MALE_GNOME` is the inference the rest of this package refuses to make. The
  * section is printed instead, which is what the install actually declared.
  */
+import { iniName } from "./declaration-files";
 import { type ConversionPlan } from "./plan";
 import { type ConversionTarget } from "./target";
 import { type NeutralSet } from "../neutral/model";
@@ -72,7 +73,13 @@ function falloutBases(set: NeutralSet, prefix?: string): string {
  * An unmodelled target says so rather than printing nothing: an absent section reads as "nothing to
  * declare", which is a stronger claim than anything here has checked.
  */
-function declarationLines(set: NeutralSet, target: ConversionTarget, id: string, prefix?: string): string[] {
+function declarationLines(
+    set: NeutralSet,
+    target: ConversionTarget,
+    id: string,
+    targetId: number,
+    prefix?: string,
+): string[] {
     if (target.declaration === "unmodelled") {
         return [`- How ${target.label} declares an animation is not modelled here - check its own requirements.`];
     }
@@ -89,6 +96,13 @@ function declarationLines(set: NeutralSet, target: ConversionTarget, id: string,
     return [
         `- \`ANIMATE.IDS\`: \`${id} ${set.identity.name}\``,
         `- \`ANISND.IDS\`: \`${id} ${set.identity.code}\``,
+        // The declaration itself is WRITTEN beside these notes rather than described - see
+        // `declaration-files.ts`, whose own naming this borrows rather than restating the hex. Named here
+        // anyway, because where it has to be PUT is the reader's, and a file in the output folder that
+        // nothing mentions is one nobody moves. Conditional, because a set nothing named a family for gets
+        // no declaration: there would be no family for it to name.
+        `- \`${iniName(targetId)}\` is written beside this file where a family was named for it:` +
+            " copy it to `override`.",
         // Provenance of the id is the caller's, not this function's, so the line claims neither - and the
         // confirmation is worth asking for either way: an override or a mod can claim an id no index saw.
         `- Confirm nothing else in the target claims ${id}.`,
@@ -110,7 +124,7 @@ export function conversionNotes(
         "",
         "## Declare by hand",
         "",
-        ...declarationLines(set, target, id, options.prefix),
+        ...declarationLines(set, target, id, options.targetId, options.prefix),
         "",
         "## Source",
         "",

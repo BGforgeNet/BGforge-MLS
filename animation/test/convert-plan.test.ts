@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Facing, type LossReport } from "@bgforge/image";
+import { FRM_FACINGS, type Facing, type LossReport } from "@bgforge/image";
 import { type NeutralAction } from "../src/neutral/model";
 import {
     FALLOUT_FRM,
@@ -74,9 +74,39 @@ describe("planning a conversion", () => {
         ]);
     });
 
-    /** A finer target holds every facing a coarser source stored, so nothing is dropped or mirrored away. */
-    it("passes an eight-point source into a sixteen-point target", () => {
+    /**
+     * A finer target drops nothing, which is what this used to assert - and it is the wrong question. The
+     * target stores nine facings and an eight-point source holds art for five of them; the half-steps have
+     * neither their own art nor a mirror partner in the source, so the retarget leaves those slots EMPTY.
+     * The result animates in five directions while declaring nine, and nothing downstream looks at it
+     * again. There is no art to invent, so the conversion is refused rather than written with holes.
+     */
+    it("refuses an eight-point source into a sixteen-point target, naming the slots it cannot fill", () => {
         const plan = planConversion(setWithActions([directional("WK - walk", WEST_ARC_8)]), IE_16_POINT_MIRRORED);
+
+        expect(plan.outcome).toBe("refused");
+        expect(reasonOf(plan)).toMatch(/SSW, WSW, WNW, NNW/);
+        expect(reasonOf(plan)).toMatch(/WK - walk/);
+    });
+
+    /** The six Fallout rotations include neither due south nor due north, which every IE block stores. */
+    it("refuses a Fallout six-rotation source into an eight-point block", () => {
+        const plan = planConversion(setWithActions([directional("AA - stand", FRM_FACINGS)]), IE_8_POINT_MIRRORED);
+
+        expect(plan.outcome).toBe("refused");
+        expect(reasonOf(plan)).toMatch(/S, N/);
+    });
+
+    /** Mirroring is filling, not inventing: a west arc reaches every eastern slot the paired target stores. */
+    it("accepts a source that fills the target's slots only by mirroring", () => {
+        const plan = planConversion(setWithActions([directional("WK - walk", WEST_ARC_8)]), IE_8_POINT_PAIRED);
+
+        expect(plan.outcome).toBe("lossless");
+    });
+
+    /** A sixteen-point source has art for all nine stored slots, so the finer target is reachable. */
+    it("accepts a sixteen-point source into a sixteen-point target", () => {
+        const plan = planConversion(setWithActions([directional("WK - walk", WEST_ARC_16)]), IE_16_POINT_MIRRORED);
 
         expect(plan.outcome).toBe("lossless");
     });

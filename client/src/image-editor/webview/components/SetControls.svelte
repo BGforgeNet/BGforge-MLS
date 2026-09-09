@@ -23,11 +23,10 @@
         onArmourChange,
         onStanceChange,
         onPickSet,
-        onConvert,
     }: {
         /**
          * Null while nothing is chosen: this column is drawn from the moment its tab opens, so the Stance
-         * picker and the convert button hold their places and fill in when a set arrives.
+         * picker holds its place and fills in when a set arrives.
          */
         set: SetView | null;
         /** Whether choosing the SET belongs here, or to the surface around this column. */
@@ -35,8 +34,6 @@
         onArmourChange: (level: number) => void;
         onStanceChange: (key: string) => void;
         onPickSet: () => void;
-        /** Open the conversion mode, which takes over this column while it is up. */
-        onConvert: () => void;
     } = $props();
 
     // On the control itself as well as the row, so the open stance's file is readable without opening the
@@ -85,7 +82,4 @@
             {/each}
         </select>
     </label>
-    <button type="button" class="convert-open" onclick={onConvert} disabled={set === null}>
-        Convert this set...
-    </button>
 </div>

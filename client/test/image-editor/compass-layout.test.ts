@@ -30,6 +30,7 @@ function makeView(facings: Facing[]): AnimationView {
         meta: { sourceFormat: "frm" },
         basename: "test",
         sourceFormat: "frm",
+        composedFiles: 1,
         hasSidecarPal: false,
         externalPaletteActive: false,
     };

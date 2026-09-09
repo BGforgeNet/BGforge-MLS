@@ -4,8 +4,9 @@
     import {
         framePixels,
         type AnimationView,
-        type ConversionPlanView,
-        type ConversionSetupView,
+        type SavePlanView,
+        type SaveRequestView,
+        type SaveAsSetupView,
         type CreatureOption,
     } from "../messages";
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
@@ -32,6 +33,7 @@
     import { analyzeCycleGrid } from "../render/cycle-grouping";
     import { ieGroups } from "@bgforge/animation/group-labels";
     import { describeAnimationName } from "../render/naming";
+    import { animationFacts } from "../render/animation-facts";
     import { DEFAULT_TILE_BOX, spriteFillRatio, tileBoxPx } from "../render/anchor";
     import {
         autoZoom,
@@ -48,7 +50,7 @@
     import CycleGrid from "./CycleGrid.svelte";
     import CycleLayoutControls from "./CycleLayoutControls.svelte";
     import LayoutModeControls from "./LayoutModeControls.svelte";
-    import ConvertControls from "./ConvertControls.svelte";
+    import SaveAsDialog from "./SaveAsDialog.svelte";
     import CreatureControls from "./CreatureControls.svelte";
     import SetControls from "./SetControls.svelte";
     import MetaControls from "./MetaControls.svelte";
@@ -104,11 +106,14 @@
     let creatures = $state.raw<CreatureOption[]>([]);
     let activeCreature = $state<string | undefined>();
     /**
-     * The conversion mode: present once the reader opens it, and what the host answered for the target.
-     * Raw for the same reason as the view above - host payloads, replaced, never written into.
+     * The Save As dialog: whether it is up, the defaults the host answered with, and its plan for the
+     * chosen layout. Both payloads raw for the same reason as the view above - host payloads, replaced,
+     * never written into.
      */
-    let conversionSetup = $state.raw<ConversionSetupView | undefined>();
-    let conversionPlan = $state.raw<ConversionPlanView | undefined>();
+    let saveAsOpen = $state(false);
+    let saveAsSetup = $state.raw<SaveAsSetupView | undefined>();
+    let savePlan = $state.raw<SavePlanView | undefined>();
+    let saveFolder = $state.raw<string | undefined>();
     // If the host never posts "init" (a dropped/failed open), surface it rather than sit on
     // "Loading..." forever. Timer mechanics shared with the binary/dialog editors' App.svelte
     // via installInitTimeout (webview-utils.ts).
@@ -177,6 +182,22 @@
             ? describeAnimationName({ ...view, scheme: ieRose?.scheme, blocks: ieRose?.groups.length })
             : undefined,
     );
+    // The structural facts beside that meaning: direction count, whether the file stores them all, how
+    // many files were combined, and the family the install declares. Read off the same resolved block
+    // reading the rose uses, so the header and the stage cannot disagree about the scheme.
+    const facts = $derived(view ? animationFacts({ view, blocks: ieRose }) : []);
+
+    /**
+     * Open the set's Save As dialog, asking the host for the name and id defaults it opens on.
+     *
+     * Asked on every open, because the answer is the OPEN SET's own stem and a free id beside its own -
+     * both change with the set. The dialog decides for itself whether to seed from the answer, so a
+     * reader's own typing survives reopening while a change of set does not.
+     */
+    function openSaveAs(): void {
+        bridge.send({ type: "beginSaveAs" });
+        saveAsOpen = true;
+    }
     $effect(() => {
         const v = view;
         if (!v || v === columnsSeededView) return;
@@ -277,11 +298,14 @@
                 loadedPixels = next;
             } else if (m.type === "creatures") {
                 creatures = m.entries;
-            } else if (m.type === "conversionSetup") {
-                conversionSetup = m.setup;
-                conversionPlan = undefined;
-            } else if (m.type === "conversionPlan") {
-                conversionPlan = m.plan;
+            } else if (m.type === "saveAsSetup") {
+                saveAsSetup = m.setup;
+            } else if (m.type === "savePlan") {
+                savePlan = m.plan;
+            } else if (m.type === "saveFolder") {
+                // Only a folder that was actually picked lands: a dismissed picker leaves the one already
+                // chosen alone rather than clearing it and disabling Save under the reader.
+                if (m.path !== undefined) saveFolder = m.path;
             } else if (m.type === "palette") {
                 // A whole replacement rather than an in-place palette write: the tiles read `view`, and a
                 // mutation through the old object would not re-render them. Indexed views only - a BAM v2
@@ -504,6 +528,14 @@
             {#if nameMeaning}
                 <span class="name-banner-meaning">{nameMeaning}</span>
             {/if}
+            <!-- The structural facts, last and to the right: what the file IS, where the meaning above it
+                 is what it depicts. Each one is a property the picture does not show - a combined base and
+                 eastern twin is indistinguishable from a file that stored all eight facings itself. -->
+            <span class="name-banner-facts">
+                {#each facts as fact (fact.id)}
+                    <span class="name-banner-fact" title={fact.title}>{fact.label}</span>
+                {/each}
+            </span>
         </header>
     {/if}
     <!-- Stage (the player) fills the main area; view/metadata/playback stack in a column on the right;
@@ -556,21 +588,6 @@
                     onArmourChange={(level) => bridge.send({ type: "selectSetArmour", level })}
                     onStanceChange={(key) => bridge.send({ type: "selectSetStance", key })}
                     onPickSet={() => bridge.send({ type: "pickSet" })}
-                    onConvert={() => bridge.send({ type: "beginConversion" })}
-                />
-            {/if}
-            <!-- The conversion is a MODE of this surface, not a window: the stage below keeps drawing the
-                 source set while these controls hold the target it is becoming. -->
-            {#if conversionSetup}
-                <ConvertControls
-                    setup={conversionSetup}
-                    plan={conversionPlan}
-                    onPlan={(profileId) => bridge.send({ type: "planConversion", profileId })}
-                    onRun={(request) => bridge.send({ type: "runConversion", request })}
-                    onClose={() => {
-                        conversionSetup = undefined;
-                        conversionPlan = undefined;
-                    }}
                 />
             {/if}
             <ViewControls
@@ -617,5 +634,20 @@
             <PlaybackControls state={playback ?? IDLE_PLAYBACK} onChange={(next) => (playback = next)} />
         </aside>
     </div>
-    <Toolbar {view} {bridge} />
+    <Toolbar {view} {bridge} onSaveAs={openSaveAs} />
+    <!-- A modal rather than a panel in the column: every set-scoped write asks for a destination and
+         several ask for a naming family, a container and an id besides, so this is a decision rather than
+         a setting to leave sitting beside the picture. -->
+    {#if view?.set}
+        <SaveAsDialog
+            bind:open={saveAsOpen}
+            set={view.set}
+            setup={saveAsSetup}
+            plan={savePlan}
+            folder={saveFolder}
+            onPlan={(request: SaveRequestView) => bridge.send({ type: "planSave", request })}
+            onRun={(request: SaveRequestView) => bridge.send({ type: "runSave", request })}
+            onChooseFolder={() => bridge.send({ type: "chooseSaveFolder" })}
+        />
+    {/if}
 {/if}

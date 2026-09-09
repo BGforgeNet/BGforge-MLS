@@ -11,7 +11,7 @@
  * costs cycle tables rather than pixels.
  */
 import { type Game } from "@bgforge/binary";
-import { isBamc } from "@bgforge/image";
+import { type Facing, isBamc } from "@bgforge/image";
 import {
     type AnimationIndexResolver,
     type AnimationSet,
@@ -20,18 +20,26 @@ import {
     type StanceIo,
     armourLabel,
     drawnArmourLevels,
+    familyDescription,
     firstArmour,
     overlaidStride,
+    namingForLayout,
     schemeForStride,
+    sectionLabel,
+    sectionOptions,
     setMembers,
     setStances,
     setTitle,
     stanceIo,
 } from "@bgforge/animation";
-import { type IeScheme } from "@bgforge/image/ie-direction";
+import { type IeScheme, IE_STRIDE, IE_WEST_SLOTS, ieBlockSize, ieFacingsForStride } from "@bgforge/image/ie-direction";
 import { type ImageDocumentModel } from "./document-model";
 import { type SetView } from "./webview/messages";
 import { stanceModel } from "./stance-model";
+import { IE_NAMINGS, NAMING_LABELS, reachableGeometries } from "./conversion";
+
+/** Facings in the whole sixteen-point wheel - what a set storing every one of them holds. */
+const IE_WHEEL_SLOTS = 16;
 
 /**
  * What a set address resolves to, or why it does not.
@@ -120,6 +128,35 @@ interface OpenAction {
 /** What the editor has open: a band, the file it sits in, and that file's model. */
 interface OpenStance extends OpenAction {
     stance: SetStance;
+}
+
+/** One member of the whole set, as an export enumerates it: which file, at which armour level. */
+export interface SetMember extends OpenAction {
+    resref: string;
+    armour: number;
+    /**
+     * The eastern twin this member was composed with, where it has one. Resolved here rather than by each
+     * caller reading `parts`: a write and its preview both have to name the same files, and a second
+     * reading of the same shape is what lets them disagree.
+     */
+    east?: string;
+}
+
+/**
+ * Whether a member's files are a base and its EASTERN TWIN, rather than any other multi-file composition.
+ *
+ * The distinction matters twice and must not drift between them: a save cuts such a member back into both
+ * halves, and its facings are all eight stored rather than five with the east mirrored. A bare count says
+ * neither - a quadrant member draws four files and stores no more facings than a single one does.
+ */
+export function isEastPair(parts: readonly string[]): boolean {
+    const [base, east] = parts;
+    return parts.length === 2 && base !== undefined && east === `${base}E`;
+}
+
+/** The twin such a member is written back over, or undefined for a member that is one file. */
+export function eastTwinOf(parts: readonly string[]): string | undefined {
+    return isEastPair(parts) ? parts[1] : undefined;
 }
 
 /**
@@ -306,6 +343,74 @@ export class AnimationSetState {
     }
 
     /**
+     * Every member of every armour level this install draws, loaded, in level then declaration order.
+     *
+     * The opposite population from `editedMembers`, and deliberately so: an export writes the whole
+     * creature, and a character's armour levels are separate files under separate prefixes, so the level
+     * the picker happens to be on is not the set. Members already open come from the cache, which is what
+     * puts the reader's unsaved edits into the export rather than the archive's own bytes.
+     *
+     * `unreadable` names the files this install ships that would not decode. Dropping them silently would
+     * write an incomplete creature with nothing on screen saying which part is missing.
+     */
+    allMembers(): { members: SetMember[]; unreadable: string[] } {
+        const members: SetMember[] = [];
+        const unreadable: string[] = [];
+        for (const level of this.levels) {
+            for (const action of resolveLevel(this.set, this.io, level).actions) {
+                const model = modelFor(this.io, this.models, action);
+                if (model === undefined) unreadable.push(action.resref);
+                else {
+                    const east = eastTwinOf(action.parts);
+                    members.push({
+                        resref: action.resref,
+                        armour: level,
+                        action,
+                        model,
+                        ...(east === undefined ? {} : { east }),
+                    });
+                }
+            }
+        }
+        return { members, unreadable };
+    }
+
+    /**
+     * The facings this set's files store art for, which decides what it can be converted into.
+     *
+     * The set's declared band width first, which is the install stating the answer. Failing that the open
+     * member's own resolved layout, and there the file COUNT settles the eastern half: an eight-slot base
+     * file leaves its three eastern slots for the engine to mirror, while the same member paired with its
+     * `E` twin stores all eight.
+     *
+     * Empty where the cycles are not directions at all - an ambient, an effect, a town static. Not every
+     * animation an install declares is a creature, and one that is not has nothing a creature layout could
+     * be built from.
+     *
+     * An APPROXIMATION of the set, deliberately: it reads the open member, where a set can hold members of
+     * differing shape. It decides only what the menu OFFERS; the planner still checks every action and
+     * refuses with the member and slots named, so a set this lets through is not one that writes holes.
+     */
+    storedFacings(): readonly Facing[] {
+        const declared = this.set.bandStride;
+        if (declared !== undefined) return ieFacingsForStride(declared, this.set.coarseBands === true);
+        switch (this.open.model.animation.meta.directionLayout) {
+            case "ie9":
+                // Through the scheme's own block size rather than a nine written here: "ie9 means nine" has
+                // one home, and a second statement of it would drift the first time a scheme is edited.
+                return ieFacingsForStride(ieBlockSize("ie9") ?? 0);
+            case "ie8": {
+                const all = ieFacingsForStride(IE_STRIDE);
+                // The eastern twin specifically, not any second file: a quadrant member draws four and
+                // stores no more facings for it.
+                return isEastPair(this.open.action.parts) ? all : all.slice(0, IE_WEST_SLOTS);
+            }
+            default:
+                return [];
+        }
+    }
+
+    /**
      * The band width the open member is read at where it is drawn over another - see `overlaidStride`.
      *
      * Here rather than in `setView` because the archive handle is this object's: a caller outside it would
@@ -401,8 +506,57 @@ function stanceTitle(stance: SetStance): string {
     return `${files}, band ${stance.band + 1}`;
 }
 
+/**
+ * The game's own override folder, which is where a save can land beside a folder of the reader's own.
+ *
+ * `<game>/override` for an Infinity Engine install - the one the engine reads loose files from, and the
+ * one a plain Save already writes into. Composed here rather than asked of the archive: the folder stack
+ * is configurable, but this is the one every install has and the only one worth OFFERING as a destination.
+ */
+export function overridePathOf(gameDir: string): string {
+    return `${gameDir}/override`;
+}
+
+/**
+ * The set's OWN shape - what the dialog opens on, and what a save is compared against to tell a straight
+ * write from a retarget.
+ *
+ * Exported because the host asks the same question when a save runs: the dialog decides what to show from
+ * it and the provider decides what to DO from it, and a second derivation of "is this the set's own shape"
+ * would let those two disagree about which path a reader is on.
+ */
+export function setSaveSource(state: AnimationSetState): SetView["saveOptions"]["source"] {
+    const held = state.storedFacings();
+    const naming = namingForLayout(state.set.layout);
+    return {
+        // The set's own wheel, read off what it stores rather than off what it could be written as: nine
+        // stored facings are sixteen shown, which is the distinction the count alone loses.
+        ...(held.length === 0 ? {} : { directions: held.length > IE_STRIDE ? (16 as const) : (8 as const) }),
+        storeEast: held.length === IE_STRIDE || held.length === IE_WHEEL_SLOTS,
+        ...(naming === undefined ? {} : { naming }),
+    };
+}
+
+/** What the Save As dialog may offer for this set - see `SetSaveOptionsView`. */
+function saveOptionsOf(state: AnimationSetState, gameDir: string): SetView["saveOptions"] {
+    // The set's OWN header first where this project has no spelling for it: an INI section is an install's
+    // vocabulary, so a picker closed to the ones listed here would refuse to write a set back under the
+    // header it was read from.
+    const known = sectionOptions();
+    const own = state.set.section;
+    const sections =
+        own === undefined || known.some((entry) => entry.id === own) ? known : [{ id: own, label: own }, ...known];
+    return {
+        geometries: reachableGeometries(state.storedFacings()).map((geometry) => ({ ...geometry })),
+        namings: IE_NAMINGS.map((id) => ({ id, label: NAMING_LABELS[id] })),
+        sections,
+        source: setSaveSource(state),
+        overridePath: overridePathOf(gameDir),
+    };
+}
+
 /** What the editor's set controls read: the level and stance lists, and which of each is open. */
-export function setView(state: AnimationSetState): SetView {
+export function setView(state: AnimationSetState, gameDir: string): SetView {
     return {
         id: state.set.id,
         title: setTitle(state.set),
@@ -415,8 +569,15 @@ export function setView(state: AnimationSetState): SetView {
         })),
         stance: stanceKey(state.stance),
         band: state.band,
+        saveOptions: saveOptionsOf(state, gameDir),
         ...(state.stance.reversed === true ? { reversed: true as const } : {}),
-        ...(state.set.section === undefined ? {} : { section: state.set.section }),
+        ...(state.set.section === undefined
+            ? {}
+            : {
+                  section: state.set.section,
+                  familyLabel: sectionLabel(state.set.section),
+                  familyTitle: familyDescription(state.set.section, state.set.layout),
+              }),
         ...bandsOf(state),
     };
 }

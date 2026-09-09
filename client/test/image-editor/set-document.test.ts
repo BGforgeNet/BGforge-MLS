@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { type AnimationSet, type StanceIo } from "@bgforge/animation";
+import { type AnimationSet, type StanceIo, sectionOptions } from "@bgforge/animation";
 import { type Frame, type IndexedAnimation, type Rgba, encodeBamc, serializeBamV1 } from "@bgforge/image";
 import { AnimationSetState, createAnimationSetSource, setView, stanceKey } from "../../src/image-editor/set-document";
+import { IE_NAMINGS, NAMING_LABELS } from "../../src/image-editor/conversion";
 import type { Game } from "@bgforge/binary";
 
 function palette(): Rgba[] {
@@ -295,6 +296,55 @@ describe("AnimationSetState", () => {
         expect(state?.armour).toBe(1);
         expect(state?.action.resref).toBe("TSTBG1");
     });
+
+    /**
+     * A set-scoped export writes the whole creature, and a character's armour levels are separate files
+     * under separate prefixes - so the level the picker happens to be on is not the population.
+     */
+    it("enumerates every member of every armour level it draws", () => {
+        const set = setOf({
+            prefixByArmour: new Map([
+                [1, "TSTB"],
+                [2, "TSTC"],
+            ]),
+        });
+        const io = fakeIo({ TSTBG1: baseFileBam(1), TSTBG2: baseFileBam(1), TSTCG1: baseFileBam(1) });
+        const state = AnimationSetState.open(set, io);
+
+        const { members, unreadable } = state!.allMembers();
+
+        expect(members.map((member) => [member.resref, member.armour])).toEqual([
+            ["TSTBG1", 1],
+            ["TSTBG2", 1],
+            ["TSTCG1", 2],
+        ]);
+        expect(unreadable).toEqual([]);
+    });
+
+    /** The models the reader has been editing, not the archive's bytes: an export writes what is on screen. */
+    it("enumerates the loaded model of a member the reader has edited", () => {
+        const state = AnimationSetState.open(setOf(), fakeIo({ TSTBG1: baseFileBam(1) }));
+        state?.model.applyMetaPatch({ transparentIndex: 7 });
+
+        const [member] = state!.allMembers().members;
+
+        expect(member?.model).toBe(state?.model);
+        expect(member?.model.animation.meta.transparentIndex).toBe(7);
+    });
+
+    /**
+     * Named rather than dropped: a set export that silently skips a file writes an incomplete creature,
+     * and the reader has no way to notice which one is missing.
+     */
+    it("names the members whose files will not parse instead of dropping them", () => {
+        const io = fakeIo({ TSTBG1: baseFileBam(1), TSTBG2: new Uint8Array([1, 2, 3, 4]) });
+        const state = AnimationSetState.open(setOf(), io);
+
+        const { members, unreadable } = state!.allMembers();
+
+        expect(members.map((member) => member.resref)).toEqual(["TSTBG1"]);
+        expect(unreadable).toEqual(["TSTBG2"]);
+    });
 });
 
 describe("createAnimationSetSource", () => {
@@ -350,6 +400,22 @@ describe("createAnimationSetSource", () => {
 });
 
 describe("setView", () => {
+    /**
+     * An INI section header is an install's vocabulary, not a closed set, so a picker holding only the
+     * families this project spells would refuse to write such a set back under the header it was read from.
+     * Its own leads the list, keeping the install's word where there is no spelling for it.
+     */
+    it("offers a set's own header first where nothing here spells it", () => {
+        const set = setOf({ prefixByArmour: new Map([[1, "TSTB"]]), section: "mod_special_thing" });
+        const state = AnimationSetState.open(set, fakeIo({ TSTBG1: baseFileBam(2) }));
+        if (state === undefined) throw new Error("expected the set to open");
+
+        const { sections } = setView(state, "/games/bgee").saveOptions;
+
+        expect(sections[0]).toEqual({ id: "mod_special_thing", label: "mod_special_thing" });
+        expect(sections.slice(1)).toEqual(sectionOptions());
+    });
+
     it("names the set and labels both pickers' options", () => {
         const set = setOf({
             prefixByArmour: new Map([
@@ -362,7 +428,7 @@ describe("setView", () => {
         const io = fakeIo({ TSTBG1: baseFileBam(1), TSTBG2: baseFileBam(1), TSTCG1: baseFileBam(1) });
         const state = AnimationSetState.open(set, io);
 
-        expect(setView(state!)).toEqual({
+        expect(setView(state!, "/games/bgee")).toEqual({
             id: 0x1234,
             title: "TEST_ANIM",
             armours: [
@@ -378,6 +444,23 @@ describe("setView", () => {
             ],
             stance: "TSTBG1#0",
             band: 0,
+            // What the Save As dialog may offer, which travels with the view because the dialog has to be
+            // able to draw itself - including saying a geometry is unreachable - before anything is picked.
+            // These files band at eight and store the western five, so both eight-point geometries are
+            // reachable and neither sixteen-point one is: the source has no art for the half-steps.
+            saveOptions: {
+                geometries: [
+                    { directions: 8, storeEast: false },
+                    { directions: 8, storeEast: true },
+                ],
+                namings: IE_NAMINGS.map((id) => ({ id, label: NAMING_LABELS[id] })),
+                // Every family a declaration can name, from the animation package's own table: the section
+                // picker offers these rather than taking a typed header no engine would read.
+                sections: sectionOptions(),
+                // The set's own shape, which the dialog opens on - leaving it alone writes it as it stands.
+                source: { directions: 8, storeEast: false, naming: "cycle-numbers" },
+                overridePath: "/games/bgee/override",
+            },
         });
     });
 
@@ -389,7 +472,7 @@ describe("setView", () => {
         const io = fakeIo({ TSTBG1: baseFileBam(2), TSTBG1E: baseFileBam(2) });
         const state = AnimationSetState.open(setOf(), io);
 
-        expect(setView(state!).stances.map((stance) => stance.title)).toEqual([
+        expect(setView(state!, "/games/bgee").stances.map((stance) => stance.title)).toEqual([
             "TSTBG1 + TSTBG1E, band 1",
             "TSTBG1 + TSTBG1E, band 2",
         ]);
@@ -408,12 +491,12 @@ describe("setView", () => {
         }
         const state = AnimationSetState.open(setOf({ layout: "quadrant" }), fakeIo(quarters));
 
-        expect(setView(state!).stances[0]?.title).toBe("TSTBG11 and 7 more files, band 1");
+        expect(setView(state!, "/games/bgee").stances[0]?.title).toBe("TSTBG11 and 7 more files, band 1");
     });
 
     it("falls back to the id for a set the install names in no table", () => {
         const state = AnimationSetState.open(setOf({ name: "", code: "" }), fakeIo({ TSTBG1: baseFileBam(1) }));
-        expect(setView(state!).title).toBe("0x1234");
+        expect(setView(state!, "/games/bgee").title).toBe("0x1234");
     });
 
     // Several animation types pack different stances into the same sequence token, block scheme and block
@@ -424,8 +507,8 @@ describe("setView", () => {
         const declared = AnimationSetState.open(setOf({ section: "monster_ankheg" }), io);
         const undeclared = AnimationSetState.open(setOf(), io);
 
-        expect(setView(declared!).section).toBe("monster_ankheg");
-        expect(setView(undeclared!)).not.toHaveProperty("section");
+        expect(setView(declared!, "/games/bgee").section).toBe("monster_ankheg");
+        expect(setView(undeclared!, "/games/bgee")).not.toHaveProperty("section");
     });
 
     // Nothing structural can tell a sixteen-cycle band from two eight-cycle ones, so the declaration is the
@@ -435,9 +518,9 @@ describe("setView", () => {
         const wide = AnimationSetState.open(setOf({ bandStride: 16 }), io);
         const narrow = AnimationSetState.open(setOf({ bandStride: 8 }), io);
 
-        expect(setView(wide!).bands).toEqual({ stride: 16 });
-        expect(setView(narrow!).bands).toEqual({ stride: 8, scheme: "ie8" });
-        expect(setView(AnimationSetState.open(setOf(), io)!)).not.toHaveProperty("bands");
+        expect(setView(wide!, "/games/bgee").bands).toEqual({ stride: 16 });
+        expect(setView(narrow!, "/games/bgee").bands).toEqual({ stride: 8, scheme: "ie8" });
+        expect(setView(AnimationSetState.open(setOf(), io)!, "/games/bgee")).not.toHaveProperty("bands");
     });
 
     /**
@@ -448,6 +531,6 @@ describe("setView", () => {
         const io = fakeIo({ TSTBG1: baseFileBam(1) });
         const coarse = AnimationSetState.open(setOf({ bandStride: 16, coarseBands: true }), io);
 
-        expect(setView(coarse!).bands).toEqual({ stride: 16, coarse: true });
+        expect(setView(coarse!, "/games/bgee").bands).toEqual({ stride: 16, coarse: true });
     });
 });

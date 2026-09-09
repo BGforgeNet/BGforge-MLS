@@ -14,6 +14,7 @@ import {
     type IndexedAnimation,
     type LossKind,
     type LossReport,
+    type UnevenRotations,
     composeParts,
     isRgbaAnimation,
     splitIeBamBlocks,
@@ -27,7 +28,7 @@ import {
 } from "../animation-schemes/actions";
 import { characterFileLayout } from "../animation-schemes/character";
 import { type NeutralAction, type NeutralSet, type NeutralVariant } from "../neutral/model";
-import { type MemberWrite, serializeAsFrm, serializeMember } from "../neutral/write";
+import { type BamContainer, type MemberWrite, serializeAsFrm, serializeMember } from "../neutral/write";
 import { type BandLayout, buildTargetFile, seatInBandLayout, targetSlots } from "./build-file";
 import { conversionNotes } from "./notes";
 import { planConversion } from "./plan";
@@ -43,6 +44,22 @@ export interface ConversionOptions {
     targetId: number;
     /** Whether to write the companion notes file. On unless asked otherwise. */
     notes?: boolean;
+    /**
+     * The BAM container every written member takes, or absent to keep each member's own.
+     *
+     * A conversion writes a whole set at once, so "the source's own" is per FILE and a set read out of an
+     * install can genuinely mix the two. Naming one makes the output uniform; naming none is the older
+     * behaviour and still the default. Nothing for a target that writes FRMs, which have no BAM container.
+     */
+    container?: BamContainer;
+    /**
+     * How rotations of differing length are made equal, for a Fallout target.
+     *
+     * Only that target asks: an FRM's six rotations share one frame count and an Infinity Engine source
+     * routinely differs by a frame or two between facings, so every directional conversion resolves it.
+     * See `UnevenRotations` for the three answers.
+     */
+    unevenRotations?: UnevenRotations;
 }
 
 export type ConversionResult =
@@ -300,7 +317,7 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                 }
                 const name = nameMember(options.scheme, options.prefix, variant.armour, named.code);
                 if (target.files === "frm-rotations") {
-                    const frm = serializeAsFrm(built, name);
+                    const frm = serializeAsFrm(built, name, options.unevenRotations);
                     for (const item of frm.report.items) stateOnce(item.kind, item.detail, item.detail);
                     if (frm.quantized) {
                         stateOnce(
@@ -313,7 +330,11 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                     continue;
                 }
                 if (!target.pairEast) {
-                    writes.push({ resref: name, extension: "BAM", bytes: serializeMember(built, name) });
+                    writes.push({
+                        resref: name,
+                        extension: "BAM",
+                        bytes: serializeMember(built, name, options.container),
+                    });
                     continue;
                 }
                 // Split on the blocks this just laid out, not on a re-reading of them: a file with real art
@@ -327,8 +348,12 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                     };
                 }
                 writes.push(
-                    { resref: name, extension: "BAM", bytes: serializeMember(split.base, name) },
-                    { resref: `${name}E`, extension: "BAM", bytes: serializeMember(split.east, `${name}E`) },
+                    { resref: name, extension: "BAM", bytes: serializeMember(split.base, name, options.container) },
+                    {
+                        resref: `${name}E`,
+                        extension: "BAM",
+                        bytes: serializeMember(split.east, `${name}E`, options.container),
+                    },
                 );
             }
         }

@@ -24,6 +24,23 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* Pushed to the trailing edge, so the two variable-length texts above never move the facts around: the
+   filename and its meaning change per stance, and a fact list that slid with them would be unreadable. */
+.name-banner-facts {
+    margin-left: auto;
+    flex: 0 0 auto;
+    display: flex;
+    gap: 0.35rem;
+}
+/* Chips rather than a comma-separated run: each is a separate property with its own tooltip, and a
+   badge border is what says which words belong to which fact without punctuation doing the work. */
+.name-banner-fact {
+    color: var(--vscode-descriptionForeground);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    padding: 0 0.35rem;
+    font-size: 0.9em;
+}
 
 /* ---- editor layout: the stage fills the left, all controls stack in a column on the right ---- */
 .editor-layout {
@@ -64,6 +81,7 @@
 /* ---- generic form controls (buttons/select/inputs/checkbox) - themed, matches the binary-editor
    webview's convention of one shared control theme rather than per-instance styling ---- */
 select,
+input[type="text"],
 input[type="number"] {
     font: inherit;
     color: var(--vscode-input-foreground, var(--vscode-foreground));
@@ -275,75 +293,123 @@ select {
     min-width: 0;
 }
 
-/* --- Conversion mode ------------------------------------------------------ */
+/* --- Save As dialog -------------------------------------------------------- */
 
-/* Both full-width commands, secondary like the set button: neither is the panel's primary action, which
-   is the save at the bottom of the editor. */
-.convert-open,
-.convert-run {
-    width: 100%;
-    background: var(--vscode-button-secondaryBackground, transparent);
-    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
-    border-color: var(--vscode-button-border, var(--vscode-panel-border));
+/* The modal's own chrome is .bb-dialog-* in primitives.css, which every panel mounting the primitive
+   links; what follows is only what this dialog puts inside it.
+
+   One bordered box per decision, so a mutually-exclusive set reads as a set. The labels wrap BETWEEN
+   themselves and never within one: a fieldset laying its labels out as running text breaks "Two-letter
+   action codes" across two lines, which reads as two options. */
+.dialog-group {
+    border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, transparent));
+    border-radius: 2px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1rem;
+    margin: 0;
+    padding: 0.3rem 0.6rem 0.5rem;
 }
-.convert-open:hover,
-.convert-run:not(:disabled):hover {
-    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+.dialog-group > legend {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    padding: 0 0.3rem;
 }
-.convert-run:disabled {
-    opacity: 0.5;
+.dialog-group label {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.3rem;
+    white-space: nowrap;
 }
-.convert-head {
+/* The control is disabled, so the label beside it says so too - a live-looking label over a dead radio is
+   the one state a reader reads as a bug in the dialog rather than a limit of the source. */
+.dialog-disabled {
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
+}
+/* Label-then-control rows, like the side column's own fields, so a reader moving between the two meets
+   one shape. */
+.dialog-field {
     align-items: center;
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.4rem;
 }
-.convert-head .view-label {
-    font-weight: 600;
+.dialog-label {
+    color: var(--vscode-descriptionForeground);
+    flex: 0 0 7rem;
 }
-.convert-close {
-    background: none;
-    border: none;
-    color: var(--vscode-textLink-foreground);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.9em;
-    padding: 0;
+.dialog-field select,
+.dialog-field input[type="text"],
+.dialog-field input[type="number"] {
+    flex: 1 1 10rem;
+    min-width: 0;
+    /* Named rather than left to `--vscode-input-border`, which several themes leave unset: the dialog's own
+       surface is the widget background, which resolves to the SAME colour as the input background, and a
+       field bordered by `transparent` then disappears into the panel and reads as plain text. */
+    border-color: var(--vscode-widget-border, var(--vscode-descriptionForeground));
 }
-.convert-close:hover {
-    text-decoration: underline;
+.dialog-check {
+    align-items: center;
+    display: flex;
+    gap: 0.4rem;
 }
 /* Takes the whole row under the id box, so the number and its hex reading sit together rather than the
    hex being read as the next field's label. */
-.convert-hex {
+.dialog-hex {
     color: var(--vscode-descriptionForeground);
     flex: 1 1 100%;
     font-size: 0.85em;
+    padding-left: 7.4rem;
 }
-.convert-summary,
-.convert-note {
+.dialog-note {
     color: var(--vscode-descriptionForeground);
     font-size: 0.9em;
     margin: 0;
 }
+/* What the settings above would actually write, kept together and ruled off from them: loose under the
+   last fieldset it read as leftover text rather than as the answer the controls are being moved for. */
+.dialog-plan {
+    border-top: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, transparent));
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding-top: 0.5rem;
+}
+/* Takes the row between its label and the Choose button, and breaks anywhere: a path is long, has no
+   spaces to break at, and truncating the one thing the reader picked it to check would defeat the point. */
+.dialog-path {
+    flex: 1 1 8rem;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.85em;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+/* The names are the point of the preview, so they get the editor's own font - and they break anywhere,
+   because a resref list has no spaces to break at once the panel is narrow. */
+.dialog-files {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.85em;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
 /* The refusal is the whole answer when it fires, so it is the one thing here that reads as a warning. */
-.convert-refused {
+.dialog-refused {
     color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
     font-size: 0.9em;
     margin: 0;
 }
-.convert-losses,
-.convert-notes {
+.dialog-losses,
+.dialog-notes {
     font-size: 0.9em;
     margin: 0;
     padding-left: 1.1rem;
 }
 /* Losses read as the warning; the notes beside them are representation changes that cost nothing, so they
    stay in the secondary colour rather than competing with the losses for attention. */
-.convert-losses {
+.dialog-losses {
     color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
 }
-.convert-notes {
+.dialog-notes {
     color: var(--vscode-descriptionForeground);
 }
 .view-check {

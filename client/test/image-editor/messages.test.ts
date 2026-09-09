@@ -1,6 +1,21 @@
 import { expect, test } from "vitest";
 import { isWebviewToHost } from "../../src/image-editor/webview/messages";
 
+/** A whole save request, which both the plan and the run carry - see `SaveRequestView`. */
+const SAVE_REQUEST = {
+    format: "bam",
+    bamVersion: 1,
+    compressed: false,
+    directions: 8,
+    storeEast: false,
+    naming: "action-codes",
+    prefix: "NEWB",
+    targetId: 0x9000,
+    section: "monster",
+    notes: true,
+    destination: "folder",
+};
+
 test("accepts valid messages", () => {
     expect(isWebviewToHost({ type: "ready" })).toBe(true);
     expect(isWebviewToHost({ type: "editMeta", patch: { fps: 10 } })).toBe(true);
@@ -20,16 +35,14 @@ test("accepts valid messages", () => {
     expect(isWebviewToHost({ type: "selectSetStance", key: "CDMB1G1#0" })).toBe(true);
     expect(isWebviewToHost({ type: "selectSetArmour", level: 2 })).toBe(true);
     expect(isWebviewToHost({ type: "pickSet" })).toBe(true);
-    // The conversion mode: opening it carries nothing, planning carries the target, and only the run
-    // carries the reader's whole choice - which is also the only one that writes anything.
-    expect(isWebviewToHost({ type: "beginConversion" })).toBe(true);
-    expect(isWebviewToHost({ type: "planConversion", profileId: "ie-monster" })).toBe(true);
-    expect(
-        isWebviewToHost({
-            type: "runConversion",
-            request: { profileId: "ie-monster", prefix: "NEWB", targetId: 0x9000, notes: true },
-        }),
-    ).toBe(true);
+    // The Save As dialog: opening it carries nothing (what it can offer travels with the view), planning
+    // carries the chosen layout, and only the run carries the reader's whole choice - which is also the
+    // only one that writes anything.
+    expect(isWebviewToHost({ type: "beginSaveAs" })).toBe(true);
+    // Planning and running carry the SAME request, so what the dialog previewed and what it writes cannot
+    // come apart - and whether it is a retarget is derived from it rather than named in it.
+    expect(isWebviewToHost({ type: "planSave", request: SAVE_REQUEST })).toBe(true);
+    expect(isWebviewToHost({ type: "runSave", request: SAVE_REQUEST })).toBe(true);
     expect(isWebviewToHost({ type: "runtimeError", message: "boom" })).toBe(true);
 });
 test("rejects malformed messages", () => {
@@ -44,15 +57,14 @@ test("rejects malformed messages", () => {
     expect(isWebviewToHost({ type: "setCreature", resref: 7 })).toBe(false);
     expect(isWebviewToHost({ type: "requestFrames", indices: ["0"] })).toBe(false);
     expect(isWebviewToHost({ type: "runtimeError" })).toBe(false);
-    expect(isWebviewToHost({ type: "planConversion" })).toBe(false);
-    expect(isWebviewToHost({ type: "runConversion", request: { profileId: "ie-monster" } })).toBe(false);
-    // The id decides what the notes tell the reader to declare, so a string that merely looks like one
-    // is not a request this acts on.
-    expect(
-        isWebviewToHost({
-            type: "runConversion",
-            request: { profileId: "ie-monster", prefix: "NEWB", targetId: "9000", notes: true },
-        }),
-    ).toBe(false);
+    expect(isWebviewToHost({ type: "planSave" })).toBe(false);
+    // The direction count decides which target the save resolves to, so a value no scheme stores is not a
+    // request this acts on.
+    expect(isWebviewToHost({ type: "planSave", request: { ...SAVE_REQUEST, directions: 12 } })).toBe(false);
+    // The id decides what the written declaration and the notes say, so a string that merely looks like
+    // one is not a request either.
+    expect(isWebviewToHost({ type: "runSave", request: { ...SAVE_REQUEST, targetId: "9000" } })).toBe(false);
+    expect(isWebviewToHost({ type: "runSave", request: { ...SAVE_REQUEST, format: "gif" } })).toBe(false);
+    expect(isWebviewToHost({ type: "runSave", request: { ...SAVE_REQUEST, destination: "somewhere" } })).toBe(false);
     expect(isWebviewToHost({ type: "somethingElse" })).toBe(false);
 });

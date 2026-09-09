@@ -1,4 +1,3 @@
-import type { AnimationView, IndexedAnimationView } from "../../src/image-editor/webview/messages";
 import {
     DEFAULT_FALLOUT_PALETTE,
     emptyPalette,
@@ -113,8 +112,13 @@ export function makeMultiFrameBam(): IndexedAnimation {
  * The view as an indexed one, for suites that build palette-indexed documents. Throws rather than
  * casting, so a document that unexpectedly became true-colour fails here instead of at a missing
  * palette three assertions later.
+ *
+ * Generic over the colour-model union rather than typed to `AnimationView`: the model builds a view
+ * without the fields only the document can fill (`ModelAnimationView`), and both arrive here.
  */
-export function asIndexedView(view: AnimationView): IndexedAnimationView {
+export function asIndexedView<T extends { colorModel: "indexed" | "rgba" }>(
+    view: T,
+): Extract<T, { colorModel: "indexed" }> {
     if (view.colorModel !== "indexed") throw new Error(`expected an indexed view, got ${view.colorModel}`);
-    return view;
+    return view as Extract<T, { colorModel: "indexed" }>;
 }

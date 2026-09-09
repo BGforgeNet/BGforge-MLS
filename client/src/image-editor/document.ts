@@ -25,10 +25,10 @@ import {
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
-import { type AnimationSetSource, AnimationSetState, type SetPick, setView } from "./set-document";
+import { type AnimationSetSource, AnimationSetState, type SetPick, isEastPair, setView } from "./set-document";
 import { parseAnimationSetUri, resourceUri } from "../ie-resources/uri";
 import { animationIdHex, replacementPaletteNames } from "@bgforge/animation";
-import { frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
+import { FR_SPLIT_MEMBERS, frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
 import { composePvrzResolver } from "./pvrz-resolver";
 import { sidecarPalPath } from "./sidecar";
@@ -347,7 +347,9 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         return state.editedMembers().flatMap(({ action, model }): ResourceWrite[] => {
             const [base, east] = action.parts;
             if (action.parts.length === 1) return [write(action.resref, model.saveArtifacts().bytes)];
-            if (action.parts.length === 2 && base !== undefined && east === `${base}E`) {
+            // Through the shared predicate: which members are an eastern PAIR also decides how many facings
+            // they store, and the two answers cannot be allowed to drift apart.
+            if (isEastPair(action.parts) && base !== undefined && east !== undefined) {
                 return ImageEditorDocument.eastPairWrites(base, east, model, state, write);
             }
             throw new Error(
@@ -565,6 +567,31 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         this.fireEdit(mode === "append" ? "Import cycles" : "Replace cycles");
     }
 
+    /**
+     * Apply an imported set folder across several members at once.
+     *
+     * ONE undo step for the whole import, not one per member: the reader performed a single action, and a
+     * stack that made them press undo a dozen times to get back would leave the set half-imported at every
+     * step in between. Each member's own model still does its own undo - they are just unwound together.
+     */
+    replaceSetSequences(
+        parts: readonly { model: ImageDocumentModel; animation: Animation }[],
+        mode: "replace" | "append",
+    ): void {
+        for (const part of parts) part.model.replaceSequences(part.animation, mode);
+        const models = parts.map((part) => part.model);
+        this._onDidChangeCustomDocument.fire({
+            document: this,
+            label: mode === "append" ? "Import set cycles" : "Replace set cycles",
+            undo: () => {
+                for (const model of models) model.undo();
+            },
+            redo: () => {
+                for (const model of models) model.redo();
+            },
+        });
+    }
+
     toView(options?: { include?: ReadonlySet<number> }): AnimationView {
         // dirName lives here, not in the model: the model is deliberately path-free, and the
         // document owns the file identity (see saveUri). Only FRM naming reads it, and an FRM is
@@ -572,8 +599,27 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         return {
             ...this.model.toView(options),
             dirName: path.basename(path.dirname(this.saveUri.fsPath)),
-            ...(this.setState === undefined ? {} : { set: setView(this.setState) }),
+            composedFiles: this.composedFiles(),
+            // The game directory travels with the set view because one of the destinations it offers is the
+            // install's own override folder, and naming that folder is the point of offering it.
+            ...(this.setState === undefined
+                ? {}
+                : { set: setView(this.setState, parseAnimationSetUri(this.uri)?.gameDir ?? "") }),
         };
+    }
+
+    /**
+     * How many files the open picture was combined from - see the field's note in `messages.ts`.
+     *
+     * The set's answer comes first and is the OPEN MEMBER's, not the set's file count: a set is many
+     * files by definition, and what the header is saying is how the one picture on the stage was put
+     * together. The two document-level compositions below cannot both apply, so their order is arbitrary.
+     */
+    private composedFiles(): number {
+        const state = this.setState;
+        if (state !== undefined) return state.action.parts.length;
+        if (this.isFrSplit) return FR_SPLIT_MEMBERS;
+        return this.iePair === undefined ? 1 : 2;
     }
 
     /**

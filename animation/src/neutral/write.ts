@@ -13,6 +13,7 @@
 import {
     type Animation,
     type LossReport,
+    type UnevenRotations,
     convertToFrm,
     encodeBamc,
     isRgbaAnimation,
@@ -35,6 +36,15 @@ export interface MemberWrite {
 }
 
 /**
+ * Which BAM container a write lands in.
+ *
+ * Only the two v1 shapes: BAM v2 keeps its frames in PVRZ pages, and the neutral reader drops a v2 member
+ * before a conversion starts because it cannot be read without them - so there is no v2 source to write
+ * back and nothing here could produce one.
+ */
+export type BamContainer = "bam" | "bamc";
+
+/**
  * Re-serialize one member in the format it was read as.
  *
  * `sourceFormat` is the animation's own record of what it came from, so this cannot drift from what the
@@ -45,17 +55,21 @@ export interface MemberWrite {
  * install's archive, which serves BAM. Writing a member as a format it did NOT come from is a conversion,
  * and it goes through `serializeAsFrm` beside this rather than through the source's own record.
  */
-export function serializeMember(animation: Animation, resref: string): Uint8Array {
+export function serializeMember(animation: Animation, resref: string, container?: BamContainer): Uint8Array {
     if (isRgbaAnimation(animation)) {
         throw new Error(`${resref}: a true-colour BAM has PVRZ pages, which this writer does not carry.`);
     }
-    switch (animation.meta.sourceFormat) {
+    // The caller's choice where it made one, the member's own record otherwise. A conversion writes a
+    // whole set at once, so a reader who wants it uniform has to be able to say so - while the default
+    // stays per member, which is what keeps a compressed source compressed.
+    const format = container ?? animation.meta.sourceFormat;
+    switch (format) {
         case "bam":
             return serializeBamV1(animation);
         case "bamc":
             return encodeBamc(serializeBamV1(animation));
         default:
-            throw new Error(`${resref}: no writer for source format "${String(animation.meta.sourceFormat)}".`);
+            throw new Error(`${resref}: no writer for source format "${String(format)}".`);
     }
 }
 
@@ -73,11 +87,15 @@ export function serializeMember(animation: Animation, resref: string): Uint8Arra
 export function serializeAsFrm(
     animation: Animation,
     resref: string,
+    unevenRotations?: UnevenRotations,
 ): { bytes: Uint8Array; report: LossReport; quantized: boolean } {
     if (isRgbaAnimation(animation)) {
         throw new Error(`${resref}: a true-colour BAM has PVRZ pages, which this writer does not carry.`);
     }
-    const { animation: frm, report } = convertToFrm(animation, { paletteMode: "nearest" });
+    const { animation: frm, report } = convertToFrm(animation, {
+        paletteMode: "nearest",
+        ...(unevenRotations === undefined ? {} : { unevenRotations }),
+    });
     // The writer reports an exact remap and stays silent on a nearest projection, so the absence of that
     // line is what says colours moved. Reading the flag here keeps the judgement with the caller.
     const quantized = !report.items.some((item) => item.kind === "palette-remapped-to-default");

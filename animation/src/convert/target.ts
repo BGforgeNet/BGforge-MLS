@@ -6,7 +6,7 @@
  * separately, because they answer different questions: what the target STORES art for decides whether the
  * source's drawn facings survive, while what it SHOWS decides whether a facing exists there at all.
  */
-import { type Facing, FRM_FACINGS, ieFacingsForStride } from "@bgforge/image";
+import { type Facing, FRM_FACINGS, ieFacingsForStride, mirrorFacing } from "@bgforge/image";
 
 export interface ConversionTarget {
     /** What a plan summary and the notes file call it. */
@@ -66,6 +66,22 @@ export interface ConversionTarget {
      * than has been checked.
      */
     declaration: "infinity-ids" | "fallout-art-list" | "unmodelled";
+}
+
+/**
+ * The target's stored slots that art for `held` cannot fill, directly or by mirroring.
+ *
+ * ONE definition of "fillable", called with two different inputs: the planner asks per action with that
+ * action's own facings, and the editor's menu asks per set with the facings its scheme stores, so that
+ * what is offered and what is accepted cannot disagree.
+ *
+ * Mirroring counts as filling - the west arc reaching every eastern slot is the whole basis of the paired
+ * target. A slot with neither its own art nor a mirror partner is skipped by the retarget, which leaves it
+ * declared and empty rather than reporting anything, so the caller has to refuse it up front.
+ */
+export function unfillableSlots(target: ConversionTarget, held: readonly Facing[]): Facing[] {
+    const have = new Set<Facing>(held);
+    return target.stored.filter((slot) => !have.has(slot) && !have.has(mirrorFacing(slot)));
 }
 
 const IE_8 = ieFacingsForStride(8);

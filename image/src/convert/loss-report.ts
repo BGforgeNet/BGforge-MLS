@@ -2,6 +2,9 @@ export type LossKind =
     | "empty-direction"
     | "mirrored-directions"
     | "padded-sequence"
+    /** Every rotation was cut back to the shortest one, so the tails of the longer ones are gone. The
+     *  loudest of the uneven-rotation answers and the only one that discards source frames. */
+    | "clipped-sequence"
     | "duplicated-shared-frames"
     | "shared-frame-direction-offset"
     | "embedded-palette"

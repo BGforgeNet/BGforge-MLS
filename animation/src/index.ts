@@ -25,6 +25,7 @@ export { readIdsCodes } from "./ids-tables";
 
 // Schemes: how an animation's files are named, and how their cycles band.
 export { type ActionScheme } from "./animation-schemes/actions";
+export { namingForLayout } from "./animation-schemes/layout";
 export { type SchemeMember } from "./animation-schemes/members";
 export { type SetStance, schemeForStride } from "./animation-schemes/bands";
 
@@ -35,7 +36,7 @@ export { type SetTile, setTile } from "./set-tiles";
 
 // The neutral model: one set, read out of a game and written back to it.
 export { readNeutralSet } from "./neutral/read";
-export { type MemberWrite } from "./neutral/write";
+export { type BamContainer, type MemberWrite } from "./neutral/write";
 
 // Conversion: what a target can hold, and what converting into it would cost.
 export {
@@ -45,9 +46,21 @@ export {
     IE_16_POINT_MIRRORED,
     IE_8_POINT_MIRRORED,
     IE_8_POINT_PAIRED,
+    unfillableSlots,
 } from "./convert/target";
 export { convertSet } from "./convert/convert";
+export { type DeclarationFile, type DeclarationInput, declarationFiles } from "./convert/declaration-files";
+export { type AnimationIniDeclaration, writeAnimationIni } from "./animation-ini-write";
 export { allocateAnimationId } from "./convert/allocate";
 
-// Display labels for a set's armour levels.
-export { armourLabel } from "./facet-labels";
+// What an exported set directory declares about itself: which files it holds and where they came from.
+export {
+    type SetManifestMember,
+    type SetManifestSource,
+    type SetManifestV1,
+    readSetManifest,
+    writeSetManifest,
+} from "./io/set-manifest";
+
+// Display labels for a set's armour levels and for the family the install declares it under.
+export { armourLabel, familyDescription, sectionLabel, sectionOptions } from "./facet-labels";

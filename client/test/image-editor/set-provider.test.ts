@@ -11,22 +11,35 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as vscode from "vscode";
 import { type AnimationSet, type StanceIo } from "@bgforge/animation";
 import { parseBamV1 } from "@bgforge/image";
-import { bandedPair } from "../../../image/test/bam-fixtures.ts";
+import { bandedPair, unevenBand } from "../../../image/test/bam-fixtures.ts";
 import type { AnimationSetLookup, AnimationSetSource } from "../../src/image-editor/set-document";
 import type { AnimationChannel, AnimationSurface } from "../../src/image-editor/provider";
-import type { HostToWebview, WebviewToHost } from "../../src/image-editor/webview/messages";
-import { CONVERSION_PROFILES } from "../../src/image-editor/conversion";
+import { type HostToWebview, type WebviewToHost, saveRequestKey } from "../../src/image-editor/webview/messages";
 
 const GAME_DIR = "/games/bgee";
 const GAME_SCHEME = "bgforge-ie-resource";
 const OUT_DIR = "/out";
 
-const { readFileMock, writeFileMock, showOpenDialogMock, showQuickPickMock, showInformationMock } = vi.hoisted(() => ({
+const {
+    readFileMock,
+    writeFileMock,
+    showOpenDialogMock,
+    showQuickPickMock,
+    showInputMock,
+    readDirMock,
+    showInformationMock,
+    showErrorMock,
+    statMock,
+} = vi.hoisted(() => ({
     readFileMock: vi.fn(),
     writeFileMock: vi.fn(),
     showOpenDialogMock: vi.fn(),
     showQuickPickMock: vi.fn(),
+    showInputMock: vi.fn(),
+    readDirMock: vi.fn(),
     showInformationMock: vi.fn(),
+    showErrorMock: vi.fn(),
+    statMock: vi.fn(),
 }));
 
 vi.mock("vscode", () => {
@@ -66,12 +79,20 @@ vi.mock("vscode", () => {
         window: {
             showOpenDialog: showOpenDialogMock,
             showQuickPick: showQuickPickMock,
+            showInputBox: showInputMock,
             showInformationMessage: showInformationMock,
             showWarningMessage: vi.fn(),
+            showErrorMessage: showErrorMock,
             setStatusBarMessage: vi.fn(),
         },
         workspace: {
-            fs: { readFile: readFileMock, writeFile: writeFileMock, stat: vi.fn(), createDirectory: vi.fn() },
+            fs: {
+                readFile: readFileMock,
+                writeFile: writeFileMock,
+                stat: statMock,
+                readDirectory: readDirMock,
+                createDirectory: vi.fn(),
+            },
         },
     };
 });
@@ -123,7 +144,27 @@ function ioFor(files: Record<string, Uint8Array>): StanceIo {
 const io = ioFor(FILES);
 
 /** The conversion the reader has filled in: the two-letter target, under a stem of their own. */
-const REQUEST = { profileId: "ie-monster", prefix: "NEWB", targetId: 0x9000, notes: true };
+/**
+ * A whole save request, as the dialog sends it - the same shape plans a save and runs it.
+ *
+ * A RETARGET of this fixture, by its STEM: the geometry and the naming match what the set already is, and
+ * the new name is what makes it a new animation - files under names the source's install does not use,
+ * which need their own declaration. Naming it the two-letter family is what the fixture's own actions can
+ * be filed under, so the refusal case below has to come from a set whose actions mean nothing.
+ */
+const REQUEST = {
+    format: "bam" as const,
+    bamVersion: 1 as const,
+    compressed: false,
+    directions: 8 as const,
+    storeEast: false,
+    naming: "action-codes",
+    prefix: "NEWB",
+    targetId: 0x9000,
+    section: "monster",
+    notes: true,
+    destination: "folder" as const,
+};
 
 function setSource(declared: readonly AnimationSet[] = [SET], archive = io): AnimationSetSource {
     return {
@@ -218,7 +259,16 @@ beforeEach(() => {
     writeFileMock.mockResolvedValue(undefined);
     showOpenDialogMock.mockReset();
     showQuickPickMock.mockReset();
+    showInputMock.mockReset();
+    // An empty destination folder is the ordinary case; a test that wants one holding files says so.
+    readDirMock.mockReset();
+    readDirMock.mockResolvedValue([]);
     showInformationMock.mockReset();
+    showErrorMock.mockReset();
+    // An empty destination folder: stat throws for an absent path, which is how the overwrite gate reads
+    // "nothing here to replace". Left as a resolving stub it would report every write as a collision.
+    statMock.mockReset();
+    statMock.mockRejectedValue(new Error("ENOENT"));
 });
 
 describe("picking another set", () => {
@@ -258,37 +308,200 @@ describe("picking another set", () => {
 });
 
 describe("planning a conversion", () => {
-    it("offers the host's conversions, the source's own stem and a free id", async () => {
+    /**
+     * Only the two defaults. What the dialog can OFFER travels with the view, because it is a property of
+     * the open set rather than an answer to opening a dialog - and the dialog has to be able to say when
+     * there is nothing to offer, which it cannot do while waiting for a reply.
+     */
+    it("offers the source's own stem and a free id", async () => {
         const { posted, send } = await openSet();
 
-        await send({ type: "beginConversion" });
+        await send({ type: "beginSaveAs" });
 
-        // Ids and labels only: the target and the naming scheme are the host's business, and the id is
-        // what comes back, so nothing downstream keys off the display text.
         expect(posted).toEqual([
             {
-                type: "conversionSetup",
-                setup: {
-                    profiles: CONVERSION_PROFILES.map((profile) => ({ id: profile.id, label: profile.label })),
-                    prefix: "TSTB",
-                    // 0x1234 is declared, so the first free id at or above the source's is offered.
-                    targetId: 0x1235,
+                type: "saveAsSetup",
+                // The answer names the set it is for: it is asynchronous, and a reader can move between
+                // sets while it is in flight - without the id the dialog seeded from whichever answer
+                // happened to arrive and offered the previous creature's stem.
+                // 0x1234 is declared, so the first free id at or above the source's is offered.
+                // Empty section: this fixture's install declares none, and an absent declaration is
+                // offered as absent rather than as a plausible family nothing said.
+                setup: { id: 0x1234, prefix: "TSTB", targetId: 0x1235, section: "" },
+            },
+        ]);
+    });
+
+    /**
+     * The file NAMES, not a count. A count answers none of the questions a reader asks of a save - whether
+     * the stem took, whether the names are the ones the target expects - and those are exactly what the
+     * dialog is for.
+     */
+    it("names the files a save would write, where they would land, and what it would cost", async () => {
+        const { posted, send } = await openSet();
+
+        await send({ type: "planSave", request: REQUEST });
+
+        expect(posted).toEqual([
+            {
+                type: "savePlan",
+                plan: {
+                    for: saveRequestKey(REQUEST),
+                    outcome: "lossless",
+                    losses: [],
+                    notes: [],
+                    shown: ["NEWBSD.BAM", "NEWBWK.BAM"],
+                    files: 2,
+                    destination: "a folder you choose",
+                    retarget: true,
+                    needsBasePage: false,
+                    unevenRotations: false,
                 },
             },
         ]);
     });
 
-    it("reports the outcome of the chosen target, and how many files it would write", async () => {
+    /**
+     * A plan is a round trip and the reader keeps moving controls, so an answer can arrive after the
+     * settings it answers have changed. Without the echo the dialog took whatever came last as the answer
+     * to what it was showing, and Save stayed live against a preview of other settings.
+     */
+    it("says which request each plan answers", async () => {
         const { posted, send } = await openSet();
 
-        await send({ type: "planConversion", profileId: "ie-monster" });
+        await send({ type: "planSave", request: REQUEST });
+        await send({ type: "planSave", request: { ...REQUEST, prefix: "OTHR" } });
 
-        expect(posted).toEqual([
-            {
-                type: "conversionPlan",
-                plan: { profileId: "ie-monster", outcome: "lossless", losses: [], notes: [], files: 2 },
-            },
-        ]);
+        const keys = posted.map((message) => (message.type === "savePlan" ? message.plan.for : undefined));
+        expect(keys).toEqual([saveRequestKey(REQUEST), saveRequestKey({ ...REQUEST, prefix: "OTHR" })]);
+        expect(keys[0]).not.toBe(keys[1]);
+    });
+
+    /**
+     * Every question a save has belongs to the dialog. The page number used to arrive as an input box
+     * AFTER the folder picker, which is past the point the reader has finished deciding - so the plan says
+     * when one is still needed, and Save waits for it rather than the host interrupting later.
+     */
+    /**
+     * The folder is picked from inside the dialog, so the host opens its picker on a message and answers
+     * with the path. It used to be sprung after Save, which put the last question of the save after the
+     * moment the reader had finished deciding.
+     */
+    it("opens the folder picker on the dialog's own message and answers with the path", async () => {
+        const { posted, send } = await openSet();
+        showOpenDialogMock.mockResolvedValue([outFolder()]);
+
+        await send({ type: "chooseSaveFolder" });
+
+        expect(posted).toEqual([{ type: "saveFolder", path: OUT_DIR }]);
+    });
+
+    /** Answered either way, or the dialog's Choose button waits on a reply that is never coming. */
+    it("answers with no path when the picker is dismissed", async () => {
+        const { posted, send } = await openSet();
+        showOpenDialogMock.mockResolvedValue(undefined);
+
+        await send({ type: "chooseSaveFolder" });
+
+        expect(posted).toEqual([{ type: "saveFolder" }]);
+    });
+
+    /** The path, not a phrase: "a folder you choose" is not a destination anyone can check. */
+    it("names the chosen folder in the plan, and what it already holds", async () => {
+        const { posted, send } = await openSet();
+        readDirMock.mockResolvedValue([["NEWBSD.BAM", 1]]);
+
+        await send({ type: "planSave", request: { ...REQUEST, folder: OUT_DIR } });
+
+        const [message] = posted;
+        expect(message?.type === "savePlan" && message.plan.destination).toBe(OUT_DIR);
+        expect(message?.type === "savePlan" && message.plan.notes).toContain(
+            "1 of these files are already in that folder and will be replaced.",
+        );
+    });
+
+    /**
+     * The control for it is drawn only where there is something to decide, so the plan answers from a run
+     * of the conversion: for a source whose facings already agree, every answer writes the same six files
+     * and a set of radios for it would be a question with no consequence.
+     */
+    it("says whether a save has rotations of differing length to resolve", async () => {
+        const uneven = ioFor({
+            TSTBSD: unevenBand(2, [0, 1, 2, 3, 4], 1),
+            TSTBWK: bandedPair(2, [0, 1, 2, 3, 4]),
+        });
+        const asFrm = { ...REQUEST, format: "frm" as const };
+        const even = await openSet();
+        await even.send({ type: "planSave", request: asFrm });
+        const jagged = await openSet([SET], uneven);
+        await jagged.send({ type: "planSave", request: asFrm });
+
+        const flagOf = (posted: HostToWebview[]): boolean | undefined =>
+            posted.flatMap((m) => (m.type === "savePlan" ? [m.plan.unevenRotations] : []))[0];
+        expect(flagOf(even.posted)).toBe(false);
+        expect(flagOf(jagged.posted)).toBe(true);
+    });
+
+    it("says a BAM v2 save takes a page number and a BAM v1 save does not", async () => {
+        const { posted, send } = await openSet();
+        const asV2 = { ...REQUEST, format: "bam" as const, bamVersion: 2 as const, prefix: "TSTB" };
+
+        await send({ type: "planSave", request: { ...REQUEST, prefix: "TSTB" } });
+        await send({ type: "planSave", request: asV2 });
+        // Still true once one has been given: keyed on what is MISSING, the dialog's own field would
+        // disappear the moment the reader typed into it.
+        await send({ type: "planSave", request: { ...asV2, basePage: 4200 } });
+
+        const asked = posted.map((m) => (m.type === "savePlan" ? m.plan.needsBasePage : undefined));
+        expect(asked).toEqual([false, true, true]);
+    });
+
+    /** With the page answered in the dialog, the run writes without stopping to ask for it again. */
+    it("writes a BAM v2 set from the page number the dialog carried", async () => {
+        const { send } = await openSet();
+        showOpenDialogMock.mockResolvedValue([outFolder()]);
+
+        await send({
+            type: "runSave",
+            request: { ...REQUEST, format: "bam" as const, bamVersion: 2 as const, prefix: "TSTB", basePage: 4200 },
+        });
+
+        expect(showInputMock).not.toHaveBeenCalled();
+        expect(writtenPaths()).toContain("file:/out/MOS4200.PVRZ");
+    });
+
+    /**
+     * The converter re-serializes each member as BAM v1 and has no BAM v2 writer, so a reshape asking for
+     * v2 used to write v1 files and report them as what was asked for. Refused where it cannot be done,
+     * naming the path that can.
+     */
+    it("refuses to reshape a set into a container the converter cannot write", async () => {
+        const { posted, send } = await openSet();
+
+        await send({ type: "planSave", request: { ...REQUEST, bamVersion: 2 as const } });
+
+        const [message] = posted;
+        expect(message?.type === "savePlan" && message.plan.outcome).toBe("refused");
+        expect(message?.type === "savePlan" && message.plan.reason).toContain("BAM v1");
+        expect(message?.type === "savePlan" && message.plan.files).toBe(0);
+    });
+
+    /**
+     * A set drawn in a layout no naming carries - a quadrant, a tiled static - can still be written back
+     * over its own files, which is what the plain save does. The dialog has to seed its radios with
+     * something, so an axis the SOURCE does not state cannot be what makes a save a reshape: comparing
+     * against an absent value made every such set unwritable, refused by a converter that has no reader
+     * for its layout.
+     */
+    it("writes a set whose layout no naming carries as it stands", async () => {
+        // The bare layout: the file IS the animation, carrying no action code for a naming to read.
+        const { posted, send } = await openSet([{ ...SET, layout: "bare" }], ioFor({ TSTB: bandedPair(2, [0, 1, 2]) }));
+
+        await send({ type: "planSave", request: { ...REQUEST, prefix: "TSTB" } });
+
+        const [message] = posted;
+        expect(message?.type === "savePlan" && message.plan.retarget).toBe(false);
+        expect(message?.type === "savePlan" && message.plan.shown).toEqual(["TSTB.bam"]);
     });
 
     it("reports a refusal as the plan, with the reason and no files", async () => {
@@ -296,47 +509,78 @@ describe("planning a conversion", () => {
         // carries meaning can file them.
         const { posted, send } = await openSet([CYCLE_SET], ioFor(CYCLE_FILES));
 
-        await send({ type: "planConversion", profileId: "ie-monster" });
+        await send({ type: "planSave", request: REQUEST });
 
         expect(posted).toEqual([
             {
-                type: "conversionPlan",
-                plan: { profileId: "ie-monster", outcome: "refused", reason: REFUSAL, losses: [], notes: [], files: 0 },
+                type: "savePlan",
+                plan: {
+                    for: saveRequestKey(REQUEST),
+                    outcome: "refused",
+                    reason: REFUSAL,
+                    losses: [],
+                    notes: [],
+                    shown: [],
+                    files: 0,
+                    destination: "a folder you choose",
+                    retarget: true,
+                    needsBasePage: false,
+                    unevenRotations: false,
+                },
             },
         ]);
     });
 });
 
 describe("running a conversion", () => {
+    /** With the folder chosen in the dialog, the run writes into it without opening a picker of its own. */
+    it("writes into the folder the request carries, asking for none", async () => {
+        const { send } = await openSet();
+
+        await send({ type: "runSave", request: { ...REQUEST, folder: OUT_DIR } });
+
+        expect(showOpenDialogMock).not.toHaveBeenCalled();
+        expect(writtenPaths()).toContain("file:/out/NEWBSD.BAM");
+    });
+
     it("writes one file per member plus the notes, into the folder the reader picks", async () => {
         const { send } = await openSet();
         showOpenDialogMock.mockResolvedValue([outFolder()]);
 
-        await send({ type: "runConversion", request: REQUEST });
+        await send({ type: "runSave", request: REQUEST });
 
-        expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBWK.BAM", "file:/out/NEWB-notes.md"]);
+        expect(writtenPaths()).toEqual([
+            "file:/out/NEWBSD.BAM",
+            "file:/out/NEWBWK.BAM",
+            // The declaration itself, precomputed rather than described - the notes used to tell the
+            // reader to write this by hand from values only the host knew.
+            "file:/out/9000.ini",
+            "file:/out/NEWB-notes.md",
+        ]);
         // The bytes are the deliverable: a file written from an empty conversion would pass the paths above.
         const [first] = writeFileMock.mock.calls;
         expect(parseBamV1(first?.[1] as Uint8Array).sequences).toHaveLength(8);
-        // The notes carry the id to declare the result under - nothing writes it into any table.
-        expect(new TextDecoder().decode(writeFileMock.mock.calls[2]?.[1] as Uint8Array)).toContain("9000");
-        expect(showInformationMock).toHaveBeenCalledWith("Converted TEST_ANIM: 2 files in /out.");
+        // The declaration is the family and the prefix, ready to copy into override rather than described.
+        expect(new TextDecoder().decode(writeFileMock.mock.calls[2]?.[1] as Uint8Array)).toContain("resref=NEWB");
+        // The notes still carry the id, since the IDS rows remain the reader's to add.
+        expect(new TextDecoder().decode(writeFileMock.mock.calls[3]?.[1] as Uint8Array)).toContain("9000");
+        expect(showInformationMock).toHaveBeenCalledWith("Wrote TEST_ANIM: 4 files in /out.");
     });
 
     it("writes no notes file when the reader asked for none", async () => {
         const { send } = await openSet();
         showOpenDialogMock.mockResolvedValue([outFolder()]);
 
-        await send({ type: "runConversion", request: { ...REQUEST, notes: false } });
+        await send({ type: "runSave", request: { ...REQUEST, notes: false } });
 
-        expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBWK.BAM"]);
+        expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBWK.BAM", "file:/out/9000.ini"]);
     });
 
     it("writes nothing when the folder prompt is dismissed", async () => {
         const { send } = await openSet();
         showOpenDialogMock.mockResolvedValue(undefined);
 
-        await send({ type: "runConversion", request: REQUEST });
+        await send({ type: "runSave", request: REQUEST });
 
         expect(writeFileMock).not.toHaveBeenCalled();
     });
@@ -344,7 +588,7 @@ describe("running a conversion", () => {
     it("says why a refused conversion wrote nothing, without asking where to put it", async () => {
         const { posted, send } = await openSet([CYCLE_SET], ioFor(CYCLE_FILES));
 
-        await send({ type: "runConversion", request: REQUEST });
+        await send({ type: "runSave", request: REQUEST });
 
         expect(posted).toEqual([{ type: "error", message: REFUSAL }]);
         expect(showOpenDialogMock).not.toHaveBeenCalled();
@@ -365,18 +609,18 @@ describe("running a conversion", () => {
                 : Promise.resolve(undefined),
         );
 
-        await send({ type: "runConversion", request: REQUEST });
+        await send({ type: "runSave", request: REQUEST });
 
         expect(posted).toEqual([
             {
                 type: "error",
                 message:
-                    "NEWBWK.BAM could not be written: EACCES: permission denied. /out now holds 1 of 2 " +
-                    "converted files (NEWBSD.BAM); the rest were not written.",
+                    "NEWBWK.BAM could not be written: EACCES: permission denied. /out now holds 1 of 4 " +
+                    "files (NEWBSD.BAM); the rest were not written.",
             },
         ]);
-        // The run stops there rather than carrying on into the notes file, which would describe a set
-        // that is not in the folder.
+        // The run stops there rather than carrying on into the declaration and the notes, which would
+        // describe a set that is not in the folder.
         expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBWK.BAM"]);
     });
 
@@ -390,14 +634,14 @@ describe("running a conversion", () => {
                 : Promise.resolve(undefined),
         );
 
-        await send({ type: "runConversion", request: REQUEST });
+        await send({ type: "runSave", request: REQUEST });
 
         expect(posted).toEqual([
             {
                 type: "error",
                 message:
-                    "NEWB-notes.md could not be written: ENOSPC: no space left on device. /out now holds 2 of 2 " +
-                    "converted files (NEWBSD.BAM, NEWBWK.BAM).",
+                    "NEWB-notes.md could not be written: ENOSPC: no space left on device. /out now holds 3 of 4 " +
+                    "files (NEWBSD.BAM, NEWBWK.BAM, 9000.ini); the rest were not written.",
             },
         ]);
         // No success notice: the run did not finish, whatever landed in the folder.
@@ -409,25 +653,90 @@ describe("running a conversion", () => {
         showOpenDialogMock.mockResolvedValue([outFolder()]);
         writeFileMock.mockRejectedValue(new Error("EROFS: read-only file system"));
 
-        await send({ type: "runConversion", request: REQUEST });
+        await send({ type: "runSave", request: REQUEST });
 
         expect(posted).toEqual([
             {
                 type: "error",
                 message:
-                    "NEWBSD.BAM could not be written: EROFS: read-only file system. /out now holds 0 of 2 " +
-                    "converted files; the rest were not written.",
+                    "NEWBSD.BAM could not be written: EROFS: read-only file system. /out now holds 0 of 4 " +
+                    "files; the rest were not written.",
             },
         ]);
+    });
+});
+
+describe("saving a set as another format", () => {
+    /**
+     * The wrinkle this exists to close: Save As used to write the animation on screen, so a set produced
+     * ONE file under the set's own name while the button beside it saved the whole set. Two members,
+     * both written, each under the file it came from.
+     */
+    it("writes every member of the set, not the stance on screen", async () => {
+        const { send } = await openSet();
+        showOpenDialogMock.mockResolvedValue([outFolder()]);
+
+        await send({ type: "saveAs", target: "bam" });
+
+        expect(writtenPaths().sort()).toEqual(["file:/out/TSTBSD.bam", "file:/out/TSTBWK.bam"]);
+    });
+
+    /** The bytes are the deliverable: a run that named two files and wrote one passes a path check. */
+    it("writes a real BAM at each member's own name", async () => {
+        const { send } = await openSet();
+        showOpenDialogMock.mockResolvedValue([outFolder()]);
+
+        await send({ type: "saveAs", target: "bam" });
+
+        const byPath = new Map(writeFileMock.mock.calls.map((call) => [String(call[0]), call[1] as Uint8Array]));
+        for (const resref of ["TSTBSD", "TSTBWK"]) {
+            const bytes = byPath.get(`file:/out/${resref}.bam`);
+            if (bytes === undefined) throw new Error(`nothing written for ${resref}`);
+            expect(parseBamV1(bytes).sequences).toHaveLength(8);
+        }
+    });
+
+    it("writes a set manifest beside the members for the directory target", async () => {
+        const { send } = await openSet();
+        showOpenDialogMock.mockResolvedValue([outFolder()]);
+
+        await send({ type: "saveAs", target: "png-directory" });
+
+        expect(writtenPaths()).toContain("file:/out/set.json");
+        expect(writtenPaths().some((p) => p.startsWith("file:/out/TSTBSD/"))).toBe(true);
+        expect(writtenPaths().some((p) => p.startsWith("file:/out/TSTBWK/"))).toBe(true);
+    });
+
+    /**
+     * A set has no single FRM. Refused rather than writing the open stance under the set's name, which
+     * is the same one-member-called-a-set the rest of this block exists to stop.
+     */
+    it("refuses FRM and points at the conversion mode", async () => {
+        const { send } = await openSet();
+        showOpenDialogMock.mockResolvedValue([outFolder()]);
+
+        await send({ type: "saveAs", target: "frm" });
+
+        expect(writeFileMock).not.toHaveBeenCalled();
+        expect(String(showErrorMock.mock.calls[0]?.[0])).toMatch(/Another game's files/);
+    });
+
+    it("writes nothing when the reader dismisses the folder picker", async () => {
+        const { send } = await openSet();
+        showOpenDialogMock.mockResolvedValue(undefined);
+
+        await send({ type: "saveAs", target: "bam" });
+
+        expect(writeFileMock).not.toHaveBeenCalled();
     });
 });
 
 describe("a document that is not a set", () => {
     /** Every one of these reads the open document's set; a file document has none, so none may act. */
     it.each([
-        ["beginConversion", { type: "beginConversion" } as const],
-        ["planConversion", { type: "planConversion", profileId: "ie-monster" } as const],
-        ["runConversion", { type: "runConversion", request: REQUEST } as const],
+        ["beginSaveAs", { type: "beginSaveAs" } as const],
+        ["planSave", { type: "planSave", request: REQUEST } as const],
+        ["runSave", { type: "runSave", request: REQUEST } as const],
         ["pickSet", { type: "pickSet" } as const],
     ])("ignores %s", async (_label, message) => {
         const provider = new ImageEditorProvider(context, undefined, undefined, setSource());

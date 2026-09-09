@@ -17,6 +17,9 @@ import type {
     GameSource,
     MemberWrite,
     SchemeMember,
+    SetManifestMember,
+    SetManifestSource,
+    SetManifestV1,
     SetStance,
     SetTile,
     StanceIo,
@@ -47,9 +50,20 @@ const REQUIRED_VALUE_EXPORTS = [
     "IE_8_POINT_MIRRORED",
     "IE_8_POINT_PAIRED",
     "convertSet",
+    "unfillableSlots",
     "allocateAnimationId",
+    // The files a converted set needs beside its art, precomputed rather than described in the notes.
+    "declarationFiles",
+    "writeAnimationIni",
+    "namingForLayout",
+    // What an exported set directory declares about itself
+    "readSetManifest",
+    "writeSetManifest",
     // Display labels
     "armourLabel",
+    "familyDescription",
+    "sectionLabel",
+    "sectionOptions",
 ] as const;
 
 /**
@@ -73,13 +87,31 @@ function pinPublicTypes(
     tile: SetTile,
     write: MemberWrite,
     target: ConversionTarget,
+    manifest: SetManifestV1,
+    manifestMember: SetManifestMember,
+    manifestSource: SetManifestSource,
 ): number {
-    return [resolver, set, game, source, scheme, member, stance, stanceIo, tile, write, target].length;
+    return [
+        resolver,
+        set,
+        game,
+        source,
+        scheme,
+        member,
+        stance,
+        stanceIo,
+        tile,
+        write,
+        target,
+        manifest,
+        manifestMember,
+        manifestSource,
+    ].length;
 }
 
 describe("@bgforge/animation public API", () => {
     it("exports every public type by name", () => {
-        expect(pinPublicTypes).toHaveLength(11);
+        expect(pinPublicTypes).toHaveLength(14);
     });
 
     for (const name of REQUIRED_VALUE_EXPORTS) {

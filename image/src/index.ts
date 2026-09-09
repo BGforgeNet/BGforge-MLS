@@ -62,6 +62,7 @@ export { loadImage } from "./load.ts";
 export { type LossKind, LossReport } from "./convert/loss-report.ts";
 export {
     type FrmConvertOpts,
+    type UnevenRotations,
     convertToBam,
     convertToBamV2,
     convertToFrm,

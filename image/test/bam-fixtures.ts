@@ -6,7 +6,7 @@
  * the other. Consumers outside this package import them by relative path - the dependency direction is
  * the same one their `@bgforge/image` imports already take.
  */
-import { type IndexedAnimation, type Rgba, serializeBamV1 } from "../src/index.ts";
+import { type Frame, type IndexedAnimation, type Rgba, serializeBamV1 } from "../src/index.ts";
 
 /** 256 opaque black entries - the neutral base a fixture overwrites only the indices it asserts on. */
 export function greyPalette(): Rgba[] {
@@ -43,6 +43,35 @@ export function multiCycle(edge: number, count: number): Uint8Array {
  */
 export function bandedPair(edge: number, drawn: readonly number[]): Uint8Array {
     return packedBands(edge, 1, drawn);
+}
+
+/**
+ * The same band with one facing a frame longer than the others.
+ *
+ * The ordinary shape rather than an edge case: a shipped stand runs 76 to 81 frames across its facings.
+ * It is what a target storing ONE frame count for every direction has to resolve, and the only fixture
+ * under which that resolution does anything at all.
+ */
+export function unevenBand(edge: number, drawn: readonly number[], longer: number): Uint8Array {
+    const palette = greyPalette();
+    for (let i = 1; i <= 2; i++) palette[i] = { r: i * 80, g: 255 - i * 80, b: i * 20, a: 255 };
+    const square = (index: number): Frame => ({
+        width: edge,
+        height: edge,
+        pixels: new Uint8Array(edge * edge).fill(index),
+        offsetX: 0,
+        offsetY: 0,
+    });
+    const animation: IndexedAnimation = {
+        palette,
+        frames: [square(1), square(2)],
+        sequences: Array.from({ length: 8 }, (_, cycle) => ({
+            frameRefs: drawn.includes(cycle) ? (cycle === longer ? [0, 1, 0] : [0, 1]) : [0, 0],
+            facing: "none" as const,
+        })),
+        meta: { sourceFormat: "bam", transparentIndex: 0 },
+    };
+    return serializeBamV1(animation);
 }
 
 /**

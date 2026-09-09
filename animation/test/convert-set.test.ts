@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FALLOUT_PALETTE, type Facing, parseBamV1, parseFrm, serializeBamV1 } from "@bgforge/image";
+import {
+    DEFAULT_FALLOUT_PALETTE,
+    type Facing,
+    encodeBamc,
+    isBamc,
+    parseBamV1,
+    parseFrm,
+    serializeBamV1,
+} from "@bgforge/image";
 import { type AnimationSet } from "../src/animation-index";
 import { type StanceIo } from "../src/set-stances";
 import { readNeutralSet } from "../src/neutral/read";
@@ -49,6 +57,41 @@ describe("converting a whole set", () => {
 
         expect(result.writes.map((write) => write.resref)).toEqual(["XYZ1G1", "XYZ1A1"]);
         expect(result.writes.every((write) => write.bytes.byteLength > 0)).toBe(true);
+    });
+
+    /**
+     * The container is the source's own by default, file by file - a member read as BAM v1 is written as
+     * BAM v1 and one read compressed stays compressed. That is what a caller naming none gets, and it is
+     * the behaviour the conversion had before a caller could name one at all.
+     */
+    it("writes each member back in the container it was read in when none is named", () => {
+        const result = converted(read({ CDMB1G1: band(), CDMB1A1: encodeBamc(band()) }));
+
+        expect(result.writes.map((write) => isBamc(write.bytes))).toEqual([false, true]);
+    });
+
+    it("writes every member in the container the caller names, whatever each was read in", () => {
+        const mixed = read({ CDMB1G1: band(), CDMB1A1: encodeBamc(band()) });
+
+        expect(converted(mixed, IE_8_POINT_MIRRORED, { ...OPTIONS, container: "bamc" }).writes).toSatisfy(
+            (writes: { bytes: Uint8Array }[]) => writes.every((write) => isBamc(write.bytes)),
+        );
+        expect(converted(mixed, IE_8_POINT_MIRRORED, { ...OPTIONS, container: "bam" }).writes).toSatisfy(
+            (writes: { bytes: Uint8Array }[]) => writes.every((write) => !isBamc(write.bytes)),
+        );
+    });
+
+    /** A Fallout target writes FRMs, which have no BAM container to choose - the option cannot reach them. */
+    it("ignores a named container for a target that writes no BAMs", () => {
+        const result = converted(read({ CDMB1G11: band() }), FALLOUT_FRM, {
+            ...OPTIONS,
+            prefix: "XYZBAS",
+            scheme: "fallout-critter",
+            container: "bamc",
+        });
+
+        expect(result.writes.map((write) => write.extension)).toEqual(["FRM"]);
+        expect(isBamc(result.writes[0]?.bytes ?? new Uint8Array())).toBe(false);
     });
 
     /**

@@ -10,9 +10,11 @@ import {
     convertToBamV2,
     importPngDirectory,
     isRgbaAnimation,
+    LossReport,
     needsFreshPages,
     serializeBamV2,
 } from "@bgforge/image";
+import { type ImageDocumentModel } from "./document-model";
 import { ieSchemeOf } from "@bgforge/image/ie-direction";
 import type { CreatureEntry } from "../ie-resources/creature-index";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
@@ -20,9 +22,23 @@ import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "..
 import { surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { type GameResourceBytes, ImageEditorDocument } from "./document";
-import { type AnimationSetSource } from "./set-document";
+import { type AnimationSetSource, overridePathOf, setSaveSource } from "./set-document";
 import { adaptImportedColourModel, buildCrossFormatSave, buildExport } from "./export-actions";
 import { type SaveWrite, planImageSave, pvrzPageWrites } from "./save";
+import {
+    type SetDirectoryImport,
+    type SetExportTarget,
+    SET_MANIFEST_NAME,
+    buildSetExport,
+    isSetDirectory,
+    matchSetImport,
+    readSetDirectory,
+    saveTargetOf,
+    setExportLosses,
+    setExportNeedsBasePage,
+    setMemberPath,
+    setMemberResrefs,
+} from "./set-export";
 import {
     type FrmShapePick,
     exportPaletteMode,
@@ -33,21 +49,31 @@ import {
     summarizeLoss,
 } from "./save-as";
 import { sidecarPalPath } from "./sidecar";
-import { type AnimationSet, type StanceIo, animationIdHex, setTitle } from "@bgforge/animation";
-import { CONVERSION_PROFILES, convertOpenSet, defaultPrefix, suggestTargetId } from "./conversion";
+import {
+    type ActionScheme,
+    type AnimationSet,
+    type StanceIo,
+    FALLOUT_FRM,
+    animationIdHex,
+    declarationFiles,
+    setTitle,
+} from "@bgforge/animation";
+import { type ConversionRequest, convertOpenSet, defaultPrefix, ieTargetFor, suggestTargetId } from "./conversion";
 import { ieGroups } from "@bgforge/animation/group-labels";
 import { parseAnimationSetUri } from "../ie-resources/uri";
 import { openAnimationSet } from "../ie-resources/open-set";
 import { ieGroupOptionText, offeredGroups } from "./webview/render/cycle-grouping";
 import {
     type AnimationView,
-    type ConversionRequestView,
+    type SavePlanView,
+    type SaveRequestView,
     type CreatureOption,
     type HostToWebview,
     type SaveAsTarget,
     type WebviewToHost,
     isWebviewToHost,
     packFramePixels,
+    saveRequestKey,
 } from "./webview/messages";
 
 /**
@@ -75,6 +101,14 @@ const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.j
 
 /** An animation resref opens with a 4-character code naming the animation; the rest is variant and action. */
 const ANIMATION_CODE_CHARS = 4;
+
+/**
+ * File names the save plan lists before it says "and N more".
+ *
+ * A character set is ninety-six names and a tiled one far more, so the list is a sample that proves the
+ * naming took rather than an inventory - the total beside it is what says how many there are.
+ */
+const PLAN_NAMES_SHOWN = 8;
 
 /**
  * The view an open (or a post-edit refresh) sends: geometry for every frame, pixels only for the one
@@ -112,6 +146,21 @@ interface ActiveCreature {
     readonly resref: string;
     readonly name: string;
     readonly palette: Rgba[];
+}
+
+/**
+ * What a dialog has already put to the reader before a set save runs.
+ *
+ * Its ABSENCE is what tells the save to ask for itself - the entry point that reaches one with no dialog
+ * behind it. Present, every question the save could raise has been answered on a surface the reader was
+ * looking at, and raising them again is a modal restating what they had just read and pressed Save on.
+ */
+interface SetSaveAnswers {
+    destination: "override" | "folder";
+    /** The folder picked in the dialog, for the destination that takes one. */
+    folder?: string;
+    /** The first PVRZ page, for the container that packs its frames into them. */
+    basePage?: number;
 }
 
 /**
@@ -391,45 +440,36 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             case "pickSet":
                 await this.pickSet(document, surface);
                 break;
-            case "beginConversion": {
+            case "beginSaveAs": {
                 const found = this.lookupSet(document);
                 if (found === undefined) break;
                 this.post(channel, {
-                    type: "conversionSetup",
+                    type: "saveAsSetup",
                     setup: {
-                        profiles: CONVERSION_PROFILES.map((profile) => ({ id: profile.id, label: profile.label })),
+                        id: found.set.id,
                         prefix: defaultPrefix(found.set),
                         targetId: suggestTargetId(found.set, this.animationSets?.list(found.gameDir) ?? []),
+                        section: found.set.section ?? "",
                     },
                 });
                 break;
             }
-            case "planConversion": {
-                const found = this.lookupSet(document);
-                if (found === undefined) break;
-                // Planned without the notes: they are written from the same report the plan reads, so
-                // rendering them here would cost the whole document to show a preview nobody asked for.
-                const result = convertOpenSet(found.set, found.io, found.flavour, {
-                    profileId: message.profileId,
-                    prefix: "",
-                    targetId: 0,
-                    notes: false,
-                });
-                this.post(channel, {
-                    type: "conversionPlan",
-                    plan: {
-                        profileId: message.profileId,
-                        outcome: result.outcome,
-                        ...(result.reason === undefined ? {} : { reason: result.reason }),
-                        losses: result.losses,
-                        notes: result.notes,
-                        files: result.writes.length,
-                    },
-                });
+            case "chooseSaveFolder": {
+                const state = document.setState;
+                if (state === undefined) break;
+                const picked = await ImageEditorProvider.pickSetFolder(setTitle(state.set));
+                // Answered either way: a dismissed picker has to reach the dialog, or its Choose button
+                // sits waiting on a reply that is never coming.
+                this.post(channel, { type: "saveFolder", ...(picked === undefined ? {} : { path: picked }) });
                 break;
             }
-            case "runConversion":
-                await this.runConversion(channel, document, message.request);
+            case "planSave": {
+                const plan = await this.planSave(document, message.request);
+                if (plan !== undefined) this.post(channel, { type: "savePlan", plan });
+                break;
+            }
+            case "runSave":
+                await this.runSave(channel, document, message.request);
                 break;
             case "save":
                 await surface.save(document);
@@ -523,6 +563,19 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         paletteMode: "sidecar" | "nearest" | undefined,
     ): Promise<void> {
         try {
+            if (document.setState !== undefined) {
+                // A set has no single FRM - see the note on FRM in `set-export.ts`. Refused rather than
+                // quietly writing the open stance, which is exactly the one-member-called-a-set the
+                // set-scoped path below exists to stop.
+                if (target === "frm") {
+                    throw new Error(
+                        'A whole set cannot be saved as one FRM. Use "Save as > Another game\'s files", ' +
+                            "which asks for the name and id a Fallout critter set needs.",
+                    );
+                }
+                await this.saveSetAs(document, target);
+                return;
+            }
             const sourcePath = await this.saveAsSourcePath(document);
             if (sourcePath === undefined) return; // user dismissed the destination picker
             const targetPath = saveAsTargetPath(sourcePath, target);
@@ -584,11 +637,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // all rotations. Undefined only when the user dismisses a picker.
             let pick: FrmShapePick | undefined = {};
             if (target === "frm") {
-                pick = await this.resolveFrmShape(
-                    anim,
-                    path.basename(document.uri.fsPath),
-                    document.setState?.set.section,
-                );
+                // No section to name the direction blocks by: a set never reaches here - it is refused
+                // above and sent to the conversion mode, which is what knows how to write Fallout files.
+                pick = await this.resolveFrmShape(anim, path.basename(document.uri.fsPath));
                 if (pick === undefined) return; // user dismissed the picker
             }
             const { writes, report } = buildCrossFormatSave(anim, target, targetPath, {
@@ -619,6 +670,129 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 `Save failed: ${error instanceof Error ? error.message : String(error)}`,
             );
         }
+    }
+
+    /**
+     * The host's folder picker, for a set save.
+     *
+     * One implementation for both the dialog's Choose button and the entry point that has no dialog behind
+     * it, so the two cannot ask differently for the same thing.
+     */
+    private static async pickSetFolder(title: string): Promise<string | undefined> {
+        const picked = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            openLabel: "Save the set here",
+            title: `Where should ${title} be written?`,
+        });
+        return picked?.[0]?.fsPath;
+    }
+
+    /**
+     * Save As for a whole set: every member of every armour level, into a folder the reader chooses.
+     *
+     * A folder rather than a name next to the source, because a set has no source file - its address is a
+     * game and an id - and because the output is a dozen to eighty files that belong together. The
+     * armour level on screen is not the scope: a character's levels are separate files under separate
+     * prefixes, so exporting only the open one writes a fraction of the creature under a name that says
+     * otherwise.
+     */
+    private async saveSetAs(
+        document: ImageEditorDocument,
+        target: SetExportTarget,
+        asked?: SetSaveAnswers,
+    ): Promise<void> {
+        const state = document.setState;
+        if (state === undefined) throw new Error("saveSetAs: not a set document");
+        const { members, unreadable } = state.allMembers();
+        if (members.length === 0) throw new Error("This install ships no readable files for this set.");
+        const destination = asked?.destination ?? "folder";
+
+        // Named before the destination is chosen: a reader who would rather fix the install than export a
+        // partial creature should not have picked a folder first. Skipped where the dialog put the same
+        // files in front of them already - a second modal saying what they just read is one to click past.
+        if (
+            asked === undefined &&
+            unreadable.length > 0 &&
+            !(await ImageEditorProvider.confirmPartialSet(unreadable))
+        ) {
+            return;
+        }
+
+        // The install's own override folder needs no prompt: it is where a plain Save already writes, and
+        // the dialog named the path before the reader chose it. Only "a folder you choose" asks.
+        // The game can close under an open tab, and an empty directory here composed `/override` at the
+        // filesystem root - a plausible path, written to without a word.
+        const gameDir = this.lookupSet(document)?.gameDir;
+        if (destination === "override" && gameDir === undefined) {
+            throw new Error("This set's game is no longer open, so there is no override folder to write into.");
+        }
+        // The dialog's own Choose button has already answered this where there was a dialog; only the
+        // entry point without one still asks here.
+        const chosen =
+            destination === "override" && gameDir !== undefined
+                ? overridePathOf(gameDir)
+                : (asked?.folder ?? (await ImageEditorProvider.pickSetFolder(setTitle(state.set))));
+        if (chosen === undefined) return;
+        const folder = vscode.Uri.file(chosen);
+
+        // Asked once for the whole set, not once per member: the pages are allocated in one run from this
+        // number, so a per-member prompt would ask the same question a dozen times about one range. The
+        // dialog asks it where there is one - a question arriving AFTER the folder picker reads as the save
+        // having started, which is the wrong moment to be told a decision is still outstanding.
+        let basePage = asked?.basePage;
+        if (basePage === undefined && setExportNeedsBasePage(members, target)) {
+            basePage = await this.pickBasePage(setTitle(state.set));
+            if (basePage === undefined) return; // user dismissed the prompt
+        }
+
+        const creature = this.activeCreature.get(document);
+        // The install this was read from, where one is still resolvable. Recorded in the manifest for the
+        // reader; nothing on the import side keys off it.
+        const flavour = this.lookupSet(document)?.flavour;
+        const plan = buildSetExport({
+            members,
+            target,
+            destDir: folder.fsPath,
+            source: {
+                id: state.set.id,
+                title: setTitle(state.set),
+                ...(flavour === undefined ? {} : { flavour }),
+            },
+            ...(creature === undefined ? {} : { palette: creature.palette }),
+            ...(basePage === undefined ? {} : { basePage }),
+        });
+
+        // Same reasoning as the partial-set consent above: the dialog listed these losses before Save was
+        // pressed, so asking again is a second answer to a question already answered. The overwrite consent
+        // below is not that - what a folder already holds is not knowable until the folder is chosen.
+        if (asked === undefined && !plan.report.lossless) {
+            const { message, detail } = summarizeLoss(plan.report);
+            const confirmed = await vscode.window.showWarningMessage(message, { modal: true, detail }, "Save anyway");
+            if (confirmed !== "Save anyway") return;
+        }
+        // The last of the questions that used to arrive after Save. What a folder already holds is knowable
+        // the moment one is chosen, and the dialog chooses one - so it says how many files it would replace
+        // beside the names it would write, and pressing Save there is the consent.
+        if (asked === undefined && !(await this.confirmOverwrite(plan.writes.map((write) => write.path)))) return;
+
+        await this.writeAll(plan.writes);
+        const pages = plan.pageCount > 0 ? ` and ${plan.pageCount} PVRZ page(s)` : "";
+        vscode.window.setStatusBarMessage(
+            `Saved ${members.length} file(s) of ${setTitle(state.set)}${pages} in ${path.basename(folder.fsPath)}`,
+            3000,
+        );
+    }
+
+    /** Consent for an export that cannot include every file, naming the ones it leaves out. */
+    private static async confirmPartialSet(unreadable: readonly string[]): Promise<boolean> {
+        const answer = await vscode.window.showWarningMessage(
+            `${unreadable.length} file(s) of this set cannot be read and will be left out.`,
+            { modal: true, detail: unreadable.join("\n") },
+            "Export the rest",
+        );
+        return answer === "Export the rest";
     }
 
     /**
@@ -708,7 +882,8 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     private async resolveFrmShape(
         anim: IndexedAnimation,
         sourceName: string,
-        section: string | undefined,
+        /** The install's own name for this animation family, where the caller has one to label blocks by. */
+        section?: string,
     ): Promise<FrmShapePick | undefined> {
         const groupCount = ieGroupCount(anim);
         if (groupCount !== undefined) {
@@ -788,71 +963,309 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     }
 
     /**
-     * Write a converted set out, into a folder the reader chooses.
+     * Whether a request rewrites the set for another shape, or writes it as it stands.
      *
-     * A folder rather than the game's own override: a converted set is a new animation nothing declares
-     * yet, and landing it in an install would put files there that no table names - which the engine
-     * ignores and the next reader cannot account for. The notes file beside them says what to declare.
+     * Derived rather than chosen, which is what removed the separate save targets: the direction and
+     * naming controls open on the set's OWN shape, so leaving them alone means the output keeps the
+     * source's resrefs, and moving any of them is what mints new names under a new stem and id.
      */
-    private async runConversion(
+    private isRetarget(document: ImageEditorDocument, request: SaveRequestView): boolean {
+        const found = this.lookupSet(document);
+        const source = document.setState === undefined ? undefined : setSaveSource(document.setState);
+        if (source === undefined || found === undefined) return true;
+        if (request.format === "frm") return true;
+        if (request.format !== "bam") return false; // an image export reshapes nothing
+        // The STEM counts as much as the shape. Renaming a set without reshaping it is a real thing to
+        // want - the same creature under a new id - and it is a new animation just as much as a reshaped
+        // one is: the files land under names the source's install does not use, so they need their own
+        // declaration. Without this a rename silently wrote the source's own resrefs back.
+        if (request.prefix !== "" && request.prefix !== defaultPrefix(found.set)) return true;
+        // Only an axis the SOURCE states can be moved off it. A set whose layout no naming carries, or whose
+        // cycles are not directions at all, states neither - and the dialog still has to seed its radios
+        // with something, so comparing against the absent value made every one of those sets a reshape and
+        // handed it to a converter that has no reader for its layout. The dialog disables what it cannot
+        // offer; here, an unstated axis simply cannot differ.
+        return (
+            (source.directions !== undefined && request.directions !== source.directions) ||
+            request.storeEast !== source.storeEast ||
+            (source.naming !== undefined && request.naming !== source.naming)
+        );
+    }
+
+    /**
+     * Why a request cannot be reshaped, where it cannot, so the plan says so instead of the write quietly
+     * producing something else.
+     *
+     * The converter re-serializes each member as BAM v1, compressed or not - it has no BAM v2 writer, and a
+     * request asking for one used to come back reporting the v1 files it had written as if they were what
+     * was asked for. Writing the set AS IT STANDS does reach v2, which is what the reason points at.
+     */
+    private static retargetRefusal(request: SaveRequestView, retarget: boolean): string | undefined {
+        if (!retarget || request.format !== "bam" || request.bamVersion !== 2) return undefined;
+        return (
+            "A reshaped set is written as BAM v1 - nothing here writes BAM v2 into a new layout. " +
+            "Pick BAM v1, or write the set as it stands to get v2 files."
+        );
+    }
+
+    /**
+     * How many of the files a save would write are already in the chosen folder.
+     *
+     * Read as ONE directory listing rather than a stat per name: a character set is eighty files and the
+     * plan is answered on every control the dialog has. Undefined where the folder could not be read at
+     * all, which the plan says rather than reporting an empty folder that was never looked into.
+     *
+     * This is why the write no longer stops to ask for overwrite consent: what a folder already holds
+     * becomes knowable the moment one is chosen, and the dialog chooses one.
+     */
+    private static async alreadyThere(folder: string, names: readonly string[]): Promise<number | undefined> {
+        let entries: [string, vscode.FileType][];
+        try {
+            entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(folder));
+        } catch {
+            return undefined;
+        }
+        // Case-insensitively: an install's own files are upper case and a save writes what the target
+        // names, so a folder holding `MDKNG1.BAM` is one a write of `MDKNG1.bam` lands on.
+        const there = new Set(entries.map(([name]) => name.toLowerCase()));
+        return names.filter((name) => there.has(name.toLowerCase())).length;
+    }
+
+    /**
+     * What the plan says about a destination that already holds files, or nothing to say.
+     *
+     * Nothing until a folder is picked - "a folder you choose" is not a place that can be looked into - and
+     * nothing when it is empty of these names, which is the ordinary case and needs no line of its own.
+     */
+    private static async overwriteNotes(destination: string, names: readonly string[]): Promise<string[]> {
+        if (!destination.startsWith("/")) return [];
+        const found = await ImageEditorProvider.alreadyThere(destination, names);
+        if (found === undefined) return [`${destination} could not be read, so what it already holds is unknown.`];
+        if (found === 0) return [];
+        return [`${found} of these files are already in that folder and will be replaced.`];
+    }
+
+    /** The conversion this request names, for the two paths that both need it. */
+    private static conversionRequestOf(request: SaveRequestView, fallbackPrefix: string): ConversionRequest {
+        return {
+            engine: request.format === "frm" ? "fallout" : "infinity",
+            geometry: { directions: request.directions, storeEast: request.storeEast },
+            naming: request.format === "frm" ? "fallout-critter" : (request.naming as ActionScheme),
+            prefix: request.prefix === "" ? fallbackPrefix : request.prefix,
+            targetId: request.targetId,
+            notes: request.notes,
+            ...(request.unevenRotations === undefined ? {} : { unevenRotations: request.unevenRotations }),
+            ...(request.format === "bam" && request.bamVersion === 1
+                ? { container: request.compressed ? ("bamc" as const) : ("bam" as const) }
+                : {}),
+        };
+    }
+
+    /**
+     * What the chosen settings would write, where, and what they would cost.
+     *
+     * Answered for EVERY destination rather than for a conversion alone, because the dialog shows the same
+     * preview whichever one is picked - and a reader deciding between them is deciding on the file names,
+     * which is exactly what differs.
+     */
+    private async planSave(document: ImageEditorDocument, request: SaveRequestView): Promise<SavePlanView | undefined> {
+        const state = document.setState;
+        const found = this.lookupSet(document);
+        if (state === undefined || found === undefined) return undefined;
+        const key = saveRequestKey(request);
+        const retarget = this.isRetarget(document, request);
+        // A retarget lands in a folder of the reader's own whatever the destination radio says, so the
+        // preview names the folder it will ask for rather than the one that is no longer on offer.
+        // The folder the reader picked, named: "a folder you choose" is not a destination anyone can check,
+        // and checking it is the whole reason the picker moved into the dialog.
+        const destination =
+            request.destination === "override" && !retarget
+                ? overridePathOf(found.gameDir)
+                : (request.folder ?? "a folder you choose");
+
+        const unsupported = ImageEditorProvider.retargetRefusal(request, retarget);
+        if (unsupported !== undefined) {
+            return {
+                for: key,
+                outcome: "refused",
+                reason: unsupported,
+                losses: [],
+                notes: [],
+                shown: [],
+                files: 0,
+                destination,
+                retarget,
+                needsBasePage: false,
+                unevenRotations: false,
+            };
+        }
+
+        if (!retarget) {
+            const { members, unreadable } = state.allMembers();
+            const target = saveTargetOf(request);
+            // Through the writer's own rule: a member composed from a pair goes back over both halves, and a
+            // preview counting the members alone understates what lands by one file each.
+            const names = members.flatMap((member) =>
+                setMemberResrefs(member, target).map((resref) => path.basename(setMemberPath("", resref, target))),
+            );
+            // The manifest is what makes a directory export re-importable as a set, so it is one of the
+            // files the reader is deciding about rather than an implementation detail of the write.
+            if (target === "png-directory") names.unshift(SET_MANIFEST_NAME);
+            const report = setExportLosses(members, target, this.activeCreature.get(document)?.palette);
+            const lost = new Set(report.losses);
+            const notes = report.items.filter((item) => !lost.has(item)).map((item) => item.detail);
+            if (unreadable.length > 0) {
+                notes.push(`${unreadable.length} file(s) cannot be read and are left out: ${unreadable.join(", ")}`);
+            }
+            // Each of these writes MORE than the entries named above - a folder of frames per member, or a
+            // PVRZ page per block - and how many is not known until the write runs, so it is said rather
+            // than counted wrong.
+            if (target === "png-directory") notes.push("Each member is a folder of one PNG per frame.");
+            if (target === "bamv2") notes.push("Each member also writes the MOS PVRZ pages its frames need.");
+            notes.push(...(await ImageEditorProvider.overwriteNotes(destination, names)));
+            return {
+                for: key,
+                outcome: report.lossless ? "lossless" : "lossy",
+                losses: report.losses.map((item) => item.detail),
+                notes,
+                shown: names.slice(0, PLAN_NAMES_SHOWN),
+                files: names.length,
+                destination,
+                retarget: false,
+                needsBasePage: setExportNeedsBasePage(members, target),
+                // Writing a set as it stands keeps each member's own cycle table, so nothing is equalised.
+                unevenRotations: false,
+            };
+        }
+
+        // Planned without the notes: they are written from the same report the plan reads, so rendering
+        // them here would cost the whole document to show a preview nobody asked for.
+        const result = convertOpenSet(found.set, found.io, found.flavour, {
+            ...ImageEditorProvider.conversionRequestOf(request, defaultPrefix(found.set)),
+            notes: false,
+        });
+        const names = result.writes.map((write) => `${write.resref}.${write.extension}`);
+        return {
+            for: key,
+            notes: [...result.notes, ...(await ImageEditorProvider.overwriteNotes(destination, names))],
+            outcome: result.outcome,
+            ...(result.reason === undefined ? {} : { reason: result.reason }),
+            losses: result.losses,
+            shown: names.slice(0, PLAN_NAMES_SHOWN),
+            files: names.length,
+            destination,
+            retarget: true,
+            // A retarget is refused for BAM v2 above, and every other container it writes packs no pages.
+            needsBasePage: false,
+            // Read off the conversion that just ran rather than guessed at: which facings differ, and by
+            // how much, is a property of this source that only the equalising step has looked at.
+            unevenRotations: result.unevenRotations,
+        };
+    }
+
+    /**
+     * Write the set out under the chosen settings.
+     *
+     * The two paths differ in more than their bytes. Writing the set AS IT STANDS keeps every member's own
+     * resref, so it can land in the install's own override folder and be the files the engine already
+     * names. A RETARGET is a new animation nothing declares yet, so it lands in a folder of the reader's
+     * own, with its declaration and notes beside it - dropping it into a game would put files there that
+     * no table names, which the engine ignores and the next reader cannot account for.
+     */
+    private async runSave(
         channel: AnimationChannel,
         document: ImageEditorDocument,
-        request: ConversionRequestView,
+        request: SaveRequestView,
+    ): Promise<void> {
+        // No try/catch here: the channel's own dispatcher already turns a throw into an error posted back
+        // to the webview, and catching it a second time here swallowed exactly the write failures whose
+        // whole point is to reach the reader with the member they stopped on.
+        if (!this.isRetarget(document, request)) {
+            await this.saveSetAs(document, saveTargetOf(request), {
+                destination: request.destination,
+                ...(request.folder === undefined ? {} : { folder: request.folder }),
+                ...(request.basePage === undefined ? {} : { basePage: request.basePage }),
+            });
+            return;
+        }
+        await this.runRetarget(channel, document, request);
+    }
+
+    private async runRetarget(
+        channel: AnimationChannel,
+        document: ImageEditorDocument,
+        request: SaveRequestView,
     ): Promise<void> {
         const found = this.lookupSet(document);
         if (found === undefined) return;
-        const result = convertOpenSet(found.set, found.io, found.flavour, request);
+        // The plan disables Save on this, but the check is here too: a run reaching the converter with a
+        // container it cannot write would produce files that are not what was asked for and say nothing.
+        const unsupported = ImageEditorProvider.retargetRefusal(request, true);
+        if (unsupported !== undefined) {
+            this.post(channel, { type: "error", message: unsupported });
+            return;
+        }
+        const converted = ImageEditorProvider.conversionRequestOf(request, defaultPrefix(found.set));
+        const result = convertOpenSet(found.set, found.io, found.flavour, converted);
         if (result.outcome === "refused") {
             this.post(channel, { type: "error", message: result.reason ?? "This set cannot be converted." });
             return;
         }
-        const [folder] =
-            (await vscode.window.showOpenDialog({
-                canSelectFiles: false,
-                canSelectFolders: true,
-                openLabel: "Convert into this folder",
-                title: `Where should ${setTitle(found.set)} be written?`,
-            })) ?? [];
-        if (folder === undefined) return;
+        // Chosen in the dialog, where the reader saw the file names that will fill it. Asked here only for
+        // a request that reached this with no dialog behind it.
+        const chosen = request.folder ?? (await ImageEditorProvider.pickSetFolder(setTitle(found.set)));
+        if (chosen === undefined) return;
+        const folder = vscode.Uri.file(chosen);
 
         // Nothing is rolled back on a failed write: the destination is a folder of the reader's own, which
         // can already hold files this run did not put there. The report carries the state instead - which
         // member stopped it, and what is in the folder now.
+        // Every file the run means to write, not the members alone: the declaration and the notes are part
+        // of what a reader gets, so a report counting only the art would understate what is missing.
+        const declarations = declarationFiles({
+            target: converted.engine === "fallout" ? FALLOUT_FRM : ieTargetFor(request.directions, request.storeEast),
+            targetId: request.targetId,
+            prefix: converted.prefix,
+            section: request.section,
+            ...(found.set.prefixByArmour.size > 1 ? { armourLevels: found.set.prefixByArmour.size } : {}),
+        });
+        const total = result.writes.length + declarations.length + (result.notesFile === undefined ? 0 : 1);
+
         const written: string[] = [];
         const stopped = (name: string, error: unknown): Error => {
             const cause = error instanceof Error ? error.message : String(error);
             const listed = written.length === 0 ? "" : ` (${written.join(", ")})`;
-            const rest = written.length === result.writes.length ? "" : "; the rest were not written";
+            const rest = written.length === total ? "" : "; the rest were not written";
             return new Error(
                 `${name} could not be written: ${cause}. ${folder.fsPath} now holds ${written.length} of ` +
-                    `${result.writes.length} converted files${listed}${rest}.`,
+                    `${total} files${listed}${rest}.`,
             );
         };
-        for (const write of result.writes) {
-            const name = `${write.resref}.${write.extension}`;
+        const write = async (name: string, bytes: Uint8Array): Promise<void> => {
             try {
-                // eslint-disable-next-line no-await-in-loop -- sequential so a failure names the file it stopped on
-                await vscode.workspace.fs.writeFile(vscode.Uri.joinPath(folder, name), write.bytes);
+                await vscode.workspace.fs.writeFile(vscode.Uri.joinPath(folder, name), bytes);
             } catch (error) {
                 throw stopped(name, error);
             }
             written.push(name);
+        };
+        for (const member of result.writes) {
+            // eslint-disable-next-line no-await-in-loop -- sequential so a failure names the file it stopped on
+            await write(`${member.resref}.${member.extension}`, member.bytes);
+        }
+        // The declaration itself, precomputed rather than described: the notes used to tell the reader to
+        // write this by hand from values only this side knew. The east flag comes from the same choice that
+        // stored the east, since the engine reads that flag rather than looking for the files.
+        for (const file of declarations) {
+            // eslint-disable-next-line no-await-in-loop -- as above
+            await write(file.name, new TextEncoder().encode(file.text));
         }
         if (result.notesFile !== undefined) {
-            const stem = request.prefix === "" ? defaultPrefix(found.set) : request.prefix;
-            const name = `${stem}-notes.md`;
-            try {
-                await vscode.workspace.fs.writeFile(
-                    vscode.Uri.joinPath(folder, name),
-                    new TextEncoder().encode(result.notesFile),
-                );
-            } catch (error) {
-                throw stopped(name, error);
-            }
+            await write(`${converted.prefix}-notes.md`, new TextEncoder().encode(result.notesFile));
         }
-        const count = result.writes.length;
         void vscode.window.showInformationMessage(
-            `Converted ${setTitle(found.set)}: ${count} ${count === 1 ? "file" : "files"} in ${folder.fsPath}.`,
+            `Wrote ${setTitle(found.set)}: ${written.length} ${written.length === 1 ? "file" : "files"} in ` +
+                `${folder.fsPath}.`,
         );
     }
 
@@ -871,6 +1284,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             // the "import" message note in webview/messages.ts for why.
             const next = await this.importPngDirectory();
             if (!next) return;
+
+            // A folder carrying a set manifest is a whole set, and applying it to the open member alone
+            // would drop every other member of it on the floor. A set folder's own member directories are
+            // ordinary animation directories, so pointing this at one of THOSE still imports that one.
+            if (next.set !== undefined) {
+                await this.importSet(document, next.set, mode);
+                return;
+            }
 
             // A directory carries its own colour model, which need not be the document's. Matching
             // them up front keeps replaceSequences a pure splice, and puts the one lossy direction
@@ -911,16 +1332,19 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         }
     }
 
-    private async importPngDirectory(): Promise<{ animation: Animation; name: string } | undefined> {
+    private async importPngDirectory(): Promise<
+        { animation: Animation; name: string; set?: SetDirectoryImport } | undefined
+    > {
         // Accept EITHER the export folder or its manifest.json - both resolve to the same directory,
-        // whose frames are read relative to manifest.json.
+        // whose frames are read relative to manifest.json. A set export's own `set.json` is accepted the
+        // same way, so the two kinds of folder are picked identically.
         const selection = await vscode.window.showOpenDialog({
             canSelectFolders: true,
             canSelectFiles: true,
             canSelectMany: false,
-            filters: { "PNG-directory manifest": ["json"] },
+            filters: { "Exported animation manifest": ["json"] },
             openLabel: "Import",
-            title: "Import PNG directory - pick its folder or its manifest.json",
+            title: "Import a PNG directory or an exported set - pick its folder or its manifest",
         });
         const picked = selection?.[0];
         if (!picked) return undefined;
@@ -928,31 +1352,100 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         const stat = await vscode.workspace.fs.stat(picked);
         const dir = stat.type === vscode.FileType.Directory ? picked : vscode.Uri.file(path.dirname(picked.fsPath));
 
-        // Sanity check the selection BEFORE reading the tree: a PNG-directory export is defined by its
-        // manifest.json. Guide the user to the right pick instead of leaking the codec's internal throw,
-        // and avoid recursively slurping an unrelated folder they picked by mistake.
-        const manifestUri = vscode.Uri.joinPath(dir, "manifest.json");
-        if (!(await this.fileExists(manifestUri))) {
+        // Sanity check the selection BEFORE reading the tree: an export is defined by a manifest at its
+        // top. Guide the user to the right pick instead of leaking a codec's internal throw, and avoid
+        // recursively slurping an unrelated folder they picked by mistake.
+        const isSet = await this.fileExists(vscode.Uri.joinPath(dir, SET_MANIFEST_NAME));
+        if (!isSet && !(await this.fileExists(vscode.Uri.joinPath(dir, "manifest.json")))) {
             void vscode.window.showWarningMessage(
-                `"${path.basename(dir.fsPath)}" is not a PNG-directory export (no manifest.json inside). ` +
-                    `Pick the folder written by "Save as > PNG directory", or its manifest.json.`,
+                `"${path.basename(dir.fsPath)}" is not an exported animation (no manifest.json or ` +
+                    `${SET_MANIFEST_NAME} inside). Pick the folder written by "Save as > PNG directory", ` +
+                    `or one of its manifests.`,
             );
             return undefined;
         }
 
         try {
-            // The directory name feeds the group-pick labels (the export keeps the source's basename).
-            return {
-                animation: importPngDirectory(await this.readDirectoryTree(dir)),
-                name: path.basename(dir.fsPath),
-            };
+            const files = await this.readDirectoryTree(dir);
+            const name = path.basename(dir.fsPath); // feeds the group-pick labels
+            if (isSetDirectory(files)) {
+                const set = readSetDirectory(files);
+                // The first member stands in for `animation`, which only the single-file path below reads;
+                // the set path takes every member from `set`.
+                const first = set.members[0];
+                if (first === undefined) throw new Error("readSetDirectory: this export names no members");
+                return { animation: first.animation, name, set };
+            }
+            return { animation: importPngDirectory(files), name };
         } catch (error) {
             // Malformed/incompatible manifest or a missing frame PNG - surface the cause, not a stack.
             const detail =
-                error instanceof Error ? error.message.replace(/^importPngDirectory:\s*/, "") : String(error);
+                error instanceof Error
+                    ? error.message.replace(/^(importPngDirectory|readSetDirectory):\s*/, "")
+                    : String(error);
             void vscode.window.showWarningMessage(`Can't import "${path.basename(dir.fsPath)}": ${detail}`);
             return undefined;
         }
+    }
+
+    /**
+     * Apply an exported set folder to the open set, member by member.
+     *
+     * Refused outright for a single-file document: a set folder holds a dozen animations, and there is no
+     * defensible answer to which of them one open file should become.
+     */
+    private async importSet(
+        document: ImageEditorDocument,
+        imported: SetDirectoryImport,
+        mode: "replace" | "append",
+    ): Promise<void> {
+        const state = document.setState;
+        if (state === undefined) {
+            throw new Error(
+                `"${imported.source.title}" is a whole exported set. Open the set it belongs to, or pick ` +
+                    "one member folder inside it to import that member alone.",
+            );
+        }
+        const open = state.allMembers().members;
+        const match = matchSetImport(imported.members, open);
+        if (match.matched.length === 0) {
+            throw new Error(`None of the files in "${imported.source.title}" belong to the open set.`);
+        }
+        // Both mismatched directions are put to the reader together: a partial import is a legitimate
+        // thing to want, and a silent one is the thing that looks like a whole-set import and is not.
+        if (match.missing.length > 0 || match.unknown.length > 0) {
+            const detail = [
+                ...match.missing.map((resref) => `- ${resref}: nothing in the folder replaces it`),
+                ...match.unknown.map((resref) => `- ${resref}: in the folder, not in this set`),
+            ].join("\n");
+            const answer = await vscode.window.showWarningMessage(
+                `This folder covers ${match.matched.length} of the set's ${open.length} files.`,
+                { modal: true, detail },
+                "Import those",
+            );
+            if (answer !== "Import those") return;
+        }
+
+        // Each member is adapted against ITS OWN model: one set can mix colour models, and adapting the
+        // whole import against the open member's would quantize the others to the wrong thing.
+        const parts: { model: ImageDocumentModel; animation: Animation }[] = [];
+        const report = new LossReport();
+        for (const { member, animation } of match.matched) {
+            const adapted = adaptImportedColourModel(animation, member.model.animation);
+            report.absorb(adapted.report);
+            parts.push({ model: member.model, animation: adapted.animation });
+        }
+        if (!report.lossless) {
+            const { detail } = summarizeLoss(report);
+            const confirmed = await vscode.window.showWarningMessage(
+                "Importing will lose data.",
+                { modal: true, detail },
+                "Import anyway",
+            );
+            if (confirmed !== "Import anyway") return;
+        }
+        document.replaceSetSequences(parts, mode);
+        vscode.window.setStatusBarMessage(`Imported ${parts.length} file(s) of ${setTitle(state.set)}`, 3000);
     }
 
     /**

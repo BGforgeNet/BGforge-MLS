@@ -238,13 +238,20 @@
             });
             return;
         }
-        if (pristine && e.key.length === 1) {
+        // Read rather than dereferenced: `key` is a non-optional string on a real KeyboardEvent, so the
+        // typechecker cannot see this, but a plain `Event` dispatched as "keydown" reaches this handler in
+        // the field and `e.key.length` threw - which unmounted the picker, since an uncaught handler error
+        // takes the component with it. Reproduced by dispatching `new Event("keydown")` at the input; no
+        // real keystroke does it, and what sends one is not established. Both uses below ask whether this
+        // is a PARTICULAR key, which an absent one simply is not.
+        const key: string | undefined = e.key;
+        if (pristine && key?.length === 1) {
             // A printable key REPLACES the shown label rather than editing it - while pristine the input holds the
             // selected label, not text the user wrote. Enforced here, not only on the open edge, since a click
             // into an already-focused field collapses that selection to a caret and typing would append.
             inputEl?.select();
         }
-        if (e.key === "Enter" && allowCustom) {
+        if (key === "Enter" && allowCustom) {
             const custom = customValue(inputValue);
             if (custom !== undefined) {
                 onchange(custom);

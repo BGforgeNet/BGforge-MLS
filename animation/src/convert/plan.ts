@@ -2,8 +2,12 @@
  * Decide what converting a set into a target would cost, before anything is written.
  *
  * Three outcomes rather than two. Two would force every mismatch the design did not anticipate into
- * "lossy" and write it anyway, which produces a plausible-looking file that is wrong; a refusal that never
- * fires costs nothing. No source in either engine reaches the refusal today, and that is the intent.
+ * "lossy" and write it anyway, which produces a plausible-looking file that is wrong.
+ *
+ * The refusal is reached by real sources, and by one shape in particular: a target stores facings the
+ * source has no art for and cannot mirror onto, which the retarget answers by SKIPPING those slots. The
+ * result declares its facings and draws a fraction of them, and nothing downstream looks at it again -
+ * so a coarser source into a finer target is refused here rather than written and reported.
  *
  * The losses themselves are recorded in `LossReport`, which already draws the line this needs: a note that
  * records a REPRESENTATION change is informational and must not make a conversion count as lossy, or a
@@ -12,7 +16,7 @@
  */
 import { type Facing, LossReport } from "@bgforge/image";
 import { type NeutralAction, type NeutralSet } from "../neutral/model";
-import { type ConversionTarget } from "./target";
+import { type ConversionTarget, unfillableSlots } from "./target";
 
 export type ConversionPlan =
     | { outcome: "lossless"; report: LossReport }
@@ -55,10 +59,19 @@ export function planConversion(set: NeutralSet, target: ConversionTarget): Conve
     for (const action of actions) {
         const facings = storedFacings(action);
         if (facings.length === 0) continue;
-        if (!facings.some((facing) => stored.has(facing))) {
+        const unfillable = unfillableSlots(target, facings);
+        if (unfillable.length === target.stored.length) {
             return {
                 outcome: "refused",
                 reason: `${action.label}: the target stores none of the facings this action holds art for.`,
+            };
+        }
+        if (unfillable.length > 0) {
+            return {
+                outcome: "refused",
+                reason:
+                    `${action.label}: this holds no art for ${unfillable.join(", ")}, which the target stores. ` +
+                    "A coarser source cannot fill a finer target - there is nothing to put in those slots.",
             };
         }
         // The target SHOWS these and the source DREW them, so writing them away is not a structural drop -

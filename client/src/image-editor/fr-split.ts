@@ -10,6 +10,9 @@ import * as path from "path";
 
 const FR_SPLIT_EXT = /^\.fr[0-5]$/;
 
+/** Files in a split set - one per FRM facing, which is what makes the extension run `.fr0` to `.fr5`. */
+export const FR_SPLIT_MEMBERS = 6;
+
 /** Whether `fsPath` is one of the six split-direction files (`.fr0` .. `.fr5`). */
 export function isFrSplitPath(fsPath: string): boolean {
     return FR_SPLIT_EXT.test(path.extname(fsPath).toLowerCase());
@@ -18,7 +21,9 @@ export function isFrSplitPath(fsPath: string): boolean {
 /** The six `.fr0` .. `.fr5` sibling paths for the set, indexed by facing (0..5), derived from any member. */
 export function frSplitSiblingPaths(fsPath: string): string[] {
     const parsed = path.parse(fsPath);
-    return Array.from({ length: 6 }, (_, d) => path.format({ dir: parsed.dir, name: parsed.name, ext: `.fr${d}` }));
+    return Array.from({ length: FR_SPLIT_MEMBERS }, (_, d) =>
+        path.format({ dir: parsed.dir, name: parsed.name, ext: `.fr${d}` }),
+    );
 }
 
 /** The combined `<base>.frm` path: the set's document identity, and where a Save As defaults to. */

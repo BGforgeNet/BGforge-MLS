@@ -74,6 +74,9 @@ export function buildFrmFixture(): AnimationView {
         meta: { sourceFormat: "frm", fps: 10 },
         basename: "harness-fixture",
         sourceFormat: "frm",
+        // Every fixture here is one file: the harness draws a single animation, and a combined base and
+        // eastern twin is a host-side composition it has no way to stand in for.
+        composedFiles: 1,
         hasSidecarPal: false,
         externalPaletteActive: false,
     };
@@ -109,6 +112,7 @@ export function buildMultiSequenceBamFixture(): AnimationView {
         meta: { sourceFormat: "bam", transparentIndex: 0 },
         basename: "harness-fixture-multi",
         sourceFormat: "bam",
+        composedFiles: 1,
         hasSidecarPal: false,
         externalPaletteActive: false,
     };
@@ -152,6 +156,7 @@ export function buildDirectionalBamFixture(): AnimationView {
         meta: { sourceFormat: "bam", transparentIndex: 0, directionLayout: "ie8", fps: 15 },
         basename: "harness-fixture-directional",
         sourceFormat: "bam",
+        composedFiles: 1,
         hasSidecarPal: false,
         externalPaletteActive: false,
     };
@@ -204,6 +209,7 @@ export function buildRgbaBamFixture(): AnimationView {
         meta: { sourceFormat: "bamv2", fps: 15 },
         basename: "harness-fixture",
         sourceFormat: "bamv2",
+        composedFiles: 1,
     };
 }
 
@@ -230,6 +236,7 @@ export function buildBamFixture(): AnimationView {
         meta: { sourceFormat: "bam", transparentIndex: 0 },
         basename: "harness-fixture",
         sourceFormat: "bam",
+        composedFiles: 1,
         hasSidecarPal: false,
         externalPaletteActive: false,
     };

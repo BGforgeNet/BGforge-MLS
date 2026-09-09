@@ -25,7 +25,7 @@ import {
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
 import { chooseActivePalette } from "./sidecar";
-import { packFramePixels, type AnimationView, type MetaPatch, type SequenceView } from "./webview/messages";
+import { packFramePixels, type ModelAnimationView, type MetaPatch, type SequenceView } from "./webview/messages";
 
 function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
     if (a === b) return true;
@@ -294,7 +294,7 @@ export class ImageDocumentModel {
      * frame's geometry crosses regardless - so an open can paint from the frames it shows and fetch
      * the rest on demand.
      */
-    toView(options?: { include?: ReadonlySet<number> }): AnimationView {
+    toView(options?: { include?: ReadonlySet<number> }): ModelAnimationView {
         const { frames, pixels } = packFramePixels(this.animationValue.frames, options?.include);
         // FRM sequences are built in header-direction order, so the sequence index selects its
         // dirOffsets entry; BAM/BAMC have none, so the anchor's direction shift is 0.
