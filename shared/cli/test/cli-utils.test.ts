@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import {
     checkFileSize,
@@ -612,10 +613,14 @@ describe("runCli --jobs fan-out", () => {
     const fixtureCli = path.join(REPO_ROOT, "shared/cli/test/fixtures/jobs-child.cjs");
     const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-jobs");
     const originalArgv = process.argv;
+    const originalExitCode = process.exitCode;
     let exitSpy: ReturnType<typeof vi.spyOn>;
     let logSpy: ReturnType<typeof vi.spyOn>;
     let stdoutSpy: ReturnType<typeof vi.spyOn>;
     let stderrSpy: ReturnType<typeof vi.spyOn>;
+
+    /** Temp dirs the fan-out has created, by the prefix runParallelJobs uses. */
+    const jobsTmpDirs = (): string[] => fs.readdirSync(os.tmpdir()).filter((n) => n.startsWith("fgcli-jobs-"));
 
     beforeEach(() => {
         exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
@@ -634,6 +639,8 @@ describe("runCli --jobs fan-out", () => {
 
     afterEach(() => {
         process.argv = originalArgv;
+        // A failing case sets process.exitCode; left set, it would fail the whole runner's own exit.
+        process.exitCode = originalExitCode;
         exitSpy.mockRestore();
         logSpy.mockRestore();
         stdoutSpy.mockRestore();
@@ -679,31 +686,34 @@ describe("runCli --jobs fan-out", () => {
 
     it("exits 1 and forwards stderr when a child fails", async () => {
         fs.writeFileSync(path.join(tmpDir, "b.txt"), "fail me");
-        await expect(
-            runCli({
-                args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 2 },
-                extensions: [".txt"],
-                description: "test",
-                processFile: unusedProcessFile,
-            }),
-        ).rejects.toThrow("exit");
-        expect(exitSpy).toHaveBeenCalledWith(1);
+        const before = jobsTmpDirs();
+        await runCli({
+            args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 2 },
+            extensions: [".txt"],
+            description: "test",
+            processFile: unusedProcessFile,
+        });
+        expect(process.exitCode).toBe(1);
         const forwarded = stderrSpy.mock.calls.map((c: unknown[]) => String(c[0])).join("");
         expect(forwarded).toContain("jobs-child: refusing");
+        // The failing path must still run its cleanup: process.exit() would have skipped the finally.
+        expect(jobsTmpDirs()).toEqual(before);
     });
 
     it("check mode: exits 1 when children report changes", async () => {
         // The fixture reports every file as changed; check mode must aggregate
         // to a failing exit even though every child exited 0.
-        await expect(
-            runCli({
-                args: { target: tmpDir, mode: "check", recursive: true, quiet: true, jobs: 2 },
-                extensions: [".txt"],
-                description: "test",
-                processFile: unusedProcessFile,
-            }),
-        ).rejects.toThrow("exit");
-        expect(exitSpy).toHaveBeenCalledWith(1);
+        const before = jobsTmpDirs();
+        await runCli({
+            args: { target: tmpDir, mode: "check", recursive: true, quiet: true, jobs: 2 },
+            extensions: [".txt"],
+            description: "test",
+            processFile: unusedProcessFile,
+        });
+        expect(process.exitCode).toBe(1);
+        // Check-mode-with-changes is the published Actions' normal outcome, so this is the path that
+        // leaked a temp dir per run before the cleanup was reachable.
+        expect(jobsTmpDirs()).toEqual(before);
     });
 
     it("still requires -r for a directory target", async () => {

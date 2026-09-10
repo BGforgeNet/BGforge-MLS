@@ -401,8 +401,14 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
             }
         }
 
-        if (failed) process.exit(1);
-        if (args.mode === "check" && changed > 0) process.exit(1);
+        // Set the code and return rather than process.exit(): exit() runs no pending `finally`, so exiting
+        // from inside this try left the run's temp dir (chunk lists plus spooled stdout) behind on every
+        // failure, and on every check-mode run that found changes - the normal outcome for the published
+        // Actions' `check` input. The caller returns straight after this, so the status is unchanged.
+        if (failed || (args.mode === "check" && changed > 0)) {
+            process.exitCode = 1;
+            return;
+        }
         if (!args.quiet) console.log(`\nSummary: ${changed} changed, ${unchanged} unchanged`);
     } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
