@@ -628,7 +628,7 @@ syntaxes/*.tmLanguage.yml               Updated highlight stanzas
 core/static-loader.ts                   Runtime loading into Symbols index
 ```
 
-YAML data files (~1.7 MB total):
+YAML data files:
 
 | File                       | Contents                                    |
 | -------------------------- | ------------------------------------------- |

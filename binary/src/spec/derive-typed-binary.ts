@@ -340,7 +340,7 @@ class SpecStructSchema extends Schema<unknown> {
                 // fromFieldArray and fromCtxArray both serialise the doc's
                 // array verbatim. The wire count is recovered on read from
                 // either the same-struct field (synced via
-                // `enforceLinkedCounts` + zod refinement) or the ctx supplied
+                // `enforceDerivedFields` + zod refinement) or the ctx supplied
                 // at read time (orchestrator's responsibility).
                 const arr = v[entry.key];
                 if (!Array.isArray(arr)) {

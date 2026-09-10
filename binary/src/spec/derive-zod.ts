@@ -80,7 +80,7 @@ function buildZodSchema<S extends Record<string, FieldSpec>>(
     let schema: z.ZodType<unknown> = z.strictObject(shape);
     if (mode === "strict" && linkedCounts.length > 0) {
         // Save-time guard: each lengthFrom array's length must equal its
-        // declared count field. enforceLinkedCounts (in spec/types.ts) is the
+        // declared count field. enforceDerivedFields (in spec/types.ts) is the
         // pre-serialization sync helper; this refinement is the safety net
         // that catches docs assembled without that helper.
         schema = schema.superRefine((doc, ctx) => {

@@ -53,7 +53,7 @@ binary/src/
   types.ts                     # ParsedField, ParsedGroup, ParseResult, ...
 
   spec/                        # Spec-system primitives (format-agnostic)
-    types.ts                   # FieldSpec, StructSpec, SpecData, arraySpec, enforceLinkedCounts
+    types.ts                   # FieldSpec, StructSpec, SpecData, arraySpec, enforceDerivedFields
     codec-meta.ts              # codecByteLength, codecNumericTypeName
     derive-typed-binary.ts     # toTypedBinarySchema -> SpecCodec<Doc, Ctx>
     derive-zod.ts              # toZodSchema (canonical validator from spec)
@@ -204,7 +204,7 @@ arraySpec<H>({ element: { codec: i32 }, count: { fromCtx: (h: H) => h.numItems }
 ```
 
 - **Fixed** - N elements always.
-- **fromField** - N decoded earlier in the same struct. zod refinement enforces `array.length === doc.n` at save; `enforceLinkedCounts(spec, doc)` is the pre-serialise sync helper that copies `doc.array.length` back into `doc.n`.
+- **fromField** - N decoded earlier in the same struct. zod refinement enforces `array.length === doc.n` at save; `enforceDerivedFields(spec, doc, ctx)` is the pre-serialise sync helper that copies `doc.array.length` back into `doc.n`.
 - **fromCtx** - N lives in another struct decoded earlier in the file (e.g. a header field driving a variable section's length). The orchestrator owns the binding; zod cannot refine across structs. The clamp/safety check belongs in the orchestrator (e.g. `clampVarCount` in `parse-sections.ts` rejects malformed header counts before invoking the spec).
 
 ### Chars fields
@@ -268,7 +268,7 @@ toTypedBinarySchema toZodSchema walkStruct  derive-domain  derive-presentation
 - **`toZodSchema(spec): z.ZodType<SpecData<S>>`** - canonical-doc validator. Scalar fields map to `z.number().int().min().max()` based on codec signedness, narrowed by `domain` and refined to enum keys when `spec.enum` is set (read-permissive / write-strict). Same-struct `fromField` arrays add a save-time refinement asserting `array.length === doc[countField]`. Cross-struct `fromCtx` arrays do not refine (the relation crosses struct boundaries; orchestrator's responsibility).
 - **`walkStruct(spec, presentation, baseOffset, data, groupName, options?)`** - emits a `ParsedGroup` for the editor. Field labels come from `presentation.label` ?? `humanize(fieldName)`. `options.labelPrefix` prepends a per-iteration prefix (e.g. `"Entry 5"` for a script slot). `options.subGroups` rearranges output into nested groups. Array fields render as `"(N values)"` summary rows.
 - **`walkGroup(group, spec, presentation): SpecData<S>`** - inverse of `walkStruct`. Used by canonical-readers to extract typed data from a display group. Looks up by display label (presentation override or humanized field name); prefers `rawValue` over `value` for enum/flags. Throws on array fields - caller iterates the array group structure manually.
-- **`enforceLinkedCounts(spec, doc)`** - pre-serialise helper. Walks the spec, copies `doc[arrayName].length` into the linked `count` field. Returns a new object; does not mutate. Use as the pre-write step in canonical-writer flows that have linked counts.
+- **`enforceDerivedFields(spec, doc, ctx?)`** - pre-serialise helper. Walks the spec and writes every field the spec derives - a linked `count` from `doc[arrayName].length`, and the offset/size roles the `ctx` supplies - into a copy of the doc. Returns a new object only when something changed; does not mutate. Use as the pre-write step in canonical-writer flows. `validateDerivedFields(spec, doc, ctx?)` is its read-side counterpart, returning the mismatches instead of correcting them.
 
 ## Public API
 
@@ -362,7 +362,7 @@ These are non-negotiable across PRO and MAP:
 
    The same pattern covers proto fields the engine seeds to `-1` in its `proto_*_init` / `proto_scenery_subdata_init` helpers (see fallout2-ce `proto.cc`). Vanilla protos that don't override the default save the seed verbatim, so the wire arrives with `0xFFFFFFFF` and the runtime per-object map record (or, rarely, a script-spawn caller) supplies the live value. Spec these fields with signed codecs (`i32`) and add `[-1]: "None"` (or a more specific sentinel label) to the enum table when one is attached. Known fields following this pattern: scenery `material` (`proto_scenery_init`), elevator `type` / `level`, stairs `destinationBuiltTile` / `destinationMap`, ladder `destinationMap` (`proto_scenery_subdata_init`); on the item side `armor.{perk,maleFid,femaleFid}`, `weapon.{projectilePid,perk,ammoTypePid}`, `misc.powerTypePid`, `key.keyCode` carry the same convention.
 
-5. **Linked structures.** Same-struct: array length drives count via `enforceLinkedCounts(spec, doc)` + zod refinement. Cross-struct (`fromCtx`): orchestrator owns the binding; the count flows in via the read-time ctx.
+5. **Linked structures.** Same-struct: array length drives count via `enforceDerivedFields(spec, doc, ctx)` + zod refinement. Cross-struct (`fromCtx`): orchestrator owns the binding; the count flows in via the read-time ctx.
 6. **No work-time artifacts in the repo.** Exception: `tmp/` (in `.gitignore`).
 
 7. **Flat-array projection for flag fields.** A flag-word spec entry (`{codec, flags: Table}`) surfaces in canonical-doc as a flat sorted `string[]`, not as the raw int. Each entry is either a named slug (slugified-camelCase from the table's display string) or `bit<N>` (zero-based bit position) for set bits the table doesn't name. Canonical sort order: named slugs first alphabetically, then `bit<N>` in ascending bit position. Toggling one bit adds or removes one entry at its sorted position - same shape for named and unnamed bits, so diffs read uniformly. `compileFlagTable` slugifies display strings to camelCase canonical keys (`"NoBlock"` -> `noBlock`); `slugifyCodedName` rejects display strings whose slug would collide with the `bit<N>` sentinel namespace. `intToFlagArray` / `flagArrayToInt` translate at the wire codec boundary via the `FlagArraySchema` wrapper.

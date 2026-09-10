@@ -582,7 +582,7 @@ Reusable infrastructure that providers consume via configuration, not inheritanc
 | `jsdoc-completions.ts`  | Completions: JSDoc tag and type completions                                             | SSL, TP2            |
 | `signature.ts`          | Data: `SigInfoEx`, `loadStatic()`, `getRequest()`, `getResponse()`                      | SSL (TP2 ready)     |
 | `completion-context.ts` | Framework: `CompletionCategory`, `CompletionItemWithCategory`, context-based filtering  | TP2                 |
-| `format-utils.ts`       | Validation: `validateFormatting()`, `createFullDocumentEdit()`, comment strippers       | All 4               |
+| `format-edits.ts`       | Edits: `createFullDocumentEdit()` (`validateFormatting()` comes from `@bgforge/format`) | All 4               |
 | `format-options.ts`     | Config: `getFormatOptions()` from `.editorconfig`                                       | All 4               |
 | `tooltip-format.ts`     | Formatting: `buildSignatureBlock()`, `buildWeiduHoverContent()`, `formatDeprecation()`  | All providers       |
 | `tooltip-table.ts`      | Tables: `buildWeiduTable()` (4-col), `buildFalloutArgsTable()` (2-col)                  | SSL, BAF, D, TP2    |
@@ -794,7 +794,7 @@ Thresholds: 91% lines, 80% branches, 96% functions, 90% statements - enforced by
 
 ## Performance Considerations
 
-- **Parse caching**: 10-entry LRU cache avoids re-parsing
+- **Parse caching**: 64-entry LRU cache avoids re-parsing (`DEFAULT_MAX_CACHE_SIZE`, `shared/parsers/parser-factory.ts`)
 - **Debounced reload**: 300ms delay on document changes
 - **Pre-computed responses**: No computation on LSP requests
 - **File-level updates**: Only changed file re-indexed

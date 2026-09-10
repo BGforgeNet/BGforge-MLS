@@ -342,7 +342,7 @@ function fieldSize<T>(fs: FieldSpec, data: T, key: keyof T & string): number {
         }
         // lengthFrom: size from data[arrayKey].length × element bytes. The
         // count field's value is redundant here - array.length is the source
-        // of truth (enforceLinkedCounts keeps the count field in sync).
+        // of truth (enforceDerivedFields keeps the count field in sync).
         const arr = data[key];
         if (!Array.isArray(arr)) {
             throw new TypeError(`lengthFrom array "${key}" expected an array in data, got ${typeof arr}.`);
