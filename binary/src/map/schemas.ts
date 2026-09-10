@@ -10,6 +10,7 @@
 import { BufferReader } from "typed-binary";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { mapHeaderSpec } from "./specs/header";
+import { OTHER_SLOT_BYTES, SPATIAL_SLOT_BYTES, TIMER_SLOT_BYTES } from "./specs/script-slot";
 import { tilePairSpec, type TilePairData } from "./specs/tile-pair";
 
 export const HEADER_SIZE = 0xf0;
@@ -66,6 +67,23 @@ export function parseHeader(data: Uint8Array): MapHeader {
 
 export function getScriptType(sid: number): number {
     return (sid >>> 24) & 0xf;
+}
+
+/**
+ * Wire size of one script slot, keyed by the type packed into its sid. Sole home for that mapping: the
+ * parser bounds-checks a slot with it, the writer advances by it, and the writer's layout pass sizes the
+ * buffer from it - restating it per caller leaves the allocation and the fill free to disagree, which
+ * either overflows the buffer or shifts every byte after the gap.
+ */
+export function scriptSlotBytes(sid: number): number {
+    switch (getScriptType(sid)) {
+        case 1:
+            return SPATIAL_SLOT_BYTES;
+        case 2:
+            return TIMER_SLOT_BYTES;
+        default:
+            return OTHER_SLOT_BYTES;
+    }
 }
 
 export const TILES_PER_ELEVATION = 10000;

@@ -6,18 +6,11 @@ import type { z } from "zod";
 import { BufferWriter } from "typed-binary";
 import { decodeOpaqueRange } from "../opaque-range";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
-import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType, tilePairCodec } from "./schemas";
+import { HEADER_SIZE, TILE_DATA_SIZE_PER_ELEVATION, getScriptType, scriptSlotBytes, tilePairCodec } from "./schemas";
 import { mapHeaderSpec } from "./specs/header";
 import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
 import { enforceDerivedFields } from "../spec/types";
-import {
-    OTHER_SLOT_BYTES,
-    SPATIAL_SLOT_BYTES,
-    TIMER_SLOT_BYTES,
-    otherSlotSpec,
-    spatialSlotSpec,
-    timerSlotSpec,
-} from "./specs/script-slot";
+import { otherSlotSpec, spatialSlotSpec, timerSlotSpec } from "./specs/script-slot";
 import { objectBaseSpec, inventoryHeaderSpec, critterDataSpec, exitGridSpec } from "./specs/object";
 import { hasElevation } from "./types";
 import type { ParseOpaqueRange } from "../types";
@@ -157,7 +150,7 @@ function serializeScriptSlot(bytes: Uint8Array, slot: z.infer<typeof mapScriptSl
                 spatialRadius: slot.spatialRadius ?? 0,
                 ...commons,
             });
-            return offset + SPATIAL_SLOT_BYTES;
+            break;
         case 2:
             timerSlotCodec.write(writer, {
                 sid: slot.sid,
@@ -165,15 +158,16 @@ function serializeScriptSlot(bytes: Uint8Array, slot: z.infer<typeof mapScriptSl
                 timerTime: slot.timerTime ?? 0,
                 ...commons,
             });
-            return offset + TIMER_SLOT_BYTES;
+            break;
         default:
             otherSlotCodec.write(writer, {
                 sid: slot.sid,
                 nextScriptLinkLegacy: slot.nextScriptLinkLegacy,
                 ...commons,
             });
-            return offset + OTHER_SLOT_BYTES;
+            break;
     }
+    return offset + scriptSlotBytes(slot.sid);
 }
 
 function serializeScripts(
@@ -327,16 +321,7 @@ function scriptSectionLength(scripts: z.infer<typeof mapScriptSectionSchema>[]):
         }
         for (const extent of section.extents) {
             for (const slot of extent.slots) {
-                let slotLength = 64;
-                switch (getScriptType(slot.sid)) {
-                    case 1:
-                        slotLength += 8;
-                        break;
-                    case 2:
-                        slotLength += 4;
-                        break;
-                }
-                length += slotLength;
+                length += scriptSlotBytes(slot.sid);
             }
             length += 8;
         }

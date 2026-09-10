@@ -14,14 +14,13 @@ import {
     parseHeader,
     tilePairCodec,
     getScriptType,
+    scriptSlotBytes,
     type MapHeader,
 } from "./schemas";
 import { mapHeaderCanonicalSpec, mapHeaderPresentation } from "./specs/header";
 import { varSectionSpec, type VarSectionCtx } from "./specs/variables";
 import {
     OTHER_SLOT_BYTES,
-    SPATIAL_SLOT_BYTES,
-    TIMER_SLOT_BYTES,
     otherSlotSpec,
     otherSlotPresentation,
     spatialSlotSpec,
@@ -201,7 +200,7 @@ function parseScriptEntryFields(
     const sid = sidView.getUint32(0, false);
     const scriptType = getScriptType(sid);
 
-    const slotBytes = scriptType === 1 ? SPATIAL_SLOT_BYTES : scriptType === 2 ? TIMER_SLOT_BYTES : OTHER_SLOT_BYTES;
+    const slotBytes = scriptSlotBytes(sid);
     if (currentOffset + slotBytes > data.length) {
         errors.push(`Script entry ${label} overflow at offset 0x${currentOffset.toString(16)}`);
         return { fields: [], offset: data.length };
