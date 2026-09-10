@@ -15,11 +15,41 @@ import {
     loadExclusions,
     collectFiles,
     parseCliArgs,
+    reportFatal,
     runCli,
     type FileResult,
     type OutputMode,
 } from "../cli-utils";
 import { REPO_ROOT } from "./repo-root";
+
+describe("reportFatal", () => {
+    const originalExitCode = process.exitCode;
+    let errorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+        errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        // Left set, a failing case would fail the whole runner's own exit.
+        process.exitCode = originalExitCode;
+        errorSpy.mockRestore();
+    });
+
+    it("reports an Error's message", () => {
+        reportFatal(new Error("bad input"));
+        expect(errorSpy).toHaveBeenCalledWith("Error:", "bad input");
+        expect(process.exitCode).toBe(1);
+    });
+
+    it("reports a non-Error throw instead of printing undefined", () => {
+        // The shape this replaced: reading `.message` off an unnarrowed catch printed "Error: undefined"
+        // for anything that is not an Error, which is what a rejected string or a foreign value gives.
+        reportFatal("plain string rejection");
+        expect(errorSpy).toHaveBeenCalledWith("Error:", "plain string rejection");
+        expect(process.exitCode).toBe(1);
+    });
+});
 
 describe("reportDiff", () => {
     let stderrSpy: ReturnType<typeof vi.spyOn>;
