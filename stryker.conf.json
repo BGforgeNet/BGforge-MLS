@@ -17,10 +17,13 @@
     "tsconfigFile": "binary/tsconfig.json",
     "ignorePatterns": ["external", "tmp", ".vscode-test", ".dev"],
     "coverageAnalysis": "perTest",
+    "ignoreStatic": true,
+    "incremental": true,
+    "incrementalFile": "tmp/mutation/incremental.json",
     "thresholds": {
-        "high": 80,
-        "low": 57,
-        "break": 55
+        "high": 90,
+        "low": 85,
+        "break": 83
     },
     "reporters": ["clear-text", "progress", "html"],
     "htmlReporter": {
