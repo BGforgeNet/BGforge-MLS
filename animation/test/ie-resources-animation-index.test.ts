@@ -287,6 +287,33 @@ describe("createAnimationIndexResolver", () => {
         expect(opened).toBe(1);
     });
 
+    /**
+     * The resolver outlives every panel and each entry holds a whole install's index, so the cache is
+     * capped rather than growing for the session. Past the cap the least-recently-inserted install is
+     * dropped and rebuilt on next use.
+     */
+    it("drops the oldest install once more than the cap are resolved", () => {
+        const opens: string[] = [];
+        const resolve = createAnimationIndexResolver({
+            gameAt: (dir) => {
+                opens.push(dir);
+                return miniGame();
+            },
+        });
+
+        for (const dir of ["/games/a", "/games/b", "/games/c", "/games/d"]) resolve(dir);
+        expect(opens).toEqual(["/games/a", "/games/b", "/games/c", "/games/d"]);
+
+        // Still resident, so answered from the cache without reopening.
+        resolve("/games/d");
+        expect(opens).toHaveLength(4);
+
+        // The fifth install overflows the cap and evicts the first, which then rebuilds on next use.
+        resolve("/games/e");
+        resolve("/games/a");
+        expect(opens).toEqual(["/games/a", "/games/b", "/games/c", "/games/d", "/games/e", "/games/a"]);
+    });
+
     it("reads a game that throws as having no animations rather than failing the panel", () => {
         const resolve = createAnimationIndexResolver({
             gameAt: () => {

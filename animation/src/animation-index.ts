@@ -289,6 +289,13 @@ export type AnimationIndexResolver = (gameDir: string) => readonly AnimationSet[
  */
 type AnimationIndexFailureReporter = (gameDir: string, error: unknown) => void;
 
+/**
+ * How many installs' indices stay resident. The resolver lives as long as the editor host and each entry
+ * holds a whole install's animation index, so an unbounded map keeps every install a session ever opened.
+ * Well past what a session realistically opens - the cap bounds the tail rather than being reached.
+ */
+const MAX_CACHED_INSTALLS = 4;
+
 /** Cached per game directory: whether an install's animations can be listed is a property of the install. */
 export function createAnimationIndexResolver(
     currentGame: GameSource,
@@ -310,6 +317,12 @@ export function createAnimationIndexResolver(
             return;
         }
         cache.set(gameDir, index);
+        // Evict least-recently-inserted on overflow (Map insertion order, the shape the server's
+        // text cache and symbol index already use).
+        if (cache.size > MAX_CACHED_INSTALLS) {
+            const oldest = cache.keys().next().value;
+            if (oldest !== undefined) cache.delete(oldest);
+        }
         return index ?? undefined;
     };
 }
