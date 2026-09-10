@@ -14,29 +14,18 @@
 import { Node, SyntaxKind, type CallExpression, type FunctionDeclaration } from "ts-morph";
 import { getSharedProject } from "../../../transpilers/common/shared-project";
 import { conlog } from "../logger";
-import type {
-    SSLDialogBlock,
-    SSLDialogBlockItem,
-    SSLDialogBranch,
-    SSLDialogData,
-    SSLDialogGroup,
-    SSLDialogNode,
-    SSLDialogOption,
-    SSLDialogOptionType,
-    SSLDialogReply,
+import {
+    type SSLDialogBlock,
+    type SSLDialogBlockItem,
+    type SSLDialogBranch,
+    type SSLDialogData,
+    type SSLDialogGroup,
+    type SSLDialogNode,
+    type SSLDialogOption,
+    type SSLDialogReply,
+    isSslMessageFn,
+    isSslOptionFn,
 } from "../../../shared/dialog-types";
-
-const OPTION_FNS: ReadonlySet<string> = new Set<SSLDialogOptionType>([
-    "NOption",
-    "NLowOption",
-    "GOption",
-    "GLowOption",
-    "BOption",
-    "BLowOption",
-]);
-const MESSAGE_FNS: ReadonlySet<string> = new Set<SSLDialogOptionType>(["NMessage", "GMessage", "BMessage"]);
-const isOptionFn = (n: string): n is SSLDialogOptionType => OPTION_FNS.has(n);
-const isMessageFn = (n: string): n is SSLDialogOptionType => MESSAGE_FNS.has(n);
 
 const TALK_PROC = "talk_p_proc";
 
@@ -169,7 +158,7 @@ function isDialogOrTransitionStmt(stmt: Node, localFns: ReadonlySet<string>): bo
     if (!Node.isCallExpression(expr)) return false;
     const name = calleeName(expr);
     if (name === undefined) return false;
-    return name === "Reply" || isOptionFn(name) || isMessageFn(name) || localFns.has(name);
+    return name === "Reply" || isSslOptionFn(name) || isSslMessageFn(name) || localFns.has(name);
 }
 
 /**
@@ -312,7 +301,7 @@ function buildBlockTSSL(
                     items.push({ kind: "line", replyIndex: counters.reply++ });
                     continue;
                 }
-                if (cn !== undefined && (isOptionFn(cn) || isMessageFn(cn))) {
+                if (cn !== undefined && (isSslOptionFn(cn) || isSslMessageFn(cn))) {
                     items.push({ kind: "choice", optionIndex: counters.opt++ });
                     continue;
                 }
@@ -364,7 +353,7 @@ function buildBranchesTSSL(fn: FunctionDeclaration): SSLDialogBranch[] {
                         branch.replyIndices.push(replyIdx++);
                         continue;
                     }
-                    if (cn !== undefined && (isOptionFn(cn) || isMessageFn(cn))) {
+                    if (cn !== undefined && (isSslOptionFn(cn) || isSslMessageFn(cn))) {
                         branch.optionIndices.push(optIdx++);
                         continue;
                     }
@@ -463,7 +452,7 @@ function buildNode(
                 ...(conditional !== undefined ? { conditional } : {}),
                 ...(ifSpans ? { condRange: ifSpans.condRange, ifRange: ifSpans.ifRange, ifPure: ifSpans.ifPure } : {}),
             });
-        } else if (isOptionFn(cn) && arg0 && args[1]) {
+        } else if (isSslOptionFn(cn) && arg0 && args[1]) {
             const arg1 = args[1];
             const ifSpans = enclosingIfSpans(node);
             const conditional = enclosingConditionTSSL(node);
@@ -481,7 +470,7 @@ function buildNode(
                 targetRange: span(arg1),
                 stmtRange: stmtSpan(node),
             });
-        } else if (isMessageFn(cn) && arg0) {
+        } else if (isSslMessageFn(cn) && arg0) {
             // A terminal message has no target node, but it can still be conditionally gated (Message-branch
             // parity with the SSL parser, which the old single-level TSSL parser omitted entirely).
             const conditional = enclosingConditionTSSL(node);

@@ -21,6 +21,36 @@ export type SSLDialogOptionType =
     | "GMessage"
     | "BMessage";
 
+/** The option half of {@link SSLDialogOptionType}: calls that offer the player a line to pick. */
+export const SSL_OPTION_FN_NAMES: ReadonlySet<string> = new Set<SSLDialogOptionType>([
+    "NOption",
+    "NLowOption",
+    "GOption",
+    "GLowOption",
+    "BOption",
+    "BLowOption",
+]);
+
+/** The message half: calls that speak a line without offering a choice. */
+export const SSL_MESSAGE_FN_NAMES: ReadonlySet<string> = new Set<SSLDialogOptionType>([
+    "NMessage",
+    "GMessage",
+    "BMessage",
+]);
+
+// Both SSL dialog parsers - the tree-sitter one and the ts-morph one - key on these names, and a name
+// added to one spelling and not the other is a silent divergence between the two. They are typed
+// `ReadonlySet<string>` rather than `Set<SSLDialogOptionType>` so `.has()` narrows in the guards below
+// without a cast at the call site.
+
+export function isSslOptionFn(name: string): name is SSLDialogOptionType {
+    return SSL_OPTION_FN_NAMES.has(name);
+}
+
+export function isSslMessageFn(name: string): name is SSLDialogOptionType {
+    return SSL_MESSAGE_FN_NAMES.has(name);
+}
+
 export interface SSLDialogReply {
     msgId: number | string;
     line: number;
