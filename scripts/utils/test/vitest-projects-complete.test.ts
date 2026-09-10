@@ -22,6 +22,9 @@ const EXCLUDED: Readonly<Record<string, string>> = {
     // The aggregate's own file.
     "vitest.config.ts": "the aggregate itself",
     // Stryker drives this one (stryker.conf.json `vitest.configFile`); it reruns the unit suite under mutants.
+    "binary/vitest.mutation.config.ts": "driven by Stryker, not a standalone suite",
+    // Kept after the mutation scope moved to binary/: re-pointing Stryker at the server is a config-file
+    // swap, and deleting this would make that a rewrite instead.
     "server/vitest.mutation.config.mts": "driven by Stryker, not a standalone suite",
     // Minutes-long corpus sweeps against committed oracles, gated to the close-out tier by scripts/test-all.sh.
     // A root `vitest run` is a dev-loop gesture and must not turn into that.

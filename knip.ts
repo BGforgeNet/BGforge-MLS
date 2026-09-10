@@ -64,9 +64,10 @@ const config: KnipConfig = {
             ignore: ["src/dialog-editor/test/harness/**"],
         },
         server: {
-            // vitest.mutation.config.mts is referenced from stryker.conf.json
-            // (vitest.configFile); knip's Stryker plugin resolves runner/checker
-            // package names but not vitest configFile paths, so list it explicitly.
+            // vitest.mutation.config.mts is no longer what Stryker drives - the mutation scope moved to
+            // binary/ (see stryker.conf.json and the mutation workflow's header for why). It is kept, and
+            // kept listed here, so re-pointing the scope back is a one-line config swap rather than a
+            // rewrite; without the entry knip reports it as an unused file.
             // src/server.ts has to be listed: knip derives the default entry from the tsconfig, and the
             // explicit `rootDir` there (added so tsgolint can build a program - see that comment) stops
             // the derivation, which drops server.ts and every handler it reaches.
@@ -166,7 +167,11 @@ const config: KnipConfig = {
             ignoreDependencies: ["quick-lru", "cac", "diff"],
         },
         binary: {
-            entry: ["test/**/*.test.ts"],
+            // vitest.mutation.config.ts is referenced from stryker.conf.json (vitest.configFile);
+            // knip's Stryker plugin resolves runner/checker package names but not vitest configFile
+            // paths, so list it explicitly - same treatment the server's copy had while the mutation
+            // scope lived there.
+            entry: ["vitest.mutation.config.ts", "test/**/*.test.ts"],
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],

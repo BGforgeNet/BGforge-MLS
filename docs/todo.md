@@ -100,3 +100,29 @@ consumer with committed snapshots even if the library API is unchanged.
 
 Until this lands, any change to `createBinaryJsonSnapshot` output should be
 treated as a breaking change to all snapshot consumers.
+
+## Fallout SSL: argument declarations for signature help
+
+Signature help is wired end to end for Fallout SSL and works, but the data behind it covers one
+function. `generateSignatures` (`scripts/utils/src/generate-data.ts`) emits an entry for every item
+declaring an `args:` block and skips the rest; across `server/data/fallout-ssl-base.yml` and
+`fallout-ssl-sfall.yml` there are 807 named items and exactly one declares `args`. So
+`server/out/signature.fallout-ssl.json` holds a single entry (`critter_mod_skill`) while the
+completion file built from the same source in the same run is 7991 lines. WeiDU TP2 declares 67
+`args` blocks by comparison.
+
+Nothing is broken: the generator, the loader (`server/src/fallout-ssl/provider.ts`) and the LSP
+surface all behave correctly. The gap is that the data was never filled in, and because the
+pipeline works exactly as written no test or gate reports it.
+
+### Approach
+
+Prefer deriving the argument lists from a source that already carries them - the engine-procedure
+JSON the TSSL plugin consumes (`server/out/fallout-ssl-engine-procedures.json`) is the obvious
+candidate - and hand-author only the prose. That turns an 807-entry authoring job into a mapping
+pass plus incremental documentation. Authoring `args` by hand, most-used functions first, is the
+fallback if no existing source lines up; either way each entry improves the feature the moment it
+lands, with no code change.
+
+A coverage assertion over the generated signature file would keep this visible once it starts
+moving - today the count is 1 and nothing says so.

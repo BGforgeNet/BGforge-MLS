@@ -48,6 +48,10 @@ node_modules
 .npmrc
 .pnpm-store/
 tmp
+# Stryker's sandbox copy of the tree, recreated per run. Its HTML report already lands under tmp/
+# (stryker.conf.json htmlReporter); this is the working dir, which only appears when the mutation
+# gate is run locally rather than on a throwaway CI checkout.
+.stryker-tmp/
 
 *.wasm
 
