@@ -66,7 +66,7 @@ allowBuilds:
 
 # Transitive pins addressing security advisories. Each is still load-bearing: with
 # it removed, `pnpm install` resolves the dependency back to a vulnerable version
-# and `pnpm audit` re-flags the advisory. All three re-verified that way on
+# and `pnpm audit` re-flags the advisory. The first three re-verified that way on
 # 2026-09-01: without them the resolution falls back to diff 7.0.0,
 # serialize-javascript 6.0.2 and qs 6.15.1, and `pnpm audit` reports all four
 # advisories again. mocha 11.8.0 still bundles both vulnerable versions, so its
@@ -82,6 +82,15 @@ allowBuilds:
 #     comma parsing, 6.14.2 to 6.15.3). Both fixed in 6.16.0, which was five days old
 #     when pinned - inside the usual maturity preference, taken because the
 #     alternative was leaving two open advisories on a dev-only path.
+#   - js-yaml via @vscode/vsce -> @secretlint/node, reached through both
+#     rc-config-loader and @textlint/linter-formatter (GHSA-2883-xcg3-v3hh:
+#     maxTotalMergeKeys does not bound CPU use for empty merge sources; fixed in
+#     4.3.2). Added 2026-09-10. Same shape as the qs pin - the path is packaging-only
+#     and never reaches shipped runtime code, and @vscode/vsce is already at its
+#     latest stable with no fix released, so the pin is the only route to a clean audit.
+#     Capped below 5 deliberately: a bare ">=4.3.2" resolves to js-yaml 5.x, which is a
+#     major its consumers here never declared - the same trap the brace-expansion note
+#     below records. 4.3.2 is the patched release on the line they do declare.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. Overrides are dropped once their
 # upstreams resolve to a patched version on their own (verified by removing the pin,
@@ -108,6 +117,7 @@ overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
   qs: ">=6.16.0"
+  js-yaml: ">=4.3.2 <5"
 
 # pnpm 11 enables minimumReleaseAge (24h maturity window) by default. The built-in
 # SSL compiler ships as a GitHub-release tarball (server/package.json
