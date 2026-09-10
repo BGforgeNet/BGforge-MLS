@@ -25,6 +25,7 @@ import {
     runCli,
     safeProcess,
     reportDiff,
+    reportFatal,
 } from "../../shared/cli/cli-utils";
 import { MAX_FILE_SIZES } from "./max-file-sizes";
 
@@ -362,7 +363,4 @@ async function main() {
     });
 }
 
-main().catch((error) => {
-    console.error("Error:", error.message);
-    process.exit(1);
-});
+main().catch(reportFatal);

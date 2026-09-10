@@ -48,6 +48,7 @@ import {
     runCli,
     safeProcess,
     reportDiff,
+    reportFatal,
 } from "../../shared/cli/cli-utils";
 
 // Per-extension input-size cap. Real-world source files stay well below
@@ -291,7 +292,4 @@ async function main() {
     });
 }
 
-main().catch((error) => {
-    console.error("Error:", error.message);
-    process.exit(1);
-});
+main().catch(reportFatal);

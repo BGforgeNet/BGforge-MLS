@@ -415,6 +415,19 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
     }
 }
 
+/**
+ * Report a fatal error from a CLI's top-level `.catch` and mark the run failed.
+ *
+ * The caught value is `unknown`, so `.message` is not there to read: a non-Error throw - a string, a
+ * rejected value from a dependency - printed `Error: undefined`, which is what every one of these
+ * handlers did before they shared this. Sets `exitCode` instead of calling `process.exit` so buffered
+ * stderr still flushes; nothing follows the catch in any of the callers.
+ */
+export function reportFatal(error: unknown): void {
+    console.error("Error:", error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+}
+
 export async function runCli(options: RunOptions): Promise<void> {
     const { args, extensions, description, init, processFile, chunksPerJob = 8 } = options;
 

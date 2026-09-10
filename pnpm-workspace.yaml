@@ -52,7 +52,8 @@ catalog:
 
 # Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive
-# `@vscode/vsce` dep no longer used since vsce 3. `@vscode/vsce-sign` only matters
+# `@vscode/vsce` optionalDependency - still declared by vsce 3.9.2 and still resolved in the
+# lockfile, so what is denied is its native build, not its presence. `@vscode/vsce-sign` only matters
 # when signing the VSIX, which is not done in this build. `lefthook`'s postinstall
 # downloads the platform binary used by `pnpm exec lefthook install` (wired via the
 # root `prepare` script).

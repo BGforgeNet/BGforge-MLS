@@ -29,7 +29,7 @@
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
-import { effV2BodyLabels, effV2BodyRows } from "./../eff/effect-body-layout";
+import { effV2BodyLabels, effV2BodyRows } from "../eff/effect-body-layout";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 
 // CRE embeds an effect record per `effStructureVersion`; v2 effects are byte-identical to a standalone `.eff`,

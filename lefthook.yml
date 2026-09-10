@@ -73,6 +73,12 @@ pre-commit:
     lint-shell:
       glob: "*.sh"
       run: pnpm lint:shell
+    lint-md-links:
+      glob: "*.md"
+      # The other Phase 1 check that was missing here, so a broken cross-doc link only failed in CI.
+      # Whole-tree rather than {staged_files}, like lint-types above: a link check is about the graph
+      # between documents, and the file a rename breaks is usually not the file being committed.
+      run: pnpm lint:md-links
     lint-workflows:
       glob:
         - ".github/**"

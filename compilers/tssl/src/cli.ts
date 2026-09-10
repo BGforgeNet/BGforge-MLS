@@ -28,6 +28,7 @@ import {
     runCli,
     safeProcess,
     reportDiff,
+    reportFatal,
 } from "../../../shared/cli/cli-utils";
 
 // A TSSL source is a TypeScript module; the largest in real mod corpora stay well under 200 KB. The cap
@@ -190,7 +191,4 @@ async function main() {
     await runCli({ args, extensions: [EXT_TSSL], description: EXT_TSSL, processFile, chunksPerJob: 1 });
 }
 
-main().catch((error) => {
-    console.error("Error:", error.message);
-    process.exit(1);
-});
+main().catch(reportFatal);

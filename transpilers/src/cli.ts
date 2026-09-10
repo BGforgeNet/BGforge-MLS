@@ -20,6 +20,7 @@ import {
     runCli,
     safeProcess,
     reportDiff,
+    reportFatal,
 } from "../../shared/cli/cli-utils";
 type TranspileType = "td" | "tbaf";
 
@@ -126,7 +127,4 @@ async function main() {
     await runCli({ args, extensions: EXTENSIONS, description: ".td and .tbaf", processFile });
 }
 
-main().catch((error) => {
-    console.error("Error:", error.message);
-    process.exit(1);
-});
+main().catch(reportFatal);
