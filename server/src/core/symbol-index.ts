@@ -9,23 +9,12 @@
  * - Immutable symbols: Stored symbols are never mutated
  * - Scope-aware queries: Respects visibility rules based on scope level
  * - Pre-computed responses: Symbols contain ready-to-return LSP data
- * - Type-safe lookups: Typed methods return narrowed symbol types
  */
 
 import { type CancellationToken, type Location, type SymbolInformation } from "vscode-languageserver/node";
 import type { NormalizedUri } from "./normalized-uri";
 import { type NameCase, nameCaseKey } from "./name-case";
-import {
-    type SymbolKind,
-    type IndexedSymbol,
-    type CallableSymbol,
-    type VariableSymbol,
-    ScopeLevel,
-    SourceType,
-    isCallableSymbol,
-    isVariableSymbol,
-    symbolKindToVscodeKind,
-} from "./symbol";
+import { type SymbolKind, type IndexedSymbol, ScopeLevel, SourceType, symbolKindToVscodeKind } from "./symbol";
 // =============================================================================
 // Types
 // =============================================================================
@@ -96,8 +85,8 @@ const DEFAULT_MAX_FILES = 2000;
 /**
  * Unified symbol storage providing lookups and queries for all LSP features.
  *
- * Provides both generic lookups (returning IndexedSymbol union type) and typed lookups
- * (returning narrowed types like CallableSymbol) for type-safe access.
+ * Lookups return the IndexedSymbol union; callers that need a narrower type discriminate with
+ * the guards in ./symbol at the call site.
  */
 export class Symbols {
     // -------------------------------------------------------------------------
@@ -267,8 +256,6 @@ export class Symbols {
     /**
      * Look up a symbol by exact name.
      * Returns the best match based on scope precedence: document > workspace > static.
-     *
-     * Use typed lookups (lookupCallable, lookupVariable) when you know the symbol type.
      */
     lookup(name: string, context?: QueryContext): IndexedSymbol | undefined {
         const all = this.lookupAll(name, context);
@@ -434,48 +421,6 @@ export class Symbols {
         }
 
         return results;
-    }
-
-    // -------------------------------------------------------------------------
-    // Typed lookup operations
-    // -------------------------------------------------------------------------
-
-    /**
-     * Look up a callable symbol (function, procedure, macro, action, trigger) by name.
-     * Returns the best match, already narrowed to CallableSymbol type.
-     *
-     * Use when hovering on a function call like `LPF my_func`.
-     */
-    lookupCallable(name: string, context?: QueryContext): CallableSymbol | undefined {
-        return this.lookupAllCallables(name, context)[0];
-    }
-
-    /**
-     * Look up all callable symbols with exact name.
-     * Returns matches sorted by scope precedence, narrowed to CallableSymbol[].
-     *
-     * Use for go-to-definition on function calls.
-     */
-    lookupAllCallables(name: string, context?: QueryContext): CallableSymbol[] {
-        return this.lookupAll(name, context).filter((s): s is CallableSymbol => isCallableSymbol(s));
-    }
-
-    /**
-     * Look up a variable symbol by name.
-     * Returns the best match, already narrowed to VariableSymbol type.
-     *
-     * Use when hovering on a variable reference.
-     */
-    lookupVariable(name: string, context?: QueryContext): VariableSymbol | undefined {
-        return this.lookupAllVariables(name, context)[0];
-    }
-
-    /**
-     * Look up all variable symbols with exact name.
-     * Returns matches sorted by scope precedence, narrowed to VariableSymbol[].
-     */
-    lookupAllVariables(name: string, context?: QueryContext): VariableSymbol[] {
-        return this.lookupAll(name, context).filter((s): s is VariableSymbol => isVariableSymbol(s));
     }
 
     // -------------------------------------------------------------------------
