@@ -29,13 +29,21 @@ export interface AnimationIniDeclaration {
     /** `resref_armor_specific` - the fourth letter at the highest level, where it differs. */
     armorSpecific?: string;
     /**
-     * `split_bams` - whether the eastern facings are stored in their own files.
+     * `split_bams` - which FILE SCHEME the animation uses, and nothing about facings.
      *
-     * The engine never looks to see whether an east file exists; it builds the name from this. So a set
-     * written with its east stored and this left off draws mirrored west, and the stored art is never
-     * addressed - which is why the writer takes it from the same choice that stored the east.
+     * The documentation gives it one meaning for every type that carries it: 0 packs the animation into
+     * `G1` and `G2`, 1 spreads it over subfiles. It says nothing about the east, which is fixed by the
+     * type - except in the one family below, which declares it.
      */
     splitBams?: boolean;
+    /**
+     * `mirror` - whether the engine computes the eastern facings, for the one family that declares it.
+     *
+     * Every other type fixes this, so a declaration of it there would be read by nothing. The burrowing
+     * family states two geometries and this is what chooses between them: clear, and the east is read from
+     * `*E` companions; set, and the engine flips a western cycle for it.
+     */
+    mirror?: boolean;
     /** `false_color` - whether the engine applies replacement colours to this animation. */
     falseColor?: boolean;
     /** `quadrants` - how many files each frame is split across, for the families that split. */
@@ -65,6 +73,7 @@ export function writeAnimationIni(declaration: AnimationIniDeclaration): string 
         ...line("resref_armor_base", declaration.armorBase),
         ...line("resref_armor_specific", declaration.armorSpecific),
         ...line("split_bams", declaration.splitBams),
+        ...line("mirror", declaration.mirror),
         ...line("false_color", declaration.falseColor),
         ...line("quadrants", declaration.quadrants),
         "",

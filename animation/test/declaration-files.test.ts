@@ -47,6 +47,19 @@ describe("declarationFiles for an Infinity Engine target", () => {
     });
 
     /**
+     * The burrowing family is the only one that declares whether its east is computed, and it is the only
+     * one this writes the field for: elsewhere the type fixes the answer and a declaration of it is read
+     * by nothing. Written from the target, since that is what decided whether a companion was produced.
+     */
+    it("declares the computed east for the one family that reads such a declaration", () => {
+        const burrowing = fileNamed(declarationFiles(input({ section: "monster_ankheg" })), "6006.ini");
+        const other = fileNamed(declarationFiles(input({ section: "monster" })), "6006.ini");
+
+        expect(burrowing).toContain("mirror=");
+        expect(other).not.toContain("mirror=");
+    });
+
+    /**
      * The flag names the FILE SCHEME, not the eastern facings. The published documentation states it
      * identically for every type that carries one: 0 packs the animation into `G1` and `G2`, 1 spreads it
      * over subfiles. One reference reads it to choose between exactly those two suffix maps and the other

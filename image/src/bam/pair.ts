@@ -76,23 +76,38 @@ export function splitIeBamPair(
  * layout it wrote rather than asking a reader to infer it back; the cycle count is still checked, since a
  * count off the stride cannot be blocks whatever the caller believes.
  */
+/** How a band divides between the two files, for a scheme wider than the eight-point one. */
+export interface PairBlocks {
+    /** Cycles in one direction band. */
+    stride: number;
+    /** How many of them the BASE file keeps; the companion takes the rest. */
+    baseSlots: number;
+}
+
+const EIGHT_POINT: PairBlocks = { stride: IE_STRIDE, baseSlots: IE_WEST_SLOTS };
+
 export function splitIeBamBlocks(
     combined: IndexedAnimation,
+    blocks: PairBlocks = EIGHT_POINT,
 ): { base: IndexedAnimation; east: IndexedAnimation } | undefined {
-    if (combined.sequences.length === 0 || combined.sequences.length % IE_STRIDE !== 0) return undefined;
+    if (combined.sequences.length === 0 || combined.sequences.length % blocks.stride !== 0) return undefined;
     return {
-        base: sideAnimation(combined, (slot) => slot < IE_WEST_SLOTS),
-        east: sideAnimation(combined, (slot) => slot >= IE_WEST_SLOTS),
+        base: sideAnimation(combined, blocks, (slot) => slot < blocks.baseSlots),
+        east: sideAnimation(combined, blocks, (slot) => slot >= blocks.baseSlots),
     };
 }
 
 // One side of the split: kept slots get their cycles with frames compacted into a fresh pool (the
 // other side's frames must not ship in this file); dropped slots become empty dummy cycles.
-function sideAnimation(combined: IndexedAnimation, keep: (slot: number) => boolean): IndexedAnimation {
+function sideAnimation(
+    combined: IndexedAnimation,
+    blocks: PairBlocks,
+    keep: (slot: number) => boolean,
+): IndexedAnimation {
     const remap = new Map<number, number>();
     const frames: Frame[] = [];
     const sequences: Sequence[] = combined.sequences.map((seq, i) => {
-        if (!keep(i % IE_STRIDE)) return { frameRefs: [], facing: "none" };
+        if (!keep(i % blocks.stride)) return { frameRefs: [], facing: "none" };
         const refs = validRefs(seq.frameRefs, combined.frames.length).map((r) => {
             let mapped = remap.get(r);
             if (mapped === undefined) {

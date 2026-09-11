@@ -17,12 +17,21 @@ const GAME = process.env.BGFORGE_IE_GAME;
 
 describe("targetForSection", () => {
     it("gives no geometry to the families whose shape these profiles cannot express", () => {
-        // Sixteen slots holding eight pictures; sixteen spread across a base and a companion; two
-        // geometries chosen by a field this project does not read; and a family with no directions at all.
+        // Sixteen slots holding eight pictures, and a family with no directions at all.
         expect(targetForSection("monster_quadrant")).toBeUndefined();
-        expect(targetForSection("monster_large16")).toBeUndefined();
-        expect(targetForSection("monster_ankheg")).toBeUndefined();
         expect(targetForSection("effect")).toBeUndefined();
+    });
+
+    /**
+     * The wide family divides its band at ten rather than at the nine-slot west arc, which is why it takes
+     * a profile of its own rather than the sixteen-point one that stores every facing in the base.
+     */
+    it("gives the wide family a profile that pairs its east at the documented slot", () => {
+        const wide = targetForSection("monster_large16");
+
+        expect(wide?.pairEast).toBe(true);
+        expect(wide?.stride).toBe(16);
+        expect(wide?.baseSlots).toBe(10);
     });
 
     it("gives no geometry to a header this project has no spelling for", () => {

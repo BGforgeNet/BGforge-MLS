@@ -41,6 +41,14 @@ export interface ConversionTarget {
      */
     pairEast: boolean;
     /**
+     * How many slots of a band the BASE file keeps, where the east goes to a companion.
+     *
+     * Not derivable from the stored arc: the eight-point families keep five of eight, and the wide
+     * sixteen-point one keeps ten of sixteen - one slot further round than the nine-slot west arc a
+     * MIRRORED sixteen-point scheme stores. The documentation states each layout, so it is carried.
+     */
+    baseSlots?: number;
+    /**
      * Whether the target fixes its own palette and remaps whatever it is given.
      *
      * A property of the format rather than of this source, so it is stated once and does not count as a
@@ -142,6 +150,26 @@ export const IE_16_POINT_FULL: ConversionTarget = {
 };
 
 /**
+ * Sixteen-point, every facing stored, the eastern six in a companion file.
+ *
+ * The wide families ship this way. Its band divides at ten rather than at the nine-slot west arc: the
+ * documentation puts S through NNE in the base and NE through SSE beside it, and the cycle offsets it
+ * lists for each stance confirm the two files fill the same sixteen positions between them.
+ */
+export const IE_16_POINT_WIDE_PAIRED: ConversionTarget = {
+    label: "Infinity Engine, 16 directions (east stored)",
+    stored: IE_16,
+    shown: IE_16,
+    files: "ie-blocks",
+    stride: 16,
+    pairEast: true,
+    baseSlots: 10,
+    fixedPalette: false,
+    weaponsInArt: false,
+    declaration: "infinity-ids",
+};
+
+/**
  * The direction geometry each declared section's TYPE uses.
  *
  * The geometry is not a choice a writer gets to make: the engine reads a declared animation through its
@@ -168,7 +196,12 @@ const SECTION_GEOMETRY: Readonly<Record<string, ConversionTarget>> = {
     flying: IE_16_POINT_MIRRORED,
     monster: IE_16_POINT_MIRRORED,
     monster_icewind: IE_8_POINT_PAIRED,
+    // The one family that states two geometries. Either is writable, and the declaration says which was
+    // written, so this is the one row where the entry is a CHOICE - taken as the shape a shipped install
+    // uses for it, which is the companion one.
+    monster_ankheg: IE_8_POINT_PAIRED,
     monster_large: IE_8_POINT_PAIRED,
+    monster_large16: IE_16_POINT_WIDE_PAIRED,
     monster_layered: IE_8_POINT_PAIRED,
     monster_layered_spell: IE_8_POINT_PAIRED,
     monster_old: IE_8_POINT_PAIRED,

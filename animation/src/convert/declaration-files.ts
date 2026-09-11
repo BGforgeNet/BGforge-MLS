@@ -40,6 +40,14 @@ export interface DeclarationInput {
     naming: ActionScheme;
 }
 
+/**
+ * The sections whose type reads a `mirror` declaration.
+ *
+ * One family states two geometries and chooses between them with that field; every other type fixes the
+ * answer, so declaring it elsewhere writes a line nothing reads.
+ */
+const DECLARES_MIRROR = new Set(["monster_ankheg"]);
+
 /** Which namings write one file per action, and so declare the spread scheme rather than the packed one. */
 function spreadsOverSubfiles(naming: ActionScheme): boolean {
     return naming !== "cycle-numbers";
@@ -89,6 +97,10 @@ export function declarationFiles(input: DeclarationInput): DeclarationFile[] {
                 // one tells the engine which filenames to build. Read off the wrong axis it sent the
                 // engine after names the conversion never wrote.
                 splitBams: spreadsOverSubfiles(input.naming),
+                // Only where a declaration of it is read. Every other type fixes whether the east is
+                // computed, so the field would be inert there - and an inert field in a declaration reads
+                // as a choice the reader made.
+                ...(DECLARES_MIRROR.has(input.section) ? { mirror: !input.target.pairEast } : {}),
                 ...(input.armourLevels === undefined ? {} : { armorMax: input.armourLevels }),
             }),
         },

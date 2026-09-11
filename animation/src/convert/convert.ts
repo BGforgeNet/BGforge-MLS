@@ -344,7 +344,14 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                 // Split on the blocks this just laid out, not on a re-reading of them: a file with real art
                 // in every slot is not the base-file shape a reader detects, so a detecting split would
                 // refuse the very file it was handed to cut.
-                const split = splitIeBamBlocks(built);
+                // On the target's OWN block division, not the eight-point default: the wide family bands at
+                // sixteen and keeps ten in the base, which the default would cut at five.
+                const split = splitIeBamBlocks(
+                    built,
+                    target.stride === undefined || target.baseSlots === undefined
+                        ? undefined
+                        : { stride: target.stride, baseSlots: target.baseSlots },
+                );
                 if (split === undefined) {
                     return {
                         outcome: "refused",

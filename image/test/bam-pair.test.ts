@@ -161,6 +161,28 @@ describe("splitIeBamBlocks", () => {
         expect(split?.east.frames.map((frame) => frame.pixels[0])).toEqual([6, 7, 8]);
     });
 
+    /**
+     * The wide family bands at sixteen and divides at ten, not at the eight-point five. The documented
+     * layout puts S through NNE in the base and NE through SSE in the companion - one slot further round
+     * than the nine-slot west arc a mirrored sixteen-point scheme stores, so it cannot be derived from the
+     * arc and is stated by the caller that laid the blocks out.
+     */
+    it("splits a wider band where that band divides", () => {
+        const frames: Frame[] = Array.from({ length: 16 }, (_, at) => px(at + 1));
+        const sequences: Sequence[] = frames.map((_, at) => ({ frameRefs: [at], facing: "none" as const }));
+
+        const split = splitIeBamBlocks(bam(sequences, frames), { stride: 16, baseSlots: 10 });
+        expect(split?.base.frames.map((frame) => frame.pixels[0])).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        expect(split?.east.frames.map((frame) => frame.pixels[0])).toEqual([11, 12, 13, 14, 15, 16]);
+    });
+
+    it("refuses a cycle count that is not blocks of the stride it was given", () => {
+        const frames: Frame[] = Array.from({ length: 8 }, (_, at) => px(at + 1));
+        const sequences: Sequence[] = frames.map((_, at) => ({ frameRefs: [at], facing: "none" as const }));
+
+        expect(splitIeBamBlocks(bam(sequences, frames), { stride: 16, baseSlots: 10 })).toBeUndefined();
+    });
+
     it("still refuses a cycle count that is not blocks of eight", () => {
         // The caller's claim is about the LAYOUT, and a count off the stride contradicts it whatever the
         // caller believes - the one check no amount of writer knowledge replaces.
