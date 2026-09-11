@@ -205,6 +205,94 @@ function fileLayout(scheme: ActionScheme, code: string): BandLayout {
     return scheme === "character" ? characterFileLayout(code) : { bands: 1, at: 0 };
 }
 
+/**
+ * One member of the set, ready to be written under whichever of the target's names it is given.
+ *
+ * The name is deliberately not part of it. The same member is written twice where the target names two
+ * files for something the source drew once, and a scheme whose files carry a band skeleton seats the art at
+ * the band its own code names - so the layout follows the CODE, and the second file is built rather than
+ * copied from the first's bytes.
+ */
+interface MemberJob {
+    /** The picture this member draws, its parts already assembled. */
+    source: IndexedAnimation;
+    /** The bands of it this file holds: one, unless the target's own file packs several. */
+    actions: readonly NeutralAction[];
+    /** The armour level the name carries, where the scheme names one. */
+    armour: number | undefined;
+    /** What the reader calls this member, and the file it was read from - for the refusals. */
+    label: string;
+    resref: string;
+}
+
+/** Report a fact about the SET once, however many levels or members restate it. */
+type StateOnce = (kind: LossKind, key: string, detail: string) => void;
+
+/**
+ * The files one member becomes under one name, or why it cannot be written.
+ *
+ * Both callers that write a member come through here - the action that claimed the name, and the pass that
+ * fills the target's other names for the same thing - so a filled name is laid out, split and serialized
+ * exactly as the one that was claimed.
+ */
+function memberFiles(
+    job: MemberJob,
+    code: string,
+    target: ConversionTarget,
+    options: ConversionOptions,
+    slots: number,
+    stateOnce: StateOnce,
+): { files: MemberWrite[] } | { refused: string } {
+    const laid = buildTargetFile(job.source, job.actions, target);
+    /* v8 ignore next -- the target's file layout was checked before the loop */
+    if (laid === undefined) return { refused: `${target.label} has no layout here.` };
+    const built = seatInBandLayout(laid, fileLayout(options.scheme, code), slots);
+    if (built === undefined) {
+        return {
+            refused: `${job.label} (${job.resref}) is not the one direction band the target's ${code} file seats.`,
+        };
+    }
+    const name = nameMember(options.scheme, options.prefix, job.armour, code);
+    if (target.files === "frm-rotations") {
+        const frm = serializeAsFrm(built, name, options.unevenRotations);
+        for (const item of frm.report.items) stateOnce(item.kind, item.detail, item.detail);
+        if (frm.quantized) {
+            stateOnce(
+                "colours-quantized",
+                "palette",
+                "colours the game's own palette does not hold were moved to their nearest match",
+            );
+        }
+        return { files: [{ resref: name, extension: "FRM", bytes: frm.bytes }] };
+    }
+    // One file, for a target that stores no companion - and for a member with no facings to put in one. A
+    // paperdoll is one cycle and never a direction, so a pairing target has nothing to split it on; refusing
+    // there refused the whole set over a still image.
+    const directional = job.actions.some((action) => action.cycles.kind === "directional");
+    if (!target.pairEast || !directional) {
+        return { files: [{ resref: name, extension: "BAM", bytes: serializeMember(built, name, options.container) }] };
+    }
+    // Split on the blocks this just laid out, not on a re-reading of them: a file with real art in every slot
+    // is not the base-file shape a reader detects, so a detecting split would refuse the very file it was
+    // handed to cut. On the target's OWN block division, not the eight-point default: the wide family bands
+    // at sixteen and keeps ten in the base, which the default would cut at five.
+    const split = splitIeBamBlocks(
+        built,
+        target.stride === undefined || target.baseSlots === undefined
+            ? undefined
+            : { stride: target.stride, baseSlots: target.baseSlots },
+    );
+    if (split === undefined) {
+        return { refused: `${job.resref} does not fit the eight-slot blocks the target's paired files take.` };
+    }
+    return {
+        files: [
+            { resref: name, extension: "BAM", bytes: serializeMember(split.base, name, options.container) },
+            { resref: `${name}E`, extension: "BAM", bytes: serializeMember(split.east, `${name}E`, options.container) },
+        ],
+    };
+}
+
 export function convertSet(set: NeutralSet, target: ConversionTarget, options: ConversionOptions): ConversionResult {
     const plan = planConversion(set, target);
     if (plan.outcome === "refused") return plan;
@@ -248,6 +336,9 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
         // its file rather than take the target's other name for the same thing (`sharesFileWith`).
         const taken = new Map<string, NeutralAction>();
         const wanted = codesWantedByOriginals(variant.actions, options.scheme);
+        /** What was written, so the pass below can write it again under the target's other names for the
+         *  same thing. Per level, because a name carries the level. */
+        const placed: { job: MemberJob; action: NeutralAction; code: string }[] = [];
         for (const [resref, packed] of filesOf(variant)) {
             // Assembled once for the whole group: every band of a file draws the same parts, so composing
             // per band would report the same assembly once per band of it.
@@ -303,68 +394,47 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                         `${member.label} becomes ${named.code}, which ${named.detail === "assumed" ? "names a weapon or grip the source did not" : "carries no grip or weapon of its own"}`,
                     );
                 }
-                const laid = buildTargetFile(source, actions, target);
-                /* v8 ignore next -- the target's file layout was checked before the loop */
-                if (laid === undefined) return { outcome: "refused", reason: `${target.label} has no layout here.` };
-                const built = seatInBandLayout(laid, fileLayout(options.scheme, named.code), slots.length);
-                if (built === undefined) {
-                    return {
-                        outcome: "refused",
-                        reason:
-                            `${member.label} (${resref}) is not the one direction band ` +
-                            `the target's ${named.code} file seats.`,
-                    };
-                }
-                const name = nameMember(options.scheme, options.prefix, variant.armour, named.code);
-                if (target.files === "frm-rotations") {
-                    const frm = serializeAsFrm(built, name, options.unevenRotations);
-                    for (const item of frm.report.items) stateOnce(item.kind, item.detail, item.detail);
-                    if (frm.quantized) {
-                        stateOnce(
-                            "colours-quantized",
-                            "palette",
-                            "colours the game's own palette does not hold were moved to their nearest match",
-                        );
-                    }
-                    writes.push({ resref: name, extension: "FRM", bytes: frm.bytes });
-                    continue;
-                }
-                // One file, for a target that stores no companion - and for a member with no facings to put
-                // in one. A paperdoll is one cycle and never a direction, so a pairing target has nothing to
-                // split it on; refusing there refused the whole set over a still image.
-                const directional = actions.some((action) => action.cycles.kind === "directional");
-                if (!target.pairEast || !directional) {
-                    writes.push({
-                        resref: name,
-                        extension: "BAM",
-                        bytes: serializeMember(built, name, options.container),
-                    });
-                    continue;
-                }
-                // Split on the blocks this just laid out, not on a re-reading of them: a file with real art
-                // in every slot is not the base-file shape a reader detects, so a detecting split would
-                // refuse the very file it was handed to cut.
-                // On the target's OWN block division, not the eight-point default: the wide family bands at
-                // sixteen and keeps ten in the base, which the default would cut at five.
-                const split = splitIeBamBlocks(
-                    built,
-                    target.stride === undefined || target.baseSlots === undefined
-                        ? undefined
-                        : { stride: target.stride, baseSlots: target.baseSlots },
-                );
-                if (split === undefined) {
-                    return {
-                        outcome: "refused",
-                        reason: `${resref} does not fit the eight-slot blocks the target's paired files take.`,
-                    };
-                }
-                writes.push(
-                    { resref: name, extension: "BAM", bytes: serializeMember(split.base, name, options.container) },
-                    {
-                        resref: `${name}E`,
-                        extension: "BAM",
-                        bytes: serializeMember(split.east, `${name}E`, options.container),
-                    },
+                const job: MemberJob = {
+                    source,
+                    actions,
+                    armour: variant.armour,
+                    label: member.label,
+                    resref,
+                };
+                const written = memberFiles(job, named.code, target, options, slots.length, stateOnce);
+                if ("refused" in written) return { outcome: "refused", reason: written.refused };
+                writes.push(...written.files);
+                placed.push({ job, action: member, code: named.code });
+            }
+        }
+
+        // The target's OTHER names for what this level already wrote.
+        //
+        // A vocabulary names two files where the source drew one clip: two hit reactions, front and behind;
+        // two falls, backwards and forwards; two ways of standing up. An engine that loads art by name finds
+        // nothing under the second, so the clip that filled the first is written there too - it is what the
+        // source drew for that event, and the alternative is a name the engine asks for and does not get.
+        //
+        // After every action has been placed, never as each one is written: a set that really does draw both
+        // wants its own two clips in them, and filling as we went would take the second name before the
+        // action that drew it was reached.
+        //
+        // Only codes the action itself could have taken. `encodeActionCodes` already refuses one whose name
+        // states a grip or a weapon the source contradicts, so reading that same list is what keeps a fill
+        // from filing a one-handed slash under the two-handed name.
+        for (const { job, action, code } of placed) {
+            for (const candidate of encodeActionCodes(options.scheme, action.action)) {
+                if (candidate.code === code || taken.has(candidate.code)) continue;
+                taken.set(candidate.code, action);
+                const filled = memberFiles(job, candidate.code, target, options, slots.length, stateOnce);
+                /* v8 ignore next -- the name that was claimed built, and a sibling name seats the same way */
+                if ("refused" in filled) return { outcome: "refused", reason: filled.refused };
+                writes.push(...filled.files);
+                stateOnce(
+                    "action-name-filled",
+                    candidate.code,
+                    `${candidate.code} is another of the target's names for ${action.label}, ` +
+                        "and is written from the same frames",
                 );
             }
         }

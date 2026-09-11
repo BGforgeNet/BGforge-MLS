@@ -196,7 +196,9 @@ describe("convertOpenSet", () => {
         const written = parseBamV1(result.writes[0]?.bytes ?? new Uint8Array());
 
         expect(result.outcome).toBe("lossless");
-        expect(result.writes.map((write) => write.resref)).toEqual(["NEWB1G12", "NEWB1G11"]);
+        // The family names three stances and this source drew one, so the two it did not claim are filled
+        // from it - each seated at its OWN band, which is what a skeleton family makes of a duplicate.
+        expect(result.writes.map((write) => write.resref)).toEqual(["NEWB1G12", "NEWB1G11", "NEWB1G17", "NEWB1G18"]);
         // Eleven bands of the sixteen-point scheme's nine stored facings - what an install's own files hold.
         expect(written.sequences.length).toBe(11 * 9);
     });
@@ -301,7 +303,16 @@ describe("convertOpenSet", () => {
         const result = convertOpenSet(packed, packedIo, "tob", request);
 
         expect(result.outcome).toBe("lossy");
-        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1", "NEWBA1E"]);
+        // The pinned attack fills the family's other two attack names as well, companion and all: this
+        // naming separates them by nothing, so one clip is the honest answer under each.
+        expect(result.writes.map((write) => write.resref)).toEqual([
+            "NEWBA1",
+            "NEWBA1E",
+            "NEWBA2",
+            "NEWBA2E",
+            "NEWBA3",
+            "NEWBA3E",
+        ]);
         // The action, not the file it came from: an armoured set draws the same action out of a file per
         // level, so naming one of them would pick a level arbitrarily. The source files are listed once.
         expect(result.losses).toEqual(["Attack has no counterpart in the target"]);

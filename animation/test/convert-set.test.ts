@@ -105,7 +105,9 @@ describe("converting a whole set", () => {
             scheme: "action-codes",
         });
 
-        expect(result.writes.map((write) => write.resref)).toEqual(["XYZA1"]);
+        // Three files from one clip: this scheme names three melee attacks and separates them by nothing,
+        // so the two it did not claim are filled from the one it did. The rename is the first of them.
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZA1", "XYZA2", "XYZA3"]);
         expect(result.report.items.map((item) => item.kind)).toContain("action-code-detail");
     });
 
@@ -289,7 +291,9 @@ describe("converting a whole set", () => {
         // conversion has to pick one - and say that it did, since nothing in the source chose it.
         const shot = converted(monster({ MOGHA4: band() }, "actions"));
 
-        expect(shot.writes.map((write) => write.resref)).toEqual(["XYZ1SA"]);
+        // And files it under the other two as well: the engine loads a shot by the weapon in hand, so a
+        // sling or a crossbow would otherwise find nothing. Same clip, since the source drew one.
+        expect(shot.writes.map((write) => write.resref)).toEqual(["XYZ1SA", "XYZ1SS", "XYZ1SX"]);
         expect(shot.report.items.some((item) => item.detail.includes("names a weapon"))).toBe(true);
     });
 
@@ -502,6 +506,11 @@ describe("converting a whole set", () => {
      * state, not art - and the IE families this fixture is shaped like already draw both from one band. So
      * the sleep is the file the death already wrote: reporting it as having no counterpart says a move was
      * dropped, when every frame of it is in the output.
+     *
+     * The target's OTHER fall is written too, and from the death rather than from the sleep. Which action
+     * fills it is the whole point: the engine plays that file for half its deaths, so the sleep taking it
+     * would lay a creature down to die - while leaving it empty is a name the engine asks for and does not
+     * get.
      */
     it("shares one target file between two actions the target stores as one animation", () => {
         const set = read({ CDMB1G1: packedBands(4, 8, [0, 1, 2, 3, 4]) }, { section: "character_old" });
@@ -510,9 +519,33 @@ describe("converting a whole set", () => {
 
         expect(detail(result.report.losses)).not.toContain("Sleep");
         expect(detail(result.report.items)).toContain("Sleep is drawn from the same frames as Die");
-        // One file, not two: the second action must not claim a second code and write the art again.
+        // The sleep claimed no code of its own, and the second fall was filled from the death's frames.
         expect(result.writes.filter((write) => write.resref.endsWith("BA"))).toHaveLength(1);
-        expect(result.writes.filter((write) => write.resref.endsWith("BB"))).toHaveLength(0);
+        expect(result.writes.filter((write) => write.resref.endsWith("BB"))).toHaveLength(1);
+        expect(detail(result.report.items)).toContain("BB is another of the target's names for Die");
+    });
+
+    /**
+     * The fill, and the case it must not touch.
+     *
+     * A target that names two of something the source drew once gets the same clip under both names - and a
+     * source that really drew two keeps its own two, which is what makes this a pair rather than a rule to
+     * duplicate everything. The negative is the half that can regress silently: a fill taking a name before
+     * the action that drew it is reached would lose a real animation and still write the same file count.
+     */
+    it("fills the target's second name for a pair, and never over a clip the source drew itself", () => {
+        const fallout = { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" as const };
+        const one = converted(read({ CDMB1A1: band() }), FALLOUT_FRM, fallout);
+        const two = converted(read({ CDMB1A1: band(), CDMB1A2: bandedPair(6, [0, 1, 2, 3, 4]) }), FALLOUT_FRM, fallout);
+
+        expect(one.writes.map((write) => write.resref)).toEqual(["XYZBAS1AQ", "XYZBAS1AR"]);
+        expect(one.writes[1]?.bytes).toEqual(one.writes[0]?.bytes);
+        expect(one.report.items.map((item) => item.kind)).toContain("action-name-filled");
+        // Two clips, two names, and the second is the source's own - six pixels across, where the clip a
+        // fill would have copied is four.
+        expect(two.writes.map((write) => write.resref)).toEqual(["XYZBAS1AQ", "XYZBAS1AR"]);
+        expect(parseFrm(two.writes[1]?.bytes ?? new Uint8Array()).frames[0]?.width).toBe(6);
+        expect(two.report.items.map((item) => item.kind)).not.toContain("action-name-filled");
     });
 
     /**
