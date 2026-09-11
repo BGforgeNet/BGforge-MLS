@@ -521,12 +521,17 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
     "multi_new/g5/ie9/2": [{ unused: true }, { codes: ["CA"], id: "spell" }],
 
     // Static scenery creatures: one file, five wide bands.
+    //
+    // The one family whose get-up is not the death. The engine reaches these blocks through a lookup array
+    // rather than a per-stance switch, and that array sends getting up to the TWITCH block - the death's
+    // block serves emerging instead. Taken from that array alone: the other reference models no family of
+    // this shape, so there is nothing here to check it against.
     "town_static/-/ie16/5": [
         { codes: ["SC"], id: "ready" },
         { codes: ["SD"], id: "stand" },
         { codes: ["GH"], id: "get-hit" },
         { codes: ["DE"], id: "die" },
-        { codes: ["TW"], id: "twitch" },
+        { codes: ["TW", "GU"] },
     ],
 
     // Birds. The documentation names these by what they look like as well as by code, and the codes are

@@ -295,6 +295,20 @@ describe("stancesOfMembers", () => {
     });
 
     /**
+     * The static scenery creatures, whose whole vocabulary collapses onto five blocks of one file. This is
+     * the one family whose get-up is NOT the death: the engine's own lookup array sends getting up to the
+     * same block as the twitch, and there is no second reference for this family to check that against.
+     */
+    it("offers a get-up on the twitch band of a static scenery creature", () => {
+        const wide = { ...bands(5, 16), scheme: undefined };
+        const stances = stancesOfMembers([member("SN", "SNOMC")], () => wide, "town_static");
+        const getUp = stances.find((stance) => stance.label.startsWith("Get up"));
+
+        expect(getUp?.band, "the twitch band, not the dying one").toBe(4);
+        expect(getUp?.reversed).toBe(true);
+    });
+
+    /**
      * The longer form addresses a get-up block directly, so it is played forwards. A rule keyed on the code
      * alone would reverse this family's get-up too.
      */
