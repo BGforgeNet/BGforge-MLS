@@ -51,7 +51,7 @@ describe("ieGroups", () => {
     // hands two of them the third's names.
     test("lets the declared section override a colliding structural key", () => {
         expect(labelAt(ieGroups("makhg2.bam", 3, "ie8"), 1)).toBe("A2/CA - attack or cast spell");
-        expect(labelAt(ieGroups("makhg2.bam", 3, "ie8", "monster_ankheg"), 1)).toBe("EMERGE - emerge");
+        expect(labelAt(ieGroups("makhg2.bam", 3, "ie8", "monster_ankheg"), 1)).toBe("EMERGE/GU - emerge or get up");
         expect(labelAt(ieGroups("moghg2.bam", 3, "ie8", "monster_old"), 2)).toBe("CA - cast spell");
     });
 

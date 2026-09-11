@@ -135,16 +135,25 @@ function words(group: IeGroup): string {
 }
 
 /**
+ * The blocks that put a creature on the floor, which is what a get-up sharing one has to run backwards.
+ *
+ * Keyed on what the block DEPICTS rather than on the block having a second code: the burrowing family
+ * shares its get-up with the clip of the creature rising out of the ground, which already plays the right
+ * way round. Sharing says the get-up has no art of its own; only these say it has to be reversed.
+ */
+const LYING_DOWN: ReadonlySet<SequenceCode> = new Set<SequenceCode>(["DE", "SL", "TW"]);
+
+/**
  * Whether the engine draws this sequence by running the block backwards.
  *
- * Only getting up, and only where it SHARES a block: with no clip of its own, the engine plays whatever put
- * the creature on the floor back to front - the death for the families that fold sleeping into it, the
- * lying-down band for the character one. A family that gives the get-up a block of its own addresses that
- * block directly and plays it forwards - the fine monster scheme does exactly this, so a rule keyed on the
- * code alone would play that whole family's get-up backwards.
+ * Only getting up, and only where it shares a block with one of those: with no clip of its own, the engine
+ * plays whatever put the creature on the floor back to front - the death for the families that fold
+ * sleeping into it, the lying-down band for the character one. A family that gives the get-up a block of
+ * its own addresses that block directly and plays it forwards - the fine monster scheme does exactly this,
+ * so a rule keyed on the code alone would play that whole family's get-up backwards.
  */
 function reversedSequence(group: NamedBlock, code: SequenceCode): boolean {
-    return code === "GU" && group.codes.length > 1;
+    return code === "GU" && group.codes.some((other) => LYING_DOWN.has(other));
 }
 
 /** One sequence of a block, as a stance list names it. */
@@ -285,7 +294,10 @@ const ANKHEG_G2: IeGroup[] = [
     // implementations name it a stand rather than a combat stance, and it cannot take the `stand` id the
     // emerged block above already carries.
     { codes: ["SD"], detail: "hidden" },
-    { codes: ["EMERGE"] },
+    // Rising out of the ground IS this family's get-up: the reference addresses both stances to this block,
+    // and the documentation's sequence list for the type carries no `GU` of its own. Played forwards, unlike
+    // every other shared get-up - see `LYING_DOWN`.
+    { codes: ["EMERGE", "GU"] },
     { codes: ["HIDE"] },
 ];
 /**

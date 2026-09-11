@@ -215,7 +215,9 @@ describe("stancesOfMembers", () => {
         // The layered families' second and third blocks are each played for two sequences, so each is two
         // rows over one band - which is what makes the two readings of this file differ in length as well.
         expect(anonymous.map((s) => s.label)).toEqual(["Attack", "Attack", "Cast spell", "Attack", "Conjure spell"]);
-        expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Hide"]);
+        // The emerge band is two rows for the same reason: this family's get-up is the creature rising, so
+        // the block is played for both and a reader picking a stance is offered each.
+        expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Get up", "Hide"]);
     });
 
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {

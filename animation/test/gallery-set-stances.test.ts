@@ -578,6 +578,8 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         const stray: string[] = [];
         let reversed = 0;
         let forward = 0;
+        /** Shared with a band that is not a fall: the burrowing family's rise, which plays forwards. */
+        let rising = 0;
         for (const set of sets) {
             for (const armour of drawnArmourLevels(set, io.exists)) {
                 const stances = setStances(set, armour, io);
@@ -585,21 +587,27 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
                     // Any OTHER row over the same band of the same file. Not "a dying row": the family that
                     // lies a creature down shares its get-up with a sleep, so keying on the death would
                     // report every one of those as a stray.
-                    const shares = stances.some(
+                    const siblings = stances.filter(
                         (row) => row !== stance && row.resref === stance.resref && row.band === stance.band,
                     );
+                    // Reversed where the band it shares depicts going DOWN, which is the property sharing was
+                    // standing in for. The burrowing family shares its get-up with the creature rising out of
+                    // the ground, so that one is shared AND forward - an install ships both shapes.
+                    const lyingDown = siblings.some((row) => ["die", "sleep", "twitch"].includes(row.action.id));
                     if (stance.reversed === true) reversed += 1;
                     else forward += 1;
-                    if ((stance.reversed === true) !== shares) {
+                    if (siblings.length > 0 && stance.reversed !== true) rising += 1;
+                    if ((stance.reversed === true) !== lyingDown) {
                         stray.push(`${set.name || set.code} ${stance.resref}#${stance.band}`);
                     }
                 }
             }
         }
-        process.stdout.write(`  ${reversed} get-ups drawn in reverse, ${forward} drawn forwards\n`);
+        process.stdout.write(`  ${reversed} get-ups drawn in reverse, ${forward} drawn forwards (${rising} rising)\n`);
         expect(stray).toEqual([]);
         expect(reversed, "no shared get-up was exercised").toBeGreaterThan(0);
         expect(forward, "no get-up of its own was exercised").toBeGreaterThan(0);
+        expect(rising, "no get-up sharing a band it does not reverse was exercised").toBeGreaterThan(0);
     });
 
     /**
@@ -654,7 +662,19 @@ describe.skipIf(GAME === undefined)("setStances over a real install", () => {
         expect(armour, `${set.code} declares no prefix`).toBeDefined();
         // Stance NAMES, not the block picker's coded form: a stance list spans a set's files and never
         // shows the code that addresses one inside a file.
-        const blocks = ["Die", "Twitch", "Stand (emerged)", "Stand (hidden)", "Emerge", "Hide", "Attack", "Cast spell"];
+        // The rise is two rows over one band: this family has no get-up of its own, and the reference plays
+        // the emerge block for both stances.
+        const blocks = [
+            "Die",
+            "Twitch",
+            "Stand (emerged)",
+            "Stand (hidden)",
+            "Emerge",
+            "Get up",
+            "Hide",
+            "Attack",
+            "Cast spell",
+        ];
 
         const stances = setStances(set, armour!, io);
 
