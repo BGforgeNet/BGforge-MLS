@@ -315,6 +315,9 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
     const writes: MemberWrite[] = [];
     /** Actions the target has no name for - kept apart from the report so a refusal can name them once. */
     const unmapped: NeutralAction[] = [];
+    /** Members left out for a reason of their own, for the same refusal to name the right cause. */
+    const undirectional: NeutralAction[] = [];
+    const unassemblable: string[] = [];
     /**
      * Facts already stated, so a set with armour levels states each once.
      *
@@ -346,11 +349,17 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
             /* v8 ignore next -- a group exists because an action put it there */
             if (first === undefined) continue;
             const source = composedSource(variant, first.resrefs, report);
+            // One member, not the set. A shipped file whose parts disagree about their cycles costs the
+            // member it draws and nothing else: refusing here threw away every other member of sets that
+            // ship one such file, which on a shipped install is a whole creature lost to one bad pair.
             if (source === undefined) {
-                return {
-                    outcome: "refused",
-                    reason: `${resref} is drawn from files this cannot assemble into one picture.`,
-                };
+                unassemblable.push(resref);
+                stateOnce(
+                    "parts-unassemblable",
+                    resref,
+                    `${resref} is drawn from files this cannot assemble into one picture, so it is left out`,
+                );
+                continue;
             }
             // What ONE target file holds. A scheme that names a file per action takes a source file's
             // bands apart - a packed monster `G1` is the walk, the stances and the death, and the target
@@ -384,6 +393,19 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                 if (named === undefined) {
                     unmapped.push(member);
                     stateOnce("action-unmapped", member.label, `${member.label} has no counterpart in the target`);
+                    continue;
+                }
+                // A target that files art by compass direction needs facings to seat it by, and a band whose
+                // facings were INFERRED rather than declared has none to give: writing it would state a
+                // direction the source never carried. Skipped without claiming the name, so a set that mixes
+                // declared bands with inferred ones still writes the declared ones under their own codes.
+                if (target.files === "frm-rotations" && !actions.some((one) => one.cycles.kind === "directional")) {
+                    undirectional.push(member);
+                    stateOnce(
+                        "directions-undeclared",
+                        member.label,
+                        `${member.label} has no declared facings, so nothing can seat the target's rotations`,
+                    );
                     continue;
                 }
                 taken.set(named.code, member);
@@ -450,6 +472,24 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
     // "nobody has said what this is" is a different problem for the reader than "the target has no such
     // file", and only the first is unfixable from here.
     if (writes.length === 0) {
+        // The causes that left members out are checked before the naming one: a set whose facings are all
+        // inferred has actions the target CAN name, and reporting those as unnameable sends the reader
+        // looking for a naming gap that is not there.
+        if (undirectional.length > 0) {
+            const names = undirectional.map((action) => action.label).join(", ");
+            return {
+                outcome: "refused",
+                reason:
+                    "This set's facings are inferred rather than declared, so none of its members can fill " +
+                    `the target's rotations: ${names}.`,
+            };
+        }
+        if (unassemblable.length > 0) {
+            return {
+                outcome: "refused",
+                reason: `Every member of this set is drawn from files this cannot assemble: ${unassemblable.join(", ")}.`,
+            };
+        }
         if (unmapped.length === 0) return { outcome: "refused", reason: "This set has no member to convert." };
         const names = unmapped.map((action) => action.label).join(", ");
         const unstated = unmapped.every((action) => action.action.id === "unpinned");

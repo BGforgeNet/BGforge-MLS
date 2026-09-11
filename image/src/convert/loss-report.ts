@@ -35,6 +35,14 @@ export type LossKind =
      *  ways of standing up - so the second is written from the first's frames. Informational: the art is
      *  the source's own, under a name its engine loads separately. */
     | "action-name-filled"
+    /** The member's parts disagree about their cycles, so the picture they draw together cannot be
+     *  reassembled. A real loss, and a bounded one: the member is left out and the rest of the set is
+     *  written, where refusing would lose every other member over one unreadable file. */
+    | "parts-unassemblable"
+    /** The target files art by compass direction and this member's facings were INFERRED rather than
+     *  declared, so there is nothing to seat its rotations by. A real loss: writing it anyway would state a
+     *  direction the source never carried. */
+    | "directions-undeclared"
     /** A member the source cut across several files was assembled into the one file the target writes.
      *  Informational: it is the picture the parts drew together, and none of it is discarded. */
     | "parts-composed"

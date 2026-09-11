@@ -274,10 +274,17 @@ export function encodeActionCodes(target: ActionScheme, action: NeutralActionRef
             if (detail !== undefined) candidates.push({ code: entry.code, detail });
         }
     }
-    // Its own scheme always names it, whatever its table holds: the code came from there, so a set written
+    // Its own scheme usually names it, whatever its table holds: the code came from there, so a set written
     // back lands on the file it was read from. This is the only name a band of a packed file has - the
     // block table pinned what it depicts, and its own family names files rather than actions.
-    if (action.scheme === target && !candidates.some((entry) => entry.code === action.code)) {
+    //
+    // Unless the target's own table gives that code ANOTHER meaning. A band carries the code of the FILE it
+    // was read from, and a file can pack several: a walk read out of a `G1` would otherwise be offered `G1`
+    // and take it, writing the walk where the engine plays the combat stance and leaving the walk's own name
+    // unwritten. Where the table names the code for something else, the meaning's own codes are all it gets.
+    const ownMeaning = decodeActionCode(target, action.code).id;
+    const ownNamesThis = ownMeaning === "unpinned" || ownMeaning === action.id;
+    if (action.scheme === target && ownNamesThis && !candidates.some((entry) => entry.code === action.code)) {
         candidates.push({ code: action.code, detail: "kept" });
     }
     // The source's own code first where the target names it too: a set written back to the scheme it came

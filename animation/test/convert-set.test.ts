@@ -526,6 +526,72 @@ describe("converting a whole set", () => {
     });
 
     /**
+     * A member whose parts will not assemble costs that member, not the set.
+     *
+     * A shipped install has files whose eastern companion carries a different cycle table from its base, and
+     * pairing frames across them would pair moments that are not the same one. Refusing there refused every
+     * other member too, which on the corpus threw away whole creatures over one bad pair.
+     */
+    it("leaves out a member whose parts will not assemble, and writes the rest of the set", () => {
+        const result = converted(read({ CDMB1G1: band(), CDMB1A1: band(), CDMB1A1E: multiCycle(4, 7) }));
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZ1G1"]);
+        expect(result.report.losses.map((loss) => loss.kind)).toContain("parts-unassemblable");
+    });
+
+    /**
+     * A Fallout target seats art by compass direction, and a band whose facings the reader could only INFER
+     * has none to seat it by - so the member is left out rather than written under a direction the source
+     * never carried. Per member: a set that mixes the two still writes the declared ones.
+     */
+    it("leaves out a member whose facings are inferred rather than declared", () => {
+        // By what they depict, not by position: the member order is the naming family's, and the walk is
+        // not the first of them.
+        const base = read({ CDMB1G11: band(), CDMB1G12: band() });
+        const actions = base.variants[0]!.actions;
+        const walk = actions.find((action) => action.action.id === "walk");
+        const stance = actions.find((action) => action.action.id === "stand");
+        if (walk === undefined || stance === undefined) throw new Error("the fixture drew no walk and stand");
+        const inferred = { ...stance, cycles: { kind: "ordered" as const, sequenceIndices: [0, 1, 2, 3, 4] } };
+        const mixed: NeutralSet = { ...base, variants: [{ ...base.variants[0]!, actions: [walk, inferred] }] };
+
+        const result = converted(mixed, FALLOUT_FRM, { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZBAS1AB"]);
+        expect(result.report.losses.map((loss) => loss.kind)).toContain("directions-undeclared");
+    });
+
+    it("names the direction cause when every member of a set carries inferred facings", () => {
+        const base = read({ CDMB1G11: band() });
+        const [walk] = base.variants[0]!.actions;
+        if (walk === undefined) throw new Error("the fixture drew no walk");
+        const inferred = { ...walk, cycles: { kind: "ordered" as const, sequenceIndices: [0, 1, 2, 3, 4] } };
+        const set: NeutralSet = { ...base, variants: [{ ...base.variants[0]!, actions: [inferred] }] };
+
+        const result = convertSet(set, FALLOUT_FRM, { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" });
+
+        // Not "the target can name none of them": it names a walk perfectly well, and sending the reader
+        // after a naming gap that is not there is what the earlier message did.
+        expect(result.outcome).toBe("refused");
+        expect(result.outcome === "refused" && result.reason).toContain("inferred rather than declared");
+    });
+
+    /**
+     * A band carries the code of the FILE it was read from, and a file can pack several bands. Offering that
+     * code first put a walk under the name the family plays as a combat stance - and left the walk's own
+     * name unwritten, which is the half an engine loading art by name cannot survive.
+     */
+    it("does not write a band under its file's code where the scheme plays that code for something else", () => {
+        const base = read({ CDMB1G1: band() });
+        const [stance] = base.variants[0]!.actions;
+        if (stance === undefined) throw new Error("the fixture drew no stance");
+        const walkInAStanceFile = { ...stance, label: "Walk", action: { ...stance.action, id: "walk" as const } };
+        const set: NeutralSet = { ...base, variants: [{ ...base.variants[0]!, actions: [walkInAStanceFile] }] };
+
+        expect(converted(set).writes.map((write) => write.resref)).toEqual(["XYZ1G11"]);
+    });
+
+    /**
      * The fill, and the case it must not touch.
      *
      * A target that names two of something the source drew once gets the same clip under both names - and a
