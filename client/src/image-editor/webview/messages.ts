@@ -55,25 +55,23 @@ export interface SequenceView {
  * table are the animation package's, and a webview copy would drift on the first edit.
  */
 export interface SetSaveOptionsView {
-    /**
-     * The direction geometries this set's own facings can fill.
-     *
-     * The radios show every geometry and DISABLE the ones absent here, rather than hiding them: a reader
-     * asking why they cannot write sixteen directions is answered by a greyed control with a reason, not
-     * by a control that was never drawn. Empty for a set whose cycles are not directions at all.
-     */
-    geometries: { directions: 8 | 16; storeEast: boolean }[];
     /** The naming families an Infinity Engine set can be written under, with their labels. */
     namings: { id: string; label: string }[];
     /**
-     * The families a declaration can name, spelled for a reader.
+     * The families a declaration can name, spelled for a reader, each saying whether this set can be
+     * written under it.
      *
      * A list rather than a box to type in: a declaration names one of these, and a header no engine reads
      * declares nothing. The set's own header leads the list where this project has no spelling for it,
      * since an INI section is an install's vocabulary and a closed picker would refuse to write such a set
      * back as it was read.
+     *
+     * The section is also the SHAPE control: its type fixes how many facings are stored and whether the
+     * east sits in a companion, so `reachable` is false where this set's own facings cannot fill that
+     * shape, or where nothing here can say what the shape is. Shown disabled rather than hidden, so a
+     * reader asking why is answered by a greyed row rather than by a row that was never drawn.
      */
-    sections: { id: string; label: string }[];
+    sections: { id: string; label: string; reachable: boolean }[];
     /**
      * The set's own shape, which the dialog opens on.
      *
@@ -82,7 +80,7 @@ export interface SetSaveOptionsView {
      * field is absent where the set has no such shape: a directionless ambient has no geometry, and a
      * layout the naming table does not cover has no family.
      */
-    source: { directions?: 8 | 16; storeEast: boolean; naming?: string };
+    source: { directions?: 8 | 16; storeEast: boolean; naming?: string; section?: string };
     /**
      * The game's own override folder, which is where a save can land instead of a folder of the reader's.
      *
@@ -352,9 +350,6 @@ export interface SaveRequestView {
     bamVersion: 1 | 2;
     /** BAM v1 only: whether the container is compressed (BAMC). */
     compressed: boolean;
-    directions: 8 | 16;
-    /** Whether the eastern facings are written, or left for the engine to mirror - see `SaveGeometry`. */
-    storeEast: boolean;
     /** What the written files are called. Ignored where the save is not a retarget. */
     naming: string;
     /**
@@ -407,8 +402,6 @@ export function saveRequestKey(request: SaveRequestView): string {
         request.basePage ?? "",
         request.folder ?? "",
         request.unevenRotations ?? "",
-        request.directions,
-        request.storeEast,
         request.naming,
         request.prefix,
         request.targetId,
@@ -441,8 +434,6 @@ function isValidSaveRequest(request: unknown): request is SaveRequestView {
         (request.folder === undefined || typeof request.folder === "string") &&
         (request.unevenRotations === undefined ||
             (typeof request.unevenRotations === "string" && UNEVEN_ROTATIONS.has(request.unevenRotations))) &&
-        (request.directions === 8 || request.directions === 16) &&
-        typeof request.storeEast === "boolean" &&
         typeof request.naming === "string" &&
         typeof request.prefix === "string" &&
         typeof request.targetId === "number" &&

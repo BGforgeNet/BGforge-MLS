@@ -36,7 +36,7 @@ import { type IeScheme, IE_STRIDE, IE_WEST_SLOTS, ieBlockSize, ieFacingsForStrid
 import { type ImageDocumentModel } from "./document-model";
 import { type SetView } from "./webview/messages";
 import { stanceModel } from "./stance-model";
-import { IE_NAMINGS, NAMING_LABELS, reachableGeometries } from "./conversion";
+import { IE_NAMINGS, NAMING_LABELS, sectionIsReachable } from "./conversion";
 
 /** Facings in the whole sixteen-point wheel - what a set storing every one of them holds. */
 const IE_WHEEL_SLOTS = 16;
@@ -530,10 +530,13 @@ export function setSaveSource(state: AnimationSetState): SetView["saveOptions"][
     const naming = namingForLayout(state.set.layout);
     return {
         // The set's own wheel, read off what it stores rather than off what it could be written as: nine
-        // stored facings are sixteen shown, which is the distinction the count alone loses.
+        // stored facings are sixteen shown, which is the distinction the count alone loses. Kept for what
+        // the dialog SHOWS about the source; the shape it would be written in comes from the section.
         ...(held.length === 0 ? {} : { directions: held.length > IE_STRIDE ? (16 as const) : (8 as const) }),
         storeEast: held.length === IE_STRIDE || held.length === IE_WHEEL_SLOTS,
         ...(naming === undefined ? {} : { naming }),
+        // The section the set was READ under, which is what a request has to differ from to be a reshape.
+        ...(state.set.section === undefined ? {} : { section: state.set.section }),
     };
 }
 
@@ -544,10 +547,12 @@ function saveOptionsOf(state: AnimationSetState, gameDir: string): SetView["save
     // header it was read from.
     const known = sectionOptions();
     const own = state.set.section;
-    const sections =
+    const offered =
         own === undefined || known.some((entry) => entry.id === own) ? known : [{ id: own, label: own }, ...known];
+    // The section carries the SHAPE, so what a set can be written under is what its own facings can fill.
+    const held = state.storedFacings();
+    const sections = offered.map((entry) => ({ ...entry, reachable: sectionIsReachable(entry.id, held) }));
     return {
-        geometries: reachableGeometries(state.storedFacings()).map((geometry) => ({ ...geometry })),
         namings: IE_NAMINGS.map((id) => ({ id, label: NAMING_LABELS[id] })),
         sections,
         source: setSaveSource(state),

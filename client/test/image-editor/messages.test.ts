@@ -6,8 +6,6 @@ const SAVE_REQUEST = {
     format: "bam",
     bamVersion: 1,
     compressed: false,
-    directions: 8,
-    storeEast: false,
     naming: "action-codes",
     prefix: "NEWB",
     targetId: 0x9000,
@@ -58,9 +56,9 @@ test("rejects malformed messages", () => {
     expect(isWebviewToHost({ type: "requestFrames", indices: ["0"] })).toBe(false);
     expect(isWebviewToHost({ type: "runtimeError" })).toBe(false);
     expect(isWebviewToHost({ type: "planSave" })).toBe(false);
-    // The direction count decides which target the save resolves to, so a value no scheme stores is not a
+    // The section decides which target the save resolves to, so one that is not even a string is not a
     // request this acts on.
-    expect(isWebviewToHost({ type: "planSave", request: { ...SAVE_REQUEST, directions: 12 } })).toBe(false);
+    expect(isWebviewToHost({ type: "planSave", request: { ...SAVE_REQUEST, section: 12 } })).toBe(false);
     // The id decides what the written declaration and the notes say, so a string that merely looks like
     // one is not a request either.
     expect(isWebviewToHost({ type: "runSave", request: { ...SAVE_REQUEST, targetId: "9000" } })).toBe(false);

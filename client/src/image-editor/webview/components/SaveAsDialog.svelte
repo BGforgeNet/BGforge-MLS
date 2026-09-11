@@ -52,8 +52,6 @@
     let format = $state<SaveRequestView["format"]>("bam");
     let bamVersion = $state<1 | 2>(1);
     let compressed = $state(false);
-    let directions = $state<8 | 16>(8);
-    let storeEast = $state(false);
     let naming = $state("cycle-numbers");
     let prefix = $state("");
     let targetId = $state(0);
@@ -92,23 +90,14 @@
     let shapedFor = $state<number | undefined>();
     $effect(() => {
         if (shapedFor === set.id) return;
-        directions = options.source.directions ?? 8;
-        storeEast = options.source.storeEast;
         naming = options.source.naming ?? options.namings[0]?.id ?? "cycle-numbers";
         compressed = false;
         shapedFor = set.id;
     });
 
-    /** Whether the source can fill a geometry - the radios show every one and disable the rest. */
-    function reachable(count: 8 | 16, east: boolean): boolean {
-        return options.geometries.some((geometry) => geometry.directions === count && geometry.storeEast === east);
-    }
-    const anyGeometry = $derived(options.geometries.length > 0);
-    // A geometry stays selectable when it is the source's OWN, even where nothing could be converted into
-    // it: writing the set as it stands is not a conversion and has nothing to fill.
-    const own = $derived(
-        (count: 8 | 16, east: boolean) => options.source.directions === count && options.source.storeEast === east,
-    );
+    // The naming controls open only where SOME family can hold this set: a set whose cycles are not
+    // directions at all fills none of them, and asking what to call files nothing can write says nothing.
+    const anyGeometry = $derived(options.sections.some((entry) => entry.reachable));
 
     // The set came OUT of the game's override folder, so writing it back as it stands goes there by
     // default - it is the one destination where the files are the ones the engine already names. Offered
@@ -123,8 +112,6 @@
         format,
         bamVersion,
         compressed,
-        directions,
-        storeEast,
         naming,
         prefix,
         targetId,
@@ -203,41 +190,6 @@
             {/if}
 
             <fieldset class="dialog-group" class:dialog-disabled={!anyGeometry}>
-                <legend>Directions</legend>
-                {#if anyGeometry}
-                    {#each [8, 16] as const as count (count)}
-                        <label
-                            class:dialog-disabled={!reachable(count, storeEast) && !own(count, storeEast)}
-                            title={reachable(count, storeEast) || own(count, storeEast)
-                                ? ""
-                                : `This set has no art for the facings a ${count}-direction band stores`}
-                        >
-                            <input
-                                type="radio"
-                                bind:group={directions}
-                                value={count}
-                                disabled={!reachable(count, storeEast) && !own(count, storeEast)}
-                            />
-                            {count} directions
-                        </label>
-                    {/each}
-                    <label
-                        class:dialog-disabled={!reachable(directions, true) && !own(directions, true)}
-                        title="The engine reads this from the declaration, never by looking for the files - so the declaration written beside the art says the same thing"
-                    >
-                        <input
-                            type="checkbox"
-                            bind:checked={storeEast}
-                            disabled={!reachable(directions, true) && !own(directions, true)}
-                        />
-                        Store the east in the files
-                    </label>
-                {:else}
-                    <p class="dialog-note">This animation's cycles are not directions, so there is nothing to set.</p>
-                {/if}
-            </fieldset>
-
-            <fieldset class="dialog-group" class:dialog-disabled={!anyGeometry}>
                 <legend>Names</legend>
                 {#each options.namings as entry (entry.id)}
                     <label class:dialog-disabled={!anyGeometry}>
@@ -288,8 +240,13 @@
                     <span class="dialog-hex">declared as {hex}</span>
                 </label>
                 <!-- A list, not a box to type in: the declaration's header is a vocabulary the engine reads,
-                     and a typed one it does not know declares nothing at all. -->
-                <label class="dialog-field" title="The family the written declaration names">
+                     and a typed one it does not know declares nothing at all. It is also the SHAPE control -
+                     the family's type fixes how many facings are stored and whether the east sits in a
+                     companion - so a family this set cannot fill is shown disabled rather than hidden. -->
+                <label
+                    class="dialog-field"
+                    title="The family the written declaration names, which also fixes how the facings are stored"
+                >
                     <span class="dialog-label">Section</span>
                     <select bind:value={section} aria-label="Declared section">
                         <!-- The absence, named: a set whose install declared no family leaves nothing to
@@ -297,7 +254,15 @@
                              one headed by a family nobody stated. -->
                         <option value="">Not declared</option>
                         {#each options.sections as entry (entry.id)}
-                            <option value={entry.id}>{entry.label}</option>
+                            <option
+                                value={entry.id}
+                                disabled={!entry.reachable}
+                                title={entry.reachable
+                                    ? ""
+                                    : "This set has no art for the facings that family's files store"}
+                            >
+                                {entry.label}{entry.reachable ? "" : " (cannot be filled)"}
+                            </option>
                         {/each}
                     </select>
                 </label>

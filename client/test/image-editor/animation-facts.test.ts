@@ -37,7 +37,7 @@ function set(overrides: Partial<SetView> & { section?: string } = {}): SetView {
         stance: "",
         band: 0,
         // The facts read nothing from these, so the emptiest shape the type takes is the honest fixture.
-        saveOptions: { geometries: [], namings: [], sections: [], source: { storeEast: false }, overridePath: "" },
+        saveOptions: { namings: [], sections: [], source: { storeEast: false }, overridePath: "" },
         ...(section === undefined
             ? {}
             : {

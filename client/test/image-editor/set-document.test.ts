@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { type AnimationSet, type StanceIo, sectionOptions } from "@bgforge/animation";
 import { type Frame, type IndexedAnimation, type Rgba, encodeBamc, serializeBamV1 } from "@bgforge/image";
 import { AnimationSetState, createAnimationSetSource, setView, stanceKey } from "../../src/image-editor/set-document";
-import { IE_NAMINGS, NAMING_LABELS } from "../../src/image-editor/conversion";
+import { IE_NAMINGS, NAMING_LABELS, sectionIsReachable } from "../../src/image-editor/conversion";
+import { ieFacingsForStride } from "@bgforge/image/ie-direction";
 import type { Game } from "@bgforge/binary";
 
 function palette(): Rgba[] {
@@ -412,8 +413,10 @@ describe("setView", () => {
 
         const { sections } = setView(state, "/games/bgee").saveOptions;
 
-        expect(sections[0]).toEqual({ id: "mod_special_thing", label: "mod_special_thing" });
-        expect(sections.slice(1)).toEqual(sectionOptions());
+        // Its own header leads, and is unreachable: nothing here can say what shape that family stores, so
+        // it is offered as a name the reader recognises rather than as one they can write under.
+        expect(sections[0]).toEqual({ id: "mod_special_thing", label: "mod_special_thing", reachable: false });
+        expect(sections.slice(1).map(({ id, label }) => ({ id, label }))).toEqual(sectionOptions());
     });
 
     it("names the set and labels both pickers' options", () => {
@@ -445,19 +448,19 @@ describe("setView", () => {
             stance: "TSTBG1#0",
             band: 0,
             // What the Save As dialog may offer, which travels with the view because the dialog has to be
-            // able to draw itself - including saying a geometry is unreachable - before anything is picked.
-            // These files band at eight and store the western five, so both eight-point geometries are
-            // reachable and neither sixteen-point one is: the source has no art for the half-steps.
+            // able to draw itself - including saying a family is unreachable - before anything is picked.
             saveOptions: {
-                geometries: [
-                    { directions: 8, storeEast: false },
-                    { directions: 8, storeEast: true },
-                ],
                 namings: IE_NAMINGS.map((id) => ({ id, label: NAMING_LABELS[id] })),
-                // Every family a declaration can name, from the animation package's own table: the section
-                // picker offers these rather than taking a typed header no engine would read.
-                sections: sectionOptions(),
+                // Every family a declaration can name, from the animation package's own table, each saying
+                // whether this set can fill it. These files band at eight and store the western five, so
+                // the eight-point families are reachable and the finer ones are not: no art for half-steps.
+                sections: sectionOptions().map((entry) => ({
+                    ...entry,
+                    reachable: sectionIsReachable(entry.id, ieFacingsForStride(8).slice(0, 5)),
+                })),
                 // The set's own shape, which the dialog opens on - leaving it alone writes it as it stands.
+                // No section: this fixture's install declared none, and the field is absent rather than
+                // guessed - which is what makes a later request under any section a reshape.
                 source: { directions: 8, storeEast: false, naming: "cycle-numbers" },
                 overridePath: "/games/bgee/override",
             },

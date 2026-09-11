@@ -58,7 +58,7 @@ import {
     declarationFiles,
     setTitle,
 } from "@bgforge/animation";
-import { type ConversionRequest, convertOpenSet, defaultPrefix, ieTargetFor, suggestTargetId } from "./conversion";
+import { type ConversionRequest, convertOpenSet, defaultPrefix, suggestTargetId } from "./conversion";
 import { ieGroups } from "@bgforge/animation/group-labels";
 import { parseAnimationSetUri } from "../ie-resources/uri";
 import { openAnimationSet } from "../ie-resources/open-set";
@@ -980,14 +980,13 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // one is: the files land under names the source's install does not use, so they need their own
         // declaration. Without this a rename silently wrote the source's own resrefs back.
         if (request.prefix !== "" && request.prefix !== defaultPrefix(found.set)) return true;
-        // Only an axis the SOURCE states can be moved off it. A set whose layout no naming carries, or whose
-        // cycles are not directions at all, states neither - and the dialog still has to seed its radios
-        // with something, so comparing against the absent value made every one of those sets a reshape and
-        // handed it to a converter that has no reader for its layout. The dialog disables what it cannot
-        // offer; here, an unstated axis simply cannot differ.
+        // Only an axis the SOURCE states can be moved off it. A set whose layout no naming carries states
+        // none - and the dialog still has to seed its controls with something, so comparing against the
+        // absent value made every one of those sets a reshape and handed it to a converter that has no
+        // reader for its layout. The section carries the SHAPE now, the two direction axes having been
+        // derived from it rather than asked; an unstated axis still cannot differ.
         return (
-            (source.directions !== undefined && request.directions !== source.directions) ||
-            request.storeEast !== source.storeEast ||
+            (source.section !== undefined && request.section !== source.section) ||
             (source.naming !== undefined && request.naming !== source.naming)
         );
     }
@@ -1049,7 +1048,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     private static conversionRequestOf(request: SaveRequestView, fallbackPrefix: string): ConversionRequest {
         return {
             engine: request.format === "frm" ? "fallout" : "infinity",
-            geometry: { directions: request.directions, storeEast: request.storeEast },
+            section: request.section,
             naming: request.format === "frm" ? "fallout-critter" : (request.naming as ActionScheme),
             prefix: request.prefix === "" ? fallbackPrefix : request.prefix,
             targetId: request.targetId,
@@ -1223,7 +1222,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         // Every file the run means to write, not the members alone: the declaration and the notes are part
         // of what a reader gets, so a report counting only the art would understate what is missing.
         const declarations = declarationFiles({
-            target: converted.engine === "fallout" ? FALLOUT_FRM : ieTargetFor(request.directions, request.storeEast),
+            // The target the conversion actually wrote for, carried out of it - the declaration describes
+            // that same shape, and a second resolution here is how the two come to disagree.
+            target: result.target ?? FALLOUT_FRM,
             targetId: request.targetId,
             prefix: converted.prefix,
             section: request.section,

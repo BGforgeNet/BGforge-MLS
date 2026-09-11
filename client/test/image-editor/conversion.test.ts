@@ -95,10 +95,10 @@ const wideIo: StanceIo = {
     read: (resref) => WIDE_FILES[resref.toUpperCase()],
 };
 
-/** The two-letter monster shape: eight points with the east mirrored, named by action code. */
+/** The two-letter monster shape, named by action code. The section is what fixes the geometry. */
 const request = {
     engine: "infinity" as const,
-    geometry: { directions: 8 as const, storeEast: false },
+    section: "monster_old",
     naming: "action-codes" as const,
     prefix: "NEWB",
     targetId: 0x9000,
@@ -157,7 +157,10 @@ describe("convertOpenSet", () => {
         expect(result.outcome).toBe("lossless");
         // The stem is the reader's and the codes are the target's naming of what each action depicts, so
         // the result is named for the destination rather than copied from the source.
-        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBSD", "NEWBWK"]);
+        // Each member with its eastern companion: the section fixes the shape, and every eight-point family
+        // an install declares keeps its east beside the base. A mirrored eight-point set is not a shape any
+        // documented type uses, so it is no longer one this can be asked for.
+        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBSD", "NEWBSDE", "NEWBWK", "NEWBWKE"]);
         expect(result.writes.every((write) => write.bytes.length > 0)).toBe(true);
         expect(result.losses).toEqual([]);
     });
@@ -170,7 +173,7 @@ describe("convertOpenSet", () => {
     it("refuses an eight-slot source into the character family, which stores nine facings", () => {
         const result = convertOpenSet(SET, io, "tob", {
             ...request,
-            geometry: { directions: 16 as const, storeEast: false },
+            section: "character",
             naming: "character" as const,
         });
 
@@ -187,7 +190,7 @@ describe("convertOpenSet", () => {
     it("files a nine-cycle set into the character family's own files and band skeleton", () => {
         const result = convertOpenSet(WIDE_SET, wideIo, "tob", {
             ...request,
-            geometry: { directions: 16 as const, storeEast: false },
+            section: "character",
             naming: "character" as const,
         });
         const written = parseBamV1(result.writes[0]?.bytes ?? new Uint8Array());
@@ -198,11 +201,10 @@ describe("convertOpenSet", () => {
         expect(written.sequences.length).toBe(11 * 9);
     });
 
-    it("writes the east into its own file for a target that stores it", () => {
-        const result = convertOpenSet(SET, io, "tob", {
-            ...request,
-            geometry: { directions: 8 as const, storeEast: true },
-        });
+    it("writes the east into its own file for a section whose type stores it", () => {
+        // `monster_old` is one of the families that keeps its eastern facings in a companion, which is the
+        // whole of what picks that shape now - there is no separate axis to ask for it.
+        const result = convertOpenSet(SET, io, "tob", { ...request, section: "monster_old" });
 
         expect(result.outcome).toBe("lossless");
         expect(result.writes.map((write) => write.resref)).toEqual(["NEWBSD", "NEWBSDE", "NEWBWK", "NEWBWKE"]);
@@ -268,7 +270,18 @@ describe("convertOpenSet", () => {
         const result = convertOpenSet(packed, packedIo, "tob", request);
 
         expect(result.outcome).toBe("lossless");
-        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1", "NEWBA2", "NEWBCA", "NEWBA3", "NEWBSP"]);
+        expect(result.writes.map((write) => write.resref)).toEqual([
+            "NEWBA1",
+            "NEWBA1E",
+            "NEWBA2",
+            "NEWBA2E",
+            "NEWBCA",
+            "NEWBCAE",
+            "NEWBA3",
+            "NEWBA3E",
+            "NEWBSP",
+            "NEWBSPE",
+        ]);
         expect(result.losses).toEqual([]);
     });
 
@@ -288,7 +301,7 @@ describe("convertOpenSet", () => {
         const result = convertOpenSet(packed, packedIo, "tob", request);
 
         expect(result.outcome).toBe("lossy");
-        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1"]);
+        expect(result.writes.map((write) => write.resref)).toEqual(["NEWBA1", "NEWBA1E"]);
         // The action, not the file it came from: an armoured set draws the same action out of a file per
         // level, so naming one of them would pick a level arbitrarily. The source files are listed once.
         expect(result.losses).toEqual(["Attack has no counterpart in the target"]);
@@ -310,7 +323,7 @@ describe("convertOpenSet", () => {
     it("falls back to the source's own stem when the reader names none", () => {
         const result = convertOpenSet(SET, io, "tob", { ...request, prefix: "" });
 
-        expect(result.writes.map((write) => write.resref)).toEqual(["TSTBSD", "TSTBWK"]);
+        expect(result.writes.map((write) => write.resref)).toEqual(["TSTBSD", "TSTBSDE", "TSTBWK", "TSTBWKE"]);
     });
 });
 

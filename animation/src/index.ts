@@ -46,6 +46,8 @@ export {
     IE_16_POINT_MIRRORED,
     IE_8_POINT_MIRRORED,
     IE_8_POINT_PAIRED,
+    IE_16_POINT_WIDE_PAIRED,
+    targetForSection,
     unfillableSlots,
 } from "./convert/target";
 export { convertSet } from "./convert/convert";

@@ -156,12 +156,12 @@ const REQUEST = {
     format: "bam" as const,
     bamVersion: 1 as const,
     compressed: false,
-    directions: 8 as const,
-    storeEast: false,
     naming: "action-codes",
     prefix: "NEWB",
     targetId: 0x9000,
-    section: "monster",
+    // The section carries the shape now. `monster_old` is the eight-point family this fixture's own
+    // facings fill; `monster` stores nine, which these five cannot reach.
+    section: "monster_old",
     notes: true,
     destination: "folder" as const,
 };
@@ -350,8 +350,10 @@ describe("planning a conversion", () => {
                     outcome: "lossless",
                     losses: [],
                     notes: [],
-                    shown: ["NEWBSD.BAM", "NEWBWK.BAM"],
-                    files: 2,
+                    // Each member with its eastern companion: the section's own type keeps the east beside
+                    // the base, and the section is what names the shape.
+                    shown: ["NEWBSD.BAM", "NEWBSDE.BAM", "NEWBWK.BAM", "NEWBWKE.BAM"],
+                    files: 4,
                     destination: "a folder you choose",
                     retarget: true,
                     needsBasePage: false,
@@ -551,7 +553,9 @@ describe("running a conversion", () => {
 
         expect(writtenPaths()).toEqual([
             "file:/out/NEWBSD.BAM",
+            "file:/out/NEWBSDE.BAM",
             "file:/out/NEWBWK.BAM",
+            "file:/out/NEWBWKE.BAM",
             // The declaration itself, precomputed rather than described - the notes used to tell the
             // reader to write this by hand from values only the host knew.
             "file:/out/9000.ini",
@@ -561,10 +565,13 @@ describe("running a conversion", () => {
         const [first] = writeFileMock.mock.calls;
         expect(parseBamV1(first?.[1] as Uint8Array).sequences).toHaveLength(8);
         // The declaration is the family and the prefix, ready to copy into override rather than described.
-        expect(new TextDecoder().decode(writeFileMock.mock.calls[2]?.[1] as Uint8Array)).toContain("resref=NEWB");
+        // Indexed off the END: the art is four files now that each member pairs its east, and counting
+        // from the front made these two assertions depend on how many members the fixture happens to have.
+        const calls = writeFileMock.mock.calls;
+        expect(new TextDecoder().decode(calls.at(-2)?.[1] as Uint8Array)).toContain("resref=NEWB");
         // The notes still carry the id, since the IDS rows remain the reader's to add.
-        expect(new TextDecoder().decode(writeFileMock.mock.calls[3]?.[1] as Uint8Array)).toContain("9000");
-        expect(showInformationMock).toHaveBeenCalledWith("Wrote TEST_ANIM: 4 files in /out.");
+        expect(new TextDecoder().decode(calls.at(-1)?.[1] as Uint8Array)).toContain("9000");
+        expect(showInformationMock).toHaveBeenCalledWith("Wrote TEST_ANIM: 6 files in /out.");
     });
 
     it("writes no notes file when the reader asked for none", async () => {
@@ -573,7 +580,13 @@ describe("running a conversion", () => {
 
         await send({ type: "runSave", request: { ...REQUEST, notes: false } });
 
-        expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBWK.BAM", "file:/out/9000.ini"]);
+        expect(writtenPaths()).toEqual([
+            "file:/out/NEWBSD.BAM",
+            "file:/out/NEWBSDE.BAM",
+            "file:/out/NEWBWK.BAM",
+            "file:/out/NEWBWKE.BAM",
+            "file:/out/9000.ini",
+        ]);
     });
 
     it("writes nothing when the folder prompt is dismissed", async () => {
@@ -615,13 +628,13 @@ describe("running a conversion", () => {
             {
                 type: "error",
                 message:
-                    "NEWBWK.BAM could not be written: EACCES: permission denied. /out now holds 1 of 4 " +
-                    "files (NEWBSD.BAM); the rest were not written.",
+                    "NEWBWK.BAM could not be written: EACCES: permission denied. /out now holds 2 of 6 " +
+                    "files (NEWBSD.BAM, NEWBSDE.BAM); the rest were not written.",
             },
         ]);
         // The run stops there rather than carrying on into the declaration and the notes, which would
         // describe a set that is not in the folder.
-        expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBWK.BAM"]);
+        expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBSDE.BAM", "file:/out/NEWBWK.BAM"]);
     });
 
     /** The one failure that leaves the set itself complete - so it must not claim members are missing. */
@@ -640,8 +653,8 @@ describe("running a conversion", () => {
             {
                 type: "error",
                 message:
-                    "NEWB-notes.md could not be written: ENOSPC: no space left on device. /out now holds 3 of 4 " +
-                    "files (NEWBSD.BAM, NEWBWK.BAM, 9000.ini); the rest were not written.",
+                    "NEWB-notes.md could not be written: ENOSPC: no space left on device. /out now holds 5 of 6 " +
+                    "files (NEWBSD.BAM, NEWBSDE.BAM, NEWBWK.BAM, NEWBWKE.BAM, 9000.ini); the rest were not written.",
             },
         ]);
         // No success notice: the run did not finish, whatever landed in the folder.
@@ -659,7 +672,7 @@ describe("running a conversion", () => {
             {
                 type: "error",
                 message:
-                    "NEWBSD.BAM could not be written: EROFS: read-only file system. /out now holds 0 of 4 " +
+                    "NEWBSD.BAM could not be written: EROFS: read-only file system. /out now holds 0 of 6 " +
                     "files; the rest were not written.",
             },
         ]);

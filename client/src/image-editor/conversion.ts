@@ -16,76 +16,27 @@ import {
     type MemberWrite,
     type StanceIo,
     FALLOUT_FRM,
-    IE_16_POINT_FULL,
-    IE_16_POINT_MIRRORED,
-    IE_8_POINT_MIRRORED,
-    IE_8_POINT_PAIRED,
     allocateAnimationId,
     convertSet,
     readNeutralSet,
+    targetForSection,
     unfillableSlots,
 } from "@bgforge/animation";
 import { type Facing, type UnevenRotations } from "@bgforge/image";
 
 /**
- * How many compass directions a written set covers.
+ * Whether a source holding `held` can be written under `section`.
  *
- * Two values, not a free number: the engine's own schemes are the eight-point wheel and the sixteen-point
- * one, and nothing in between is a thing an install declares.
+ * The section fixes the geometry, so this is the same question the planner refuses on, asked before the
+ * reader picks: a section whose stored slots the source cannot fill is not a lossy conversion but a file
+ * with declared facings and no art in them. A section this project cannot state a shape for is unreachable
+ * too - there is no target to check against - which is what keeps an unwritable family out of the picker
+ * rather than offering it and refusing.
  */
-export type DirectionCount = 8 | 16;
-
-/**
- * The geometry of a written set - the two axes the dialog asks as radios.
- *
- * Independent, and their product IS the four Infinity Engine targets, which is why neither axis needs a
- * target of its own: a target list would have been the cross product spelled out, and it made the
- * character family read as a different direction count from the cycle-numbered sixteen-point one when the
- * two are the same geometry.
- */
-export interface SaveGeometry {
-    directions: DirectionCount;
-    /**
-     * Whether the eastern facings are written into the files, or left for the engine to mirror.
-     *
-     * NOT a free choice: the engine never looks to see whether an east file exists, it builds the name
-     * from the animation's declared type. Under a mirrored declaration it reads a western cycle and flips
-     * it, so stored eastern art is never addressed; under a split declaration it reads `<base>E`, so an
-     * existing one keeps playing against newly written west. The declaration has to match, which is what
-     * the notes are for.
-     */
-    storeEast: boolean;
-}
-
-/** The Infinity Engine target one pairing of the two axes names. */
-export function ieTargetFor(directions: DirectionCount, storeEast: boolean): ConversionTarget {
-    if (directions === 8) return storeEast ? IE_8_POINT_PAIRED : IE_8_POINT_MIRRORED;
-    return storeEast ? IE_16_POINT_FULL : IE_16_POINT_MIRRORED;
-}
-
-/** Every pairing, in the order the radios read: coarser wheel first, mirrored before stored. */
-const ALL_GEOMETRIES: readonly SaveGeometry[] = [
-    { directions: 8, storeEast: false },
-    { directions: 8, storeEast: true },
-    { directions: 16, storeEast: false },
-    { directions: 16, storeEast: true },
-];
-
-/**
- * The geometries a source holding `held` can actually be written into.
- *
- * A target whose stored slots the source cannot fill is not a lossy conversion, it is a file with declared
- * facings and no art in them - so the radio is disabled rather than offered and refused. The same
- * `unfillableSlots` the planner refuses on answers here, so the dialog and the plan cannot disagree.
- *
- * An empty `held` reaches none of them, which is the right answer and not an edge case: not every
- * animation is a creature, and an ambient or an effect has no facings a creature layout is built from.
- */
-export function reachableGeometries(held: readonly Facing[]): SaveGeometry[] {
-    if (held.length === 0) return [];
-    return ALL_GEOMETRIES.filter((geometry) => {
-        return unfillableSlots(ieTargetFor(geometry.directions, geometry.storeEast), held).length === 0;
-    });
+export function sectionIsReachable(section: string, held: readonly Facing[]): boolean {
+    const target = targetForSection(section);
+    if (target === undefined || held.length === 0) return false;
+    return unfillableSlots(target, held).length === 0;
 }
 
 /** How each naming family spells the files it writes - the second radio's labels. */
@@ -105,8 +56,15 @@ export interface ConversionRequest {
      * one shape - six rotations, every one stored - so nothing further is asked of it.
      */
     engine: "infinity" | "fallout";
-    /** Ignored for the Fallout engine, which has only its own geometry. */
-    geometry: SaveGeometry;
+    /**
+     * The section the result is declared under, which FIXES the Infinity Engine geometry.
+     *
+     * Not a second axis beside the shape: the engine reads a declared animation through its type, and the
+     * type decides how many facings are stored and whether the eastern ones sit in a companion. Offering
+     * the shape separately let a reader ask for one the declared section's engine would never look for.
+     * Ignored for the Fallout engine, which has one geometry of its own.
+     */
+    section: string;
     /** What the written files are called. `fallout-critter` belongs to the Fallout engine alone. */
     naming: ActionScheme;
     /** The stem the target's filenames take. Empty asks for the source's own. */
@@ -132,6 +90,13 @@ export interface ConversionOutcome {
     writes: MemberWrite[];
     /** The companion notes file, or undefined where the reader asked for none. */
     notesFile: string | undefined;
+    /**
+     * The target these files were written for, absent on a refusal.
+     *
+     * Carried rather than re-derived: the declaration beside the art describes this same shape, and a
+     * second resolution of it from the same section is how the two come to disagree.
+     */
+    target?: ConversionTarget;
     /**
      * Whether this conversion had rotations of differing length to make equal.
      *
@@ -172,12 +137,21 @@ export function convertOpenSet(
     flavour: string,
     request: ConversionRequest,
 ): ConversionOutcome {
-    // The Fallout engine has one geometry of its own, so the direction radios say nothing about it and
-    // are not consulted; the Infinity Engine target is exactly the pairing they name.
-    const target =
-        request.engine === "fallout"
-            ? FALLOUT_FRM
-            : ieTargetFor(request.geometry.directions, request.geometry.storeEast);
+    // The Fallout engine has one geometry of its own; the Infinity Engine one is the declared section's.
+    const target = request.engine === "fallout" ? FALLOUT_FRM : targetForSection(request.section);
+    if (target === undefined) {
+        return {
+            outcome: "refused",
+            reason:
+                `Nothing here can say what shape a ${request.section} animation stores its facings in, ` +
+                "so a set written under that section would declare a layout its engine does not read.",
+            losses: [],
+            notes: [],
+            writes: [],
+            notesFile: undefined,
+            unevenRotations: false,
+        };
+    }
     const neutral = readNeutralSet(set, io, { flavour });
     const result = convertSet(neutral, target, {
         prefix: request.prefix === "" ? defaultPrefix(set) : request.prefix,
@@ -206,6 +180,7 @@ export function convertOpenSet(
         notes: result.report.items.filter((item) => !losses.has(item)).map((item) => item.detail),
         writes: result.writes,
         notesFile: result.notes,
+        target,
         // Read off the report rather than re-derived from the source: which rotations differ, and whether
         // this target equalised any, is what the conversion has just finished working out.
         unevenRotations: result.report.items.some(
