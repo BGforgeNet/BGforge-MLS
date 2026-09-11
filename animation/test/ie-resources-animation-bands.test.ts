@@ -268,6 +268,22 @@ describe("stancesOfMembers", () => {
     });
 
     /**
+     * And offers NO sleep there, which is the decision this pins rather than an omission.
+     *
+     * The published format documentation is explicit that these lengths carry no sleep block. The two
+     * references then fall back differently - one to the death, the other to the twitch - and both play
+     * that band FORWARD, so either would put a second name on a clip the list already shows. The get-up
+     * earns its row because reversal makes it a different clip; a sleep row would not.
+     */
+    it("offers no sleep on a body file whose length carries no sleep block", () => {
+        const stances = stancesOfMembers([member("G1", "MEASG1")], () => bands(6, 9, "ie9"));
+
+        expect(stances.map((stance) => stance.action.id)).not.toContain("sleep");
+        // The bands a sleep row would have doubled are each still offered exactly once.
+        expect(stances.filter((stance) => stance.band === 4 || stance.band === 5)).toHaveLength(3);
+    });
+
+    /**
      * The same six-block body at the coarser band width, which is what most of an install's creatures ship.
      * The layout is the one above rather than a second table, so the get-up follows it.
      */

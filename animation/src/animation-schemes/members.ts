@@ -145,8 +145,10 @@ const BAND_FILES = [1, 2, 3, 4, 5, 6] as const;
  * table, draws the band its own suffix numbers, and continues one band into the next - so a list keyed on
  * "holds art" offers one clip once per file that carries a copy of it.
  *
- * Positions are the reference's own split map, confirmed per file on two sets by measuring which band holds
- * a frame larger than the single-pixel placeholder the rest are padded with. The two groups disagree about
+ * Positions are the published format documentation's own split layout, which both references agree with and
+ * which was confirmed per file on two sets by measuring which band holds a frame larger than the
+ * single-pixel placeholder the rest are padded with. That documentation also names the second band one file
+ * carries as unused, which is the bleed described below. The two groups disagree about
  * their bare file, and that asymmetry is the reference's rather than a rule derived here: the first group's
  * bare file is the combat stance at band 1 with the walk taking band 0, while the attack group's bare file
  * is the first attack at band 0.

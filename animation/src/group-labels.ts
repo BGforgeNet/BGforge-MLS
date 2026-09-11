@@ -246,8 +246,10 @@ const MONSTER_GET_UP = MONSTER_G1.findIndex((group) => group.codes?.includes("GU
  * same way: the dying band, run back to front. Without this those families offer no way to stand a creature
  * up at all, which is the state they were in.
  *
- * Only the get-up. The two references disagree about SLEEP, one folding it into the death and the other
- * into the twitch, so a row for it here would ship one reading of a disagreement as a fact.
+ * Only the get-up, deliberately. The published format documentation is explicit that these lengths carry no
+ * sleep block, and both fallbacks the references offer for one play an EXISTING band FORWARD - so a sleep
+ * row would be the death or the twitch under a second name, where the get-up is that band REVERSED and is a
+ * clip a reader can tell apart.
  */
 function monsterG1(blocks: number): IeGroup[] {
     const taken = MONSTER_G1.slice(0, blocks);
