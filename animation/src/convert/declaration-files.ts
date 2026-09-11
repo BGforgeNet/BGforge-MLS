@@ -10,6 +10,7 @@
  * is the same rule the art follows: a converted set is an animation nothing declares yet, and dropping
  * files into a game that no table names is what the notes exist to avoid.
  */
+import { type ActionScheme } from "../animation-schemes/actions";
 import { declarationFor } from "../animation-ini";
 import { writeAnimationIni } from "../animation-ini-write";
 import { type ConversionTarget } from "./target";
@@ -30,6 +31,18 @@ export interface DeclarationInput {
     section: string;
     /** Armour levels the written set has, where its naming carries them. */
     armourLevels?: number;
+    /**
+     * How the conversion named its files, which is what the declared file-scheme flag states.
+     *
+     * The flag is about the SCHEME and nothing else: the documentation gives it the same meaning for every
+     * type that carries one, 0 packing the animation into `G1` and `G2` and 1 spreading it over subfiles.
+     */
+    naming: ActionScheme;
+}
+
+/** Which namings write one file per action, and so declare the spread scheme rather than the packed one. */
+function spreadsOverSubfiles(naming: ActionScheme): boolean {
+    return naming !== "cycle-numbers";
 }
 
 /** An animation's declaration is read as its id in hex - `6006.ini` for `0x6006`. */
@@ -70,11 +83,12 @@ export function declarationFiles(input: DeclarationInput): DeclarationFile[] {
                 // install never writes, and declaring it under that name declares nothing at all.
                 ...declarationFor(input.section),
                 resref: input.prefix.toUpperCase(),
-                // From the TARGET, not from the dialog's "store the east" axis: only one target writes a
-                // companion file, and the sixteen-point one that stores every facing puts them in the base.
-                // The engine never looks to see whether a companion exists - it builds the name from this -
-                // so a flag read off the axis sends it after a file the write never made.
-                splitBams: input.target.pairEast,
+                // From the NAMING, which is what this flag states. It carried the direction profile's
+                // "store the east" axis before, and the two are unrelated: whether an eastern companion
+                // exists is fixed by the declared section's own type and no flag can move it, while this
+                // one tells the engine which filenames to build. Read off the wrong axis it sent the
+                // engine after names the conversion never wrote.
+                splitBams: spreadsOverSubfiles(input.naming),
                 ...(input.armourLevels === undefined ? {} : { armorMax: input.armourLevels }),
             }),
         },

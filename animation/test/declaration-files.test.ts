@@ -16,8 +16,15 @@ function input(over: Partial<DeclarationInput> = {}): DeclarationInput {
         targetId: 0x6006,
         prefix: "NEWB",
         section: "monster",
+        naming: "character",
         ...over,
     };
+}
+
+/** The declared file scheme, read back through this project's own parser. */
+function splitBamsOf(from: DeclarationInput): boolean | undefined {
+    const text = fileNamed(declarationFiles(from), "6006.ini");
+    return parseAnimationIni(new TextEncoder().encode(text)).splitBams;
 }
 
 function fileNamed(files: ReturnType<typeof declarationFiles>, name: string): string {
@@ -40,27 +47,28 @@ describe("declarationFiles for an Infinity Engine target", () => {
     });
 
     /**
-     * The engine never looks to see whether an east file exists - it builds the name from this flag. A set
-     * written with its east stored and this left off draws mirrored west and never addresses the art, so
-     * the flag comes from the same choice that stored the east.
+     * The flag names the FILE SCHEME, not the eastern facings. The published documentation states it
+     * identically for every type that carries one: 0 packs the animation into `G1` and `G2`, 1 spreads it
+     * over subfiles. One reference reads it to choose between exactly those two suffix maps and the other
+     * never reads it at all, keying the file names off the animation type instead - which is also what
+     * decides whether an eastern companion exists, so no flag can carry that choice.
      */
-    it("declares the east as stored exactly when the written files store it", () => {
-        const stored = fileNamed(declarationFiles(input({ target: IE_8_POINT_PAIRED })), "6006.ini");
-        const mirrored = fileNamed(declarationFiles(input()), "6006.ini");
-
-        expect(parseAnimationIni(new TextEncoder().encode(stored)).splitBams).toBe(true);
-        expect(parseAnimationIni(new TextEncoder().encode(mirrored)).splitBams).toBe(false);
+    it("declares the file scheme the naming wrote", () => {
+        expect(splitBamsOf(input({ naming: "cycle-numbers" }))).toBe(false);
+        expect(splitBamsOf(input({ naming: "character" }))).toBe(true);
+        expect(splitBamsOf(input({ naming: "action-codes" }))).toBe(true);
     });
 
     /**
-     * The sixteen-point target that stores every facing writes ONE wide-band file per member, not a pair -
-     * the east is stored IN the base rather than beside it. Read off the dialog's "store the east" axis the
-     * declaration would send the engine looking for a companion nothing wrote.
+     * And does not move with the direction profile, which was the bug: read off the dialog's "store the
+     * east" axis, five of the eight reachable pairings declared a scheme the conversion had not written,
+     * sending the engine after filenames nothing made.
      */
-    it("declares no companion for a target that stores the east in the base file", () => {
-        const text = fileNamed(declarationFiles(input({ target: IE_16_POINT_FULL })), "6006.ini");
-
-        expect(parseAnimationIni(new TextEncoder().encode(text)).splitBams).toBe(false);
+    it("keeps the file-scheme flag off the direction profile", () => {
+        for (const target of [IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED, IE_16_POINT_FULL]) {
+            expect(splitBamsOf(input({ naming: "character", target })), target.label).toBe(true);
+            expect(splitBamsOf(input({ naming: "cycle-numbers", target })), target.label).toBe(false);
+        }
     });
 
     /**

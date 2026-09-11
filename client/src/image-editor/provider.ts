@@ -1227,6 +1227,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             targetId: request.targetId,
             prefix: converted.prefix,
             section: request.section,
+            naming: converted.naming,
             ...(found.set.prefixByArmour.size > 1 ? { armourLevels: found.set.prefixByArmour.size } : {}),
         });
         const total = result.writes.length + declarations.length + (result.notesFile === undefined ? 0 : 1);
