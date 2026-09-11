@@ -140,12 +140,15 @@ describe("stance names", () => {
 
         const stances = setStances(set, 1, ioFor({ MOGHG1: packedBands(4, 6, [0, 1, 2, 3, 4]) }));
 
+        // The dying band yields two rows at this length: the death, and standing back up by running the
+        // same cycles backwards, which is the only get-up a six-block file has.
         expect(stances.map((stance) => stance.label)).toEqual([
             "Walk",
             "Combat ready",
             "Stand",
             "Get hit",
             "Die",
+            "Get up",
             "Twitch",
         ]);
     });

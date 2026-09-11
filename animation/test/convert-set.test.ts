@@ -218,12 +218,16 @@ describe("converting a whole set", () => {
 
         const result = converted(packed, IE_8_POINT_MIRRORED, { ...OPTIONS, scheme: "action-codes" });
 
+        // Seven files from six blocks: this length carries no block for standing back up, so the dying one
+        // is played backwards for it - and a target that names a file per action needs that written, since
+        // its engine finds an animation by name and cannot run another file in reverse.
         expect(result.writes.map((write) => write.resref)).toEqual([
             "XYZWK",
             "XYZSC",
             "XYZSD",
             "XYZGH",
             "XYZDE",
+            "XYZGU",
             "XYZTW",
         ]);
     });

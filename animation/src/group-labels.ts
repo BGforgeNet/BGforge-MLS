@@ -233,6 +233,28 @@ const MONSTER_G1: IeGroup[] = [
     { codes: ["GU"], id: "get-up" },
 ];
 
+/** Where that table keeps the two blocks a short file stops before - read off it, so neither can drift. */
+const MONSTER_DYING = MONSTER_G1.findIndex((group) => group.codes?.includes("DE"));
+const MONSTER_GET_UP = MONSTER_G1.findIndex((group) => group.codes?.includes("GU"));
+
+/**
+ * The first `blocks` of that table, with getting up folded into the death where the file stops short of the
+ * block that would name it.
+ *
+ * A file carrying the whole table addresses a get-up block directly and plays it forwards. The shorter
+ * files - most of what an install ships - stop before it, and both references then derive the get-up the
+ * same way: the dying band, run back to front. Without this those families offer no way to stand a creature
+ * up at all, which is the state they were in.
+ *
+ * Only the get-up. The two references disagree about SLEEP, one folding it into the death and the other
+ * into the twitch, so a row for it here would ship one reading of a disagreement as a fact.
+ */
+function monsterG1(blocks: number): IeGroup[] {
+    const taken = MONSTER_G1.slice(0, blocks);
+    if (blocks > MONSTER_GET_UP) return taken;
+    return taken.map((group, at) => (at === MONSTER_DYING ? { codes: ["DE", "GU"] } : group));
+}
+
 /** The same family's `G2`, on the same prefix rule. */
 const MONSTER_G2: IeGroup[] = [
     // Numbered, not named: this family ships five interchangeable strikes and the reference browser
@@ -274,7 +296,9 @@ const WIDE_BODY: IeGroup[] = [
     { codes: ["SD"], id: "stand" },
     { codes: ["SC"], id: "ready" },
     { codes: ["GH"], id: "get-hit" },
-    { codes: ["DE"], id: "die" },
+    // These files carry no block for standing back up anywhere, so the dying one serves both directions -
+    // the same derivation the short files of the other families use, and what the reference addresses here.
+    { codes: ["DE", "GU"] },
     { codes: ["TW"], id: "twitch" },
 ];
 
@@ -355,22 +379,18 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
         { codes: ["TW"], id: "twitch" },
         { codes: ["SL"], id: "sleep" },
     ],
-    "g1/ie8/6": [
-        { codes: ["WK"], id: "walk" },
-        { codes: ["SC"], id: "ready" },
-        { codes: ["SD"], id: "stand" },
-        { codes: ["GH"], id: "get-hit" },
-        { codes: ["DE"], id: "die" },
-        { codes: ["TW"], id: "twitch" },
-    ],
+    // The same six-block body as the fine scheme's short files, at the coarser band width - walk, the two
+    // stances, get hit, die, twitch, in that order. Shared rather than restated: the key already carries
+    // the width, so a second copy of the list would only be a second place for the order to drift.
+    "g1/ie8/6": monsterG1(6),
     // The second and third blocks are each played for an attack AND a spell - one clip serving both, the
     // same sharing the wide families do. Neither takes an `id`, since no one term covers a pair like that;
     // each ROW takes the meaning of its own code.
     "g2/ie8/3": [{ codes: ["A1"], id: "attack" }, { codes: ["A2", "CA"] }, { codes: ["A3", "SP"] }],
     // Fine-scheme monster (unsplit G1/G2) and character G1, plus the shorter files of the same family.
-    "g1/ie9/8": MONSTER_G1,
-    "g1/ie9/7": MONSTER_G1.slice(0, 7),
-    "g1/ie9/6": MONSTER_G1.slice(0, 6),
+    "g1/ie9/8": monsterG1(8),
+    "g1/ie9/7": monsterG1(7),
+    "g1/ie9/6": monsterG1(6),
     "g2/ie9/7": MONSTER_G2,
     "g2/ie9/6": MONSTER_G2.slice(0, 6),
     "g2/ie9/5": MONSTER_G2.slice(0, 5),
@@ -451,14 +471,16 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
     "monster_large/g3/ie8/4": [
         { codes: ["A3"] },
         { codes: ["GH"], id: "get-hit" },
-        { codes: ["DE"], id: "die" },
+        // As above: this family's three files carry no get-up block, so the death is what runs backwards.
+        { codes: ["DE", "GU"] },
         { codes: ["TW"], id: "twitch" },
     ],
     "ambient_static/g1/ie8/5": [
         { codes: ["SC"], id: "ready" },
         { codes: ["SD"], id: "stand" },
         { codes: ["GH"], id: "get-hit" },
-        { codes: ["DE"], id: "die" },
+        // No block for standing back up in any file of this family, so the dying one serves both.
+        { codes: ["DE", "GU"] },
         { codes: ["TW"], id: "twitch" },
     ],
 

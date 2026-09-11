@@ -132,10 +132,19 @@ describe("stancesOfMembers", () => {
     });
 
     it("names each band of a file that packs several stances", () => {
-        // MOGHG1's real shape: six 8-slot bands, five stored facings each.
+        // MOGHG1's real shape: six 8-slot bands, five stored facings each. The dying band yields two rows -
+        // this length carries no block for standing back up, so that is the same band run backwards.
         const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(6));
-        expect(stances.map((s) => s.label)).toEqual(["Walk", "Combat ready", "Stand", "Get hit", "Die", "Twitch"]);
-        expect(stances.map((s) => s.band)).toEqual([0, 1, 2, 3, 4, 5]);
+        expect(stances.map((s) => s.label)).toEqual([
+            "Walk",
+            "Combat ready",
+            "Stand",
+            "Get hit",
+            "Die",
+            "Get up",
+            "Twitch",
+        ]);
+        expect(stances.map((s) => s.band)).toEqual([0, 1, 2, 3, 4, 4, 5]);
         expect(stances.every((s) => s.resref === "MOGHG1")).toBe(true);
     });
 
@@ -147,7 +156,15 @@ describe("stancesOfMembers", () => {
     it("gives each band of a packed file what the block table says it depicts", () => {
         const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(6));
 
-        expect(stances.map((s) => s.action.id)).toEqual(["walk", "ready", "stand", "get-hit", "die", "twitch"]);
+        expect(stances.map((s) => s.action.id)).toEqual([
+            "walk",
+            "ready",
+            "stand",
+            "get-hit",
+            "die",
+            "get-up",
+            "twitch",
+        ]);
         expect(stances.every((s) => s.action.code === "G1")).toBe(true);
     });
 
@@ -222,6 +239,68 @@ describe("stancesOfMembers", () => {
     it("plays a get-up block of its own forwards", () => {
         const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(8, 9, "ie9"));
         const getUp = stances.find((s) => s.label === "Get up");
+
+        expect(getUp?.band).toBe(7);
+        expect(getUp?.reversed).toBeUndefined();
+    });
+
+    /**
+     * A monster file too short to carry a get-up block still gets up.
+     *
+     * The eight-block form gives getting up and sleeping blocks of their own, and the shorter files of the
+     * same family stop before them - so a stance list read off the blocks alone offered no way to stand the
+     * creature back up, for most of what an install ships. Both references derive it the same way: the
+     * dying band, played back to front. They disagree about SLEEP, one folding it into the death and the
+     * other into the twitch, so only the get-up is taken here.
+     */
+    it("offers a get-up on the dying band of a monster file too short to hold one", () => {
+        const stances = stancesOfMembers([member("G1", "MEASG1")], () => bands(6, 9, "ie9"));
+        const getUp = stances.find((stance) => stance.label.startsWith("Get up"));
+
+        expect(getUp?.band, "the dying band is the one played backwards").toBe(4);
+        expect(getUp?.reversed).toBe(true);
+        // The death itself stays on that band and keeps its own meaning - the get-up is a second row over
+        // the same cycles, not a replacement for it.
+        expect(stances.filter((stance) => stance.band === 4).map((stance) => stance.action.id)).toEqual([
+            "die",
+            "get-up",
+        ]);
+    });
+
+    /**
+     * The same six-block body at the coarser band width, which is what most of an install's creatures ship.
+     * The layout is the one above rather than a second table, so the get-up follows it.
+     */
+    it("offers the same get-up on a six-block body banded at eight", () => {
+        const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(6, 8, "ie8"));
+        const getUp = stances.find((stance) => stance.label.startsWith("Get up"));
+
+        expect(getUp?.band).toBe(4);
+        expect(getUp?.reversed).toBe(true);
+    });
+
+    /**
+     * The wide-band families keep the body in a file of five blocks with no block for standing up at all,
+     * so the same derivation applies - the reference addresses their get-up at the dying block.
+     */
+    it("offers a get-up on the dying band of a wide-band body file", () => {
+        // No scheme on the file: a wide band is settled by the SECTION's declared stride, which is what
+        // `blockScheme` reads when the file itself names none.
+        const wide = { ...bands(5, 16), scheme: undefined };
+        const stances = stancesOfMembers([member("G2", "MWYVG2")], () => wide, "monster_quadrant");
+        const getUp = stances.find((stance) => stance.label.startsWith("Get up"));
+
+        expect(getUp?.band).toBe(3);
+        expect(getUp?.reversed).toBe(true);
+    });
+
+    /**
+     * The longer form addresses a get-up block directly, so it is played forwards. A rule keyed on the code
+     * alone would reverse this family's get-up too.
+     */
+    it("leaves a monster file that carries its own get-up block playing forwards", () => {
+        const stances = stancesOfMembers([member("G1", "MOGHG1")], () => bands(8, 9, "ie9"));
+        const getUp = stances.find((stance) => stance.label.startsWith("Get up"));
 
         expect(getUp?.band).toBe(7);
         expect(getUp?.reversed).toBeUndefined();
@@ -310,7 +389,9 @@ describe("stancesOfMembers", () => {
         const stances = stancesOfMembers([member("G1", "MOGHG1"), member("G2", "MOGHG2")], (row) =>
             row.resref === "MOGHG1" ? bands(6) : bands(2),
         );
-        expect(stances).toHaveLength(8);
+        // Seven from the body file - its six bands plus the get-up its dying band also plays - and two
+        // from the attack file.
+        expect(stances).toHaveLength(9);
         expect(stances.at(-1)?.resref).toBe("MOGHG2");
     });
 
