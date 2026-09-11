@@ -52,6 +52,7 @@
         "watch:server": "pnpm build:base:server --sourcemap --watch",
         "test": "./scripts/test.sh",
         "test:all": "./scripts/test-all.sh",
+        "test:project": "vitest run --project",
         "test:cov": "./scripts/test-coverage.sh",
         "test:grammars": "./scripts/test-grammars.sh",
         "test:harness": "./scripts/test-harness.sh",

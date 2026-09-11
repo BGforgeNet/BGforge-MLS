@@ -32,11 +32,13 @@ Pick the cheapest tool that answers the actual question.
   answers "how long is this animation" without a drive. Answers through the same index and resolvers the gallery
   uses, so its answer and the panel's cannot disagree - which a throwaway script re-deriving the naming rules can.
   Not a substitute for a gallery drive.
-- **"Run one package's tests"** -> `pnpm exec vitest run --project <name> [file filter]` from the repo root. Never
+- **"Run one package's tests"** -> `pnpm test:project <name> [file filter]` from the repo root. Never
   `--config <pkg>/vitest.config...`: the extension varies per package (`.mts` under `client/` and `server/`, `.ts`
   everywhere else) and a wrong guess fails as an unresolved-entry error that reads like a broken config. The root
   `vitest.config.ts` names every project, so `--project` cannot be spelled wrong without saying so. Project names are
-  in each package's own config (`rg -n 'name:' */vitest.config.*`).
+  in each package's own config (`rg -n 'name:' */vitest.config.*`), and they carry a suffix the directory does not -
+  `animation-lib`, not `animation`. **Pass the file filter while iterating**: a package's whole suite over a real
+  install runs for minutes, and one file answers in seconds - keep the unfiltered run for close-out.
 - **Any visual/CSS/layout change to the binary editor** -> render it, do not reason about the cascade blind. Run
   order: `pnpm -C binary build` (only if `binary/src` changed) -> `pnpm exec tsx binary-editor/test/harness/build.mts`
   (after any webview/Svelte/`styles.css` edit) -> one of the `render-*.mts` drivers in that same directory
