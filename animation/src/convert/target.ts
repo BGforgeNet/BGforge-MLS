@@ -141,6 +141,52 @@ export const IE_16_POINT_FULL: ConversionTarget = {
     declaration: "infinity-ids",
 };
 
+/**
+ * The direction geometry each declared section's TYPE uses.
+ *
+ * The geometry is not a choice a writer gets to make: the engine reads a declared animation through its
+ * type, and the type fixes how many facings are stored and whether the eastern ones sit in a companion
+ * file. Offering the two as separate controls let a reader ask for a shape the declared section's engine
+ * would never look for.
+ *
+ * Taken from the published documentation's own per-type orientation lists and confirmed against a shipped
+ * install section by section: every section here stores what the documentation says, and holds an eastern
+ * companion exactly where it says the east is not computed.
+ *
+ * Four sections are deliberately absent, and a caller refuses rather than guessing for them. The quadrant
+ * family stores sixteen slots holding eight pictures; the wide sixteen-direction family spreads its sixteen
+ * across a base and a companion - neither shape is one of the profiles above, which either store every
+ * facing in the base or keep an eight-point west arc with a companion. The burrowing family states TWO
+ * geometries chosen by a `mirror` field this project neither reads nor writes, so a conversion into it
+ * could not declare which one it wrote. `effect` is not a directional family at all.
+ */
+const SECTION_GEOMETRY: Readonly<Record<string, ConversionTarget>> = {
+    ambient: IE_8_POINT_PAIRED,
+    ambient_static: IE_8_POINT_PAIRED,
+    character: IE_16_POINT_MIRRORED,
+    character_old: IE_8_POINT_PAIRED,
+    flying: IE_16_POINT_MIRRORED,
+    monster: IE_16_POINT_MIRRORED,
+    monster_icewind: IE_8_POINT_PAIRED,
+    monster_large: IE_8_POINT_PAIRED,
+    monster_layered: IE_8_POINT_PAIRED,
+    monster_layered_spell: IE_8_POINT_PAIRED,
+    monster_old: IE_8_POINT_PAIRED,
+    multi_new: IE_16_POINT_MIRRORED,
+    town_static: IE_16_POINT_FULL,
+};
+
+/**
+ * The geometry a set declared under `section` is written in, or undefined where this cannot say.
+ *
+ * Undefined is the answer for a section outside the table AND for an install's own header this project has
+ * no spelling for - both are "nothing here states the shape", which a caller answers by keeping the set's
+ * own rather than by picking one.
+ */
+export function targetForSection(section: string): ConversionTarget | undefined {
+    return SECTION_GEOMETRY[section];
+}
+
 /** Fallout's six rotations, every one stored, against the game's own palette. */
 export const FALLOUT_FRM: ConversionTarget = {
     label: "Fallout, 6 rotations",
