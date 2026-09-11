@@ -279,6 +279,8 @@ describe("schemeMembers", () => {
     });
 
     it("takes whichever family the files answer for, where the section mixes two", () => {
+        // No band map on this one: the archive answers for plain quarters here, and a set whose `G` files
+        // are whole animations would lose the bands another group's file is named for.
         expect(schemeMembers("mixed", "MTAN", has("MTANG11", "MTANG12"))).toEqual([
             { label: "G1", name: "G1", action: cycleAction("G1"), resref: "MTANG11", parts: ["MTANG11", "MTANG12"] },
         ]);
@@ -291,6 +293,26 @@ describe("schemeMembers", () => {
                 parts: ["METNWK"],
             },
         ]);
+    });
+
+    /**
+     * The quartered split. The one animation in this family cuts every band file into quarters as well, so a
+     * member is four files and the band digit follows the quadrant - the other order names nothing. Reaching
+     * only the band-less files left five of its fourteen stances unreachable, the walk and the death among
+     * them.
+     */
+    it("reads a quartered split-band family as one member per band", () => {
+        const members = schemeMembers(
+            "mixed",
+            "MDEM",
+            has("MDEMG11", "MDEMG12", "MDEMG13", "MDEMG14", "MDEMG111", "MDEMG121", "MDEMG131", "MDEMG141"),
+        );
+
+        expect(members.map((member) => [member.label, member.ownBand])).toEqual([
+            ["G1", 1],
+            ["G11", 0],
+        ]);
+        expect(members[1]?.parts).toEqual(["MDEMG111", "MDEMG121", "MDEMG131", "MDEMG141"]);
     });
 
     it("resolves nothing for an animation with no declared prefix", () => {

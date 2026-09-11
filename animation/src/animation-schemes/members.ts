@@ -185,6 +185,17 @@ const TILES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
  */
 const TILE_CYCLES = [0, 1, 2].flatMap((tens) => TILES.map((_, at) => `${tens}${at}`));
 
+/**
+ * One member's four quarters, each quarter's own eastern twin after them.
+ *
+ * The quadrant digit sits between the group and whatever follows it, so a band file's quarters are
+ * `<resref>G<group><quadrant><band>`. The other order names nothing an install ships.
+ */
+function quartered(resref: string, cycle: string, band = ""): string[] {
+    const parts = QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}${band}`);
+    return [...parts, ...parts.map((part) => `${part}E`)];
+}
+
 /** As `cycleMember`, plus the band this file is named for where the split map places one. */
 function splitMember(label: string, parts: readonly string[]): MemberShape {
     const own = SPLIT_BAND[label];
@@ -210,7 +221,14 @@ function withEast(resref: string): string[] {
     return [resref, `${resref}E`];
 }
 
-function candidates(layout: Layout, resref: string): MemberShape[] {
+/**
+ * The members a layout could name for this prefix, before existence filters them.
+ *
+ * `exists` is here for the one layout that has to CHOOSE between two readings of the same names rather than
+ * offer both: see the mixed case. Everywhere else the candidates are the same whatever the archive holds,
+ * and `schemeMembers` does the filtering.
+ */
+function candidates(layout: Layout, resref: string, exists: (resref: string) => boolean): MemberShape[] {
     switch (layout) {
         case "bare":
             // The file IS the animation, so it carries no action code at all - the empty one, which names
@@ -256,19 +274,34 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
             // No quadrant candidate, deliberately - see the `actionsOrCycles` layout for the neighbour
             // whose files it resolved. Cycles first, since the few animations that ship them ship nothing
             // else, and an action-code probe on the same prefix costs only lookups.
-            return [...candidates("cycles", resref), ...candidates("actions", resref)];
-        case "mixed":
-            // TODO: the id range above the tiled dragons numbers a THIRD digit after the quadrant -
-            // `<resref>G<group><quadrant><variant>` - and none of the candidates below generates it. Measured
-            // on a Baldur's Gate II Enhanced Edition install: `MDEM` (the only animation in the family that
-            // uses it) ships 52 files, of which the quadrant candidate reaches the 8 whose stance carries no
-            // variant digit. The other 44 are a naming family of their own, not a variant of these.
+            return [...candidates("cycles", resref, exists), ...candidates("actions", resref, exists)];
+        case "mixed": {
+            // One animation here quarters a SPLIT-BAND set: each group has a file per band and every one of
+            // those is itself cut into quarters, `<resref>G<group><quadrant><band>`, with the band-less name
+            // being the group's own file. Measured per file on both installs by which band holds a frame
+            // larger than the single-pixel placeholder: all eleven files of each group land on the split
+            // family's own band map, so that map is what names them here too. Reaching only the band-less
+            // files left five of that animation's fourteen stances unreachable, its walk and death among them.
+            //
+            // Asked of the archive rather than applied to the family, because the family also holds sets
+            // whose `G` files are PLAIN quarters: a band map over those drops the bands they really draw,
+            // each to the member some other group's file is named for.
+            const split = CYCLES.some((cycle) =>
+                BAND_FILES.some((band) => QUADRANTS.some((quarter) => exists(`${resref}${cycle}${quarter}${band}`))),
+            );
+            const quarters = split
+                ? CYCLES.flatMap((cycle) => [
+                      splitMember(cycle, quartered(resref, cycle)),
+                      ...BAND_FILES.map((band) => splitMember(`${cycle}${band}`, quartered(resref, cycle, `${band}`))),
+                  ])
+                : CYCLES.map((cycle) => cycleMember(cycle, quartered(resref, cycle)));
             return [
-                ...candidates("quadrant", resref),
-                ...candidates("pieces", resref),
-                ...candidates("cycles", resref),
-                ...candidates("actions", resref),
+                ...quarters,
+                ...candidates("pieces", resref, exists),
+                ...candidates("cycles", resref, exists),
+                ...candidates("actions", resref, exists),
             ];
+        }
         case "characterOld":
             // The base files are the character scheme's own; only the mirrored twin below is extra, and it
             // is a part of its member rather than a member of its own.
@@ -292,7 +325,7 @@ export function schemeMembers(
     layer?: string,
 ): SchemeMember[] {
     if (resref === undefined) return [];
-    return candidates(layout, resref).flatMap((member) => {
+    return candidates(layout, resref, exists).flatMap((member) => {
         const parts = member.parts.filter(exists);
         const first = parts[0];
         if (first === undefined) return [];
