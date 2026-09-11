@@ -329,7 +329,11 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                     writes.push({ resref: name, extension: "FRM", bytes: frm.bytes });
                     continue;
                 }
-                if (!target.pairEast) {
+                // One file, for a target that stores no companion - and for a member with no facings to put
+                // in one. A paperdoll is one cycle and never a direction, so a pairing target has nothing to
+                // split it on; refusing there refused the whole set over a still image.
+                const directional = actions.some((action) => action.cycles.kind === "directional");
+                if (!target.pairEast || !directional) {
                     writes.push({
                         resref: name,
                         extension: "BAM",

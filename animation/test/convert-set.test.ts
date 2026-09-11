@@ -340,10 +340,11 @@ describe("converting a whole set", () => {
         expect(result.outcome).toBe("lossless");
     });
 
-    it("refuses to pair a file whose cycles do not fill the target's blocks", () => {
+    it("writes a file whose cycles do not fill the target's blocks without carving a companion", () => {
         // The eastern half of a paired scheme is slots 5-7 of each block. A band whose cycles are an
         // ordered list of three has no blocks to take a half of, and splitting on the count alone would
-        // carve a companion file out of arbitrary cycles. Built by hand: the shape needs a band the
+        // carve a companion file out of arbitrary cycles - so it is written whole instead. Refusing was the
+        // older answer and cost the whole set over one member. Built by hand: the shape needs a band the
         // reader only produces from a file whose block structure it could not recognise.
         const set: NeutralSet = {
             identity: { sourceId: 0x1234, code: "MOGH", name: "OGRE_MAGE", sourceFlavour: "tob", sourceSection: "x" },
@@ -364,9 +365,12 @@ describe("converting a whole set", () => {
             ],
         };
 
-        expect(convertSet(set, IE_8_POINT_PAIRED, { ...OPTIONS, scheme: "cycle-numbers" })).toMatchObject({
-            outcome: "refused",
-        });
+        const result = convertSet(set, IE_8_POINT_PAIRED, { ...OPTIONS, scheme: "cycle-numbers" });
+
+        expect(result.outcome).not.toBe("refused");
+        // One file and no `E` beside it: the guarantee is that nothing carves a companion out of cycles
+        // that are not directions, which writing it whole keeps.
+        expect(result.outcome === "refused" ? [] : result.writes.map((write) => write.resref)).toEqual(["XYZG1"]);
     });
 
     /**
@@ -564,6 +568,24 @@ describe("converting a whole set", () => {
         const result = converted(set, IE_8_POINT_MIRRORED, { ...OPTIONS, prefix: "XYZ" });
 
         expect(result.writes.map((write) => write.resref)).toContain("XYZ1INV");
+    });
+
+    /**
+     * A target that keeps its eastern facings in a companion file splits every member it writes. The
+     * paperdoll has nothing to split - it is one cycle and never a direction - so the split refused it, and
+     * with it the whole set: on a real install this made the paired profile unable to convert a single
+     * character animation, all 78 of them refused on this one member.
+     */
+    it("writes a non-directional member as one file for a target that pairs its east", () => {
+        const set = read(
+            { CDMB1G11: band(), CDMD1INV: multiCycle(4, 1) },
+            { paperdollPrefix: "CDMD", prefixByArmour: new Map([[1, "CDMB"]]) },
+        );
+
+        const result = converted(set, IE_8_POINT_PAIRED, { ...OPTIONS, prefix: "XYZ" });
+
+        // The banded member still pairs; the paperdoll is the one that does not.
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZ1G11", "XYZ1G11E", "XYZ1INV"]);
     });
 
     it("converts the rest of the set where the paperdoll itself will not parse", () => {
