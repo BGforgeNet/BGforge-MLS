@@ -190,11 +190,15 @@ function schemeFrom(ini: AnimationIni | undefined, tabled: TableAnimation | unde
 }
 
 /**
- * The layout an animation draws under. A table row carries no `split_bams`, so a tabled `monster` resolves to
- * the unsplit layout - which is what `layoutOf` returns for an undeclared split.
+ * The layout an animation draws under, from the install's own declaration where it ships one and from the
+ * vendored table otherwise.
+ *
+ * The table carries the split too, for the same reason it carries the section: a classic install declares
+ * neither, and without it every split animation of the `monster` section falls to the unsplit layout - which
+ * opens two files of the eleven such a creature draws from.
  */
 function layoutFor(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): Layout | undefined {
-    return ini === undefined ? layoutOf(tabled?.section) : layoutOf(ini.section, ini.splitBams);
+    return ini === undefined ? layoutOf(tabled?.section, tabled?.splitBams) : layoutOf(ini.section, ini.splitBams);
 }
 
 /**

@@ -38,6 +38,12 @@ export interface TableAnimation {
      * set of files. Absent for every other family, and for a spell-layered animation that declares none.
      */
     readonly overlays?: readonly string[];
+    /**
+     * Whether this animation's bands are split across a file each, for the one section that takes two
+     * layouts. Only a declaration can separate them, and a classic install ships none - so for those games
+     * this table is the only place the fact can live.
+     */
+    readonly splitBams?: true;
 }
 
 export type AnimationTable = ReadonlyMap<number, TableAnimation>;

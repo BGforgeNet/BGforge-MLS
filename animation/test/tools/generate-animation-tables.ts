@@ -42,6 +42,7 @@ interface Row {
     paperdoll?: string;
     overlays?: string[];
     base?: string;
+    splitBams?: true;
 }
 
 /**
@@ -87,6 +88,10 @@ function readRows(gameDir: string): Row[] {
             ...(ini.resrefPaperdoll === undefined ? {} : { paperdoll: ini.resrefPaperdoll }),
             ...(ini.weaponOverlays.length === 0 ? {} : { overlays: [...ini.weaponOverlays] }),
             ...(base === undefined || prefixes.includes(base) === true ? {} : { base }),
+            // A classic install declares nothing, so without this the table cannot tell the two monster
+            // layouts apart and every split animation falls to the unsplit one - which opens two files of
+            // the eleven such a creature draws from.
+            ...(ini.splitBams === true ? { splitBams: true as const } : {}),
         });
     }
     return rows.sort((a, b) => a.id - b.id);
@@ -139,7 +144,8 @@ function render(rows: readonly Row[]): string {
         const overlays =
             row.overlays === undefined ? "" : `, overlays: [${row.overlays.map((o) => `"${o}"`).join(", ")}]`;
         const base = row.base === undefined ? "" : `, base: "${row.base}"`;
-        return `    [${hex(row.id)}, { prefixes: [${prefixes}], section: "${row.section}"${base}${paperdoll}${overlays} }],`;
+        const split = row.splitBams === undefined ? "" : ", splitBams: true";
+        return `    [${hex(row.id)}, { prefixes: [${prefixes}], section: "${row.section}"${base}${paperdoll}${overlays}${split} }],`;
     });
     return [BEGIN_MARKER, ...lines, END_MARKER].join("\n");
 }

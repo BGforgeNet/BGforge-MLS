@@ -247,6 +247,9 @@ describe("tableForFlavour", () => {
             prefixes: ["CHMB", "CHMB", "CHMB", "CHMC"],
             section: "character",
             paperdoll: "CHMC",
+            // Carried because the install declares it, not because this section reads it - only `monster`
+            // takes two layouts. A row is what the declaration says, so the flag travels with the rest.
+            splitBams: true,
         });
     });
 
