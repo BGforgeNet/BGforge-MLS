@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { layoutOf } from "../src/animation-schemes/layout";
+import { layoutOf, namingForLayout } from "../src/animation-schemes/layout";
 import { layerPrefixes } from "../src/animation-schemes/layers";
 import { schemeMembers } from "../src/animation-schemes/members";
 import { parseAnimationIni } from "../src/animation-ini";
@@ -67,6 +67,25 @@ describe("layoutOf", () => {
     it("gives no layout to a section nothing here covers", () => {
         expect(layoutOf("monster_wyvern", undefined)).toBeUndefined();
         expect(layoutOf(undefined, undefined)).toBeUndefined();
+    });
+});
+
+describe("namingForLayout", () => {
+    it("names the family a layout's files already follow", () => {
+        expect(namingForLayout("character")).toBe("character");
+        expect(namingForLayout("actionsOrCycles")).toBe("action-codes");
+        expect(namingForLayout("cycles")).toBe("cycle-numbers");
+    });
+
+    /**
+     * The gaps are what a save dialog has to see: a layout with no naming cannot be written back in its own
+     * shape, so "as it stands" is not an option for it. A split-band set is the one this project added most
+     * recently - the writer packs a cycle group into one file, and that family wants one file per band.
+     */
+    it("gives no naming to a layout this cannot write, and none to a set with no layout at all", () => {
+        expect(namingForLayout("splitCycles")).toBeUndefined();
+        expect(namingForLayout("quadrant")).toBeUndefined();
+        expect(namingForLayout(undefined)).toBeUndefined();
     });
 });
 
@@ -138,6 +157,21 @@ describe("schemeMembers", () => {
             ["MEASG21", 1],
             ["MEASG25", 5],
         ]);
+    });
+
+    /**
+     * The section whose layout the archive settles offers both families at once, cycle-numbered first.
+     * A set of either shape resolves through one call, which is what lets the picker ask the archive rather
+     * than the declaration - and the order matters only in that the few sets shipping cycles ship nothing
+     * else, so the action-code probe behind them costs lookups and finds nothing.
+     */
+    it("offers both namings for the section whose layout the archive decides", () => {
+        const cycles = schemeMembers("actionsOrCycles", "MDOG", has("MDOGG1", "MDOGG2"), undefined);
+        const actions = schemeMembers("actionsOrCycles", "MDOG", has("MDOGWK", "MDOGDE"), undefined);
+
+        expect(cycles.map((member) => member.resref)).toEqual(["MDOGG1", "MDOGG2"]);
+        // In the scheme's own action order, not the order the archive happens to answer in.
+        expect(actions.map((member) => member.resref)).toEqual(["MDOGDE", "MDOGWK"]);
     });
 
     /**

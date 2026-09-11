@@ -47,9 +47,11 @@ const REQUIRED_VALUE_EXPORTS = [
     "FALLOUT_FRM",
     "IE_16_POINT_FULL",
     "IE_16_POINT_MIRRORED",
+    "IE_16_POINT_WIDE_PAIRED",
     "IE_8_POINT_MIRRORED",
     "IE_8_POINT_PAIRED",
     "convertSet",
+    "targetForSection",
     "unfillableSlots",
     "allocateAnimationId",
     // The files a converted set needs beside its art, precomputed rather than described in the notes.
