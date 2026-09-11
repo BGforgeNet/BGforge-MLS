@@ -78,6 +78,7 @@ interface MemberShape {
     name: string;
     action: NeutralActionRef;
     parts: readonly string[];
+    ownBand?: number;
 }
 
 /** Cycles a one-file-per-cycle animation can carry. */
@@ -129,6 +130,47 @@ function actionName(code: string): string {
 
 const QUADRANTS = [1, 2, 3, 4] as const;
 
+/**
+ * The digits a split `monster` animation numbers its band files with, appended to a cycle suffix.
+ *
+ * Six rather than the five a `G1` group answers, because the attack group runs one further. Offering a
+ * digit the archive does not hold costs a lookup; stopping short loses a band outright.
+ */
+const BAND_FILES = [1, 2, 3, 4, 5, 6] as const;
+
+/**
+ * Which band of the shared skeleton each split `monster` file is FOR.
+ *
+ * Same shape as the character family's skeleton and for the same reason: every file carries the whole cycle
+ * table, draws the band its own suffix numbers, and continues one band into the next - so a list keyed on
+ * "holds art" offers one clip once per file that carries a copy of it.
+ *
+ * Positions are the reference's own split map, confirmed per file on two sets by measuring which band holds
+ * a frame larger than the single-pixel placeholder the rest are padded with. The two groups disagree about
+ * their bare file, and that asymmetry is the reference's rather than a rule derived here: the first group's
+ * bare file is the combat stance at band 1 with the walk taking band 0, while the attack group's bare file
+ * is the first attack at band 0.
+ *
+ * The attack group runs to a seventh band, which only some sets carry: where the files stop at six it is
+ * simply a band nothing draws, and where they reach it every one of them was offering it until the last
+ * file claimed it.
+ */
+const SPLIT_BAND: Readonly<Record<string, number>> = {
+    G11: 0,
+    G1: 1,
+    G12: 2,
+    G13: 3,
+    G14: 4,
+    G15: 5,
+    G2: 0,
+    G21: 1,
+    G22: 2,
+    G23: 3,
+    G24: 4,
+    G25: 5,
+    G26: 6,
+};
+
 /** Stance groups a tiled animation can carry, and the 3x3 grid each one's picture is cut into. */
 const PIECE_STANCES = [1, 2, 3, 4, 5] as const;
 const TILES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
@@ -140,6 +182,12 @@ const TILES = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
  * three ranges costs only lookups - the archive decides which a given animation ships.
  */
 const TILE_CYCLES = [0, 1, 2].flatMap((tens) => TILES.map((_, at) => `${tens}${at}`));
+
+/** As `cycleMember`, plus the band this file is named for where the split map places one. */
+function splitMember(label: string, parts: readonly string[]): MemberShape {
+    const own = SPLIT_BAND[label];
+    return { ...cycleMember(label, parts), ...(own === undefined ? {} : { ownBand: own }) };
+}
 
 /** A member of the cycle-numbered family: the digits are its name, and nothing pins what they depict. */
 function cycleMember(label: string, parts: readonly string[]): MemberShape {
@@ -177,6 +225,14 @@ function candidates(layout: Layout, resref: string): MemberShape[] {
                     ...QUADRANTS.map((quadrant) => `${resref}${cycle}${quadrant}E`),
                 ]),
             );
+        case "splitCycles":
+            // The cycle file itself and the band files numbered off it, each its own member: this split is
+            // of the BANDS, so nothing is composed. Each carries the band it is named for, which is what
+            // keeps a neighbour's copy of that band out of the list.
+            return CYCLES.flatMap((cycle) => [
+                splitMember(cycle, withEast(`${resref}${cycle}`)),
+                ...BAND_FILES.map((band) => splitMember(`${cycle}${band}`, withEast(`${resref}${cycle}${band}`))),
+            ]);
         case "pieces":
             // One member per stance group, drawing every tile of every facing that stance stores. They are
             // pieces of one picture across the grid AND across the cycle table, so the caller composes the
@@ -248,6 +304,7 @@ export function schemeMembers(
                 action: member.action,
                 resref: first,
                 parts,
+                ...(member.ownBand === undefined ? {} : { ownBand: member.ownBand }),
                 ...(layer === undefined ? {} : { layer }),
             },
         ];

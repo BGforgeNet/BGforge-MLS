@@ -81,6 +81,7 @@ const LAYOUT_SUMMARIES = {
     bare: "a single file, with no suffix",
     cycles: "one file per numbered cycle",
     quadrant: "each cycle split across four files",
+    splitCycles: "one file per band, numbered off its cycle",
     pieces: "a grid of tiles, one file per tile per facing",
     actions: "one file per two-letter action code",
     mixed: "one file per cycle, or a grid of tiles - whichever the install ships",

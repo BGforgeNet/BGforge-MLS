@@ -7,6 +7,7 @@ import { parseAnimationIni } from "../src/animation-ini";
 import { buildAnimationIndex } from "../src/animation-index";
 import { tableForFlavour } from "../src/animation-tables";
 import { setTile } from "../src/set-tiles";
+import { drawnArmourLevels, setStances, stanceIo } from "../src/set-stances";
 
 const GAME = process.env.BGFORGE_IE_GAME;
 
@@ -21,8 +22,14 @@ describe("layoutOf", () => {
         expect(layoutOf("character_old", undefined)).toBe("characterOld");
     });
 
+    /**
+     * The declared split is of the BANDS, not of the picture. Reading it as quarters composed four separate
+     * animations into one, and the two readings are indistinguishable by name - both produce `G11`..`G14`.
+     * What separates them is geometry: quarters of one picture share a frame geometry, as the tiled
+     * families' parts do, and these files do not.
+     */
     it("splits the one section that takes two layouts on the field that declares it", () => {
-        expect(layoutOf("monster", true)).toBe("quadrant");
+        expect(layoutOf("monster", true)).toBe("splitCycles");
         expect(layoutOf("monster", false)).toBe("cycles");
     });
 
@@ -94,6 +101,44 @@ describe("schemeMembers", () => {
         const set = new Set(names);
         return (resref: string): boolean => set.has(resref);
     };
+
+    /**
+     * Each band file is its own member, drawing itself. The bug this pins composed the four band files into
+     * one member per cycle, so four separate animations were merged into a single picture and the bands that
+     * were only reachable through them disappeared.
+     */
+    it("gives a declared band split one member per file rather than one composed of them", () => {
+        const members = schemeMembers("splitCycles", "MEAS", has("MEASG1", "MEASG11", "MEASG12"), undefined);
+        expect(members.map((member) => member.resref)).toEqual(["MEASG1", "MEASG11", "MEASG12"]);
+        expect(members.map((member) => member.parts)).toEqual([["MEASG1"], ["MEASG11"], ["MEASG12"]]);
+    });
+
+    /**
+     * A split file carries the whole cycle table and is authoritative for ONE band, so it has to say which.
+     * Without that every file offers each band it happens to carry and the picker shows one clip several
+     * times - a set of eleven files came back as twenty-four rows over twelve distinct stances.
+     *
+     * The positions are the reference's own split map, confirmed per file on two sets by measuring which
+     * band holds art larger than a placeholder. The first group puts its bare file at band 1 and its `1`
+     * digit at band 0; the attack group puts its bare file at band 0. That asymmetry is the reference's,
+     * not a rule derived here.
+     */
+    it("names each band file of a declared split for the one band it owns", () => {
+        const members = schemeMembers(
+            "splitCycles",
+            "MEAS",
+            has("MEASG1", "MEASG11", "MEASG13", "MEASG2", "MEASG21", "MEASG25"),
+            undefined,
+        );
+        expect(members.map((member) => [member.resref, member.ownBand])).toEqual([
+            ["MEASG1", 1],
+            ["MEASG11", 0],
+            ["MEASG13", 3],
+            ["MEASG2", 0],
+            ["MEASG21", 1],
+            ["MEASG25", 5],
+        ]);
+    });
 
     /**
      * A layer is a member of its own rather than a part of the base one: measured on a classic archive, an
@@ -322,6 +367,51 @@ describe.skipIf(GAME === undefined)("over a real install", () => {
         process.stdout.write(`  ${shipping - undrawn.length}/${shipping} animations with art resolve a file\n`);
         expect(shipping, "no animation in this install ships art, so nothing was exercised").toBeGreaterThan(0);
         expect(undrawn).toEqual([]);
+    });
+
+    /**
+     * A split set offers each of its clips once.
+     *
+     * Every band file of this family carries its neighbours' bands as well, at the same cycles and frame
+     * counts, so a list keyed on "this file draws that band" shows one clip once per file carrying a copy -
+     * and a reader choosing between those rows is choosing at random. The band map is what settles which
+     * file each band belongs to; without it one set came back as twenty-four rows over twelve stances.
+     */
+    it("offers each stance of a split set once rather than once per file carrying it", (ctx) => {
+        const game = openGame(GAME!);
+        expect(game, `no game at ${GAME}`).toBeDefined();
+        const io = stanceIo(game!);
+
+        const repeated: string[] = [];
+        let split = 0;
+        let rows = 0;
+        for (const set of buildAnimationIndex(game!, tableForFlavour(game!.identity.flavour))) {
+            if (set.layout !== "splitCycles") continue;
+            split += 1;
+            for (const armour of drawnArmourLevels(set, io.exists)) {
+                const seen = new Map<string, number>();
+                for (const stance of setStances(set, armour, io)) {
+                    // The attack group's last two files, whose mapped bands are past the end of a set whose
+                    // files carry fewer. A file that does not draw the band it is named for falls back to
+                    // offering every band it does draw, deliberately - it holds a clip of its own, so the
+                    // surplus row is a better failure than dropping the member (see `stancesOfMembers`).
+                    // Every other file of the split is in scope, which is what this guards.
+                    if (stance.resref.endsWith("G25") || stance.resref.endsWith("G26")) continue;
+                    rows += 1;
+                    seen.set(stance.label, (seen.get(stance.label) ?? 0) + 1);
+                }
+                for (const [label, count] of seen) {
+                    if (count > 1) repeated.push(`${set.name || set.code} armour ${armour}: ${label} x${count}`);
+                }
+            }
+        }
+        process.stdout.write(`  ${split} split sets checked, ${rows} stance rows\n`);
+        // Only an install that declares its own animations reaches this layout - the split is a declared
+        // field, and the vendored table for the classic games carries none. Skipped rather than failed
+        // there, since an absent class is the install's shape and not a regression; the count above is
+        // what says which of the two a green run was.
+        if (split === 0) ctx.skip("this install declares no split set");
+        expect(repeated).toEqual([]);
     });
 
     /**

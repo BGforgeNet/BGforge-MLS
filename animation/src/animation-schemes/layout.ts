@@ -2,13 +2,12 @@
  * Which file-naming family an animation draws under.
  *
  * The install declares sixteen scheme sections, but they resolve to far fewer NAMING rules: most monsters
- * are one cycle per file, a large minority split each cycle across four quadrant files, some carry IWD-style
- * action codes, and a few are a single unsuffixed BAM. The section names the scheme; this names the file
- * layout, and only the second one decides what to open.
+ * are one cycle per file, a large minority give each band a file of its own, some carry IWD-style action
+ * codes, and a few are a single unsuffixed BAM. The section names the scheme; this names the file layout,
+ * and only the second one decides what to open.
  *
  * `monster` is the case that proves the split has to be declared rather than guessed: its animations use two
- * different layouts, and `split_bams` says which - true for every one of the 67 that quadrant, false for all
- * 7 that do not, with no exceptions across a shipped install.
+ * different layouts and `split_bams` says which, with no exceptions across a shipped install.
  */
 import { type ActionScheme } from "./actions";
 
@@ -23,6 +22,22 @@ export type Layout =
     | "cycles"
     /** `<resref>G<cycle><quadrant>` - each cycle split across four files. */
     | "quadrant"
+    /**
+     * `<resref>G1`, `<resref>G11`..`G15`, `<resref>G2`, `<resref>G21`..`G26` - one BAND per file.
+     *
+     * The declared split of the `monster` section, and NOT a split of the picture: each file carries the
+     * whole cycle table and is authoritative for the one band its own suffix numbers, padding most of the
+     * rest with single-pixel placeholders. Measured on the earth elemental, whose five `G1` files differ in
+     * frame geometry from one another - quarters of one picture share a geometry, as the tiled families'
+     * parts do. Both reference implementations read the flag the same way, one by mapping each stance to
+     * its own suffix and cycle offset, the other by appending those suffixes with no tile index anywhere.
+     *
+     * A file is NOT padded at every other band: measured on the same set, three of the six carry a
+     * neighbour's art at a second and third band as well. Which band each file OWNS is therefore part of
+     * the layout rather than something the art can be asked - `SPLIT_BAND` carries it, and without it a set
+     * of eleven files offered twenty-four rows over twelve stances.
+     */
+    | "splitCycles"
     /**
      * `<resref><stance><tile><facing>` - a 3x3 grid of tiles, one file per tile PER FACING.
      *
@@ -105,6 +120,10 @@ const LAYOUT_NAMING = {
     cycles: "cycle-numbers",
     bare: undefined,
     quadrant: undefined,
+    // Cycle-numbered names, but the writer packs a set's bands into one file per cycle group and these
+    // want one file per band. Left unnamed until that shape is writable rather than offering a save that
+    // would collapse thirteen files into two.
+    splitCycles: undefined,
     pieces: undefined,
     mixed: undefined,
 } as const satisfies Readonly<Record<Layout, ActionScheme | undefined>>;
@@ -138,7 +157,7 @@ export type ModelledSection = keyof typeof FIXED | "monster";
  */
 export function layoutOf(section: string | undefined, splitBams?: boolean): Layout | undefined {
     if (section === undefined) return undefined;
-    if (section === "monster") return splitBams === true ? "quadrant" : "cycles";
+    if (section === "monster") return splitBams === true ? "splitCycles" : "cycles";
     // An install may declare a section this project does not model - a mod's own, or one from a game the
     // tables do not cover - so the lookup stays open and answers undefined for it.
     return (FIXED as Readonly<Record<string, Layout>>)[section];
