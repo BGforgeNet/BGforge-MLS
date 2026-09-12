@@ -3,6 +3,7 @@ import { animationFacts } from "../../src/image-editor/webview/render/animation-
 import type { AnimationView, SetView } from "../../src/image-editor/webview/messages";
 import type { DirectionBlocks } from "../../src/image-editor/webview/render/compass-layout";
 import { familyDescription, sectionLabel } from "@bgforge/animation";
+import { ieFacingsForStride } from "@bgforge/image/ie-direction";
 
 function view(overrides: Partial<AnimationView> = {}): AnimationView {
     return {
@@ -54,6 +55,18 @@ function blocks(overrides: Partial<DirectionBlocks> = {}): DirectionBlocks {
     return { groups: [], ...overrides } as DirectionBlocks;
 }
 
+/**
+ * One band's slots as the band reader hands them over: the first `count` of the wheel's own facing order.
+ *
+ * Taken from the published order rather than written out here, so a fixture claiming ten stored slots holds
+ * the ten the reader would actually keep.
+ */
+function slots(count: number): DirectionBlocks["groups"][number] {
+    return ieFacingsForStride(16)
+        .slice(0, count)
+        .map((facing, seqIndex) => ({ facing, seqIndex }));
+}
+
 function labelled(facts: ReturnType<typeof animationFacts>, id: string): string | undefined {
     return facts.find((fact) => fact.id === id)?.label;
 }
@@ -81,11 +94,28 @@ describe("animationFacts directions", () => {
     it("says nothing about mirroring for a band that stores every facing", () => {
         const facts = animationFacts({
             view: view({ set: set({ bands: { stride: 16 } }) }),
-            blocks: blocks({ declared: true }),
+            blocks: blocks({ declared: true, groups: [slots(16)] }),
         });
 
         expect(labelled(facts, "directions")).toBe("16 directions");
         expect(labelled(facts, "mirrored")).toBeUndefined();
+    });
+
+    /**
+     * A wide band whose eastern slots are flat padding stores fewer facings than its declared width, and
+     * the band reader has already dropped them - so the stride answers what the ENGINE draws and the blocks
+     * answer what the file holds. Reading the stride for both said every facing was stored and left the
+     * quadrant families' half-empty wheel unexplained. Measured on WYVERN_BIG, whose walk band holds ten.
+     */
+    it("calls a wide band's padded slots mirrored rather than claiming it stores every facing", () => {
+        const facts = animationFacts({
+            view: view({ set: set({ bands: { stride: 16 } }) }),
+            blocks: blocks({ declared: true, groups: [slots(10)] }),
+        });
+
+        expect(labelled(facts, "directions")).toBe("16 directions");
+        expect(labelled(facts, "mirrored")).toBe("east mirrored");
+        expect(facts.find((fact) => fact.id === "mirrored")?.title).toContain("10 of 16");
     });
 
     /** An FRM tags its own six rotations, so nothing has to be inferred from block structure. */

@@ -62,9 +62,23 @@ function directionsOf(view: AnimationView, blocks: DirectionBlocks | undefined):
         return stored === undefined ? undefined : { stored, shown: IE_WHEEL };
     }
     if (blocks.scheme === "ie8") return { stored: IE_STRIDE, shown: IE_STRIDE };
-    // A declared band the schemes do not cover - a sixteen-wide one, which stores every facing itself.
+    // A declared band the schemes do not cover - a sixteen-wide one. The stride says what the ENGINE draws;
+    // what the file STORES is the arc the band reader kept, which is short of the stride wherever the
+    // eastern slots are flat padding. Reading the stride for both claimed a quadrant family stored all
+    // sixteen while its rose drew ten, with nothing saying where the other six went.
     const stride = view.set?.bands?.stride;
-    return stride === undefined ? undefined : { stored: stride, shown: stride };
+    return stride === undefined ? undefined : { stored: storedSlots(blocks), shown: stride };
+}
+
+/**
+ * The most facings any one of these bands holds.
+ *
+ * Per band rather than summed: a band IS the wheel, and a file holding several is that wheel at several
+ * stances. The maximum rather than the first band's count, so the answer does not turn on which band a
+ * file happens to lead with.
+ */
+function storedSlots(blocks: DirectionBlocks): number {
+    return blocks.groups.reduce((most, group) => Math.max(most, group.length), 0);
 }
 
 /**
