@@ -15,8 +15,9 @@ import type { Frame, IndexedAnimation, Sequence } from "./animation.ts";
  * rectangles never overlap. The first is what lets indexed pixels merge without remapping; the second is
  * not relied on - a transparent source pixel never overwrites, so an overlap composes rather than erases.
  *
- * Returns undefined when the parts disagree about their cycles, which is the one case where composing
- * would silently pair frames that are not the same moment.
+ * Returns undefined when the parts of a SPATIAL split disagree about their cycles, which is the one case
+ * where composing would silently pair frames that are not the same moment. Files dividing the picture by
+ * facing never hold one cycle between them, so a difference there is one file's dead slot.
  */
 export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimation | undefined {
     const [reference] = parts;
@@ -24,8 +25,9 @@ export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimati
     // Each part's frames by pixel count, which is what tells its padded slots from its art. Computed
     // once: every cycle asks the question of every part, and a frame's size does not change.
     const areas = parts.map((part) => part.frames.map((frame) => frame.width * frame.height));
+    const byFacing = dividesByFacing(parts);
     const spine = spineOf(parts, reference);
-    if (!cyclesAgree(parts, spine)) return undefined;
+    if (!byFacing && !cyclesAgree(parts, spine)) return undefined;
 
     const transparent = reference.meta.transparentIndex ?? 0;
     const frames: Frame[] = [];
@@ -36,7 +38,7 @@ export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimati
     const sequences: Sequence[] = spine.sequences.map((sequence, cycle) => {
         // Only the parts that DRAW this cycle contribute: a part holding a placeholder for it would
         // otherwise be laid over the art of the part that has it, which is the mirrored-twin shape.
-        const contributing = contributorsTo(parts, areas, cycle);
+        const contributing = contributorsTo(parts, areas, cycle, byFacing);
         const length = Math.max(0, ...contributing.map((part) => part.sequences[cycle]?.frameRefs.length ?? 0));
         // Which parts contribute varies by cycle, so the dedup key names them: two cycles that reuse the
         // same frames of the same parts still share one composed frame, as a BAM's own table does.
@@ -130,19 +132,45 @@ export function drawsCycle(sequence: Sequence | undefined): boolean {
 }
 
 /**
+ * Whether the parts divide the picture by FACING rather than by space.
+ *
+ * A mirrored pair pads exactly the cycles its partner draws, so no cycle is held by both of them and a
+ * length difference between the two is one file's dead slot rather than a contradiction. A spatial split -
+ * quarters, tiles - has every part drawing every cycle, and there a difference IS a contradiction.
+ */
+function dividesByFacing(parts: readonly IndexedAnimation[]): boolean {
+    return parts.some((part) =>
+        part.sequences.some(
+            (sequence, cycle) =>
+                !drawsCycle(sequence) && parts.some((other) => other !== part && drawsCycle(other.sequences[cycle])),
+        ),
+    );
+}
+
+/**
  * The parts whose art this cycle is composed from.
  *
  * Animation first, since a part that plays one is unambiguously drawing the cycle. Where none does, the
  * parts holding PIXELS for it: a still is one frame like a pad is, so only the frame's size tells them
  * apart, and taking the pads too would lay a single pixel over the art. Where nothing holds pixels the
  * cycle is blank in every part, and composing them all keeps a genuinely empty slot as it was.
+ *
+ * Where the files divide by facing and two of them still animate one cycle, the longer entry is the file
+ * that stores the facing: a file stores a facing whole, and pads the rest with whatever is left in the
+ * slot. The squirrel's base pads two of its facings from a pair of leftover frames rather than one
+ * repeated, and reading those four frames as a rival animation cost the whole creature.
  */
 function contributorsTo(
     parts: readonly IndexedAnimation[],
     areas: readonly (readonly number[])[],
     cycle: number,
+    byFacing: boolean,
 ): readonly IndexedAnimation[] {
     const animated = parts.filter((part) => drawsCycle(part.sequences[cycle]));
+    if (byFacing && animated.length > 1) {
+        const longest = Math.max(...animated.map((part) => part.sequences[cycle]?.frameRefs.length ?? 0));
+        return animated.filter((part) => (part.sequences[cycle]?.frameRefs.length ?? 0) === longest);
+    }
     if (animated.length > 0) return animated;
     const holding = parts.filter((part, at) => cycleDrawsArt(part.sequences[cycle]?.frameRefs ?? [], areas[at] ?? []));
     return holding.length > 0 ? holding : parts;
@@ -163,13 +191,15 @@ function spineOf(parts: readonly IndexedAnimation[], reference: IndexedAnimation
 }
 
 /**
- * The parts that DRAW a cycle must agree on its length.
+ * The parts of a SPATIAL split must agree on each cycle's length, or they cannot be composed.
  *
- * A placeholder is an absence rather than a disagreement - that is the whole shape of the mirrored twin,
- * whose partner pads exactly the cycles it draws. So is a MISSING entry: a twin that holds only the
- * facings it draws stops its table short of the ones it does not, which is why the parts need not hold the
- * same number of cycles. Two parts that both draw a cycle at different lengths are a real disagreement:
- * composing them would pair frames that are not the same moment.
+ * Asked only of files that divide the picture between them at every moment - quarters and tiles - since
+ * those are the ones whose lengths are claims about the same animation. Two of them drawing one cycle at
+ * different lengths is a real disagreement: composing them would pair frames that are not the same moment.
+ *
+ * A placeholder is an absence rather than a disagreement, and so is a MISSING entry: a twin that holds only
+ * the facings it draws stops its table short of the ones it does not, which is why the parts need not hold
+ * the same number of cycles.
  *
  * A part standing on ONE frame has no moments to misalign, so its length is not a claim about timing and
  * cannot contradict anybody's: the demons pad ten facings of their twitch with three copies of a single

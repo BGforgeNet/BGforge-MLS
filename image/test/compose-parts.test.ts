@@ -112,8 +112,9 @@ describe("composeParts", () => {
         expect(composeParts(parts)?.sequences).toHaveLength(2);
     });
 
-    test("refuses a cycle two parts both draw at different lengths", () => {
-        // Both hold distinct frames, so neither is a pad and the lengths are a real disagreement.
+    test("refuses a cycle two parts of one picture both draw at different lengths", () => {
+        // Both hold distinct frames in every cycle, so the files split the picture by space rather than
+        // by facing, neither is a pad, and the lengths are a real disagreement.
         const parts = [
             animation([frame(2, 2, 2, 2, 1), frame(2, 2, 2, 2, 2), frame(2, 2, 2, 2, 3)], [[0, 1, 2]]),
             animation([frame(2, 2, 0, 2, 4), frame(2, 2, 0, 2, 5)], [[0, 1]]),
@@ -179,6 +180,32 @@ describe("composeParts", () => {
 
         expect(composed?.sequences.map((cycle) => cycle.frameRefs.length)).toEqual([2, 1]);
         expect(composed?.frames[composed.sequences[1]!.frameRefs[0]!]?.pixels[0]).toBe(22);
+    });
+
+    // The squirrel's shape: its base pads two of the facings its twin draws from a pair of leftover frames
+    // rather than one repeated, so those pads VARY and read as rival animations four frames long against
+    // the twin's six. The pair divides the picture by facing and never both holds a moment, so there is
+    // nothing to contradict - and refusing cost the whole creature, the set having only this one member.
+    test("takes the longer cycle where the parts divide the picture by facing", () => {
+        const base = animation(
+            [frame(2, 2, 2, 2, 11), frame(2, 2, 2, 2, 12), frame(2, 2, 2, 2, 13)],
+            [
+                [0, 1],
+                [2, 2, 1, 1],
+            ],
+        );
+        const twin = animation(
+            [frame(1, 1, 0, 0, 88), frame(2, 2, 0, 2, 21), frame(2, 2, 0, 2, 22)],
+            [
+                [0, 0],
+                [1, 2, 1, 2, 1, 2],
+            ],
+        );
+
+        const composed = composeParts([base, twin]);
+
+        expect(composed?.sequences.map((cycle) => cycle.frameRefs.length)).toEqual([2, 6]);
+        expect(composed?.frames[composed.sequences[1]!.frameRefs[0]!]?.pixels[0]).toBe(21);
     });
 
     test("composes a cycle every part only pads, however long the pads run", () => {
