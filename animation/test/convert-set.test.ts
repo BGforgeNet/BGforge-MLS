@@ -15,7 +15,7 @@ import { type NeutralSet } from "../src/neutral/model";
 import { FALLOUT_FRM, IE_8_POINT_MIRRORED, IE_8_POINT_PAIRED } from "../src/convert/target";
 import { type ConversionOptions, convertSet } from "../src/convert/convert";
 import { decodeActionCode } from "../src/animation-schemes/actions";
-import { bandedPair, multiCycle, packedBands } from "../../image/test/bam-fixtures.ts";
+import { bandedPair, multiCycle, packedBands, unevenBand } from "../../image/test/bam-fixtures.ts";
 import { CLERIC_MALE_GNOME_SET, directional, setWithActions } from "./ie-game-fixtures";
 
 /** A west-arc band: five drawn facings and three the engine mirrors, which is the stored IE shape. */
@@ -528,12 +528,15 @@ describe("converting a whole set", () => {
     /**
      * A member whose parts will not assemble costs that member, not the set.
      *
-     * A shipped install has files whose eastern companion carries a different cycle table from its base, and
-     * pairing frames across them would pair moments that are not the same one. Refusing there refused every
-     * other member too, which on the corpus threw away whole creatures over one bad pair.
+     * A shipped install has files whose eastern companion plays a facing at a different length from its
+     * base, and pairing frames across them would pair moments that are not the same one. Refusing there
+     * refused every other member too, which on the corpus threw away whole creatures over one bad pair.
      */
     it("leaves out a member whose parts will not assemble, and writes the rest of the set", () => {
-        const result = converted(read({ CDMB1G1: band(), CDMB1A1: band(), CDMB1A1E: multiCycle(4, 7) }));
+        // The twin plays its first facing a frame longer than the base does, which is the disagreement.
+        const result = converted(
+            read({ CDMB1G1: band(), CDMB1A1: band(), CDMB1A1E: unevenBand(4, [0, 1, 2, 3, 4], 0) }),
+        );
 
         expect(result.writes.map((write) => write.resref)).toEqual(["XYZ1G1"]);
         expect(result.report.losses.map((loss) => loss.kind)).toContain("parts-unassemblable");

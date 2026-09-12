@@ -21,6 +21,9 @@ import type { Frame, IndexedAnimation, Sequence } from "./animation.ts";
 export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimation | undefined {
     const [reference] = parts;
     if (reference === undefined) return undefined;
+    // Each part's frames by pixel count, which is what tells its padded slots from its art. Computed
+    // once: every cycle asks the question of every part, and a frame's size does not change.
+    const areas = parts.map((part) => part.frames.map((frame) => frame.width * frame.height));
     const spine = spineOf(parts, reference);
     if (!cyclesAgree(parts, spine)) return undefined;
 
@@ -33,7 +36,7 @@ export function composeParts(parts: readonly IndexedAnimation[]): IndexedAnimati
     const sequences: Sequence[] = spine.sequences.map((sequence, cycle) => {
         // Only the parts that DRAW this cycle contribute: a part holding a placeholder for it would
         // otherwise be laid over the art of the part that has it, which is the mirrored-twin shape.
-        const contributing = contributorsTo(parts, cycle);
+        const contributing = contributorsTo(parts, areas, cycle);
         const length = Math.max(0, ...contributing.map((part) => part.sequences[cycle]?.frameRefs.length ?? 0));
         // Which parts contribute varies by cycle, so the dedup key names them: two cycles that reuse the
         // same frames of the same parts still share one composed frame, as a BAM's own table does.
@@ -114,23 +117,35 @@ export function cycleDrawsArt(frameRefs: readonly number[], areas: readonly numb
 }
 
 /**
- * Whether a part holds real art for a cycle, as opposed to a placeholder standing in its slot.
+ * Whether a part plays an ANIMATION in a cycle, as opposed to standing on one frame.
  *
- * A part that does not draw a cycle still carries an entry for it rather than an empty one, and the shape
- * that entry takes is one frame repeated - measured on the older character files, whose base pads the
- * three facings the engine mirrors with a single frame while the twin holds a ten-frame walk for each. A
- * genuinely one-frame cycle reads as a placeholder by this test, which is why the callers fall back to
- * every part where NONE draws: a still animation is then composed as it always was.
+ * The files pad an unstored facing two ways, both measured on shipped demons: one repeats a single pixel,
+ * the other points once at a frame it draws elsewhere. Neither varies, and that is the test - a part that
+ * varies its frames is playing something, and its length is a sequence of moments another part's length
+ * has to line up with.
  */
 export function drawsCycle(sequence: Sequence | undefined): boolean {
     if (sequence === undefined || sequence.frameRefs.length === 0) return false;
     return !sequence.frameRefs.every((ref, _, refs) => ref === refs[0]);
 }
 
-/** The parts that draw this cycle, or every part where none does. */
-function contributorsTo(parts: readonly IndexedAnimation[], cycle: number): readonly IndexedAnimation[] {
-    const drawing = parts.filter((part) => drawsCycle(part.sequences[cycle]));
-    return drawing.length > 0 ? drawing : parts;
+/**
+ * The parts whose art this cycle is composed from.
+ *
+ * Animation first, since a part that plays one is unambiguously drawing the cycle. Where none does, the
+ * parts holding PIXELS for it: a still is one frame like a pad is, so only the frame's size tells them
+ * apart, and taking the pads too would lay a single pixel over the art. Where nothing holds pixels the
+ * cycle is blank in every part, and composing them all keeps a genuinely empty slot as it was.
+ */
+function contributorsTo(
+    parts: readonly IndexedAnimation[],
+    areas: readonly (readonly number[])[],
+    cycle: number,
+): readonly IndexedAnimation[] {
+    const animated = parts.filter((part) => drawsCycle(part.sequences[cycle]));
+    if (animated.length > 0) return animated;
+    const holding = parts.filter((part, at) => cycleDrawsArt(part.sequences[cycle]?.frameRefs ?? [], areas[at] ?? []));
+    return holding.length > 0 ? holding : parts;
 }
 
 /**
@@ -155,11 +170,18 @@ function spineOf(parts: readonly IndexedAnimation[], reference: IndexedAnimation
  * facings it draws stops its table short of the ones it does not, which is why the parts need not hold the
  * same number of cycles. Two parts that both draw a cycle at different lengths are a real disagreement:
  * composing them would pair frames that are not the same moment.
+ *
+ * A part standing on ONE frame has no moments to misalign, so its length is not a claim about timing and
+ * cannot contradict anybody's: the demons pad ten facings of their twitch with three copies of a single
+ * pixel while the twin's art for the same facings is a one-frame still, and reading three against one as a
+ * contradiction refused the member carrying their stand, hit, death and get-up.
  */
 function cyclesAgree(parts: readonly IndexedAnimation[], spine: IndexedAnimation): boolean {
     return spine.sequences.every((_, cycle) => {
-        const lengths = contributorsTo(parts, cycle).map((part) => part.sequences[cycle]?.frameRefs.length ?? 0);
-        return new Set(lengths.filter((length) => length > 0)).size <= 1;
+        const lengths = parts
+            .filter((part) => drawsCycle(part.sequences[cycle]))
+            .map((part) => part.sequences[cycle]?.frameRefs.length ?? 0);
+        return new Set(lengths).size <= 1;
     });
 }
 

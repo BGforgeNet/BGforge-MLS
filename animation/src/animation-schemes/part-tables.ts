@@ -56,10 +56,10 @@ export function cycleHoldsArt(sequence: SequenceShape | undefined, areas: readon
  * across parts, so a merged entry addresses the same cycle of the composed animation.
  *
  * `drawsCycle` cannot tell a genuine ONE-FRAME cycle from a placeholder - it reads a repeated ref, and a
- * still repeats trivially - so a member whose files are all stills has no drawing part anywhere. The
- * composer's answer there is every part; this one's is the part that holds PIXELS for the cycle, which is
- * the same choice narrowed to the one sequence a band can be read from. Without it the burrowing family's
- * stills overlay merged nothing and its bands came back three facings short.
+ * still repeats trivially - so a member whose files are all stills has no drawing part anywhere. The part
+ * that holds PIXELS for the cycle answers it, which is the composer's own second reading narrowed to the
+ * one sequence a band can be read from. Without it the burrowing family's stills overlay merged nothing
+ * and its bands came back three facings short.
  */
 export function mergeParts(parts: readonly PartTables[]): MergedTables | undefined {
     const [first] = parts;

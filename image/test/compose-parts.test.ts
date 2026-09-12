@@ -161,6 +161,33 @@ describe("composeParts", () => {
         expect(composed?.frames[composed.sequences[1]!.frameRefs[0]!]?.pixels[0]).toBe(21);
     });
 
+    // Where NO part plays an animation the frame's size is the only thing separating a still from a pad.
+    // The demons pad ten facings of their twitch with three copies of a single pixel while the twin's art
+    // for the same facings is a one-frame still; reading three against one as a length disagreement
+    // refused the member carrying their stand, hit, death and get-up.
+    test("reads a one-frame still as art beside a longer pad", () => {
+        const base = animation(
+            [frame(1, 1, 0, 0, 99), frame(2, 2, 2, 2, 11)],
+            [
+                [1, 1],
+                [0, 0, 0],
+            ],
+        );
+        const twin = animation([frame(1, 1, 0, 0, 88), frame(3, 3, 1, 1, 22)], [[0], [1]]);
+
+        const composed = composeParts([base, twin]);
+
+        expect(composed?.sequences.map((cycle) => cycle.frameRefs.length)).toEqual([2, 1]);
+        expect(composed?.frames[composed.sequences[1]!.frameRefs[0]!]?.pixels[0]).toBe(22);
+    });
+
+    test("composes a cycle every part only pads, however long the pads run", () => {
+        const base = animation([frame(1, 1, 0, 0, 99), frame(2, 2, 2, 2, 11)], [[1], [0, 0, 0]]);
+        const twin = animation([frame(1, 1, 0, 0, 88), frame(2, 2, 0, 2, 22)], [[1], [0]]);
+
+        expect(composeParts([base, twin])?.sequences).toHaveLength(2);
+    });
+
     // A missing cycle is an absence, the same as an empty one: an eastern twin stores only the facings it
     // draws, so its table runs PAST a base file that stops at the western five. Refusing the pair on the
     // length difference dropped the eastern facings of most of one shipped section.
