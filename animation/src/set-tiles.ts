@@ -59,7 +59,7 @@ function emptyNote(set: AnimationSet, hasPrefix: boolean): string {
         const code = set.code === "" ? "" : ` (code ${set.code})`;
         return `Nothing declares which files this animation draws${code}.`;
     }
-    if (set.layout === undefined && set.scheme.kind === "unimplemented") return set.scheme.reason;
+    if (set.scheme.kind === "unimplemented") return set.scheme.reason;
     return "This install ships no files for this animation.";
 }
 

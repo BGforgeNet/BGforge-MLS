@@ -193,7 +193,7 @@ describe("writing a neutral set back to the game it came from", () => {
             id: 0x9000,
             code: "MOGR",
             name: "OGRE",
-            scheme: { kind: "unimplemented", scheme: 0x9000, reason: "the monster_large scheme..." },
+            scheme: { kind: "layout" },
             layout: "cycles",
             prefixByArmour: new Map([
                 [1, "MOGR"],

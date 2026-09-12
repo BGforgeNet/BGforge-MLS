@@ -261,11 +261,11 @@ export class AnimationSetState {
      *
      * Two different facts sit behind one empty set, and they ask different things: a set this names no
      * files for is a gap in what the editor models, one whose files are absent is a gap in the install.
-     * The scheme carries the first in its own words, since only it knows what is unmodelled - and a set
-     * with no layout is exactly the case `setMembers` can name nothing for.
+     * The scheme carries the first in its own words, since only it knows what is unmodelled - and it is
+     * already decided by whether a layout resolved, which is exactly the case `setMembers` names nothing for.
      */
     static refusal(set: AnimationSet, hex: string): string {
-        return set.scheme.kind === "unimplemented" && set.layout === undefined
+        return set.scheme.kind === "unimplemented"
             ? `Cannot show animation ${hex}: ${set.scheme.reason}.`
             : `This install ships no files for animation ${hex}.`;
     }

@@ -5,6 +5,11 @@
  * code cannot stand in: its fourth letter is an armour-family letter rather than a class code (one cleric
  * set draws `CHMB` at the low levels and `CHMC` at the top), and a table's comment column is prose that
  * differs between installs.
+ *
+ * Nothing in the editor reads this yet. It is kept deliberately, as the decode the set picker's race,
+ * gender and class filters are to be built on, and its corpus test is what pins the bitfield against the
+ * install's own comment column. `AnimationSet` used to carry the decoded facets on every set, which read
+ * as a consumer and was not one - so the field went and this stayed.
  */
 
 export type Race = "human" | "elf" | "dwarf" | "halfling" | "gnome" | "halforc";

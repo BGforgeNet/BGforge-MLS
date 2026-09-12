@@ -15,7 +15,7 @@ function setWith(fields: Partial<AnimationSet>): AnimationSet {
         name: "DRAGON_GREEN",
         prefixByArmour: new Map([[1, "MDR1"]]),
         paperdollPrefix: undefined,
-        scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+        scheme: { kind: "layout" },
         ...fields,
     };
 }

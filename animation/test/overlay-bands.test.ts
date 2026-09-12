@@ -22,7 +22,7 @@ const SET: AnimationSet = {
     name: "TEST_BURROWER",
     prefixByArmour: new Map([[1, "MAKH"]]),
     paperdollPrefix: undefined,
-    scheme: { kind: "unimplemented", scheme: 1, reason: "the burrowing scheme is not implemented yet" },
+    scheme: { kind: "layout" },
     layout: "cycles",
     section: "monster_ankheg",
     layerPrefixes: ["MAKHD"],

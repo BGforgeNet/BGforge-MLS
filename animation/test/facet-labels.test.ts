@@ -13,7 +13,6 @@ function characterSet(id: number, facets: CharacterFacets, prefix: string, level
         prefixByArmour,
         paperdollPrefix: prefix,
         scheme: { kind: "character" },
-        facets,
     };
 }
 

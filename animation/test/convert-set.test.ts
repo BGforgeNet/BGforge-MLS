@@ -205,7 +205,7 @@ describe("converting a whole set", () => {
             code: "MOGH",
             name: "OGRE_MAGE",
             prefixByArmour: new Map([[1, "MOGH"]]),
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout,
         });
     }

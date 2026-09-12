@@ -9,7 +9,8 @@
  *
  * It deliberately carries the shapes that a single-source model gets wrong: a hex `animation_type` that is
  * not digits, a body prefix that changes between armour levels, a set whose paperdoll aliases away from its
- * body, an id one table names and the other does not, and a scheme with no implementation.
+ * body, and an id one table names and the other does not - which is also the one set here that nothing can
+ * name files for, every declared section resolving a layout.
  */
 import { type Facing } from "@bgforge/image";
 import type { GameHandle } from "../src/game-handle";
@@ -27,7 +28,7 @@ export const MINI_GAME_PROVENANCE = {
     "ANIMATE.IDS": "verbatim, including the two ids ANISND.IDS does not name",
     "6000.INI": "cleric male human - the armour-family split (body CHMB, level 4 CHMC)",
     "6004.INI": "cleric male gnome - the aliasing case (body CDMB, paperdoll CGMC)",
-    "A000.INI": "wyvern - a hex animation_type and a scheme with no implementation",
+    "A000.INI": "wyvern - a hex animation_type, and the wide-band family",
     bams:
         "presence checked against an EE install: CHMB1G1 exists, CHMB4G1 does not, CHMC4G1 does. The gnome " +
         "cleric draws CDMB1-3 and CDMC4 - only its PAPERDOLL is CGMC1INV, and CGMC4G1 does not exist.",

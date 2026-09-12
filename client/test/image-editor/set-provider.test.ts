@@ -111,7 +111,7 @@ const SET: AnimationSet = {
     name: "TEST_ANIM",
     prefixByArmour: new Map([[1, "TSTB"]]),
     paperdollPrefix: undefined,
-    scheme: { kind: "unimplemented", scheme: 1, reason: "the monster scheme is not implemented yet" },
+    scheme: { kind: "layout" },
     layout: "actions",
 };
 

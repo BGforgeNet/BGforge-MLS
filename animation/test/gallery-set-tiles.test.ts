@@ -51,7 +51,7 @@ describe("setPreviewResref", () => {
         const unknown = setOf({
             id: 0xa000,
             code: "MWYV",
-            scheme: { kind: "unimplemented", scheme: 0xa000, reason: "the monster_wyvern scheme..." },
+            scheme: { kind: "unimplemented", reason: "the monster_wyvern scheme..." },
             prefixByArmour: new Map([[1, "MWYV"]]),
         });
         expect(setPreviewResref(unknown, has("MWYVG1"))).toBeUndefined();
@@ -65,7 +65,7 @@ describe("setPreviewResref", () => {
     it("has no preview for a layout set that declares no armour levels", () => {
         const bare = setOf({
             id: 0x9100,
-            scheme: { kind: "unimplemented", scheme: 0x9100, reason: "declared with no prefixes" },
+            scheme: { kind: "layout" },
             layout: "cycles",
             prefixByArmour: new Map(),
         });
@@ -75,7 +75,7 @@ describe("setPreviewResref", () => {
     it("stands a non-character layout at the first member the archive answers for", () => {
         const ogre = setOf({
             id: 0x9000,
-            scheme: { kind: "unimplemented", scheme: 0x9000, reason: "the monster_large scheme..." },
+            scheme: { kind: "layout" },
             layout: "cycles",
             prefixByArmour: new Map([[1, "MOGR"]]),
         });
@@ -86,7 +86,7 @@ describe("setPreviewResref", () => {
     it("has no preview where the layout names nothing the install ships", () => {
         const ogre = setOf({
             id: 0x9000,
-            scheme: { kind: "unimplemented", scheme: 0x9000, reason: "the monster_large scheme..." },
+            scheme: { kind: "layout" },
             layout: "cycles",
             prefixByArmour: new Map([[1, "MOGR"]]),
         });
@@ -115,7 +115,7 @@ describe("setTile", () => {
             setOf({
                 code: "SPRI",
                 name: "FIRE_RING",
-                scheme: { kind: "unimplemented", scheme: undefined, reason: "no INI declaration" },
+                scheme: { kind: "unimplemented", reason: "no INI declaration" },
             }),
             nothing,
         );
@@ -124,10 +124,7 @@ describe("setTile", () => {
     });
 
     it("leaves the code out of that note where the tables name none", () => {
-        const tile = setTile(
-            setOf({ scheme: { kind: "unimplemented", scheme: undefined, reason: "no INI declaration" } }),
-            nothing,
-        );
+        const tile = setTile(setOf({ scheme: { kind: "unimplemented", reason: "no INI declaration" } }), nothing);
         expect(tile.unsupported).toBe("Nothing declares which files this animation draws.");
     });
 
@@ -135,7 +132,7 @@ describe("setTile", () => {
         const tile = setTile(
             setOf({
                 prefixByArmour: new Map([[1, "MXXX"]]),
-                scheme: { kind: "unimplemented", scheme: undefined, reason: "the moon scheme is not implemented yet" },
+                scheme: { kind: "unimplemented", reason: "the moon scheme is not implemented yet" },
             }),
             nothing,
         );
@@ -149,17 +146,17 @@ describe("setTile", () => {
             setOf({
                 prefixByArmour: new Map([[1, "MBAS"]]),
                 layout: "cycles",
-                scheme: { kind: "unimplemented", scheme: undefined, reason: "the monster_old scheme is not done" },
+                scheme: { kind: "layout" },
             }),
             nothing,
         );
         expect(tile.unsupported).toBe("This install ships no files for this animation.");
     });
 
-    it("drops the reason once a layout resolves, rather than saying so beside a working link", () => {
+    it("leaves a layout set whose files resolve with no note, the same as a character one", () => {
         const tile = setTile(
             setOf({
-                scheme: { kind: "unimplemented", scheme: 0x9000, reason: "the monster_large scheme..." },
+                scheme: { kind: "layout" },
                 layout: "cycles",
                 prefixByArmour: new Map([[1, "MOGR"]]),
             }),

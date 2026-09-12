@@ -134,7 +134,7 @@ describe("stance names", () => {
             name: "OGRE_MAGE",
             prefixByArmour: new Map([[1, "MOGH"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "cycles",
         };
 
@@ -161,7 +161,7 @@ describe("stance names", () => {
             name: "SALAMANDER_FIRE",
             prefixByArmour: new Map([[1, "MSAL"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "actions",
         };
 
@@ -180,7 +180,7 @@ describe("setMembers", () => {
             name: "OGRE_MAGE",
             prefixByArmour: new Map([[1, "MOGH"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "cycles",
             ...overrides,
         };
@@ -286,7 +286,7 @@ describe("setStances with a declared stride", () => {
             name: "OGRE_MAGE",
             prefixByArmour: new Map([[1, "MOGH"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "cycles",
             bandStride: 8,
         };
@@ -309,7 +309,7 @@ describe("setStances with a declared stride", () => {
             name: "TANARRI",
             prefixByArmour: new Map([[1, "MTAN"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "cycles",
             bandStride: 16,
             section: "monster_quadrant",
@@ -346,7 +346,7 @@ describe("setStances with a declared stride", () => {
             name: "WYVERN",
             prefixByArmour: new Map([[1, "MWYV"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "cycles",
             bandStride: 16,
             section: "monster_quadrant",
@@ -375,7 +375,7 @@ describe("setStances over a file that is not directional", () => {
             name: "CHUNKS",
             prefixByArmour: new Map([[1, "SPCHUNKS"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: undefined, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "bare",
             section: "effect",
         };
@@ -428,7 +428,7 @@ describe("setStances over a band several sequences share", () => {
             name: "DRAGON_RED",
             prefixByArmour: new Map([[1, "MDR1"]]),
             paperdollPrefix: undefined,
-            scheme: { kind: "unimplemented", scheme: 1, reason: "not implemented" },
+            scheme: { kind: "layout" },
             layout: "pieces",
             section: "multi_new",
         };

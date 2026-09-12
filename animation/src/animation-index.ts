@@ -13,7 +13,6 @@
  * could not work out rather than guessing.
  */
 import { type AnimationIni, declaredFamily, parseAnimationIni } from "./animation-ini";
-import { characterFacetsOf, type CharacterFacets } from "./animation-facets";
 import { type AnimationTable, type TableAnimation } from "./animation-tables/table";
 import { tableForFlavour } from "./animation-tables";
 import { type Layout, layoutOf } from "./animation-schemes/layout";
@@ -22,11 +21,20 @@ import { coarseBands, declaredStride } from "./animation-schemes/bands";
 import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
 
-/** How this animation's files are laid out, carrying its own identity so a tile can name what is missing. */
+/** Which of three ways this animation's files are named, so a tile can say what it cannot show. */
 export type AnimationScheme =
+    /** The armour-levelled family, whose members this package names itself rather than through a layout. */
     | { kind: "character" }
-    /** `scheme` is the install's own family number where it declared one, so the tile can name it. */
-    | { kind: "unimplemented"; scheme: number | undefined; reason: string };
+    /** Any other family this package models - `layout` is the field that says which files to open. */
+    | { kind: "layout" }
+    /**
+     * Nothing here can name this animation's files, and `reason` is what a reader is told instead.
+     *
+     * Decided by the layout rather than by the section's name, so the sentence is only ever produced for a
+     * family that genuinely draws nothing: every section a shipped install declares resolves a layout, which
+     * leaves an id nothing declares and a section from outside that set - a mod's own, or another game's.
+     */
+    | { kind: "unimplemented"; reason: string };
 
 export interface AnimationSet {
     id: number;
@@ -97,8 +105,6 @@ export interface AnimationSet {
      * stores one table per stance group and this is their common stem. `set-palette.ts` composes the name.
      */
     newPalette?: string;
-    /** Present only where the id declares them - a monster or a named individual has none. */
-    facets?: CharacterFacets;
 }
 
 const ANIMATION_CODES = "ANISND";
@@ -169,24 +175,20 @@ function sectionOf(ini: AnimationIni | undefined, tabled: TableAnimation | undef
     return ini === undefined ? tabled?.section : declaredFamily(ini);
 }
 
-function schemeFrom(ini: AnimationIni | undefined, tabled: TableAnimation | undefined): AnimationScheme {
+function schemeFrom(
+    ini: AnimationIni | undefined,
+    tabled: TableAnimation | undefined,
+    layout: Layout | undefined,
+): AnimationScheme {
     const section = sectionOf(ini, tabled);
     if (ini === undefined && tabled === undefined) {
-        return {
-            kind: "unimplemented",
-            scheme: undefined,
-            reason: "no INI declares this animation and no table covers it",
-        };
+        return { kind: "unimplemented", reason: "no INI declares this animation and no table covers it" };
     }
     // `character_old` names its files exactly as `character` does; what it adds is a mirrored twin per
     // file, which is a part of each member rather than a scheme of its own.
     if (section === "character" || section === "character_old") return { kind: "character" };
-    return {
-        kind: "unimplemented",
-        // A table row carries the layout's name but not the install's own type number; only an INI has that.
-        scheme: ini?.animationType,
-        reason: `the ${section ?? "unnamed"} scheme is not implemented yet`,
-    };
+    if (layout !== undefined) return { kind: "layout" };
+    return { kind: "unimplemented", reason: `the ${section ?? "unnamed"} scheme is not implemented yet` };
 }
 
 /**
@@ -264,6 +266,9 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             ini === undefined ? tabled?.prefixes[0] : ini.resref,
             ini === undefined ? (tabled?.overlays ?? []) : ini.weaponOverlays,
         );
+        // Resolved once: the scheme is decided by it as well as the field, and two calls are two chances
+        // for the pair to answer differently.
+        const layout = layoutFor(ini, tabled);
         sets.push({
             id,
             code: codes.get(id) ?? "",
@@ -271,15 +276,14 @@ export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): A
             prefixByArmour: ini === undefined ? prefixesOfTable(tabled) : prefixesFrom(ini),
             ...(base === undefined ? {} : { basePrefix: base }),
             paperdollPrefix: ini === undefined ? tabled?.paperdoll : ini.resrefPaperdoll,
-            scheme: schemeFrom(ini, tabled),
+            scheme: schemeFrom(ini, tabled, layout),
             ...(section === undefined ? {} : { section }),
             ...(layers.length === 0 ? {} : { layerPrefixes: layers }),
             ...(coarseBands(section, ini?.pathSmooth) ? { coarseBands: true as const } : {}),
-            ...(layoutFor(ini, tabled) === undefined ? {} : { layout: layoutFor(ini, tabled) }),
+            ...(layout === undefined ? {} : { layout }),
             ...(stride === undefined ? {} : { bandStride: stride }),
             // Only an install that ships INIs declares one; a classic archive's table carries no such column.
             ...(ini?.newPalette === undefined ? {} : { newPalette: ini.newPalette }),
-            ...(characterFacetsOf(id) === undefined ? {} : { facets: characterFacetsOf(id) }),
         });
     }
     return sets;

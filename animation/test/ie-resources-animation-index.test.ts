@@ -106,25 +106,49 @@ describe("buildAnimationIndex", () => {
         expect(setFor(0x6004)?.prefixByArmour.get(4)).toBe("CDMC");
     });
 
-    it("attaches facets where the id declares them, and none where it does not", () => {
-        expect(setFor(0x6004)?.facets).toEqual({ race: "gnome", gender: "male", charClass: "cleric" });
-        expect(setFor(0x1000)?.facets).toBeUndefined();
-    });
-
-    it("reports an unimplemented scheme rather than dropping it", () => {
-        // The whole scheme, unconditionally: narrowing with an `if` would leave the reason unasserted on
-        // the very path where the kind is wrong, which is the path worth checking.
-        expect(setFor(0xa000)?.scheme).toEqual({
-            kind: "unimplemented",
-            scheme: 0xa000,
-            reason: expect.stringContaining("monster_large16"),
-        });
+    /**
+     * A family drawn through its layout is not an unimplemented one, whatever its section is called.
+     *
+     * The scheme used to say "unimplemented" for every section but `character`, reason string and all, and
+     * the two readers of it each carried their own `layout === undefined` clause to keep that sentence off
+     * the screen. The layout decides it here instead, so the reason is only ever produced for a family
+     * nothing can name files for.
+     */
+    it("calls a family drawn through its layout a layout scheme, not an unimplemented one", () => {
+        expect(setFor(0xa000)?.scheme).toEqual({ kind: "layout" });
+        expect(setFor(0xa000)?.layout).toBe("cycles");
     });
 
     it("reports an id no INI declares and no table covers rather than guessing its prefix", () => {
         const set = setFor(0xe440);
-        expect(set!.scheme.kind).toBe("unimplemented");
+        // The whole scheme, unconditionally: narrowing with an `if` would leave the reason unasserted on
+        // the very path where the kind is wrong, which is the path worth checking.
+        expect(set?.scheme).toEqual({ kind: "unimplemented", reason: expect.stringContaining("no INI") });
         expect(set!.prefixByArmour.size).toBe(0);
+    });
+
+    /**
+     * A section from outside the modelled set - a mod's own, or a game the tables do not cover. Every
+     * section a shipped install declares resolves a layout, so this is the one shape left that genuinely
+     * has no files anything here can name.
+     */
+    it("reports an unimplemented scheme for a section that resolves no layout", () => {
+        const game = miniGame();
+        const invented: GameHandle = {
+            ...game,
+            canRead: (resref, type) => resref === "A000" || game.canRead(resref, type),
+            read: (resref, type) =>
+                resref === "A000"
+                    ? new TextEncoder().encode(
+                          "[general]\nanimation_type=a000\n\n[monster_hypothetical]\nresref=MWYV\n",
+                      )
+                    : game.read(resref, type),
+        };
+
+        const set = buildAnimationIndex(invented).find((entry) => entry.id === 0xa000);
+
+        expect(set?.scheme).toEqual({ kind: "unimplemented", reason: expect.stringContaining("monster_hypothetical") });
+        expect(set?.layout).toBeUndefined();
     });
 
     it("is sorted by id, so the gallery's order does not depend on table order", () => {
@@ -171,11 +195,11 @@ describe("buildAnimationIndex with a vendored table", () => {
     });
 
     it("reports the table's scheme, so a tabled id says what it is rather than that nothing declares it", () => {
-        expect(tabled(0xe440)?.scheme).toEqual({
-            kind: "unimplemented",
-            scheme: undefined,
-            reason: expect.stringContaining("monster_large"),
-        });
+        // The contrast is with the same id UNTABLED above, whose scheme is "nothing declares this animation".
+        // A table row carries a section, the section resolves a layout, and the set is drawable from there.
+        expect(tabled(0xe440)?.scheme).toEqual({ kind: "layout" });
+        expect(tabled(0xe440)?.section).toBe("monster_large");
+        expect(tabled(0xe440)?.layout).toBe("cycles");
     });
 
     it("resolves a tabled character scheme, which is what a classic install could not do at all", () => {

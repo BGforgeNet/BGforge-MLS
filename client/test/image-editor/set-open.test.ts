@@ -121,7 +121,7 @@ const SET: AnimationSet = {
     name: "TEST_ANIM",
     prefixByArmour: new Map([[1, "TSTB"]]),
     paperdollPrefix: undefined,
-    scheme: { kind: "unimplemented", scheme: 1, reason: "the monster scheme is not implemented yet" },
+    scheme: { kind: "layout" },
     layout: "cycles",
 };
 
@@ -399,7 +399,7 @@ describe("opening an animation set", () => {
     it("says what a set it cannot name any file for is refused for", async () => {
         const unmodelled: AnimationSet = {
             ...SET,
-            scheme: { kind: "unimplemented", scheme: 9, reason: "the monster_icewind scheme is not implemented yet" },
+            scheme: { kind: "unimplemented", reason: "the monster_icewind scheme is not implemented yet" },
             layout: undefined,
         };
         const source = setSource(() => found(unmodelled, ioFor({ TSTBG1: baseFileBam() })));
