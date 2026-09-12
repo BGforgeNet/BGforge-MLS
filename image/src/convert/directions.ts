@@ -15,11 +15,11 @@ export function facingsForCycleCount(count: number): Facing[] | null {
     return null;
 }
 
-// Matched by facing NAME, which is also the closest ANGULAR match. Fallout's hex axes are
-// foreshortened on screen - a walk cycle's accumulated frame offsets, which are motion deltas, run
-// ~36.3 degrees above the horizontal across the corpus - against the IE wheel's even 22.5-degree
-// screen spacing, so a diagonal slot sits ~8.7 degrees off its IE namesake and ~13.8 off the nearest
-// half-step; reassigning the diagonals to ENE/ESE/WSW/WNW is measurably worse, not better.
+// Matched by facing NAME, which is also the EXACT angular match: both engines draw their diagonals at the
+// same visible angle, arctan(3/4) or about 36.9 degrees above the horizontal. Fallout reaches it through
+// its tile grid, which steps 32 across for every 24 down; the IE through art rendered at even 22.5-degree
+// world azimuths onto a ground plane that compresses vertically by three quarters - so a half-step slot
+// such as ENE lands about 14 degrees away, and reassigning the diagonals to it is worse, not better.
 export function frmSlotOrder(facings: Facing[]): number[] {
     return FRM_FACINGS.map((slot) => facings.indexOf(slot));
 }

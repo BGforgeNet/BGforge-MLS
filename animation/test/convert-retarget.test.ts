@@ -213,10 +213,11 @@ describe("retargeting an action's directions", () => {
      * A sixteen-point source into Fallout's six rotations fills every slot from the 45-degree facings and
      * drops the half-steps, rather than substituting a nearer-numbered half-step for a slot.
      *
-     * That is settled by measurement, not by analogy: summing FRM locomotion offsets over the critter
-     * corpus puts Fallout's diagonals at ~36 degrees of screen elevation, so for each FRM diagonal its
-     * 45-degree namesake is roughly 9 degrees off while the nearest half-step is roughly 14. The namesake
-     * is the closer match in every case, which is why name-matching IS the minimum-angle mapping here.
+     * That is settled by measurement, not by analogy: the two engines put their diagonals at the SAME
+     * visible angle, arctan(3/4) or about 36.9 degrees above the horizontal. Fallout reaches it through its
+     * tile grid, the IE through art rendered at even 22.5-degree world azimuths onto a ground plane that
+     * compresses vertically by three quarters. So each FRM diagonal's namesake is an exact match while the
+     * nearest half-step is roughly 14 degrees away, which is why name-matching IS the minimum-angle mapping.
      */
     it("fills Fallout's rotations from a sixteen-point source's 45-degree facings", () => {
         const result = retargetAction(bandOf(WEST_ARC_16), actionOver(WEST_ARC_16), FALLOUT_FRM);
