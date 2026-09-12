@@ -154,7 +154,8 @@ grammar_format() {
     # Remove empty directories left after deletion
     find test/samples-formatted -type d -empty -delete 2>/dev/null || true
     # --save-and-check saves the formatted output and verifies idempotency in one pass
-    pnpm -s --dir "$ROOT_DIR" format "grammars/$GRAMMAR_NAME/test/samples-formatted" -r --save-and-check -q
+    # `--silent` spelled out: pnpm 11 dropped the `-s` short form and rejects it as an unknown argument.
+    pnpm --silent --dir "$ROOT_DIR" format "grammars/$GRAMMAR_NAME/test/samples-formatted" -r --save-and-check -q
 }
 
 grammar_compare() {
@@ -172,7 +173,7 @@ grammar_regenerate_expected() {
     cp -r test/samples test/samples-expected
     find test/samples-expected -type f ! \( "${SAMPLE_EXTS[@]}" \) -delete
     find test/samples-expected -type d -empty -delete 2>/dev/null || true
-    pnpm -s --dir "$ROOT_DIR" format "grammars/$GRAMMAR_NAME/test/samples-expected" -r --save -q
+    pnpm --silent --dir "$ROOT_DIR" format "grammars/$GRAMMAR_NAME/test/samples-expected" -r --save -q
     echo "Done: $(find test/samples-expected -type f | wc -l) files regenerated"
 }
 
