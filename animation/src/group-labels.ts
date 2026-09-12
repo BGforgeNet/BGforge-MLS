@@ -401,6 +401,14 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
     // same sharing the wide families do. Neither takes an `id`, since no one term covers a pair like that;
     // each ROW takes the meaning of its own code.
     "g2/ie8/3": [{ codes: ["A1"], id: "attack" }, { codes: ["A2", "CA"] }, { codes: ["A3", "SP"] }],
+    // A monster whose files hold ONE cycle each: the summoned magic-eaters, whose two files are a single
+    // forty-frame drift and are byte-identical to each other. With no bands to spread over, that one clip
+    // is the whole of the group its token names - the body group for `G1`, the strikes for `G2` - so the
+    // rows below carry the codes those groups lead with rather than a band apiece. Which body stances the
+    // engine plays it for is not recorded anywhere the install or the published list says; walking and
+    // standing are the two the family's own table puts first, and a creature that drifts has no other.
+    "monster/g1/ie1/1": [{ codes: ["WK", "SD"] }],
+    "monster/g2/ie1/1": [{ codes: ["A1"], id: "attack" }],
     // Fine-scheme monster (unsplit G1/G2) and character G1, plus the shorter files of the same family.
     "g1/ie9/8": monsterG1(8),
     "g1/ie9/7": monsterG1(7),
@@ -602,8 +610,17 @@ export function ieBlocks(
  */
 export type WideBand = "ie16";
 
-/** Every band width a key can name - the block schemes, plus the one no scheme covers. */
-type BandWidth = IeScheme | WideBand;
+/**
+ * The key segment for a band that is ONE slot.
+ *
+ * A file holding a single cycle per band stores one picture rather than an arc of facings - the drifting
+ * mist the summoned magic-eaters share is forty frames and one slot - so neither slot scheme applies and
+ * its bands were numbered for want of a key.
+ */
+export type SingleSlot = "ie1";
+
+/** Every band width a key can name - the block schemes, plus the two no scheme covers. */
+type BandWidth = IeScheme | WideBand | SingleSlot;
 
 /**
  * The tokens a file's name can end on, plus the stand-in for a section whose animation is one untokenised
@@ -633,7 +650,7 @@ type AttackToken = "a1" | "a2" | "a3" | "a4" | "a5" | "a6";
 export function ieGroups(
     names: string | readonly string[],
     groupCount: number,
-    scheme?: IeScheme | WideBand,
+    scheme?: BandWidth,
     section?: string,
 ): IeGroup[] | undefined {
     if (scheme === undefined) return undefined;
@@ -644,12 +661,7 @@ export function ieGroups(
     return undefined;
 }
 
-function blocksNamed(
-    basename: string,
-    groupCount: number,
-    scheme: IeScheme | WideBand,
-    section?: string,
-): IeGroup[] | undefined {
+function blocksNamed(basename: string, groupCount: number, scheme: BandWidth, section?: string): IeGroup[] | undefined {
     const stem = basename.toLowerCase().replace(/\.[^.]*$/, "");
     for (const candidate of [stem, stem.replace(/e$/, "")]) {
         for (const [token, pattern] of IE_SEQUENCE_TOKENS) {

@@ -124,6 +124,21 @@ function composedSource(
  * of them, rather than three files landing on the same name and two of them disappearing.
  */
 /**
+ * Whether an action can fill a target that files art by compass rotation.
+ *
+ * Declared facings can, which is the ordinary case. So can an action that is ONE cycle: a creature stored
+ * as a single picture has no facings to misstate, and every rotation of it is that picture - which is what
+ * the source engine draws from any angle. The summoned magic-eaters are forty frames and one slot.
+ *
+ * Several ordered cycles are neither: they are a list of something the source did not call directions, and
+ * seating them by position would invent the mapping this refuses to guess.
+ */
+function seatsRotations(action: NeutralAction): boolean {
+    if (action.cycles.kind === "directional") return true;
+    return action.cycles.sequenceIndices.length === 1;
+}
+
+/**
  * Whether two actions are the same animation: the same frames, played the same way.
  *
  * Same drawing files and same band is not enough on its own - a get-up shares the dying band and runs it
@@ -399,7 +414,7 @@ export function convertSet(set: NeutralSet, target: ConversionTarget, options: C
                 // facings were INFERRED rather than declared has none to give: writing it would state a
                 // direction the source never carried. Skipped without claiming the name, so a set that mixes
                 // declared bands with inferred ones still writes the declared ones under their own codes.
-                if (target.files === "frm-rotations" && !actions.some((one) => one.cycles.kind === "directional")) {
+                if (target.files === "frm-rotations" && !actions.some((one) => seatsRotations(one))) {
                     undirectional.push(member);
                     stateOnce(
                         "directions-undeclared",

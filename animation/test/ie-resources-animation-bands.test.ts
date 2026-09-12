@@ -131,6 +131,28 @@ describe("stancesOfMembers", () => {
         ]);
     });
 
+    /**
+     * A file holding ONE cycle stores one picture, not an arc of facings - the summoned magic-eaters are
+     * forty frames and one slot. No slot scheme covers that, and the direction reader still answers `ie8`
+     * for it, so the width has to be read off the band rather than taken from the reader's label.
+     */
+    it("names a monster file whose band is a single slot from its token", () => {
+        const one = (scheme: FileBands["scheme"]): FileBands => bands(1, 1, scheme);
+
+        const body = stancesOfMembers([member("G1", "MMSTG1")], () => one("ie8"), "monster");
+        const strike = stancesOfMembers([member("G2", "MMSTG2")], () => one("ie8"), "monster");
+
+        // One clip, both stances the body group leads with - and the attack for the other file.
+        expect(body.map((stance) => stance.label)).toEqual(["Walk", "Stand"]);
+        expect(body.map((stance) => stance.band)).toEqual([0, 0]);
+        expect(strike.map((stance) => stance.label)).toEqual(["Attack"]);
+        expect(strike.map((stance) => stance.action.id)).toEqual(["attack"]);
+    });
+
+    it("leaves a single-slot band of another section numbered, having no table for it", () => {
+        expect(stancesOfMembers([member("G1", "SPRING")], () => bands(1, 1, "ie8"), "effect")[0]?.label).toBe("G1");
+    });
+
     it("names each band of a file that packs several stances", () => {
         // MOGHG1's real shape: six 8-slot bands, five stored facings each. The dying band yields two rows -
         // this length carries no block for standing back up, so that is the same band run backwards.

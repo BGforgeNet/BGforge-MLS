@@ -564,6 +564,31 @@ describe("converting a whole set", () => {
         expect(result.report.losses.map((loss) => loss.kind)).toContain("directions-undeclared");
     });
 
+    /**
+     * A creature stored as ONE picture has no facings to misstate - every rotation of it is that picture,
+     * which is what the source engine draws from any angle. The summoned magic-eaters are forty frames and
+     * one slot, and turning them away wrote nothing at all for the three sets that share them.
+     */
+    it("seats a one-cycle member in every rotation of a target that files by direction", () => {
+        const base = read({ CDMB1G11: band() });
+        const [walk] = base.variants[0]!.actions;
+        if (walk === undefined) throw new Error("the fixture drew no walk");
+        const oneView = { ...walk, cycles: { kind: "ordered" as const, sequenceIndices: [0] } };
+        const set: NeutralSet = { ...base, variants: [{ ...base.variants[0]!, actions: [oneView] }] };
+
+        const result = converted(set, FALLOUT_FRM, { ...OPTIONS, prefix: "XYZBAS", scheme: "fallout-critter" });
+
+        expect(result.writes.map((write) => write.resref)).toEqual(["XYZBAS1AB"]);
+        const written = parseFrm(result.writes[0]!.bytes);
+        expect(written.sequences).toHaveLength(FALLOUT_FRM.stored.length);
+        // That each rotation DRAWS, not merely that six slots exist: an empty slot passes every count.
+        const drawn = written.sequences.map((sequence) => {
+            const frame = written.frames[sequence.frameRefs[0] ?? -1];
+            return frame !== undefined && frame.pixels.some((pixel) => pixel !== 0);
+        });
+        expect(drawn).toEqual([true, true, true, true, true, true]);
+    });
+
     it("names the direction cause when every member of a set carries inferred facings", () => {
         const base = read({ CDMB1G11: band() });
         const [walk] = base.variants[0]!.actions;

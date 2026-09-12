@@ -89,6 +89,14 @@ export function buildTargetFile(
         // Cycles that are not facings keep the length and order the source gave them: a target's direction
         // slots mean nothing to them, and padding them into blocks would claim they are directions.
         if (action.cycles.kind !== "directional") {
+            const [only] = cycles;
+            // Unless the source is ONE picture and the target files by rotation: every rotation of a
+            // creature stored without facings is that picture, so each slot takes a copy of it. Copies
+            // rather than one shared cycle, since a rotation is its own clip to everything downstream.
+            if (target.files === "frm-rotations" && cycles.length === 1 && only !== undefined) {
+                for (const _ of slots) sequences.push({ ...only, frameRefs: [...only.frameRefs] });
+                continue;
+            }
             sequences.push(...cycles);
             continue;
         }

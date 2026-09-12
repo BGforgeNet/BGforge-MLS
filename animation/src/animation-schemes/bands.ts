@@ -11,7 +11,7 @@
  * two surfaces name the same block identically. Where neither pins a name, the band is numbered - the
  * same posture that table takes, and for the same reason.
  */
-import { type SequenceCode, type WideBand, blockSequences, ieGroups } from "../group-labels";
+import { type SequenceCode, type SingleSlot, type WideBand, blockSequences, ieGroups } from "../group-labels";
 import { type IeDirectionSlot, type IeScheme } from "@bgforge/image/ie-direction";
 import { type SchemeMember } from "./members";
 import { type NeutralActionId, type NeutralActionRef } from "./actions";
@@ -242,7 +242,13 @@ export function stancesOfMembers(
  * the slots read back, so a coarse reading that folds sixteen slots into eight facings still finds its
  * table. Kept out of `FileBands.scheme`, which is a real block scheme and travels to the webview as one.
  */
-function blockScheme(file: FileBands, section: string | undefined): IeScheme | WideBand | undefined {
+function blockScheme(file: FileBands, section: string | undefined): IeScheme | WideBand | SingleSlot | undefined {
+    // A file whose bands hold ONE slot each stores one picture per band rather than an arc of facings, so no
+    // slot scheme covers it and its bands were being numbered. The width stands in for the scheme, as it
+    // does for the wide families: what the scheme contributes to the key is only the width. Asked FIRST,
+    // because the direction reader answers `ie8` for a one-cycle file too - a name for the arrangement it
+    // would use rather than a claim that one slot is an eight-facing arc.
+    if (file.bands.every((band) => band.length === 1)) return "ie1";
     if (file.scheme !== undefined) return file.scheme;
     return declaredStride(section) === WIDE_BAND_STRIDE ? "ie16" : undefined;
 }
