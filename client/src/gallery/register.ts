@@ -1,13 +1,24 @@
 /**
  * The gallery's commands, its panel serializer, and the two sources it can browse.
  *
+ * At most one panel exists at a time. Every entry point - both commands and the animation link - moves that
+ * one panel rather than opening another, so the rule is kept here, where the panels are made, rather than
+ * left to each caller.
+ *
  * The serializer is what makes a panel survive a window reload. It only runs if the extension is active by
  * then, which is what `onWebviewPanel:bgforge.gallery` in package.json guarantees - without that event VS
  * Code restores the panel's frame and finds nobody to fill it, leaving a permanently blank tab.
  */
 import * as vscode from "vscode";
 import { gameSource } from "./game-source";
-import { GALLERY_VIEW_TYPE, type GalleryDeps, type GalleryPanelState, wireGalleryPanel } from "./panel";
+import {
+    GALLERY_VIEW_TYPE,
+    type GalleryDeps,
+    type GalleryPanelHandle,
+    type GalleryPanelState,
+    galleryTitle,
+    wireGalleryPanel,
+} from "./panel";
 import { type GallerySource } from "./source";
 import { workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
@@ -116,15 +127,45 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         onDidChangeGame: deps.onDidChangeGame,
     } satisfies GalleryDeps;
 
+    /**
+     * The one live gallery, or undefined with none.
+     *
+     * The gallery browses a whole corpus and is pointed at things from several places - two commands and a
+     * creature's animation field - so opening a panel per request piles up tabs that differ only in what
+     * they happen to be scrolled to. One panel that moves is what the reader wants from all three.
+     */
+    let live: { panel: vscode.WebviewPanel; handle: GalleryPanelHandle } | undefined;
+
+    /** Wire a panel and make it the live one until it closes. */
+    const adopt = (panel: vscode.WebviewPanel, state: GalleryPanelState): void => {
+        const handle = wireGalleryPanel(panel, state, context, panelDeps);
+        live = { panel, handle };
+        panel.onDidDispose(() => {
+            // Guarded rather than cleared outright: a panel disposed AFTER another became live would
+            // otherwise take the live one's place in the bookkeeping with it.
+            if (live?.panel === panel) live = undefined;
+        });
+    };
+
     const show = (kind: "game" | "workspace", focusSet?: number): void => {
+        const state = { source: kind, ...(focusSet === undefined ? {} : { focusSet }) };
+        if (live !== undefined) {
+            live.handle.retarget(state);
+            // No column argument: revealing it where it already sits answers the command without pulling
+            // the tab out of the group the reader put it in.
+            live.panel.reveal();
+            return;
+        }
         const panel = vscode.window.createWebviewPanel(
             GALLERY_VIEW_TYPE,
-            kind === "game" ? "Game Image Gallery" : "Workspace Image Gallery",
+            galleryTitle(kind),
             vscode.ViewColumn.Active,
-            { enableScripts: true, retainContextWhenHidden: true },
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true,
+            },
         );
-        const state = { source: kind, ...(focusSet === undefined ? {} : { focusSet }) };
-        wireGalleryPanel(panel, state, context, panelDeps);
+        adopt(panel, state);
     };
 
     context.subscriptions.push(
@@ -137,10 +178,17 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         }),
         vscode.window.registerWebviewPanelSerializer(GALLERY_VIEW_TYPE, {
             async deserializeWebviewPanel(panel: vscode.WebviewPanel, state: unknown): Promise<void> {
+                // A window saved before the one-panel rule can restore several. The extras are duplicates of
+                // a corpus browser, so they are closed rather than wired: leaving them would reinstate the
+                // pile of tabs on every reload, and wiring them costs a worker and a thumbnail cache each.
+                if (live !== undefined) {
+                    panel.dispose();
+                    return;
+                }
                 // A restored panel whose state VS Code could not persist falls back to the workspace, which
                 // is the source that needs no game open - a blank panel would be the alternative.
                 const kind = (state as GalleryPanelState | undefined)?.source === "game" ? "game" : "workspace";
-                wireGalleryPanel(panel, { source: kind }, context, panelDeps);
+                adopt(panel, { source: kind });
             },
         }),
     );

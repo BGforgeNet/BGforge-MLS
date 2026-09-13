@@ -32,6 +32,11 @@ const ANIMATION_CSS = path.join(ANIMATION_WEBVIEW_DIR, "styles.css");
 
 export const GALLERY_VIEW_TYPE = "bgforge.gallery";
 
+/** The tab's title for a source. One definition, because a retargeted panel has to restate it. */
+export function galleryTitle(source: "game" | "workspace"): string {
+    return source === "game" ? "Game Image Gallery" : "Workspace Image Gallery";
+}
+
 /** What a restored panel needs to rebuild itself. Structured-clone safe - VS Code persists it as JSON. */
 export interface GalleryPanelState {
     source: "game" | "workspace";
@@ -82,6 +87,17 @@ export interface GalleryDeps {
     makePort?(extensionUri: vscode.Uri): GalleryPort;
 }
 
+/** What the caller keeps hold of, so one live panel can answer a later command instead of a second tab. */
+export interface GalleryPanelHandle {
+    /**
+     * Point this panel at another source, or at an animation, in place.
+     *
+     * A no-op when neither changes: re-running the command that opened a panel is a request to LOOK at it,
+     * and rebuilding the webview's world would throw away the filter, scroll and tab the reader had set.
+     */
+    retarget(state: GalleryPanelState): void;
+}
+
 function defaultPort(extensionUri: vscode.Uri): GalleryPort {
     // An absolute path under the installed extension, not a bare specifier: `new Worker` resolves a relative
     // one against the extension host's cwd, which is not the extension directory.
@@ -103,10 +119,12 @@ function describeMessageType(message: unknown): string {
  */
 export function wireGalleryPanel(
     panel: vscode.WebviewPanel,
-    state: GalleryPanelState,
+    initial: GalleryPanelState,
     context: vscode.ExtensionContext,
     deps: GalleryDeps,
-): void {
+): GalleryPanelHandle {
+    /** What this panel is browsing NOW - `initial` is where it started, which `retarget` moves it off. */
+    let state: GalleryPanelState = initial;
     panel.webview.options = {
         // Two of its own on top of the shared roots, because the animation surface drawn here brings its own
         // stylesheet. The script is inlined and the worker is spawned by the host, so nothing else under
@@ -120,7 +138,7 @@ export function wireGalleryPanel(
 
     // Nothing to browse is a legitimate state, not a failure - and the panel must say WHICH state, because
     // "no pictures here" and "you have not opened a game" send the reader in opposite directions.
-    const emptyNote =
+    const emptyNote = (): string =>
         state.source === "game"
             ? 'No game is open. Run "BGforge: Open IE Game..." to browse an install.'
             : "No folder is open. Open a folder to browse the images in it.";
@@ -185,7 +203,7 @@ export function wireGalleryPanel(
             items: source?.list() ?? [],
             sets: [...deps.sets()],
             ...(state.focusSet === undefined ? {} : { focusSet: state.focusSet }),
-            ...(source === undefined ? { note: emptyNote } : {}),
+            ...(source === undefined ? { note: emptyNote() } : {}),
         } satisfies HostToWebview);
         // Stated on every reading, not only when it changes: `init` replaces the webview's whole world, so
         // a stage left drawn without this would be a picture the browse list no longer marks a row for.
@@ -268,6 +286,19 @@ export function wireGalleryPanel(
         port.dispose();
         stage?.dispose();
     });
+
+    return {
+        retarget: (next: GalleryPanelState): void => {
+            if (next.source === state.source && next.focusSet === undefined) return;
+            state = next;
+            panel.title = galleryTitle(next.source);
+            // The stage keeps whatever it is drawing, unlike the game-change path above: nothing went away
+            // here, so the picture is still a resource the reader asked to see.
+            mount();
+            postInit();
+            if (next.focusSet !== undefined) void showSet(next.focusSet);
+        },
+    };
 }
 
 function buildGalleryHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
