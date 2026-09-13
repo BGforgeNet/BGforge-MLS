@@ -49,14 +49,18 @@ test_repo() {
     git -C "$dir" checkout .
 
     # Install dependencies if node_modules is missing.
-    # --ignore-workspace prevents pnpm from resolving to the parent monorepo workspace.
-    # --ignore-scripts skips lifecycle scripts: pnpm 11 errors on unapproved builds
-    # (ERR_PNPM_IGNORED_BUILDS), and the workspace's allowBuilds list is detached by
+    # --ignore-workspace prevents pnpm from resolving to the parent monorepo workspace, but pnpm 12 still
+    # takes the monorepo's lockfile unless --lockfile-dir says otherwise, and counts a nested package (the
+    # IElib submodule) as a project unless --workspace-packages narrows it; either way a frozen install then
+    # fails for want of an importer entry. --pm-on-fail=ignore stops it recording the monorepo's
+    # packageManager pin into the repo's lockfile. --ignore-scripts skips lifecycle scripts: pnpm errors on
+    # unapproved builds (ERR_PNPM_IGNORED_BUILDS), and the workspace's allowBuilds list is detached by
     # --ignore-workspace. The transpile CLI only reads installed sources for type
     # resolution (folib / iets .d.ts); no postinstall artefacts are needed.
     if [[ -f "$dir/package.json" && ! -d "$dir/node_modules" ]]; then
         echo "Installing dependencies for $repo..."
-        (cd "$dir" && pnpm install --ignore-workspace --ignore-scripts)
+        (cd "$dir" && pnpm install --ignore-workspace --lockfile-dir . --workspace-packages . --pm-on-fail=ignore \
+            --ignore-scripts)
     fi
 
     # One process per language family, and only where that family has sources. `.tssl` belongs to the
