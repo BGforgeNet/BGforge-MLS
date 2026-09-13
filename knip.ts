@@ -40,6 +40,8 @@ const config: KnipConfig = {
                 "scripts/utils/src/generate-editor-queries.ts",
                 "scripts/utils/src/update-ssl-engine-arity.ts",
             ],
+            // Run only as `pnpm vsce package` inside scripts/package.sh, and knip does not read shell scripts.
+            ignoreDependencies: ["@vscode/vsce"],
         },
         client: {
             entry: [

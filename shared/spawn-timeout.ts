@@ -9,7 +9,7 @@
  * The value is deliberately far above any real run: it is a hang detector, not a performance budget, and a
  * timeout that fires on a merely slow machine would be a flake generator. Sites needing a different bound
  * pass their own - tighter where the child is quick, larger where its cost scales with something other than
- * the work requested (see `vscode-package-workspace-dirs.test.ts`, whose child enumerates the whole tree
- * including untracked files). `scripts/utils/test/spawn-timeouts.test.ts` enforces that every site passes one.
+ * the work requested (a child that enumerates the whole tree, untracked files included).
+ * `scripts/utils/test/spawn-timeouts.test.ts` enforces that every site passes one.
  */
 export const SPAWN_TIMEOUT_MS = 120_000;
