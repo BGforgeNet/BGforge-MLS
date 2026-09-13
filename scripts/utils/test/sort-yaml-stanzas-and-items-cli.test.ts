@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { tsxCommand } from "../../../shared/tsx-command.ts";
 
 const TMP_BASE = "tmp";
 
@@ -23,10 +24,8 @@ describe("sort-yaml-stanzas-and-items CLI", () => {
         const inputFile = path.join(tmpDir, "input.yml");
         fs.writeFileSync(inputFile, `b:\n  value: 2\n\na:\n  value: 1\n`, "utf8");
 
-        execSync(`pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}"`, {
-            cwd: process.cwd(),
-            timeout: SPAWN_TIMEOUT_MS,
-        });
+        const { file, args } = tsxCommand("scripts/utils/src/sort-yaml-stanzas-and-items.ts", [inputFile]);
+        execFileSync(file, args, { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS });
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`a:
   value: 1
@@ -49,10 +48,14 @@ b:
             "utf8",
         );
 
-        execSync(
-            `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --sequence-path repository.fallout-base-functions.patterns --sort-key match`,
-            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
-        );
+        const { file, args } = tsxCommand("scripts/utils/src/sort-yaml-stanzas-and-items.ts", [
+            inputFile,
+            "--sequence-path",
+            "repository.fallout-base-functions.patterns",
+            "--sort-key",
+            "match",
+        ]);
+        execFileSync(file, args, { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS });
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`repository:
   fallout-base-functions:
@@ -79,10 +82,16 @@ b:
             "utf8",
         );
 
-        execSync(
-            `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --map-path repository --sequence-key patterns --sort-key match`,
-            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
-        );
+        const { file, args } = tsxCommand("scripts/utils/src/sort-yaml-stanzas-and-items.ts", [
+            inputFile,
+            "--map-path",
+            "repository",
+            "--sequence-key",
+            "patterns",
+            "--sort-key",
+            "match",
+        ]);
+        execFileSync(file, args, { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS });
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`repository:
   beta:
@@ -110,10 +119,14 @@ b:
             "utf8",
         );
 
-        execSync(
-            `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts "${inputFile}" --sequence-path repository.fallout-base-functions.patterns --sort-key match`,
-            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
-        );
+        const { file, args } = tsxCommand("scripts/utils/src/sort-yaml-stanzas-and-items.ts", [
+            inputFile,
+            "--sequence-path",
+            "repository.fallout-base-functions.patterns",
+            "--sort-key",
+            "match",
+        ]);
+        execFileSync(file, args, { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS });
 
         expect(fs.readFileSync(inputFile, "utf8")).toBe(`repository:
   fallout-base-functions:

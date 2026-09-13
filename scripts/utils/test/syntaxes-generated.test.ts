@@ -20,7 +20,7 @@ const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const SYNTAXES_DIR = path.join(REPO_ROOT, "syntaxes");
 const DATA_DIR = path.join(REPO_ROOT, "server", "data");
 
-/** One `pnpm exec tsx` per grammar, run in parallel by the script; well past the suite default. */
+/** One tsx process per grammar, run in parallel by the script; well past the suite default. */
 const REGENERATE_TIMEOUT_MS = 300_000;
 
 const GENERATED_MARKER = /^#\s*Auto-generated\b.*\bDo not hand-edit\b/;

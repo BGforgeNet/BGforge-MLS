@@ -2,7 +2,9 @@
 
 set -xeu -o pipefail
 
-yaml2json="pnpm exec tsx scripts/utils/src/yaml2json.ts"
+# tsx through node rather than `pnpm exec`: this runs once per grammar, and the launcher costs more than the
+# conversion. Resolves tsx from the repo root, which is where the script is run from.
+yaml2json="node --import tsx scripts/utils/src/yaml2json.ts"
 syntaxes_dir="syntaxes"
 # Defaults to writing beside the sources; a guard test passes a temp dir and diffs the
 # result against the tracked JSON.

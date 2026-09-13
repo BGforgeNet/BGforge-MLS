@@ -5,8 +5,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { tsxCommand } from "../../../shared/tsx-command.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -34,10 +35,15 @@ describe("generate-data CLI", () => {
         const completionFile = path.join(tmpDir, "completion.json");
         fs.writeFileSync(inputFile, inputYaml, "utf8");
 
-        execSync(
-            `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --tooltip-lang test-tooltip`,
-            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
-        );
+        const { file, args } = tsxCommand("scripts/utils/src/generate-data.ts", [
+            "-i",
+            inputFile,
+            "--completion",
+            completionFile,
+            "--tooltip-lang",
+            "test-tooltip",
+        ]);
+        execFileSync(file, args, { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS });
 
         const completion = JSON.parse(fs.readFileSync(completionFile, "utf8"));
         expect(completion).toHaveLength(1);
@@ -64,10 +70,17 @@ describe("generate-data CLI", () => {
         const signatureFile = path.join(tmpDir, "signature.json");
         fs.writeFileSync(inputFile, inputYaml, "utf8");
 
-        execSync(
-            `pnpm exec tsx scripts/utils/src/generate-data.ts -i "${inputFile}" --completion "${completionFile}" --signature "${signatureFile}" --tooltip-lang test-tooltip`,
-            { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS },
-        );
+        const { file, args } = tsxCommand("scripts/utils/src/generate-data.ts", [
+            "-i",
+            inputFile,
+            "--completion",
+            completionFile,
+            "--signature",
+            signatureFile,
+            "--tooltip-lang",
+            "test-tooltip",
+        ]);
+        execFileSync(file, args, { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS });
 
         const sig = JSON.parse(fs.readFileSync(signatureFile, "utf8"));
         expect(sig["f"]).toBeDefined();

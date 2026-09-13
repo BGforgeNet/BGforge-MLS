@@ -15,6 +15,7 @@ import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
 import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { tsxCommand } from "../../../shared/tsx-command.ts";
 
 const EE_GAME = process.env.BGFORGE_IE_GAME;
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
@@ -26,20 +27,14 @@ describe.skipIf(FLAVOUR === undefined || !BG2_FAMILY.has(FLAVOUR))(
     "the vendored bg2 table against a real EE install of its own family",
     () => {
         it("carries no drift from what the install declares", () => {
-            const result = spawnSync(
-                "pnpm",
-                [
-                    "exec",
-                    "tsx",
-                    "animation/test/tools/generate-animation-tables.ts",
-                    "--table",
-                    "bg2",
-                    "--ee",
-                    EE_GAME!,
-                    "--check",
-                ],
-                { cwd: REPO_ROOT, encoding: "utf8", timeout: SPAWN_TIMEOUT_MS },
-            );
+            const { file, args } = tsxCommand("animation/test/tools/generate-animation-tables.ts", [
+                "--table",
+                "bg2",
+                "--ee",
+                EE_GAME!,
+                "--check",
+            ]);
+            const result = spawnSync(file, args, { cwd: REPO_ROOT, encoding: "utf8", timeout: SPAWN_TIMEOUT_MS });
 
             expect(result.error).toBeUndefined();
             expect(result.status, result.stderr).toBe(0);

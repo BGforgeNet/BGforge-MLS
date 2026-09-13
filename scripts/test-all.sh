@@ -11,6 +11,12 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$ROOT_DIR"
 
+# Bare tool names below, as in test.sh (see its note): they resolve only through pnpm's PATH.
+command -v vitest >/dev/null || {
+    echo "test-all.sh: node_modules/.bin is not on PATH - run it as 'pnpm test:all'" >&2
+    exit 1
+}
+
 # This is the close-out gate, so a suite gated on a build artifact must fail rather than skip when the
 # artifact is missing: a silently shrunken run reports the same green as a complete one. The dev-loop
 # tier (test.sh) leaves it unset and skips loudly instead. See shared/cli/test/built-artifacts.ts.
@@ -38,7 +44,7 @@ TEST_STOP_AFTER_BUILD=1 TEST_COVERAGE=1 "$SCRIPT_DIR/test.sh"
 # without competing suites: the relative speedup remains a close-out gate, under the cost model it
 # is intended to measure. TEST_COVERAGE=0 is explicit in case test-all.sh inherited it from its caller.
 step "Dialog source parser reuse performance (serial, no coverage)"
-TEST_COVERAGE=0 pnpm exec vitest run --config server/vitest.config.mts \
+TEST_COVERAGE=0 vitest run --config server/vitest.config.mts \
     server/test/dialog-source-project-reuse.test.ts --maxWorkers=4
 
 # test.sh resolves this before its own Phase 1, but that export dies with the subprocess above, and the
@@ -76,10 +82,10 @@ export WEIDU_BIN
 # runs it INSTEAD of test:cli rather than as a second job - running both compiled the shared cases twice.
 step "Phase 3 + Extended: All remaining tests"
 parallel \
-    "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.mts)" \
+    "Smoke test" "(cd server && vitest run --config vitest.smoke.config.mts)" \
     "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli:external" \
-    "Corpus chain (format + binary, SSL, server integration)" "$SCRIPT_DIR/test-external.sh && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts && (cd server && pnpm exec vitest run --config vitest.integration.config.mts)" \
-    "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars"
+    "Corpus chain (format + binary, SSL, server integration)" "$SCRIPT_DIR/test-external.sh && vitest run --config compilers/ssl/vitest.integration.config.ts && (cd server && vitest run --config vitest.integration.config.mts)" \
+    "Grammar tests" "SKIP_FORMAT_BUILD=1 ./scripts/test-grammars.sh"
 
 # The webview drivers (`pnpm test:harness`) are deliberately NOT here: they gate every push and PR in
 # their own workflow, where the ~150MB Chromium download and the browser runs cost no wall-clock to any
@@ -89,6 +95,6 @@ parallel \
 # result by `git diff` against the committed output, restoring the generated .ssl afterwards. That
 # method needs a clean tree and no concurrent reader, so it runs alone after the block rather than in it.
 step "Transpile external (writes external/, so it runs alone)"
-pnpm test:transpile-external
+./scripts/test-transpile-external.sh
 
 timing_summary "All tests passed (full suite)"
