@@ -101,8 +101,8 @@ any configured credentials, and on success replaces the auth token for that requ
 over OIDC from the moment its trusted publisher exists, while the rest keep using the token.
 
 `pnpm publish` performs the OIDC exchange and the provenance signing itself rather than delegating to
-`npm publish`, so the floor that matters is the pinned pnpm (`packageManager`, with `pnpm/action-setup` v6.1.0
-for pnpm 12). Earlier pnpm 11.0.x releases lost the OIDC handshake, failing with a masked `E404`.
+`npm publish`, so what matters is the pinned pnpm (`packageManager`) and a `pnpm/action-setup` that can install
+it (v6.1.0 or later).
 
 Once a package is on trusted publishing npm generates its provenance automatically, so the explicit
 `--provenance` flag becomes redundant for it - harmless, and still doing the work for every package left on

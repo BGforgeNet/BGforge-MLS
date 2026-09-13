@@ -49,7 +49,7 @@ test_repo() {
     git -C "$dir" checkout .
 
     # Install dependencies if node_modules is missing.
-    # --ignore-workspace prevents pnpm from resolving to the parent monorepo workspace, but pnpm 12 still
+    # --ignore-workspace prevents pnpm from resolving to the parent monorepo workspace, but pnpm still
     # takes the monorepo's lockfile unless --lockfile-dir says otherwise, and counts a nested package (the
     # IElib submodule) as a project unless --workspace-packages narrows it; either way a frozen install then
     # fails for want of an importer entry. --pm-on-fail=ignore stops it recording the monorepo's
