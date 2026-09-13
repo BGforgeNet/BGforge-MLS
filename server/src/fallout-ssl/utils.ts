@@ -443,7 +443,7 @@ export function extractMacros(root: Node): MacroData[] {
         }
 
         // Fallback: ERROR nodes at top level may contain collapsed #define directives
-        if (node.type === "ERROR" && node.parent?.type === SyntaxType.SourceFile) {
+        if (node.type === SyntaxType.ERROR && node.parent?.type === SyntaxType.SourceFile) {
             extractFromError(node, node);
         }
 

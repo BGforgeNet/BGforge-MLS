@@ -60,7 +60,8 @@ gate and the sibling to copy: `docs/development.md`.
 
 - **Tree-sitter node types:** `SyntaxType.ActionCopy`, never the string `"action_copy"`. Import from `./syntax-type` in
   `server/`, from `../../../shared/syntax-types/<grammar>` in `@bgforge/format` (the canonical home). Generated - see
-  `grammars/README.md` (Type Generation).
+  `grammars/README.md` (Type Generation). Enforced by the `bgforge-syntax/no-node-type-literal` oxlint rule, which is
+  silent on a string no generated enum spells (an anonymous keyword token).
 - **A package's `src/` never imports its own name.** Inside `format/src/`, reach `format-utils` by relative path, not
   as `@bgforge/format`. `test/` is exempt. Guard: `scripts/utils/test/no-package-self-import.test.ts`.
 - **Libraries imported by transpiler sources** (iets, folib) use named re-exports (`export { X } from './module'`),

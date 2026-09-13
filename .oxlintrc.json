@@ -1,5 +1,5 @@
 {
-    "jsPlugins": ["./.oxlint/oxlint-plugin-no-showmessage.mjs"],
+    "jsPlugins": ["./.oxlint/oxlint-plugin-no-showmessage.mjs", "./.oxlint/oxlint-plugin-node-type-literal.mjs"],
 
     // All five categories at `error`. That is what makes the disabled list below long, and the trade has
     // been measured rather than assumed: 331 rules are enforced, 236 of them come from `pedantic` and
@@ -323,6 +323,13 @@
             "files": ["server/src/**/*.ts"],
             "rules": {
                 "bgforge-mls/no-showmessage": "error"
+            }
+        },
+        {
+            // The packages that walk tree-sitter trees through the generated SyntaxType enums.
+            "files": ["server/src/**/*.ts", "format/src/**/*.ts", "compilers/bcs/src/**/*.ts", "shared/**/*.ts"],
+            "rules": {
+                "bgforge-syntax/no-node-type-literal": "error"
             }
         },
         {

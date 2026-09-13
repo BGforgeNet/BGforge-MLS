@@ -34,7 +34,7 @@ import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
 
 /** Format FOR loop header: FOR (init; condition; increment) */
 export function formatForLoopHeader(node: SyntaxNode): string | null {
-    if (node.type !== "patch_for" && node.type !== "outer_for") {
+    if (node.type !== SyntaxType.PatchFor && node.type !== SyntaxType.OuterFor) {
         return null;
     }
 

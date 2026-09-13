@@ -35,13 +35,18 @@ function isCopyTrans(node: SyntaxNode): boolean {
 
 // Get the actual transition node (unwrap if wrapped in generic "transition")
 function getTransitionNode(node: SyntaxNode): SyntaxNode | null {
-    if (node.type === "transition") {
+    if (node.type === SyntaxType.Transition) {
         return node.children[0] ?? null;
     }
-    if (node.type.startsWith("transition_")) {
+    if (isTransitionBody(node)) {
         return node;
     }
     return null;
+}
+
+/** The concrete transition shapes a generic `transition` wraps. */
+function isTransitionBody(node: SyntaxNode): boolean {
+    return node.type === SyntaxType.TransitionFull || node.type === SyntaxType.TransitionShort;
 }
 
 // withNormalizedComment (inline + standalone comment handling) is shared with
@@ -69,10 +74,10 @@ function normalizeDelimitedString(text: string): string {
 // Check if node is a next-state feature (goto, exit, extern, short_goto)
 function isNextFeature(node: SyntaxNode): boolean {
     return (
-        node.type === "goto_next" ||
-        node.type === "exit_next" ||
-        node.type === "extern_next" ||
-        node.type === "short_goto"
+        node.type === SyntaxType.GotoNext ||
+        node.type === SyntaxType.ExitNext ||
+        node.type === SyntaxType.ExternNext ||
+        node.type === SyntaxType.ShortGoto
     );
 }
 
@@ -125,7 +130,7 @@ function formatTransitionLine(node: SyntaxNode, indent: string, innerIndent: str
     }
 
     // Find break points using AST
-    const doFeature = node.children.find((c) => c.type === "do_feature");
+    const doFeature = node.children.find((c) => c.type === SyntaxType.DoFeature);
     const nextFeature = node.children.find(isNextFeature);
 
     // Try breaking on DO
@@ -267,7 +272,7 @@ function reindentState(node: SyntaxNode, ctx: FormatContext): string {
 
     function markContinuations(n: SyntaxNode) {
         // Only count top-level string nodes (not inner tilde_string etc)
-        const isString = n.type === "string";
+        const isString = n.type === SyntaxType.String;
         const startLine = n.startPosition.row - baseRow;
         const endLine = n.endPosition.row - baseRow;
 
@@ -410,7 +415,7 @@ function getActionHeader(node: SyntaxNode): string {
     const parts: string[] = [];
     for (const child of node.children) {
         // Stop at states or END keyword
-        if (child.type === "state") break;
+        if (child.type === SyntaxType.State) break;
         if (child.text === "END") break;
         // Stop at comments that are NOT on the header line
         if (isComment(child) && child.startPosition.row !== headerRow) break;
@@ -440,7 +445,7 @@ function formatStateAction(node: SyntaxNode, ctx: FormatContext, trailingEnd: bo
     const lines: string[] = [getActionHeader(node)];
 
     forEachChild(node, lines, (child) => {
-        if (child.type === "state") {
+        if (child.type === SyntaxType.State) {
             return formatState(child, ctx);
         } else if (isComment(child)) {
             // Skip comments on the header line - already included via getActionHeader()
@@ -461,12 +466,7 @@ function getExtendHeader(node: SyntaxNode): string {
     let result = "";
     for (const child of node.children) {
         // Stop at transitions, comments, copy_trans, or the trailing END
-        if (
-            child.type === "transition" ||
-            child.type.startsWith("transition_") ||
-            isComment(child) ||
-            isCopyTrans(child)
-        )
+        if (child.type === SyntaxType.Transition || isTransitionBody(child) || isComment(child) || isCopyTrans(child))
             break;
         if (child.text === "END") break;
         // Don't insert space after "#" - keep "#N" as a single token (position number).
