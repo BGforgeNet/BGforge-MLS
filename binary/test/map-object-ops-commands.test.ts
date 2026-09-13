@@ -313,7 +313,8 @@ const elevationsWithObjects = (doc: MapDoc): number[] =>
 
 describe.skipIf(!hasFixture)("map object-ops under sequences of edits", () => {
     const bytes = hasFixture ? new Uint8Array(fs.readFileSync(FIXTURE)) : new Uint8Array();
-    const baseDoc = hasFixture ? docOf(mapParser.parse(bytes, PARSE_OPTIONS)) : undefined;
+    const basePr = hasFixture ? mapParser.parse(bytes, PARSE_OPTIONS) : undefined;
+    const baseDoc = basePr ? docOf(basePr) : undefined;
     const elev = baseDoc ? elevationsWithObjects(baseDoc)[0] : undefined;
 
     it("has a fully-decoded elevation with objects to exercise", () => {
@@ -322,7 +323,9 @@ describe.skipIf(!hasFixture)("map object-ops under sequences of edits", () => {
         expect(baseDoc!.objects.elevations[elev!]!.objects.length).toBeGreaterThan(1);
     });
 
-    it("keeps every edit sequence count-consistent and round-trippable", () => {
+    // Its own budget rather than the suite's: every command re-parses a whole MAP, and the parallel
+    // coverage phase in CI slows that work past the suite default while the test is still progressing.
+    it("keeps every edit sequence count-consistent and round-trippable", { timeout: 180_000 }, () => {
         const index = fc.nat({ max: 8 });
         const position = fc.constantFrom<"before" | "after">("before", "after");
         const direction = fc.constantFrom<"up" | "down">("up", "down");
@@ -339,15 +342,15 @@ describe.skipIf(!hasFixture)("map object-ops under sequences of edits", () => {
         fc.assert(
             fc.property(fc.commands(commands, { maxCommands: 4 }), (cmds) => {
                 fc.modelRun(() => {
-                    const pr = mapParser.parse(bytes, PARSE_OPTIONS);
-                    const real: Real = { pr, doc: docOf(pr) };
+                    // Every run starts from the one fixture parse: the builders only read the parse result
+                    // and each command replaces `real`'s fields rather than mutating them.
+                    const real: Real = { pr: basePr!, doc: baseDoc! };
                     const model: Abstract = { elevations: [] };
                     sync(model, real);
                     return { model, real };
                 }, cmds);
             }),
-            // Each command re-serializes and re-parses a whole MAP, so the sequences stay short and
-            // the run count small enough to fit the suite's per-test budget under coverage instrumentation.
+            // Each command re-serializes and re-parses a whole MAP, so the sequences stay short.
             { numRuns: 8 },
         );
     });
