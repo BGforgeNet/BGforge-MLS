@@ -82,7 +82,7 @@ export async function runPool(
             }
             const index = next++;
             // A worker_threads port, not a window: its postMessage takes no target origin.
-            // eslint-disable-next-line unicorn/require-post-message-target-origin
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin
             worker.postMessage({ index, input: inputs[index] });
         };
 

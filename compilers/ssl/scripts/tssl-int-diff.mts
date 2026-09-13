@@ -86,7 +86,7 @@ async function run(target: string, sets: { label: string; options: CompileOption
         const entry = file.replace(/\.tssl$/, ".ssl");
         const text = fs.readFileSync(file, "utf-8");
 
-        // eslint-disable-next-line no-await-in-loop -- one shared ts-morph project; see tssl-oracles.mts
+        // oxlint-disable-next-line no-await-in-loop -- one shared ts-morph project; see tssl-oracles.mts
         const ssl = await transpile(file, text, batch);
         const preprocessed = preprocessTextWithOrigins(ssl, entry);
 

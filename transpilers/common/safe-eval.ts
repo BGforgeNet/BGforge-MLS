@@ -252,13 +252,13 @@ class Parser {
             const right = this.comparison();
             if (type === TokenType.EqEq) {
                 // Implementing `==` semantics for the sandboxed evaluator.
-                // eslint-disable-next-line eqeqeq
+                // oxlint-disable-next-line eqeqeq
                 left = left == right;
             } else if (type === TokenType.EqEqEq) {
                 left = left === right;
             } else if (type === TokenType.NotEq) {
                 // Implementing `!=` semantics for the sandboxed evaluator.
-                // eslint-disable-next-line eqeqeq
+                // oxlint-disable-next-line eqeqeq
                 left = left != right;
             } else {
                 left = left !== right;

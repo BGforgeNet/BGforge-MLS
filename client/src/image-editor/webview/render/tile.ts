@@ -126,7 +126,7 @@ export async function fitZoomByMeasuring(
         const mid = Math.floor(((lo + hi) / 2) * 100) / 100;
         if (mid <= lo || mid >= hi) break;
         // A search, not a batch: each candidate is chosen from the previous one's measurement.
-        // eslint-disable-next-line no-await-in-loop -- sequential by nature; nothing to parallelise
+        // oxlint-disable-next-line no-await-in-loop -- sequential by nature; nothing to parallelise
         await apply(mid);
         if (fits()) lo = mid;
         else hi = mid;

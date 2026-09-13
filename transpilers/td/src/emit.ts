@@ -105,7 +105,7 @@ function emitConstruct(construct: TDConstruct): string {
             return emitPatch(construct);
         default: {
             // Exhaustive check: all TDConstructType values must be handled above
-            // eslint-disable-next-line no-underscore-dangle -- standard `never`-narrowing pattern; underscore marks the binding as intentionally only read for the type check
+            // oxlint-disable-next-line no-underscore-dangle -- standard `never`-narrowing pattern; underscore marks the binding as intentionally only read for the type check
             const _exhaustive: never = construct;
             throw new Error(`Unknown construct type: ${(_exhaustive as TDConstruct).type}`);
         }
@@ -332,7 +332,7 @@ function emitText(text: TDText): string {
             break;
         default: {
             // Exhaustive check: all TDTextType values must be handled above
-            // eslint-disable-next-line no-underscore-dangle -- standard `never`-narrowing pattern; underscore marks the binding as intentionally only read for the type check
+            // oxlint-disable-next-line no-underscore-dangle -- standard `never`-narrowing pattern; underscore marks the binding as intentionally only read for the type check
             const _exhaustive: never = text.type;
             throw new Error(`Unknown text type: ${_exhaustive}`);
         }

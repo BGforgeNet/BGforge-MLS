@@ -135,7 +135,7 @@ describe("safeProcess", () => {
 
     it("handles non-Error throws", async () => {
         const result = await safeProcess("bad.txt", () => {
-            // eslint-disable-next-line no-throw-literal -- the point of this case is a non-Error throw
+            // oxlint-disable-next-line no-throw-literal -- the point of this case is a non-Error throw
             throw "string error";
         });
         expect(result).toBe("error");

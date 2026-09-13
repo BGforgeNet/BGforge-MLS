@@ -368,7 +368,7 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
                 const i = nextChunk++;
                 const listFile = path.join(tmpDir, `chunk-${i}.txt`);
                 fs.writeFileSync(listFile, chunks[i]!.join("\n") + "\n");
-                // eslint-disable-next-line no-await-in-loop
+                // oxlint-disable-next-line no-await-in-loop
                 results[i] = await runChild([...baseArgs, "--files-from", listFile], path.join(tmpDir, `stdout-${i}`));
             }
         };
@@ -384,7 +384,7 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
             // Manual pump instead of stream pipeline({ end: false }): pipeline
             // leaves its listeners on the shared process.stdout, and one call
             // per chunk trips the MaxListenersExceeded warning.
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             for await (const data of fs.createReadStream(spool)) {
                 if (!process.stdout.write(data)) {
                     await new Promise<void>((resolve) => {
@@ -445,7 +445,7 @@ export async function runCli(options: RunOptions): Promise<void> {
         let changed = 0,
             unchanged = 0;
         for (const file of files) {
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             const result = await processFile(file, args.mode);
             if (result === "error") process.exit(1);
             if (result === "changed") {
@@ -500,7 +500,7 @@ export async function runCli(options: RunOptions): Promise<void> {
         for (const file of files) {
             // Sequential processing - CLI mode needs deterministic output and
             // early exit on first mismatch in check mode.
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             const result = await processFile(file, args.mode);
             if (result === "error") process.exit(1);
             if (result === "changed") {

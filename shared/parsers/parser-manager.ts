@@ -91,7 +91,7 @@ class ParserManager {
             try {
                 // Tree-sitter WASM init must be sequential - parallel init
                 // causes WASM memory corruption on some runtimes.
-                // eslint-disable-next-line no-await-in-loop
+                // oxlint-disable-next-line no-await-in-loop
                 await parser.module.init();
             } catch (error) {
                 logger.error(
