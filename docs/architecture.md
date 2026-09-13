@@ -670,15 +670,16 @@ so they cannot drift out of sync as thresholds are ratcheted. Two packages run
 intentionally low floors because their broader behaviour is verified by other layers:
 
 - **`@bgforge/format`** (`format/vitest.config.ts`): the tree-sitter-driven formatters (`src/{fallout-ssl,weidu-baf,weidu-d,weidu-tp2}/`) are exercised end-to-end by grammar-corpus fixtures under `grammars/*/test/corpus/` and by the directory-mode `--check-idempotency` invocation in `scripts/test-external.sh` (run by `pnpm test:all`), so they are excluded from this gate's coverage scope; the threshold measures only the standalone unit slice (the pure formatters, utilities, helpers, dispatch) it actually covers.
-- **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): the bulk of transpiler correctness is enforced by the TD/TBAF fixture-driven integration suites in `scripts/test.sh` (`api.test.ts`, `transpile-cli.test.ts`, and the `test/td` + `test/tbaf` fixture suites). The vitest project here covers the public API, shared helpers, and targeted unit slices of the per-language transformers (TBAF condition algebra, TD expression evaluation, TSSL operator conversion, the shared loop-unroll guard); Stryker mutation testing does not reach this package (it mutates `server/src/core` only - see below), so the rest of the per-language transformer surface is exercised through those integration suites.
+- **`@bgforge/transpile`** (`transpilers/vitest.config.ts`): the bulk of transpiler correctness is enforced by the TD/TBAF fixture-driven integration suites in `scripts/test.sh` (`api.test.ts`, `transpile-cli.test.ts`, and the `test/td` + `test/tbaf` fixture suites). The vitest project here covers the public API, shared helpers, and targeted unit slices of the per-language transformers (TBAF condition algebra, TD expression evaluation, TSSL operator conversion, the shared loop-unroll guard); Stryker mutation testing does not reach this package (its `mutate` list names no transpiler file - see below), so the rest of the per-language transformer surface is exercised through those integration suites.
 
-Stryker (`stryker.conf.json`) mutates exactly three `server/src/core` files -
-`normalized-uri.ts`, `symbol-index.ts`, and `provider-registry.ts` - not the
-transpilers or any other package. The `break` threshold sits at 70 (`high` 80,
-`low` 70); run `pnpm exec stryker run` locally for the current per-file scoped
-score (report at `tmp/mutation/report.html`), since the figure moves as those
-files' tests change and a snapshot pinned to one run's date would go stale here
-the same way the coverage numbers above did.
+Stryker mutates only the files listed under `mutate` in `stryker.conf.json` - the
+canonical writers and the spec types of `@bgforge/binary`, the code where a
+surviving mutant means bytes written wrong - and its thresholds live in the same
+file; this doc intentionally restates neither, for the reason given for the
+coverage numbers above. The score history and the reasoning behind the scope
+are in the header of `.github/workflows/mutation.yml`; run `pnpm exec stryker
+run` locally for the current per-file score (report at
+`tmp/mutation/report.html`).
 
 The other workspaces - `server`, `client`, `binary`, `shared`, `scripts`, and the
 two TypeScript plugins - run substantially higher floors (see each package's own
