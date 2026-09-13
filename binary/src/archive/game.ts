@@ -286,6 +286,16 @@ function escapesGameDir(relative: string): boolean {
     return relative.split("/").some((seg) => seg === "..");
 }
 
+/**
+ * A name the write paths join under a game folder must be one plain filename segment: the read paths refuse
+ * `..` and rooted names through `escapesGameDir`, and a write must not be the one direction that escapes.
+ */
+function assertPlainName(name: string): void {
+    if (name === "" || name === "." || name === ".." || /[\\/]/.test(name) || escapesGameDir(name)) {
+        throw new Error(`Refusing to write "${name}": not a plain file name`);
+    }
+}
+
 /** Resolve a game-relative path (`data/foo.bif`, `lang/en_US/override`) segment by segment, case-insensitively. */
 function resolveGamePath(gameDir: string, relative: string): string | undefined {
     if (escapesGameDir(relative)) return undefined;
@@ -613,6 +623,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return { kind: "bif", archivePath, entry: tileset ? source.tilesetIndex : source.fileIndex, tileset };
         },
         write(resref, type, bytes, writeOptions) {
+            assertPlainName(resref);
             const typeCode = typeCodeOf(type);
             const ext = resourceTypeExt(typeCode);
             if (!ext) throw new Error(`No file extension known for resType 0x${typeCode.toString(16)}`);
@@ -669,6 +680,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return looseSourceIn(resref, typeCodeOf(type), folder)?.path;
         },
         writeAuxFile(fileName, bytes) {
+            assertPlainName(fileName);
             const target = path.join(ensureFolder(gameDir, "override"), fileName.toLowerCase());
             atomicWriteFileSync(target, bytes);
             return target;

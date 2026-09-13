@@ -846,6 +846,21 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    it("refuses to write a resref or aux file name that is not one plain file name", () => {
+        const DATA = Uint8Array.from([7, 7, 7]);
+        const dir = makeGameDir();
+        const game = openGame(dir);
+        try {
+            expect(() => game.write("../escaped", "itm", DATA)).toThrow(/not a plain file name/);
+            expect(() => game.write("sub/nested", "itm", DATA)).toThrow(/not a plain file name/);
+            expect(() => game.writeAuxFile("../escaped.json", DATA)).toThrow(/not a plain file name/);
+            expect(fs.existsSync(path.join(dir, "escaped.itm"))).toBe(false);
+            expect(fs.existsSync(path.join(dir, "escaped.json"))).toBe(false);
+        } finally {
+            game.close();
+        }
+    });
+
     it("rescan picks up override files another tool wrote, and drops ones it deleted", () => {
         const OUTSIDE_EDIT = Uint8Array.from([0x5a, 0x5a]);
         const OVERRIDE_ITEM = Uint8Array.from([0xde, 0xad, 0xbe, 0xef]);
