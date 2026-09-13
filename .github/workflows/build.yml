@@ -146,7 +146,7 @@ jobs:
         run: |
           set -euo pipefail
           # --allow-build=libxmljs2: cyclonedx pulls libxmljs2 (native; ships a prebuilt binary
-          # via prebuild-install) as a transitive dep. pnpm 11 fails closed on an unclassified
+          # via prebuild-install) as a transitive dep. pnpm fails closed on an unclassified
           # install script (ERR_PNPM_IGNORED_BUILDS), and `pnpm dlx` resolves in a throwaway dir
           # outside the workspace, so the pnpm-workspace.yaml allowBuilds list does not apply -
           # allow it inline.
