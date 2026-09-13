@@ -43,7 +43,7 @@ catalog:
   # Declared by both client and server.
   fast-glob: ^3.3.3
   quick-lru: ^7.3.0
-  tsdown: ^0.22.14
+  tsdown: ^0.23.0
   # The CLI generates the parsers web-tree-sitter loads, so both must agree on the parser ABI.
   tree-sitter-cli: 0.27.0
   web-tree-sitter: ^0.27.0
@@ -128,3 +128,9 @@ overrides:
 # the age window adds nothing here; exclude it so `pnpm install`/`update` resolve.
 minimumReleaseAgeExclude:
   - sslc-emscripten-noderawfs
+
+# `pnpm outdated` then reports the SHA-pinned GitHub Actions in .github/workflows beside the npm deps,
+# and `pnpm update` re-pins them to the new commit SHA, so the CI pins share the npm sweep instead of a
+# separate by-hand check.
+update:
+  githubActions: true

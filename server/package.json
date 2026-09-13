@@ -45,7 +45,7 @@
         "@types/node": "catalog:",
         "fast-check": "catalog:",
         "fast-glob": "catalog:",
-        "p-limit": "^7.3.1",
+        "p-limit": "^7.3.2",
         "ts-morph": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:",

@@ -17,11 +17,12 @@
         "@bgforge/binary": "workspace:*",
         "@bgforge/binary-editor": "workspace:*",
         "@bgforge/image": "workspace:*",
-        "@xyflow/svelte": "^1.6.5",
+        "@xyflow/svelte": "^1.6.6",
         "bits-ui": "2.19.0",
         "elkjs": "^0.12.0",
         "vscode-languageclient": "catalog:",
-        "vscode-languageserver-protocol": "catalog:"
+        "vscode-languageserver-protocol": "catalog:",
+        "web-tree-sitter": "catalog:"
     },
     "devDependencies": {
         "@types/node": "catalog:",
