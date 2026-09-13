@@ -3,6 +3,7 @@
     import { filterTiles } from "../grid-window";
     import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip, viewerMounted } from "../tabs";
+    import BetaNotice from "../../../webview-ui/BetaNotice.svelte";
     import Grid from "./Grid.svelte";
     import SetPicker from "./SetPicker.svelte";
     import Tabs from "./Tabs.svelte";
@@ -145,6 +146,7 @@
      tab draws it. The controls keep their place and their width whatever is on the stage, so picking
      something moves nothing that the reader is still using to pick with. -->
 <div class="controls">
+<div class="bb-notice-bar"><BetaNotice /></div>
 {#if showTabStrip(hasSets)}
     <Tabs current={tab} onSelect={(next) => (tab = next)} />
 {/if}
@@ -209,6 +211,7 @@
             showSet={tab === "sets"}
             showSetChoice={false}
             idle={showing === undefined}
+            showNotice={false}
         />
     </div>
 {/if}

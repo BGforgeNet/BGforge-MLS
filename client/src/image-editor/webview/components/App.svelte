@@ -46,6 +46,7 @@
     } from "../render/tile";
     import { framesToRequest, seedLoadedPixels } from "../render/frame-loading";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, type InitWait } from "../../../webview-utils";
+    import BetaNotice from "../../../webview-ui/BetaNotice.svelte";
     import CompassRose from "./CompassRose.svelte";
     import CycleGrid from "./CycleGrid.svelte";
     import CycleLayoutControls from "./CycleLayoutControls.svelte";
@@ -64,6 +65,7 @@
         showSet,
         showSetChoice,
         idle,
+        showNotice,
     }: {
         bridge: Bridge;
         viewState?: { get: () => unknown; set: (state: unknown) => void };
@@ -87,6 +89,8 @@
          * the loading placeholder below is for a set that IS coming.
          */
         idle?: boolean;
+        /** Whether this surface draws the beta notice. False inside the gallery, whose own top bar carries it. */
+        showNotice?: boolean;
     } = $props();
 
     /**
@@ -518,6 +522,9 @@
         <p class="placeholder">Loading...</p>
     {/if}
 {:else}
+    {#if showNotice !== false}
+        <div class="bb-notice-bar"><BetaNotice /></div>
+    {/if}
     <!-- Shown for every view, not only the ones whose name decodes: this sits ABOVE the stage, so a
          banner that came and went took 27px of stage height with it - and the stage's height is what the
          tile fit measures, so switching to a stance whose filename happens to decode resized every tile

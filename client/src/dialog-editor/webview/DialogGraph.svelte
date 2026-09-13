@@ -1,4 +1,5 @@
 <script lang="ts">
+    import BetaNotice from "../../webview-ui/BetaNotice.svelte";
     import Checkbox from "../../webview-ui/Checkbox.svelte";
     import {
         SvelteFlow,
@@ -1424,13 +1425,9 @@
         <!-- Left column: (1) beta/feedback, (2) the button row. The keyboard reference is a full-height panel
              docked on the RIGHT (tree view only), so it no longer consumes a third stacked row. -->
         <div class="tbleft">
-            <!-- Row 1: beta / feedback notice, matching the binary editor's toolbar-beta. -->
+            <!-- Row 1: beta / feedback notice, the same component every panel carries. -->
             <div class="tbrow tbbeta">
-                <span class="dlgbeta">
-                    Beta. Send feedback to
-                    <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
-                       >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
-                </span>
+                <BetaNotice />
             </div>
             <!-- Row 2: buttons - the view switch + actions (tree adds Expand/Collapse all), then the
                  "Auto node names" toggle at the END of the list. -->
@@ -1915,17 +1912,6 @@
         align-items: center;
         border-left: 1px solid var(--vscode-panel-border);
         padding-left: 12px;
-    }
-    /* Beta notice - low-emphasis muted text on its own row. */
-    .dlgbeta {
-        font-size: 11px;
-        color: var(--vscode-descriptionForeground);
-    }
-    .dlgbeta a {
-        color: var(--vscode-textLink-foreground);
-    }
-    .dlgbeta a:hover {
-        color: var(--vscode-textLink-activeForeground);
     }
     /* Tree keyboard reference: muted key -> action pairs laid out in a grid that fills 4 rows then flows into a
        new column (>=2 columns), so the panel stays short instead of one tall single-column stack. Each pair is

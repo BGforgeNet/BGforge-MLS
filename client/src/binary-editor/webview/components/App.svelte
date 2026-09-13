@@ -6,6 +6,7 @@
     import { clearSelectionMemory } from "../state/list-selection-memory";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import LayoutRenderer from "./LayoutRenderer.svelte";
+    import BetaNotice from "../../../webview-ui/BetaNotice.svelte";
     import Icon from "../../../webview-ui/Icon.svelte";
 
     const { bridge }: { bridge: Bridge } = $props();
@@ -123,11 +124,7 @@
     <div class="toolbar">
         <!-- Beta notice sits on the left; JSON import/export are pushed to the right (toolbar-actions
              margin-left:auto) so they sit apart from it. -->
-        <span class="toolbar-beta">
-            Beta. Send feedback to
-            <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
-               >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
-        </span>
+        <BetaNotice />
         <div class="toolbar-actions">
             <button class="toolbar-btn" onclick={() => bridge.dumpJson()}
                     title="Export the current file contents as JSON to a new editor tab">

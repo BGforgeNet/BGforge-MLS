@@ -283,3 +283,21 @@
     justify-content: flex-end;
     gap: 0.5rem;
 }
+
+/* ---- bb-beta-notice (BetaNotice.svelte: low-emphasis text with themed links) ----
+ * .bb-notice-bar is the row a panel without a toolbar of its own at the top puts the notice in. */
+.bb-beta-notice {
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+.bb-beta-notice a {
+    color: var(--vscode-textLink-foreground);
+}
+.bb-beta-notice a:hover {
+    color: var(--vscode-textLink-activeForeground);
+}
+.bb-notice-bar {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
