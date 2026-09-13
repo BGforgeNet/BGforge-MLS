@@ -103,14 +103,6 @@ export interface BinaryFormatAdapter {
         ) => ProjectedEntry | undefined,
     ): ProjectedEntry[];
 
-    // -- Structural edits (optional) -------------------------------------------
-    isStructuralFieldId?(fieldId: string): boolean;
-    buildStructuralTransitionBytes?(
-        parseResult: ParseResult,
-        fieldId: string,
-        rawValue: number,
-    ): Uint8Array | undefined;
-
     // -- Add/remove entries in variable-length arrays (optional) ---------------
     /**
      * Produce the bytes for `parseResult` with one new default entry appended

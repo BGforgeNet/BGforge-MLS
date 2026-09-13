@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-    compileFlagTable,
-    emptyFlagArray,
-    flagArrayToInt,
-    intToFlagArray,
-    slugifyCodedName,
-} from "../src/spec/coded-projection";
+import { compileFlagTable, flagArrayToInt, intToFlagArray, slugifyCodedName } from "../src/spec/coded-projection";
 import { flagArrayZodSchema } from "../src/spec/derive-zod";
 
 describe("slugifyCodedName", () => {
@@ -150,13 +144,6 @@ describe("flagArrayToInt", () => {
         const projected = intToFlagArray(tableLarge, u32, codecBits);
         const repacked = flagArrayToInt(tableLarge, projected, codecBits);
         expect(repacked).toBe(u32);
-    });
-});
-
-describe("emptyFlagArray", () => {
-    it("returns an empty array", () => {
-        const table = { 0x01: "Hidden", 0x02: "BigGun" };
-        expect(emptyFlagArray(table)).toEqual([]);
     });
 });
 

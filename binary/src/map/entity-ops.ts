@@ -37,7 +37,7 @@
  * not this module.
  *
  * Future hazard for new structural mutations (object type-tag transitions,
- * future buildStructuralTransitionBytes for MAP, anything else that changes
+ * a layout-changing field edit for MAP, anything else that changes
  * mid-file byte layout): `serializeMapCanonicalDocument` writes the new
  * sections at recomputed offsets but applies opaque ranges at their stored
  * offsets verbatim. Any range whose offset lies in or after the resized
