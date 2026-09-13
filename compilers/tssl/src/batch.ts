@@ -1,9 +1,8 @@
 /**
  * The ts-morph project a compile runs in, and how it is kept across compiles.
  *
- * Building one costs over a second - overwhelmingly TypeScript's own parser and binder, against which
- * lowering a script is under 2% - so a caller that compiles more than once reuses a project rather than
- * paying that again per file. What reuse costs in return is freshness: a project holds the dependencies
+ * Building one - TypeScript parsing and binding the lib set and the script's imports - is most of a first
+ * compile, so a caller that compiles more than once reuses a project rather than paying that again per file. What reuse costs in return is freshness: a project holds the dependencies
  * it parsed, and will not notice one of them changing on disk. `prepareEntry` is what settles that,
  * which is why every front end goes through it instead of creating its own source file.
  */
