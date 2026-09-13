@@ -1,5 +1,5 @@
 import zlib from "node:zlib";
-import { MAX_INFLATED_BYTES } from "../limits.ts";
+import { MAX_FRAME_PIXELS, MAX_INFLATED_BYTES } from "../limits.ts";
 import { decodeBc1, decodeBc3, encodeBc3 } from "./bc.ts";
 import { type PvrFormat, type PvrTexture } from "./texture.ts";
 
@@ -87,6 +87,11 @@ export function decodePvrz(bytes: Uint8Array): PvrTexture {
     // rather than read off a field list, because transposing them yields a plausible-looking image.
     const height = view.getUint32(0x18, true);
     const width = view.getUint32(0x1c, true);
+    // The block-data check below only proves the stream is long enough for the declared size; the RGBA
+    // output is width*height*4 regardless, so bound the dimensions the way every sibling decoder does.
+    if (width === 0 || height === 0 || width * height > MAX_FRAME_PIXELS) {
+        throw new Error(`decodePvrz: texture ${width}x${height} exceeds the ${MAX_FRAME_PIXELS}-pixel cap`);
+    }
 
     const blocks = inflated.subarray(PVR_HEADER_BYTES + view.getUint32(0x30, true));
     const needed = Math.ceil(width / 4) * Math.ceil(height / 4) * BLOCK_BYTES[format];

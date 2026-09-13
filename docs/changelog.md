@@ -27,6 +27,8 @@
 ### Fixes
 
 - `.d` files show the WeiDU script icon under any file icon theme.
+- A PVRZ page whose header declares more pixels than the per-frame cap is refused on open, instead of the
+  editor allocating the full texture from a crafted header.
 
 ## 3.15.0
 
