@@ -460,14 +460,6 @@ class ProviderRegistry {
     handleDocumentClosed(langId: string, uri: string): void {
         this.fileWatcher.handleDocumentClosed(langId, uri, this);
     }
-
-    /**
-     * Scan workspace for indexed files and reload them through their providers.
-     * Called after providers are initialized to populate indices at startup.
-     */
-    async scanWorkspaceFiles(workspaceRoot: string | undefined): Promise<void> {
-        await scanWorkspaceFiles(this.providers.values(), this, workspaceRoot);
-    }
 }
 
 // Singleton instance
