@@ -6,7 +6,7 @@
  * reader commits to it - a conversion is many files at once, so "run it and see" is not an option.
  *
  * Pure of `vscode` on purpose, like `set-document.ts` beside it: the pickers, the folder prompt and the
- * writes are the provider's, and everything below is testable without a host.
+ * writes live in `save-flow.ts`, and everything below is testable without a host.
  */
 import {
     type ActionScheme,

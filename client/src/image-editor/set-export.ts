@@ -6,7 +6,7 @@
  * for the file it came from, so the folder that comes out is the set.
  *
  * Pure of `vscode`, like `conversion.ts` beside it: the destination prompt, the consent modals and the
- * writes are the provider's, and the planning below is testable without a host.
+ * writes live in `save-flow.ts`, and the planning below is testable without a host.
  *
  * FRM is deliberately not a target here. A set has no single FRM, and turning one into a folder of
  * Fallout critter files needs a naming family, a stem and an animation id - which is what the conversion
