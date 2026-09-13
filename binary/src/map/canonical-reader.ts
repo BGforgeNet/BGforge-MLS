@@ -6,6 +6,7 @@
 import type { z } from "zod";
 import { clampNumericValue } from "../binary-format-contract";
 import { parseWithSchemaValidation } from "../schema-validation";
+import { displayNavigator, isGroup } from "../spec/navigate-display";
 import { walkGroup } from "../spec/walk-display";
 
 import { ScriptType } from "./types";
@@ -41,29 +42,7 @@ import {
     type MapCanonicalDocument,
     type MapCanonicalSnapshot,
 } from "./canonical-schemas";
-function isGroup(entry: ParsedField | ParsedGroup): entry is ParsedGroup {
-    return "fields" in entry;
-}
-
-function getGroup(root: ParsedGroup, name: string): ParsedGroup {
-    const group = root.fields.find((entry): entry is ParsedGroup => isGroup(entry) && entry.name === name);
-    if (!group) {
-        throw new Error(`Missing MAP group: ${name}`);
-    }
-    return group;
-}
-
-function getOptionalGroup(root: ParsedGroup, name: string): ParsedGroup | undefined {
-    return root.fields.find((entry): entry is ParsedGroup => isGroup(entry) && entry.name === name);
-}
-
-function getField(group: ParsedGroup, name: string): ParsedField {
-    const field = group.fields.find((entry): entry is ParsedField => !isGroup(entry) && entry.name === name);
-    if (!field) {
-        throw new Error(`Missing MAP field: ${group.name}.${name}`);
-    }
-    return field;
-}
+const { getGroup, getOptionalGroup, getField } = displayNavigator("MAP");
 
 function readNumber(group: ParsedGroup, name: string): number {
     const field = getField(group, name);

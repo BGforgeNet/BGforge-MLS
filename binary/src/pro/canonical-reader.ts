@@ -7,11 +7,12 @@ import { clampNumericValue } from "../binary-format-contract";
 import { resolveRawValueFromDisplay } from "../display-lookups";
 import { createFieldKey, toSemanticFieldKey } from "../presentation-schema";
 import { parseWithSchemaValidation } from "../schema-validation";
+import { displayNavigator } from "../spec/navigate-display";
 import { intToFlagArray, type FlagArray } from "../spec/coded-projection";
 import { structFromDisplay } from "../spec/walk-display";
 import { ActionFlags, ContainerFlags, HeaderFlags, ItemFlagsExt, WallLightFlags } from "./types";
 import { critterSpec, critterPresentation } from "./specs/critter";
-import type { ParsedField, ParsedGroup, ParseResult } from "../types";
+import type { ParsedGroup, ParseResult } from "../types";
 import {
     proCanonicalSnapshotSchemaPermissive,
     proCanonicalDocumentSchemaPermissive,
@@ -19,25 +20,7 @@ import {
     type ProCanonicalDocument,
 } from "./canonical-schemas";
 
-function getGroup(root: ParsedGroup, groupName: string): ParsedGroup {
-    const group = root.fields.find((entry): entry is ParsedGroup => "fields" in entry && entry.name === groupName);
-    if (!group) {
-        throw new Error(`Missing PRO group: ${groupName}`);
-    }
-    return group;
-}
-
-function getOptionalGroup(root: ParsedGroup, groupName: string): ParsedGroup | undefined {
-    return root.fields.find((entry): entry is ParsedGroup => "fields" in entry && entry.name === groupName);
-}
-
-function getField(group: ParsedGroup, fieldName: string): ParsedField {
-    const field = group.fields.find((entry): entry is ParsedField => !("fields" in entry) && entry.name === fieldName);
-    if (!field) {
-        throw new Error(`Missing PRO field: ${group.name}.${fieldName}`);
-    }
-    return field;
-}
+const { getGroup, getOptionalGroup, getField } = displayNavigator("PRO");
 
 function readFieldNumber(group: ParsedGroup, fieldName: string, fieldPath: string): number {
     const field = getField(group, fieldName);
