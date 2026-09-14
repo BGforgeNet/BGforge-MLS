@@ -20,7 +20,7 @@
  * field, not just layout blocks).
  */
 
-import { formatLayoutSchema, WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX, type FormatLayout } from "../layout-schema-types";
+import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 import { itmAbilityBodyLabels, itmAbilityBodyRows } from "./ability-layout";
 
@@ -76,7 +76,6 @@ const itmLabels: Record<string, string> = {
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "itm",
-    maxContentWidthPx: WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX,
     labels: itmLabels,
     variants: {
         item: {

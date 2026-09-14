@@ -238,26 +238,15 @@
    the viewport are mounted (.eff-tree-vrow absolutely positioned over a full-height spacer). The
    .eff-tree-vlist is the lone scroll container (max-height bounds it; the detail flows into the page scroll),
    so there is no nested double-scroll. */
+/* The tree takes the shared .master width; min-width:0 keeps its toolbar's min-content from pinning it wider. */
 .eff-tree-master {
-    /* min-width:0 so flex-basis actually governs the width: without it the column's min-content (the toolbar -
-       "+ ability" button + filter + icons) silently pins it far wider (~23rem) than the short rows need
-       ("Ability N", "Effect N - op NNN", "Global (Equipping)"), wasting width the detail pane could use. 14rem
-       clears the widest label (Global header floors at ~12rem) and keeps the filter input usable (~10ch). */
-    flex-basis: 14rem;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
     overflow: visible;
 }
-.eff-tree-toolbar {
+.eff-tree-toolbar-end {
+    margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.4rem;
-    border-bottom: 1px solid var(--vscode-panel-border);
-}
-.eff-tree-toolbtn {
-    flex: 0 0 auto;
 }
 /* Collapse-all / expand-all icon buttons at the right of the tree toolbar. */
 .eff-tree-iconbtn {
@@ -275,10 +264,6 @@
     opacity: 1;
     background: var(--vscode-toolbar-hoverBackground);
     border-radius: 3px;
-}
-.eff-tree-filter {
-    flex: 1 1 auto;
-    min-width: 0;
 }
 .eff-tree-vlist {
     overflow-y: auto;

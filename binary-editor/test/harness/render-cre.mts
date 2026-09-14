@@ -477,7 +477,7 @@ check(
 // Revert the live edit so the byte-round-trip regression later in this file sees the original fixture bytes.
 await doUndo();
 
-// Constrained-width pass: the CRE layout caps its content width (WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX) regardless of a
+// Constrained-width pass: the CRE layout caps its content width (the renderer's shared default) regardless of a
 // WIDER viewport, so the comfortable pass above never squeezes it. A live code-server session at a 1920px BROWSER
 // window still measured real clipping, because the webview's actual content area (behind VS Code's own
 // sidebar/tabs chrome) was narrower than this harness's bare full-viewport render - narrow the viewport well below

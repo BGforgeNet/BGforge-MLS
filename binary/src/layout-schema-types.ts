@@ -368,13 +368,6 @@ const layoutVariantSchema = z
     .refine((v) => (v.rows === undefined) !== (v.tabs === undefined), "a variant must have rows xor tabs");
 
 /**
- * The content-width cap of the wide single-page layouts (CRE, ITM, MAP, SPL), shared so they cannot drift apart.
- * Set by the Abilities & Effects tree: it splits this width between its list and the effect detail, and at 1180 the
- * detail fell just short of two feature-block columns at full dropdown width.
- */
-export const WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX = 1280;
-
-/**
  * A format's full layout: one variant per object/sub type the parser can report (PRO dispatches by
  * object type and item/scenery subtype). The active variant is chosen by the `variantId` the parser
  * stamps on the parse result; a result with no `variantId`, or one no variant declares, gets no layout.
@@ -383,7 +376,8 @@ export const formatLayoutSchema = z.strictObject({
     schemaVersion: z.literal(1),
     format: z.string().min(1),
     variants: z.record(z.string(), layoutVariantSchema),
-    /** Content hugs and clumps left within the pane up to this width (~900 default in the renderer). */
+    /** Content hugs and clumps left within the pane up to this width. Omit for the renderer's shared default;
+     *  declare only a narrower cap (a single dense form). */
     maxContentWidthPx: z.number().int().positive().optional(),
     /**
      * Display-label overrides keyed by semantic field key (`FieldRef`). Applied at resolve time to a field's

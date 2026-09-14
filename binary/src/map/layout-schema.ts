@@ -23,7 +23,7 @@
  *     a form; they are a raw grid that round-trips untouched. A map editor with tile art is the right tool.
  */
 
-import { formatLayoutSchema, WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX, type FormatLayout } from "../layout-schema-types";
+import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 
 const k = (key: string): string => `map.header.${key}`;
 
@@ -54,7 +54,6 @@ const listRow = (
 export const mapLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "map",
-    maxContentWidthPx: WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX,
     variants: {
         map: {
             tabs: [

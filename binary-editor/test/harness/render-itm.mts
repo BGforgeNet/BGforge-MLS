@@ -727,7 +727,7 @@ await page.screenshot({ path: shotPath("shot-itm-tree.png"), fullPage: true });
 // Structure ops via the tree (full parity with the dropped Abilities/Effects tabs)
 // ============================================================
 // + ability (section-level add)
-await page.locator(".eff-tree-toolbar .eff-tree-toolbtn").click();
+await page.locator(".eff-tree-toolbar button", { hasText: "+ ability" }).click();
 await page
     .waitForFunction(
         () =>
@@ -816,7 +816,7 @@ check("ops: undo restores 3 effects", sectionKids(effectsNodeId).total === 3, `$
 // ============================================================
 // Filter: typing narrows the tree to matching effects (+ their owning headers), forcing groups expanded.
 // ============================================================
-await page.locator(".eff-tree-toolbar input.list-filter-input").fill("op 21");
+await page.locator(".eff-tree-master input.list-filter-input").fill("op 21");
 await page
     .waitForFunction(() => document.querySelectorAll(".eff-tree-effect-label").length === 1, undefined, {
         timeout: 5000,
@@ -834,7 +834,7 @@ check(
         filtered.heads[0] === "Ability 2",
     JSON.stringify(filtered),
 );
-await page.locator(".eff-tree-toolbar .list-filter-clear").click();
+await page.locator(".eff-tree-master .list-filter-clear").click();
 await page
     .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 3, undefined, { timeout: 5000 })
     .catch(() => undefined);

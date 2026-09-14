@@ -35,11 +35,15 @@
         version: number;
         selection: NodeId | undefined;
         // A detail layout rendered inside another layout's pane: that page already caps the content width, so a
-        // second cap here would only narrow the pane further (it held the effect detail at the 900px default).
+        // second cap here would only narrow the pane further.
         nested?: boolean;
     } = $props();
 
-    const rootStyle = $derived(nested ? "" : `max-width:${layout.maxContentWidthPx ?? 900}px`);
+    // The content-width cap every format shares unless its layout declares a narrower one (PRO, EFF). Set by the
+    // widest consumer: the Abilities & Effects tree splits it between its list and the effect detail, and at 1180
+    // the detail fell just short of two feature-block columns at full dropdown width.
+    const DEFAULT_MAX_CONTENT_WIDTH_PX = 1280;
+    const rootStyle = $derived(nested ? "" : `max-width:${layout.maxContentWidthPx ?? DEFAULT_MAX_CONTENT_WIDTH_PX}px`);
 
     // A `list` block targeting a section absent from this file (e.g. a MAP with no local variables, or fewer
     // than three elevations) produces no content. Prune its panel - and any row left with only such panels -

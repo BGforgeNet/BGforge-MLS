@@ -9,7 +9,7 @@
  * numeric value.
  */
 
-import { formatLayoutSchema, WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX, type FormatLayout } from "../layout-schema-types";
+import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 import { splAbilityBodyLabels, splAbilityBodyRows } from "./ability-layout";
 
@@ -25,7 +25,6 @@ const SPL_ABILITIES_PREFIX = "spl.abilities[]";
 export const splLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "spl",
-    maxContentWidthPx: WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX,
     labels: {
         ...featureBlockBodyLabels(SPL_EFFECTS_PREFIX),
         ...splAbilityBodyLabels(SPL_ABILITIES_PREFIX),
