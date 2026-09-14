@@ -28,7 +28,7 @@
  * field, not just layout blocks).
  */
 
-import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
+import { formatLayoutSchema, WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX, type FormatLayout } from "../layout-schema-types";
 import { effV2BodyLabels, effV2BodyRows } from "../eff/effect-body-layout";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 
@@ -153,7 +153,7 @@ const creLabels: Record<string, string> = {
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "cre",
-    maxContentWidthPx: 1180,
+    maxContentWidthPx: WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX,
     labels: creLabels,
     variants: {
         creature: {

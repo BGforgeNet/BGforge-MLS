@@ -20,7 +20,7 @@
  * field, not just layout blocks).
  */
 
-import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
+import { formatLayoutSchema, WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX, type FormatLayout } from "../layout-schema-types";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 import { itmAbilityBodyLabels, itmAbilityBodyRows } from "./ability-layout";
 
@@ -76,9 +76,7 @@ const itmLabels: Record<string, string> = {
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "itm",
-    // Wider than the 1180 its siblings use: the Abilities & Effects tree splits this width between its list and the
-    // effect detail, and at 1180 the detail falls just short of two feature-block columns at full dropdown width.
-    maxContentWidthPx: 1280,
+    maxContentWidthPx: WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX,
     labels: itmLabels,
     variants: {
         item: {

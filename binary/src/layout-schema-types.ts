@@ -368,6 +368,13 @@ const layoutVariantSchema = z
     .refine((v) => (v.rows === undefined) !== (v.tabs === undefined), "a variant must have rows xor tabs");
 
 /**
+ * The content-width cap of the wide single-page layouts (CRE, ITM, MAP, SPL), shared so they cannot drift apart.
+ * Set by the Abilities & Effects tree: it splits this width between its list and the effect detail, and at 1180 the
+ * detail fell just short of two feature-block columns at full dropdown width.
+ */
+export const WIDE_LAYOUT_MAX_CONTENT_WIDTH_PX = 1280;
+
+/**
  * A format's full layout: one variant per object/sub type the parser can report (PRO dispatches by
  * object type and item/scenery subtype). The active variant is chosen by the `variantId` the parser
  * stamps on the parse result; a result with no `variantId`, or one no variant declares, gets no layout.
