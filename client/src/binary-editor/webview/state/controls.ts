@@ -225,6 +225,15 @@ export function rangeTooltip(row: Row): string | undefined {
     return `${row.min} to ${row.max}`;
 }
 
+// ---- why a control is disabled ----
+/** Tooltip for a row inside an editing-locked (partially undecoded) subtree, so a disabled control is not just
+ *  mysteriously greyed. Undefined otherwise: a plain read-only row (padding, note) needs no explanation. */
+export function readOnlyTitle(row: Row): string | undefined {
+    return row.editingLocked === true
+        ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited."
+        : undefined;
+}
+
 // ---- which "open this resource" affordance a row gets ----
 /**
  * Whether the row shows the textual `-> ext` chip.

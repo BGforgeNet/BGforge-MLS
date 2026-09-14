@@ -5,9 +5,27 @@
 
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { compile, compileModule } from "svelte/compiler";
 import { coverageConfig } from "../scripts/utils/src/vitest-coverage-config.ts";
 
 export default defineConfig({
+    // Component tests render Svelte through its server renderer (`svelte/server`), which needs no DOM
+    // environment. The compiler is already a dependency, so this adapter stands in for
+    // @sveltejs/vite-plugin-svelte, whose client/HMR machinery a server render never uses.
+    plugins: [
+        {
+            name: "svelte-server-compile",
+            enforce: "pre",
+            transform(code: string, id: string) {
+                const file = id.split("?")[0] ?? id;
+                if (file.endsWith(".svelte")) return compile(code, { filename: file, generate: "server" }).js;
+                if (/\.svelte\.[jt]s$/.test(file)) {
+                    return compileModule(code, { filename: file, generate: "server" }).js;
+                }
+                return null;
+            },
+        },
+    ],
     resolve: {
         // Map the workspace package to its source so vitest can import it
         // without requiring a build step. The built out/ does not exist until
@@ -17,6 +35,9 @@ export default defineConfig({
             "@bgforge/animation/group-labels": path.resolve(import.meta.dirname, "../animation/src/group-labels.ts"),
             "@bgforge/animation": path.resolve(import.meta.dirname, "../animation/src/index.ts"),
             "@bgforge/binary": path.resolve(import.meta.dirname, "../binary/src/index.ts"),
+            // Source-subpath imports (the webview reaches one module past the barrel) before the barrel, for the
+            // reason spelled out for @bgforge/image below.
+            "@bgforge/binary-editor/src": path.resolve(import.meta.dirname, "../binary-editor/src"),
             "@bgforge/binary-editor": path.resolve(import.meta.dirname, "../binary-editor/src/index.ts"),
             // The pure subpaths must precede the barrel alias: vite matches an alias when the id starts
             // with `key + "/"`, so "@bgforge/image" would otherwise capture them and rewrite to a bad
@@ -35,6 +56,8 @@ export default defineConfig({
     },
     test: {
         name: "client",
+        // bits-ui ships uncompiled .svelte and .svelte.js; externalized, Node would load them untransformed.
+        server: { deps: { inline: [/bits-ui/, /svelte-toolbelt/, /runed/] } },
         // Absolute so discovery works both from client/ and from the repo root
         // (scripts/test.sh invokes this config from root); a repo-root-relative
         // glob silently matches 0 files when run from client/.

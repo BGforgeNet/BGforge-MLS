@@ -166,12 +166,34 @@ What a writer in the Svelte webview must honour.
 Fields render through MULTIPLE components under `client/src/binary-editor/webview/components/`:
 `Field.svelte` (kv/detail forms, also used by `FormSection.svelte` and `InlineList.svelte`),
 `blocks/FieldsBlock.svelte` (packed titled boxes), `JoinedField.svelte` (a `join` folded into one row),
-`blocks/GridBlock.svelte` (label+control grids), `blocks/MatrixBlock.svelte` (2D matrices), with
-`CellControl.svelte` as the shared control dispatcher underneath. A per-field presentation property (a tooltip, a
-range hint, a diagnostic/advisory, a link affordance) added to ONE of these renderers is a defect unless every
-other renderer either also gets it (via one shared helper/component, never per-block copies) or is explicitly
-declared N/A with the reason. A field's presentation must not depend on which block kind the layout schema
-happened to place it in.
+`blocks/GridBlock.svelte` (label+control grids), `blocks/MatrixBlock.svelte` (2D matrices) and
+`blocks/FlagColumns.svelte` (one bitfield), with `CellControl.svelte` as the shared control dispatcher underneath.
+A per-field presentation property (a tooltip, a range hint, a diagnostic/advisory, a link affordance) added to ONE
+of these renderers is a defect unless every other renderer either also gets it (via one shared helper/component,
+never per-block copies) or is explicitly declared N/A with the reason. A field's presentation must not depend on
+which block kind the layout schema happened to place it in.
+
+Two shared layers carry it. Everything the CONTROL draws - the strref line, the range tooltip, the gradient
+picker - is in the control components `CellControl` dispatches to. Everything drawn BESIDE the control - picture,
+open chip, animation chip, jump chip, diagnostic marker and quick fix - is `FieldAffordances.svelte`, which every
+renderer draws beside the value, and the doc link is `DocLink.svelte` beside whatever names the field. The
+read-only reason for a locked row is `readOnlyTitle` in `state/controls.ts`. Guarded per renderer by
+`client/test/binary-editor/webview/field-affordances.test.ts`.
+
+Where the renderers place them differs only as far as their shape forces:
+
+- A **grid** slot label that is itself the jump link (a CRE item slot) draws no second jump chip.
+- A **matrix** row label names the row, not a cell, so each cell's doc link and affordances sit between the label
+  and the cells. The label is the only flexible track, so they shorten it (ellipsized, full text in its tooltip)
+  and never move a value column.
+- A **join** puts each part's doc link in its shared label and the parts' affordances after the whole run.
+- A **flag** field's affordances sit beside whatever names it: its own legend when boxed, the panel title when it
+  is the sole block of a titled panel, the group legend when it is a group's `flagsField`.
+- Matrix, join, legend and panel-title placements are compact: the quick fix shows its icon and names itself in
+  its tooltip.
+- `FlagGroups.svelte` is N/A: it regroups bits of several fields under category legends and never draws a field's
+  name, so there is nothing to put a row affordance beside. `SpellbookBlock` and `EffectTreeBlock` draw no field
+  row of their own; their detail panes render through the renderers above.
 
 The per-row affordances this rule covers, each keyed off one row property:
 
@@ -186,7 +208,8 @@ The per-row affordances this rule covers, each keyed off one row property:
   the install's gradient table, fetched through `state/gradient-table-context.ts`.
 - **Diagnostics** - the validate pass and each relationship overlay's `constraints` (dangling cross-record
   references, a spellbook over capacity) reach the webview as `Diagnostic[]`. `App.svelte` summarises them in a
-  banner, and `Field.svelte` marks a field's own beside its control, with the first quick fix as a button.
+  banner, and `FieldAffordances.svelte` marks a field's own beside its control, with the first quick fix as a
+  button.
 
 ### Resolved strrefs: idle text in roomy controls, tooltip in dense ones
 
@@ -199,7 +222,8 @@ shown twice; the title carries the full line. A record outside a game has no `st
 ordinary number.
 
 The `compact` prop on `CellControl` is the declared N/A for the shared-layer rule above: it keeps the number in
-the cell and moves the line to the tooltip. Only `MatrixBlock` sets it - a true 2D matrix has no room to grow.
+the cell and moves the line to the tooltip. `MatrixBlock` and `JoinedField` set it - a matrix cell and a join part
+are fixed small boxes with no room to grow.
 A grid is NOT compact: it shows the line like any other form, which works because a grid sheds columns rather
 than overflowing (see Grids).
 
@@ -213,7 +237,7 @@ different resource entirely, via a host command so the binary-vs-default editor 
 
 Absent `openTarget` renders NOTHING - no marker, no dimming, no advisory. That is deliberate and must stay:
 a mod record legitimately references what a later install step creates, so flagging it would fire on correct
-input. Per the shared-layer rule above, the chip is rendered by BOTH `Field.svelte` and `GridBlock.svelte` -
+input. Per the shared-layer rule above, the chip is rendered by `FieldAffordances.svelte` in every renderer -
 and SUPPRESSED on a row that also carries a picture, which becomes the link instead (see the picture section
 below; the decision is `showsOpenChip`, never an inline condition in a renderer).
 

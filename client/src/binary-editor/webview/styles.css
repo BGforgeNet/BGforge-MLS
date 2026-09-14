@@ -559,7 +559,11 @@
    bonus); spinners are dropped so the box stays compact. */
 .field-control.joined {
     flex-wrap: nowrap;
-    gap: 0;
+}
+/* The run itself packs tight; the wrapper's normal gap separates it from the trailing affordances. */
+.field-control.joined .joined-run {
+    display: inline-flex;
+    align-items: center;
 }
 .field-control.joined .joined-sep {
     padding: 0 0.3rem;
@@ -931,6 +935,19 @@ input[type="text"]::placeholder {
     align-items: center;
     gap: 0.3rem;
 }
+/* Icon-only quick fix for a fixed-size cell (matrix, join, a title); its label is the tooltip. */
+.quick-fix.compact {
+    padding: 0 0.2rem;
+}
+/* Affordances beside a title that names a field: a flag box legend, or a panel title over a bare flag block. */
+.layout-root .flag-group > legend .diag,
+.layout-root .flag-group > legend .quick-fix,
+.layout-root .panel > h3 .diag,
+.layout-root .panel > h3 .quick-fix {
+    margin-left: 0.4rem;
+    text-transform: none;
+    letter-spacing: normal;
+}
 
 /* ---- placeholder / error / loading states ---- */
 
@@ -1179,6 +1196,20 @@ input[type="text"]::placeholder {
 }
 .layout-root .matrix .strow .c {
     width: 56px;
+}
+/* The cells' doc links and affordances, between the label and the cells. `flex: none` makes the label (the only
+   flexible track) give way, so the cells keep their x; hidden when empty so it adds no flex gap. */
+.layout-root .matrix .strow .m-aff {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex: none;
+}
+.layout-root .matrix .strow .m-aff:empty {
+    display: none;
+}
+.layout-root .matrix .strow .m-aff .jump-link {
+    margin-left: 0;
 }
 /* skills grid: N columns of label + control, clumped left */
 /* Multi-column, so the block sheds columns rather than overflowing when the panel is narrow or the labels are

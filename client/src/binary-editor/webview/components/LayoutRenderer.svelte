@@ -13,6 +13,8 @@
     import { provideGradientTable } from "../state/gradient-table-context";
     import { provideThumbnail } from "../state/thumbnail-context";
     import Tabs, { type TabItem } from "./primitives/Tabs.svelte";
+    import DocLink from "./DocLink.svelte";
+    import FieldAffordances from "./FieldAffordances.svelte";
     import FieldsBlock from "./blocks/FieldsBlock.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
     import FlagGroups from "./blocks/FlagGroups.svelte";
@@ -124,6 +126,9 @@
     {/if}
 </div>
 
+<!-- Written without whitespace between the tags: this renders inside a title, and any would join its text. -->
+{#snippet labelAffordances(ref: string)}{@const row = layout.fields[ref]}{#if row}<DocLink url={row.docUrl} description={row.description} /><FieldAffordances {row} {onedit} diagnostics={byNode.get(row.id)} compact />{/if}{/snippet}
+
 {#snippet rowsView(rows: LayoutRow[])}
     {#each rows as row, ri (ri)}
         {#if rowHasContent(row)}
@@ -131,7 +136,11 @@
             {#each row.panels as panel, pi (pi)}
                 {#if panelHasContent(panel)}
                 <div class="panel" class:panel-fit={panel.fit} style={panel.widthPx ? `width:${panel.widthPx}px` : ""}>
-                    {#if panel.title}<h3>{panel.title}</h3>{/if}
+                    {#if panel.title}
+                        {@const sole = panel.blocks.length === 1 && panel.blocks[0]?.kind === "flags" ? panel.blocks[0] : undefined}
+                        <!-- A flag block alone in a titled panel renders bare, so this title is its label. -->
+                        <h3>{panel.title}{#if sole}{@render labelAffordances(sole.field)}{/if}</h3>
+                    {/if}
                     <div class="panel-blocks" class:stack={panel.stack}
                          style={panel.colGapPx ? `gap:${panel.colGapPx}px` : ""}>
                         {#each panel.blocks as block, bi (bi)}
@@ -145,7 +154,8 @@
                                      An optional `flagsField` renders a flag-checkbox box below the fields,
                                      inside the SAME legend box (EFF v2 Parent Resource Flags). -->
                                 <fieldset class="flag-group">
-                                    <legend>{block.label}</legend>
+                                    <!-- The bare flags member has no name of its own, so its affordances join the legend. -->
+                                    <legend>{block.label}{#if block.flagsField !== undefined}{@render labelAffordances(block.flagsField)}{/if}</legend>
                                     <FieldsBlock fieldRefs={block.fields} columns={block.columns} joins={block.joins}
                                                  fields={layout.fields} {onedit} {byNode} />
                                     {#if block.flagsField !== undefined}
@@ -160,17 +170,17 @@
                                              descriptions={block.descriptions} labels={block.labels}
                                              spread={block.spread}
                                              boxed={!(panel.blocks.length === 1 && panel.title !== undefined)}
-                                             fields={layout.fields} {onedit} />
+                                             fields={layout.fields} {onedit} {byNode} />
                             {:else if block.kind === "flagGroups"}
                                 <FlagGroups columns={block.columns} bulkSelect={block.bulkSelect}
                                             fields={layout.fields} {onedit} />
                             {:else if block.kind === "matrix"}
                                 <MatrixBlock valueColumns={block.valueColumns} groups={block.groups}
                                              columnWidthPx={block.columnWidthPx} fields={layout.fields}
-                                             {onedit} />
+                                             {onedit} {byNode} />
                             {:else if block.kind === "grid"}
                                 <GridBlock columns={block.columns} items={block.items}
-                                           fields={layout.fields} {onedit} />
+                                           fields={layout.fields} {onedit} {byNode} />
                             {:else if block.kind === "list"}
                                 <ListBlock sectionKey={block.sectionKey} section={layout.sections[block.sectionKey]}
                                            render={block.render} detailVariant={block.detailVariant}

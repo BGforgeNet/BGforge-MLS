@@ -45,7 +45,7 @@
     <!-- Wrap so the toolbar (+add) and the row list stack vertically within the flex-row panel-blocks,
          matching the master-detail toolbar-above-list layout (InlineList itself emits two sibling roots). -->
     <div class="inline-list">
-        <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} />
+        <InlineList parentId={section.nodeId} caps={caps!} {bridge} {version} {selection} {onedit} {byNode} />
     </div>
 {:else}
     <ListSection {sectionKey} nodeId={section.nodeId} caps={caps!} {bridge} {version} {selection}

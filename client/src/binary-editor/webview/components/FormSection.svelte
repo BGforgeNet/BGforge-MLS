@@ -70,7 +70,7 @@
     {#if flagFields.length > 0}
         <div class="form-flags">
             {#each flagFields as row (row.id)}
-                <FlagColumns field={row.id} columns={flagColumns(row)} boxed fields={flagFieldMap} {onedit} />
+                <FlagColumns field={row.id} columns={flagColumns(row)} boxed fields={flagFieldMap} {onedit} {byNode} />
             {/each}
         </div>
     {/if}

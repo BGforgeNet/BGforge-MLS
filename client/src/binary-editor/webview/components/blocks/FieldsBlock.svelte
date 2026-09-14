@@ -55,7 +55,7 @@
     {#each fieldRefs as ref (ref)}
         {@const join = joinByAnchor.get(ref)}
         {#if join}
-            <JoinedField label={join.label} fieldRefs={join.fields} separator={join.separator} {fields} {onedit} />
+            <JoinedField label={join.label} fieldRefs={join.fields} separator={join.separator} {fields} {onedit} {byNode} />
         {:else if !folded.has(ref)}
             {@const row = fields[ref]}
             {#if row}

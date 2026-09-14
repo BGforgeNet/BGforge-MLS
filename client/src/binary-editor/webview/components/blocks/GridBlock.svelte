@@ -1,19 +1,18 @@
 <script lang="ts">
     // Flat grid of label + control cells (the critter Skills block, the CRE sound slots). Clumps left.
-    import type { FieldRef, Row } from "@bgforge/binary-editor";
-    import { controlWidthClass, showsOpenChip, thumbnailOpens } from "../../state/controls";
+    import type { Diagnostic, FieldRef, Row } from "@bgforge/binary-editor";
+    import { controlWidthClass, readOnlyTitle } from "../../state/controls";
     import { useJump } from "../../state/jump-context";
     import CellControl from "../CellControl.svelte";
     import DocLink from "../DocLink.svelte";
-    import AnimationLink from "../AnimationLink.svelte";
-    import OpenResourceLink from "../OpenResourceLink.svelte";
-    import ResourceThumbnail from "../ResourceThumbnail.svelte";
+    import FieldAffordances from "../FieldAffordances.svelte";
 
-    const { columns, items, fields, onedit }: {
+    const { columns, items, fields, onedit, byNode }: {
         columns: number;
         items: FieldRef[];
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
+        byNode: Map<string, Diagnostic[]>;
     } = $props();
     const jump = useJump();
 
@@ -66,41 +65,27 @@
         return { update: schedule, destroy: () => cancelAnimationFrame(pending) };
     }
 </script>
-<div class="grid" style={`column-count:${columns}`} use:fitColumns={cells}>
+<!-- Diagnostics are part of the measured cell, so a marker appearing re-measures rather than overflowing. -->
+<div class="grid" style={`column-count:${columns}`} use:fitColumns={[cells, byNode]}>
     {#each cells as cell (cell.row.id)}
+        {@const link = jump ? cell.row.link : undefined}
         <div class="skill">
-            {#if cell.row.link && jump}
-                {@const link = cell.row.link}
-                <!-- The slot LABEL is the jump link. For a CRE item slot the label ("Weapon 2") NAMES the linked
-                     record - the referenced Items entry IS "Weapon 2" - so the label itself is the natural,
-                     unambiguous affordance to jump to. (Contrast the MAP script-SID chip in Field.svelte, where
-                     the label names the FIELD and the link target is a reverse-referenced object, so a separate
-                     chip is correct there.) It is a real button: keyboard-operable with a visible focus ring. -->
-                <button
-                    type="button"
-                    class="nm nm-link"
-                    title={`Go to ${link.label}`}
-                    onclick={() => jump(link)}>{cell.row.name}</button>
-            {:else}
-                <span class="nm" title={cell.row.description ?? ""}>{cell.row.name}<DocLink url={cell.row.docUrl} description={cell.row.description} /></span>
-            {/if}
+            <!-- Exactly two children (label, control): `.skill` is a two-track grid, so anything else wraps. -->
+            <span class="nm" title={link ? undefined : (cell.row.description ?? "")}>
+                {#if link && jump}
+                    <!-- The slot LABEL is the jump link. For a CRE item slot the label ("Weapon 2") NAMES the linked
+                         record, so the label itself is the unambiguous affordance (contrast the chip in Field.svelte,
+                         where the label names the FIELD). A real button: keyboard-operable, visible focus ring. -->
+                    <button type="button" class="nm-link" title={`Go to ${link.label}`}
+                            onclick={() => jump(link)}>{cell.row.name}</button>
+                {:else}{cell.row.name}{/if}<DocLink url={cell.row.docUrl} description={cell.row.description} />
+            </span>
             <!-- Wrap in the same sized .field-control Field.svelte uses, so a dropdown in a grid cell is sized
                  to its longest option instead of falling to the combobox's intrinsic (clipping) width. -->
-            <span class="field-control {controlWidthClass(cell.row)}">
+            <span class="field-control {controlWidthClass(cell.row)}" title={readOnlyTitle(cell.row)}>
                 <CellControl row={cell.row} {onedit} />
+                <FieldAffordances row={cell.row} {onedit} diagnostics={byNode.get(cell.row.id)} jumpChip={link === undefined} />
             </span>
-            <!-- Per `docs/binary-editor-ui.md`, a per-field affordance covers every block renderer, not just the kv
-                 form - a grid cell holding a resref (a CRE item slot) offers the same open chip and, where the
-                 target is a picture, the same thumbnail. -->
-            {#if cell.row.thumbnail}
-                <ResourceThumbnail target={cell.row.thumbnail} opens={thumbnailOpens(cell.row)} />
-            {/if}
-            {#if showsOpenChip(cell.row)}
-                <OpenResourceLink target={cell.row.openTarget!} />
-            {/if}
-            {#if cell.row.animationTarget}
-                <AnimationLink target={cell.row.animationTarget} />
-            {/if}
         </div>
     {/each}
 </div>
