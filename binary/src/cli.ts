@@ -269,43 +269,28 @@ function loadJsonToBinary(jsonPath: string, parseOptions: ParseOptions): void {
 }
 
 /**
- * Pull the binary-specific `--proto-dir <dir>` override out of process.argv
- * before the shared cac parser runs. Like `--graceful-map` it is binary-only,
- * so it stays out of `parseCliArgs`; unlike `--graceful-map` it takes a value,
- * so both tokens must be removed from argv or cac would read the directory as
- * the positional target. Accepts `--proto-dir <dir>` and `--proto-dir=<dir>`.
- * Returns the directory, or undefined when not passed.
+ * The `--proto-dir` value cac parsed, or undefined when not passed. Registered with cac rather than cut out of
+ * process.argv, because `--jobs` workers are spawned with that argv and must receive the flag too.
  */
-function extractProtoDirOverride(): string | undefined {
-    const argv = process.argv;
-    const eqIndex = argv.findIndex((a) => a.startsWith("--proto-dir="));
-    if (eqIndex !== -1) {
-        const value = argv[eqIndex]!.slice("--proto-dir=".length);
-        argv.splice(eqIndex, 1);
-        return value;
-    }
-    const flagIndex = argv.indexOf("--proto-dir");
-    if (flagIndex === -1) return undefined;
-    const value = argv[flagIndex + 1];
-    if (value === undefined || value.startsWith("-")) {
+function readProtoDirOverride(extra: Record<string, unknown>): string | undefined {
+    const value = extra.protoDir;
+    if (value === undefined) return undefined;
+    // cac yields `true` for a valued flag given no value, and a number for a numeric-looking one.
+    if (value === true) {
         console.error("Error: --proto-dir requires a directory argument");
         process.exit(1);
     }
-    argv.splice(flagIndex, 2);
-    return value;
+    const dir = String(value);
+    // Explicit intent fails loud: a typo'd path silently falling back to the
+    // bundled vanilla resolver would produce wrong subtypes that look fine.
+    if (!fs.existsSync(dir)) {
+        console.error(`Error: --proto-dir not found: ${dir}`);
+        process.exit(1);
+    }
+    return dir;
 }
 
 async function main() {
-    // Pull --proto-dir out of argv first so neither the local argv copy below
-    // nor the shared cac parser mistakes its value for the positional target.
-    const protoDirOverride = extractProtoDirOverride();
-    // Explicit intent fails loud: a typo'd path silently falling back to the
-    // bundled vanilla resolver would produce wrong subtypes that look fine.
-    if (protoDirOverride !== undefined && !fs.existsSync(protoDirOverride)) {
-        console.error(`Error: --proto-dir not found: ${protoDirOverride}`);
-        process.exit(1);
-    }
-
     const argv = process.argv.slice(2);
 
     // `--graceful-map` is a binary-specific preference axis, so it stays out of
@@ -351,8 +336,9 @@ async function main() {
         return;
     }
 
-    const args = parseCliArgs(HELP);
+    const args = parseCliArgs(HELP, [["--proto-dir <dir>", "Load MAP proto subtype overrides from <dir>"]]);
     if (!args) return;
+    const protoDirOverride = readProtoDirOverride(args.extra ?? {});
 
     await runCli({
         args,

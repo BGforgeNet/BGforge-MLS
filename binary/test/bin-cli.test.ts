@@ -302,6 +302,28 @@ describe("bin CLI integration", () => {
             expect(stderr).toMatch(/proto overrides/i);
         });
 
+        it("hands the override to every --jobs worker", () => {
+            // No sibling proto/ beside the maps, so a worker that lost the flag loads nothing and says nothing.
+            const mapsDir = path.join(tmpDir, "maps");
+            fs.mkdirSync(mapsDir, { recursive: true });
+            for (const name of ["a.map", "b.map"]) {
+                fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), path.join(mapsDir, name));
+            }
+            const overrideProto = path.join(tmpDir, "mod", "proto");
+            fs.mkdirSync(path.join(overrideProto, "items"), { recursive: true });
+            fs.copyFileSync(
+                path.join(FIXTURES, "items", "00000031.pro"),
+                path.join(overrideProto, "items", "00000031.pro"),
+            );
+
+            const { code, stderr } = run(mapsDir, "-r", "--save", "--jobs", "2", "--proto-dir", overrideProto);
+            expect(code).toBe(0);
+            expect(stderr.match(/Loaded 1 proto overrides from .*/g)).toEqual([
+                expect.stringContaining(overrideProto),
+                expect.stringContaining(overrideProto),
+            ]);
+        });
+
         it("exits 1 when --proto-dir points at a nonexistent directory", () => {
             const mapFile = path.join(tmpDir, "artemple.map");
             fs.copyFileSync(path.join(REPO_ROOT, "client/testFixture/maps/artemple.map"), mapFile);
