@@ -207,11 +207,12 @@ The tree-sitter modes and basic modes are independent. If using tree-sitter mode
 ### eglot (built-in, Emacs 29+)
 
 ```elisp
-(add-to-list 'eglot-server-programs
-             '((fallout-ssl-mode weidu-baf-mode weidu-tp2-mode weidu-d-mode
-                weidu-slb-mode fallout-worldmap-txt-mode fallout-msg-mode weidu-tra-mode
-                infinity-2da-mode fallout-scripts-lst-mode weidu-log-mode)
-               "bgforge-mls-server" "--stdio"))
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               '((fallout-ssl-mode weidu-baf-mode weidu-tp2-mode weidu-d-mode
+                  weidu-slb-mode fallout-worldmap-txt-mode fallout-msg-mode weidu-tra-mode
+                  infinity-2da-mode fallout-scripts-lst-mode weidu-log-mode)
+                 "bgforge-mls-server" "--stdio")))
 ```
 
 ### [lsp-mode](https://emacs-lsp.github.io/lsp-mode/)
@@ -259,7 +260,39 @@ Requires a [Nerd Font](https://www.nerdfonts.com/). Glyph names follow the Nerd 
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Emacs they load through
+`typescript-language-server`, which passes plugins from its initialization options to tsserver. Install it with
+`pnpm add -g typescript-language-server,typescript@6`, open the files in `typescript-ts-mode`, and replace
+`<mls-node-modules>` below with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```elisp
+(add-to-list 'auto-mode-alist '("\\.tssl\\'" . typescript-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.td\\'" . typescript-ts-mode))
+```
+
+With eglot, add a server entry ahead of the built-in one:
+
+```elisp
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               '((typescript-ts-mode :language-id "typescript")
+                 . ("typescript-language-server" "--stdio"
+                    :initializationOptions
+                    (:plugins [(:name "@bgforge/mls-server/out/tssl-plugin" :location "<mls-node-modules>")
+                               (:name "@bgforge/mls-server/out/td-plugin" :location "<mls-node-modules>")])))))
+```
+
+With lsp-mode, set its plugin list:
+
+```elisp
+(setq lsp-clients-typescript-plugins
+      (vector (list :name "@bgforge/mls-server/out/tssl-plugin" :location "<mls-node-modules>")
+              (list :name "@bgforge/mls-server/out/td-plugin" :location "<mls-node-modules>")))
+```
+
+`:name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

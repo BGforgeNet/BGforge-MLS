@@ -198,7 +198,28 @@ and `Highlight queries` separately, and both must be present.
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Helix they load through
+`typescript-language-server`, Helix's TypeScript server, which receives the `config` table as its initialization
+options and passes the plugins in it to tsserver. Install it with
+`pnpm add -g typescript-language-server,typescript@6`, then add to `~/.config/helix/languages.toml`, replacing
+`<mls-node-modules>` with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```toml
+[language-server.typescript-language-server.config]
+plugins = [
+  { name = "@bgforge/mls-server/out/tssl-plugin", location = "<mls-node-modules>" },
+  { name = "@bgforge/mls-server/out/td-plugin", location = "<mls-node-modules>" },
+]
+
+[[language]]
+name = "typescript"
+file-types = ["ts", "mts", "cts", { glob = "*.tssl" }, { glob = "*.td" }]
+```
+
+The new extensions are globs because Helix checks globs before extensions, and the built-in TableGen language also
+claims `td`. `name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

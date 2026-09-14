@@ -91,7 +91,35 @@ Restart Kate. Notes:
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Kate they load through
+`typescript-language-server`, which the LSP Client's default configuration uses for TypeScript and which passes
+plugins from its initialization options to tsserver.
+
+1. Install it: `pnpm add -g typescript-language-server,typescript@6`
+2. In `Settings > Configure Kate > Open/Save > Modes & Filetypes`, select the TypeScript filetype and add `*.tssl;*.td`
+   to its extensions
+3. Add to `User Server Settings`, replacing `<mls-node-modules>` with the `node_modules` directory holding
+   `@bgforge/mls-server`. The default `typescript` entry reuses the `javascript` one, and Kate merges these keys into
+   it:
+
+```json
+{
+  "servers": {
+    "javascript": {
+      "initializationOptions": {
+        "plugins": [
+          { "name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>" },
+          { "name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>" }
+        ]
+      }
+    }
+  }
+}
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

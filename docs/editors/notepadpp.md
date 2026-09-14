@@ -112,11 +112,11 @@ If you write `.tssl` or `.td` transpiler files, the server package includes Type
 tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Notepad++ they load through
 `typescript-language-server`, which reads plugins from its initialization options and starts tsserver with them:
 
-1. Install it: `pnpm install -g typescript-language-server typescript`
+1. Install it: `pnpm add -g typescript-language-server,typescript@6`
 2. In `Settings > Style Configurator...`, select the TypeScript language and add `tssl td` to its `User ext.` field,
    so these files open as TypeScript
-3. Add a server entry for TypeScript, replacing `<pnpm-global-root>` with the directory `pnpm root -g` prints, each
-   backslash doubled because the value is a JSON string:
+3. Add a server entry for TypeScript, replacing `<mls-node-modules>` with the `node_modules` directory holding
+   `@bgforge/mls-server`, each backslash doubled because the value is a JSON string:
 
 ```toml
 [lspservers.typescript]
@@ -126,14 +126,15 @@ args = '--stdio'
 auto_start_server = true
 initialization_options = '''{
   "plugins": [
-    { "name": "@bgforge/mls-server/out/tssl-plugin", "location": "<pnpm-global-root>" },
-    { "name": "@bgforge/mls-server/out/td-plugin", "location": "<pnpm-global-root>" }
+    { "name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>" },
+    { "name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>" }
   ]
 }'''
 ```
 
 `name` must be a package path as above: tsserver refuses a plugin named by an absolute path, and resolves the name from
-`location` as a package import.
+`location` as a package import. `pnpm ls -g --parseable` lists that package as
+`<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

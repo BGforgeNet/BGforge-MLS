@@ -69,7 +69,29 @@ association to take effect; the change applies IDE-wide.
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. JetBrains IDEs with TypeScript support (WebStorm, IntelliJ Ultimate) use their own TypeScript service, which reads `tsconfig.json` plugins. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). They load through
+`typescript-language-server` added as a second LSP4IJ server, which passes plugins from its initialization options to
+tsserver:
+
+1. Install it: `pnpm add -g typescript-language-server,typescript@6`
+2. In `Settings > Languages & Frameworks > Language Servers`, add a server named `TypeScript (TSSL/TD)` with the
+   command `typescript-language-server --stdio`
+3. In its **Mappings** tab, add the file name patterns `*.tssl` and `*.td`, both with the Language ID `typescript`
+4. In its **Configuration** tab (**Server** sub-tab), paste into **Initialization Options**, replacing
+   `<mls-node-modules>` with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```json
+{
+  "plugins": [
+    { "name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>" },
+    { "name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>" }
+  ]
+}
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

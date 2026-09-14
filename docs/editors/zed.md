@@ -312,7 +312,44 @@ Open Zed, go to `Extensions`, click `Install Dev Extension`, and point to the di
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Zed they load through `vtsls`, its
+default TypeScript server, whose `vtsls.tsserver.globalPlugins` setting starts tsserver with them. Add to your user
+settings, replacing `<mls-node-modules>` with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```json
+{
+  "file_types": {
+    "TypeScript": ["tssl", "td"]
+  },
+  "lsp": {
+    "vtsls": {
+      "settings": {
+        "vtsls": {
+          "tsserver": {
+            "globalPlugins": [
+              {
+                "name": "@bgforge/mls-server/out/tssl-plugin",
+                "location": "<mls-node-modules>",
+                "enableForWorkspaceTypeScriptVersions": true
+              },
+              {
+                "name": "@bgforge/mls-server/out/td-plugin",
+                "location": "<mls-node-modules>",
+                "enableForWorkspaceTypeScriptVersions": true
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`enableForWorkspaceTypeScriptVersions` keeps the plugins loaded when a project's own TypeScript is in use, which
+`vtsls` otherwise skips global plugins for. `name` must be a package path as above: tsserver refuses a plugin named by
+an absolute path. `pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

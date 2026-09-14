@@ -84,7 +84,31 @@ Open `Preferences > Package Settings > LSP > Settings` and add:
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Sublime Text they load through the
+[LSP-typescript](https://packagecontrol.io/packages/LSP-typescript) package, whose server passes plugins from its
+initialization options to tsserver.
+
+1. Install LSP-typescript via Package Control.
+2. Open a `.tssl` file and choose `View > Syntax > Open all with current extension as... > TypeScript`; repeat for a
+   `.td` file.
+3. Open `Preferences > Package Settings > LSP > Servers > LSP-typescript` and add to your user settings, replacing
+   `<mls-node-modules>` with the `node_modules` directory holding `@bgforge/mls-server`. LSP merges this object into
+   the default `initialization_options`, so the other default keys stay:
+
+```json
+{
+  "initialization_options": {
+    "plugins": [
+      { "name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>" },
+      { "name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>" }
+    ]
+  }
+}
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

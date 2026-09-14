@@ -71,7 +71,25 @@ Note: If `bgforge-mls-server` is not on your system PATH, use the full path to t
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Geany they load through
+`typescript-language-server`, which the LSP Client plugin's default configuration uses for TypeScript and which
+passes plugins from its initialization options to tsserver.
+
+1. Install it: `pnpm add -g typescript-language-server,typescript@6`
+2. In `Tools > Configuration Files > filetype_extensions.conf`, add the extensions to the TypeScript line:
+   `TypeScript=*.ts;*.cts;*.mts;*.tsx;*.tssl;*.td;`
+3. In `Tools > LSP Client > User Configuration`, add to the `[TypeScript]` section, replacing `<mls-node-modules>`
+   with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```ini
+[TypeScript]
+cmd=typescript-language-server --stdio
+initialization_options={"plugins": [{"name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>"}, {"name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>"}]}
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

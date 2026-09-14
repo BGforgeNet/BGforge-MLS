@@ -274,7 +274,35 @@ Glyphs are written as Nerd Font codepoints (FontAwesome `file_code_o` `0xF1C9`, 
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Neovim they load through
+`typescript-language-server`, using the `ts_ls` configuration from
+[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig), which passes plugins from its initialization options to
+tsserver. Install it with `pnpm add -g typescript-language-server,typescript@6`, then add the following, replacing
+`<mls-node-modules>` with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```lua
+-- .td is TableGen by default; this mapping takes precedence
+vim.filetype.add({
+  extension = {
+    tssl = "typescript",
+    td = "typescript",
+  },
+})
+
+vim.lsp.config("ts_ls", {
+  init_options = {
+    plugins = {
+      { name = "@bgforge/mls-server/out/tssl-plugin", location = "<mls-node-modules>" },
+      { name = "@bgforge/mls-server/out/td-plugin", location = "<mls-node-modules>" },
+    },
+  },
+})
+vim.lsp.enable("ts_ls")
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 
