@@ -226,10 +226,10 @@ jobs:
 
       # Use pre-built VSIX for publishing: pnpm package (scripts/package.sh)
       # dereferences pnpm symlinks that vsce can't follow.
-      # skipDuplicate makes a release-tag re-run idempotent: a registry that
-      # already carries this version is skipped instead of failing the job, so
-      # a partial release (e.g. one registry's token expired) can be completed
-      # by re-running the tag without tripping over the registries that succeeded.
+      # skipDuplicate skips a registry that already carries this version. Releases are
+      # immutable, so a re-run fails at the GitHub Release step once that release exists;
+      # a publish failing after it is completed by hand from the release's VSIX (see
+      # docs/releasing.md, "Recovering from a partial release").
       - name: Publish to Open VSX Registry
         if: "startsWith(github.ref, 'refs/tags/')"
         uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2

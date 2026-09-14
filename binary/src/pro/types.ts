@@ -426,9 +426,8 @@ export const WallLightFlags: Record<number, string> = {
 
 // Low 16 bits of the proto extended-flags dword (the actionFlags:u16 half, read AFTER wallLightFlags). These
 // are the engine's real extended flags, NOT shifted - the engine tests the use bit (0x800) directly, and likewise
-// use-on / look / talk-to / pick-up. The prior table
-// placed these at 0x8-0x80 (an extra 8-bit shift); corroborated by CritterFlagsExt, which reads the full u32
-// and correctly has Look=0x2000 / Can talk to=0x4000. 0x0001 = the engine's magic-hands-ground flag (scenery).
+// use-on / look / talk-to / pick-up. CritterFlagsExt, which reads the full u32, agrees: Look=0x2000 /
+// Can talk to=0x4000. 0x0001 = the engine's magic-hands-ground flag (scenery).
 export const ActionFlags: Record<number, string> = {
     0x0001: "Magic hands (ground)",
     0x0800: "Use",

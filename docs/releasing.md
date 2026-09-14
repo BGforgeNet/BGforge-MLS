@@ -60,7 +60,14 @@ Root `package.json` and `server/package.json` must carry identical versions; the
 
 ### Recovering from a partial release
 
-The GitHub Release is created before the extension is pushed to the marketplaces, and the `@bgforge/mls-server` npm publish runs last, so a failed publish step leaves the GitHub Release and every earlier publish in place. Fix the cause (usually an expired token) and re-run the failed workflow run for that tag rather than pushing a new tag: both marketplace publish steps set `skipDuplicate`, so a registry that already carries the version is skipped instead of failing the job.
+The GitHub Release is created before the extension is pushed to the marketplaces, and the `@bgforge/mls-server` npm publish runs last, so a failed publish step leaves the GitHub Release and every earlier publish in place.
+
+This repository's releases are published as immutable (the releases API reports `"immutable": true` for recent tags; check the newest with `gh api repos/BGforgeNet/BGforge-MLS/releases/latest --jq .immutable`): once published, a release's assets cannot be replaced or deleted, and its tag cannot be reused even if the release is deleted. Re-running the tag workflow therefore fails at the GitHub Release step, which re-uploads the assets, before it reaches the publish steps. So a failure that happens after the GitHub Release exists is completed by hand, from the VSIX attached to that release, once the cause (usually an expired token) is fixed:
+
+- a marketplace: publish that VSIX with the registry's CLI (`vsce publish --packagePath <vsix>` for the Visual Studio Marketplace, `ovsx publish <vsix>` for Open VSX) and the same token the workflow uses;
+- npm: run `./scripts/publish-server.sh` from a checkout of the tag.
+
+A failure before the GitHub Release step leaves no release behind, and re-running the workflow is then safe; the marketplace steps set `skipDuplicate`, so a registry that already carries the version is skipped.
 
 ## Releasing a library (`binary` / `format` / `transpile` / `tssl`)
 
