@@ -5,8 +5,8 @@
  * those citations rot into dangling pointers - a whole `dialog-tree/` -> `dialog-editor/` rename once
  * left the architecture doc describing files that no longer existed, and the lsp-api doc described a
  * `workspace/symbol` encoding and custom methods the server never implemented. This test pins every
- * backticked source path to `git ls-files`, every backticked `name()` to a word in tracked code, and
- * every backticked bgforge command id to a real code usage.
+ * backticked source path and file-tree entry to `git ls-files`, every backticked `name()` to a word in tracked
+ * code outside comments, and every backticked bgforge command id to a real code usage.
  *
  * It catches a NAME that stopped existing, never a relationship that changed (a doc saying module A
  * calls B, after A stopped): that class is kept down by docs pointing at module docstrings rather than
@@ -59,16 +59,21 @@ const codeMentions = execSync("git grep -hF bgforge -- ':!*.md'", {
     timeout: SPAWN_TIMEOUT_MS,
 });
 
-// Every identifier-shaped word in tracked code. Markdown is excluded so a doc cannot vouch for itself, and
-// data files and the lockfile so a name surviving only as a string there does not count as code.
-const codeWords = new Set(
-    // Not piped through `sort -u`: a pipe would report sort's exit status and hide a failed git grep.
-    execSync("git grep -hoE '[A-Za-z_$][A-Za-z0-9_$]*' -- ':!*.md' ':!*.json' ':!*.yml' ':!*.yaml'", {
-        encoding: "utf8",
-        timeout: SPAWN_TIMEOUT_MS,
-        maxBuffer: 256 * 1024 * 1024,
-    }).split("\n"),
-);
+// Every identifier-shaped word in tracked code, outside comments. Markdown is excluded so a doc cannot vouch for
+// itself, data files and the lockfile so a name surviving only as a string there does not count, and comments so a
+// deleted function still named in some comment does not keep a doc citing it green. Comment stripping is
+// line-based - whole comment lines (`//`, `*`, `/*`, `#`, `<!--`) and a trailing `//` after whitespace - which
+// errs toward keeping words, the direction that cannot false-positive a correct doc.
+const codeWords = new Set<string>();
+// Not piped through a filter: a pipe would report the filter's exit status and hide a failed git grep.
+const codeLines = execSync(
+    "git grep -h -v -E '^\\s*(//|\\*|/\\*|#|<!--)' -- ':!*.md' ':!*.json' ':!*.yml' ':!*.yaml'",
+    { encoding: "utf8", timeout: SPAWN_TIMEOUT_MS, maxBuffer: 512 * 1024 * 1024 },
+).split("\n");
+for (const line of codeLines) {
+    const code = line.replace(/(^|\s)\/\/.*$/, "").replaceAll(/\/\*.*?\*\//g, "");
+    for (const word of code.matchAll(/[A-Za-z_$][A-Za-z0-9_$]*/g)) codeWords.add(word[0]);
+}
 
 /** All backticked inline-code spans in a markdown file, outside fenced blocks. */
 function backtickedTokens(text: string): string[] {
