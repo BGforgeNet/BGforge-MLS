@@ -89,7 +89,7 @@
 {#snippet detailsForm()}
     {#if useVariant}
         <!-- selection/bridge/version are only consumed by `list` blocks, which a detailVariant never contains. -->
-        <LayoutRenderer layout={detailLayout} {onedit} {byNode} {bridge} {version} selection={undefined} />
+        <LayoutRenderer layout={detailLayout} {onedit} {byNode} {bridge} {version} selection={undefined} nested />
     {:else}
         <!-- The auto-form hides the childList's entry groups (e.g. "Inventory Entry N") so they are not rendered
              twice - the childList tab presents them as an editable mini master-detail with add/remove. -->

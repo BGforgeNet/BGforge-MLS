@@ -27,16 +27,19 @@
 
     // bridge/version/selection are only needed by `list` blocks (variable-length sections render via the
     // live windowed getChildren path); form-only layouts (PRO/EFF) ignore them.
-    const { layout, onedit, byNode, bridge, version, selection }: {
+    const { layout, onedit, byNode, bridge, version, selection, nested = false }: {
         layout: ResolvedLayout;
         onedit: (id: string, v: number | string) => void;
         byNode: Map<string, Diagnostic[]>;
         bridge: Bridge;
         version: number;
         selection: NodeId | undefined;
+        // A detail layout rendered inside another layout's pane: that page already caps the content width, so a
+        // second cap here would only narrow the pane further (it held the effect detail at the 900px default).
+        nested?: boolean;
     } = $props();
 
-    const rootStyle = $derived(`max-width:${layout.maxContentWidthPx ?? 900}px`);
+    const rootStyle = $derived(nested ? "" : `max-width:${layout.maxContentWidthPx ?? 900}px`);
 
     // A `list` block targeting a section absent from this file (e.g. a MAP with no local variables, or fewer
     // than three elevations) produces no content. Prune its panel - and any row left with only such panels -

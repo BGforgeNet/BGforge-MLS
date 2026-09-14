@@ -11,6 +11,9 @@
  *  - clip: a visible value `<input>` (text/number input or the combobox's value input) whose `scrollWidth`
  *    exceeds its `clientWidth` is showing horizontally-clipped text. Catches a control that clips its CURRENT
  *    value, whatever the cause.
+ *  - shrunk: a sized control (`.field-control` carrying a `dd-*` or `tier-*` class) rendered narrower than that
+ *    class's width. The width comes from the field's longest possible value, so a squeezed control clips some
+ *    value even while the one currently shown happens to fit - the clip check alone misses it.
  *  - unsized: a rendered dropdown (`.bb-combobox`) with no `dd-{1..6}` width class on an ancestor box. Every
  *    dropdown is sized to its OWN longest option via that class (state/controls.ts `dropdownWidth`, applied in
  *    Field.svelte); a dropdown rendered through a path that never applies it (a grid/matrix cell via
@@ -28,8 +31,9 @@ import type { Page } from "playwright";
 export interface ClipViolation {
     /** Which view this was found in, e.g. "CRE > Inventory". */
     context: string;
-    /** "clip" = current value overflows its box; "unsized" = dropdown with no dd-* width class. */
-    kind: "clip" | "unsized";
+    /** "clip" = current value overflows its box; "shrunk" = narrower than its width class; "unsized" = dropdown
+     *  with no dd-* width class. */
+    kind: "clip" | "shrunk" | "unsized";
     /** Best-effort field label (the nearest `.nm` / `.field-label` text), for locating the control. */
     label: string;
     /** The text the control is displaying (the clipped value). */
@@ -52,7 +56,7 @@ export async function collectClipViolations(page: Page, context: string): Promis
     // anonymous inline arrows (array callbacks and IIFEs), never `const fn = () => ...` / `function`.
     const raw = await page.evaluate(() => {
         const out: {
-            kind: "clip" | "unsized";
+            kind: "clip" | "shrunk" | "unsized";
             label: string;
             value: string;
             scrollWidth: number;
@@ -87,6 +91,30 @@ export async function collectClipViolations(page: Page, context: string): Promis
                     value: inp.value,
                     scrollWidth: inp.scrollWidth,
                     clientWidth: inp.clientWidth,
+                });
+            }
+        }
+
+        // --- shrunk: a sized control rendered narrower than its width class ---
+        for (const fc of Array.from(document.querySelectorAll<HTMLElement>(".layout-root .field-control"))) {
+            if (!/\b(dd-[1-6]|tier-(s|m|ml|l))\b/.test(fc.className)) continue;
+            const ctrl = fc.querySelector<HTMLElement>(":scope > input, .bb-combobox, select");
+            if (!ctrl || ctrl.offsetParent === null) continue;
+            const rendered = ctrl.getBoundingClientRect().width;
+            if (rendered <= 0) continue;
+            // The class sets --val-ch in ch; resolve it to px with a throwaway box in the same font context.
+            const probe = document.createElement("span");
+            probe.style.cssText = "position:absolute;visibility:hidden;display:block;width:var(--val-ch)";
+            fc.append(probe);
+            const declared = probe.getBoundingClientRect().width;
+            probe.remove();
+            if (declared > 0 && rendered + 1 < declared) {
+                out.push({
+                    kind: "shrunk",
+                    label: fc.parentElement?.querySelector(".label, .nm")?.textContent?.trim() ?? "",
+                    value: (ctrl as HTMLInputElement).value ?? ctrl.querySelector("input")?.value ?? "",
+                    scrollWidth: Math.round(declared),
+                    clientWidth: Math.round(rendered),
                 });
             }
         }
@@ -143,7 +171,12 @@ export function reportClipViolations(violations: ClipViolation[], label: string)
     }
     console.log(`\n${unique.length} clipped / unsized value control(s) detected:`);
     for (const v of unique) {
-        const size = v.kind === "clip" ? ` (scroll ${v.scrollWidth} > client ${v.clientWidth})` : "";
+        const size =
+            v.kind === "clip"
+                ? ` (scroll ${v.scrollWidth} > client ${v.clientWidth})`
+                : v.kind === "shrunk"
+                  ? ` (declared ${v.scrollWidth}px, rendered ${v.clientWidth}px)`
+                  : "";
         console.log(`  [${v.kind}] ${v.context}  "${v.label}" = "${v.value}"${size}`);
     }
     console.log(`\n${label} FAILED`);

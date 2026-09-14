@@ -1509,9 +1509,9 @@ input[type="text"]::placeholder {
 .layout-root .kv.kv-multi .field-control {
     justify-self: start;
     /* The span is the grid item in the (auto) value track; min-width:0 + max-width:100% let it shrink to the
-       track in a pane too narrow to hold every column at full tier width (e.g. the tree's split detail) instead
-       of staying at its tier width and overflowing into the next column. The control inside is capped at 100%
-       below, so it follows the span down rather than spilling. */
+       track rather than overflow into the next column. A too-narrow pane first sheds columns (fitKvColumns in
+       state/fit-kv-columns.ts, which detects exactly this shrink), so the shrink is left only for a single column
+       that still does not fit. The control inside is capped at 100% below, so it follows the span down. */
     min-width: 0;
     max-width: 100%;
 }
@@ -1521,9 +1521,8 @@ input[type="text"]::placeholder {
     width: var(--val-ch, 16ch);
     box-sizing: border-box; /* outer width = --val-ch for every control type (see kv:not(.kv-multi) above) */
     min-width: 0;
-    /* Never exceed the value cell: in a pane too narrow to hold the tier at full width the track collapses, and
-       without this cap the fixed-width control would overflow it and overlap the next column's label. Capping at
-       100% shrinks the control with its track (tier is the max, not a floor), keeping columns aligned. */
+    /* Never exceed the value cell: without this cap a control in a collapsed track would overflow it and overlap
+       the next column's label. Reached only once the grid is down to one column (see the span rule above). */
     max-width: 100%;
 }
 /* Inline-list rows (MAP variables) render an editable Field but sit in a flex .vrow, outside the .kv grid, so

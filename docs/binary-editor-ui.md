@@ -340,6 +340,15 @@ clips.
 Guarded at two viewports by `render-cre.mts`. The harness has no game, so it exercises the narrow-panel case
 rather than the long-label one; both are "content wider than the panel".
 
+A multi-column fields grid (`FieldsBlock`, `FormSection`) treats its column count the same way. Its value
+tracks are `auto` and its controls may shrink, so without a fit a narrow pane squeezes a dropdown sized for its
+longest option and clips the label. `state/fit-kv-columns.ts` renders the grid at the full count and drops a
+column while any sized control renders narrower than its width class. The ITM effect feature block declares
+three columns and shows fewer in the tree's detail pane, which a narrow editor squeezes further. A detail layout
+nested in a list or tree (`ListEntryDetail`) takes no content-width cap of its own, since the page around it
+already applies one. Guarded by the clip gate's `shrunk` check in `render-itm.mts` at three
+viewports and in the cross-format clip sweep.
+
 ### Multi-column fill: column-major (top-down first)
 
 A multi-column group fills column 1 top-to-bottom, then column 2, ... - NOT left-to-right across rows. Reading

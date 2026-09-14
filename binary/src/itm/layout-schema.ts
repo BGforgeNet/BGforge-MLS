@@ -76,7 +76,9 @@ const itmLabels: Record<string, string> = {
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "itm",
-    maxContentWidthPx: 1180,
+    // Wider than the 1180 its siblings use: the Abilities & Effects tree splits this width between its list and the
+    // effect detail, and at 1180 the detail falls just short of two feature-block columns at full dropdown width.
+    maxContentWidthPx: 1280,
     labels: itmLabels,
     variants: {
         item: {
