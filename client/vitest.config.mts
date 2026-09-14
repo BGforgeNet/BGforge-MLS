@@ -187,6 +187,10 @@ export default defineConfig({
                 // stub. Exercised by the harness drivers and the live editor. Same category as
                 // jump-context.ts above.
                 "client/src/dialog-editor/webview/autosize.ts",
+                // The key/value column-fit action, same category: it renders candidates and measures laid-out
+                // controls. Its decision is pickKvFit (kv-fit-choice.ts, unit-tested); the measuring is exercised
+                // by the render harness at several widths and the live editor.
+                "client/src/binary-editor/webview/state/fit-kv-columns.ts",
             ],
             // Enforced as a real gate: scripts/test.sh runs this config with
             // --coverage, and vitest exits non-zero on threshold breach. Round

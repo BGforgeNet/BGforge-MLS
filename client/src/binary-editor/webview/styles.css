@@ -233,6 +233,24 @@
        tree viewport so the two can't diverge (see --bb-list-max-height). `height:auto` still hugs a short list. */
     max-height: var(--bb-list-max-height, 48rem);
 }
+/* A narrow editor stacks the list above the detail: side by side needs the 16rem column plus the widest detail
+   row (a label and a dd-6 dropdown, ~570px) and the panel chrome, so below that the pair ran off the right edge.
+   The webview viewport is the editor's width, so a media query measures the right box. The shorter list cap keeps
+   the detail within reach below it. */
+@media (max-width: 900px) {
+    .master-detail {
+        flex-direction: column;
+    }
+    .layout-root .master-detail {
+        align-items: stretch;
+        --bb-list-max-height: 20rem;
+    }
+    .master {
+        flex: 0 0 auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--vscode-panel-border);
+    }
+}
 /* Abilities+effects tree: a single VIRTUALIZED collapsible column on the master side. The whole view is in
    memory; the groups are flattened (respecting collapse + filter) into fixed-height rows and only the rows in
    the viewport are mounted (.eff-tree-vrow absolutely positioned over a full-height spacer). The
@@ -848,6 +866,8 @@ input[type="text"]::placeholder {
 /* ---- row actions (master/detail header) ---- */
 .row-actions {
     display: inline-flex;
+    /* Wraps so a narrow detail pane is bounded by its widest button, not by the whole strip. */
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.2rem;
     padding: 0.5rem 0.75rem;
@@ -991,6 +1011,9 @@ input[type="text"]::placeholder {
 }
 .panel-blocks {
     display: flex;
+    /* A block that no longer fits beside its neighbour (a flags box beside a one-column fields list in a narrow
+       editor) drops below it instead of squeezing the fields' controls under their width class. */
+    flex-wrap: wrap;
     gap: var(--bb-col-gap, 16px);
     align-items: flex-start;
 }
@@ -1046,6 +1069,8 @@ input[type="text"]::placeholder {
 /* flag checkbox columns */
 .flag-columns {
     display: flex;
+    /* Checkbox columns wrap in a narrow editor rather than holding the panel wider than the page. */
+    flex-wrap: wrap;
     gap: 16px;
     align-items: flex-start;
 }
@@ -1074,6 +1099,8 @@ input[type="text"]::placeholder {
 .flag-groups {
     display: flex;
     flex-direction: row;
+    /* In a narrow editor the bulk bar drops below the columns instead of pinning the panel's width. */
+    flex-wrap: wrap;
     gap: 16px;
     flex: 1 1 auto;
     min-inline-size: 0;
@@ -1129,6 +1156,8 @@ input[type="text"]::placeholder {
 }
 .flag-group-cols {
     display: flex;
+    /* Category columns wrap rather than holding the panel wider than a narrow editor. */
+    flex-wrap: wrap;
     gap: 16px;
     align-items: flex-start;
 }
@@ -1138,11 +1167,16 @@ input[type="text"]::placeholder {
     gap: 10px;
     align-items: stretch;
 }
-/* stats matrix: N fixed-width column groups, each Base|Bonus */
+/* stats matrix: N fixed-width column groups, each Base|Bonus. A wrapping row rather than a fixed N-column grid, so
+   a narrow panel is bounded by one group's width; multicol would re-balance groups of unequal height even when
+   all of them fit side by side. */
 .layout-root .matrix {
-    display: grid;
-    justify-content: start;
-    gap: 0 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+}
+.layout-root .matrix .mcol {
+    flex: 0 0 var(--mcol-w);
 }
 .layout-root .matrix .mcol .sub {
     display: flex;
@@ -1509,6 +1543,22 @@ input[type="text"]::placeholder {
     /* Never exceed the value cell: without this cap a control in a collapsed track would overflow it and overlap
        the next column's label. Reached only once the grid is down to one column (see the span rule above). */
     max-width: 100%;
+}
+/* One column still too narrow for a label beside its control (fitKvColumns sets the class): each field spans the
+   grid and puts its label above the control, which gets the full width for its class. */
+.layout-root .kv.kv-multi.kv-stacked .field {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 2px;
+}
+/* The row layout's flex bases (a 12rem label) would become heights in the column. */
+.layout-root .kv.kv-multi.kv-stacked .field > * {
+    flex: none;
+}
+.layout-root .kv.kv-multi.kv-stacked .field + .field {
+    margin-top: 4px;
 }
 /* Inline-list rows (MAP variables) render an editable Field but sit in a flex .vrow, outside the .kv grid, so
    the tier-width rules above don't reach them - without this the input falls back to its intrinsic width and

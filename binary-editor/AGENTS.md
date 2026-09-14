@@ -13,7 +13,8 @@ driver exists.
 What to check: [docs/binary-editor-ui.md](../docs/binary-editor-ui.md) (Reviewing a rendered screenshot).
 
 **Do not flag the intentional patterns**: a roomy dropdown, a control narrower than its track, a grid showing
-fewer columns than its schema declares, a bare-vs-boxed flag difference, a folded Dice / Probability cell,
+fewer columns than its schema declares, labels above their controls or a list above its detail in a narrow
+editor, a bare-vs-boxed flag difference, a folded Dice / Probability cell,
 mojibake in a raw-byte field, a lone-field PRO panel, an effect with no semantic panel titles. Each is explained
 in that doc.
 

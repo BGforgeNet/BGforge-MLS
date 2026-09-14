@@ -16,7 +16,8 @@
         byNode: Map<string, Diagnostic[]>;
     } = $props();
 
-    const gridStyle = $derived(`grid-template-columns:repeat(${groups.length},${columnWidthPx}px)`);
+    // The groups sit in one row while it fits and wrap below it when the panel is narrower (styles.css `.matrix`).
+    const matrixStyle = $derived(`--mcol-w:${columnWidthPx}px`);
     // Per-value-column cell width; default 56px (the narrow numeric base/bonus cell). A column may widen to fit
     // a control that needs room (e.g. a dropdown) via its `widthPx`.
     const cellWidth = (vc: { widthPx?: number }): string => `width:${vc.widthPx ?? 56}px`;
@@ -26,7 +27,7 @@
     const labelTitle = (label: string, rows: Row[]): string =>
         [label, ...rows.flatMap((row) => (row.description ? [row.description] : []))].join("\n");
 </script>
-<div class="matrix" style={gridStyle}>
+<div class="matrix" style={matrixStyle}>
     {#each groups as group, gi (gi)}
         <div class="mcol">
             <div class="sub">

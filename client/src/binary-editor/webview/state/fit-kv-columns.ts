@@ -1,4 +1,5 @@
 import { flushSync } from "svelte";
+import { pickKvFit } from "./kv-fit-choice";
 
 /**
  * Fits a multi-column key/value grid (`.kv-multi`) to its pane: the schema's column count is a MAXIMUM, and the
@@ -7,7 +8,8 @@ import { flushSync } from "svelte";
  * never overlaps the next column), and a dropdown sized for its longest option clips its label.
  *
  * Each candidate count is rendered (`flushSync`) and measured inside one animation frame, widest first, so the
- * reader sees only the settled layout. At one column the shrink stays as the last resort.
+ * reader sees only the settled layout; `pickKvFit` decides between them. Stacked labels (`kv-stacked`) are for a
+ * label and a wide dropdown side by side wider than the pane, and the shrink stays for a pane narrower still.
  */
 export function fitKvColumns(
     node: HTMLElement,
@@ -16,12 +18,19 @@ export function fitKvColumns(
     let current = params;
     let pending = 0;
 
-    const renderAt = (columns: number): void => flushSync(() => current.set(columns));
+    // The class is the action's own: the components render a static class list, so a re-render never resets it.
+    const renderAt = (columns: number, stacked = false): void => {
+        node.classList.toggle("kv-stacked", stacked);
+        flushSync(() => current.set(columns));
+    };
     const fit = (): void => {
-        for (let n = current.max; n >= 1; n--) {
-            renderAt(n);
-            if (n === 1 || controlsHoldTheirWidth(node)) return;
-        }
+        let rendered = 0;
+        const choice = pickKvFit(current.max, (columns) => {
+            renderAt(columns);
+            rendered = columns;
+            return { holds: controlsHoldTheirWidth(node), besideSiblings: sharesLineWithSiblings(node) };
+        });
+        if (choice.stacked || choice.columns !== rendered) renderAt(choice.columns, choice.stacked);
     };
     const schedule = (): void => {
         cancelAnimationFrame(pending);
@@ -48,6 +57,15 @@ export function fitKvColumns(
             observer.disconnect();
         },
     };
+}
+
+/** Whether the grid sits on one line with the other blocks of its panel (`.panel-blocks` wraps a block that does not
+ *  fit beside it). A grid outside a panel row has no such siblings. */
+function sharesLineWithSiblings(node: HTMLElement): boolean {
+    const row = node.parentElement;
+    if (!row?.classList.contains("panel-blocks")) return true;
+    const top = node.offsetTop;
+    return [...row.children].every((c) => (c as HTMLElement).offsetTop === top);
 }
 
 /** Whether every sized value control in the grid renders at the full width its class declares. */

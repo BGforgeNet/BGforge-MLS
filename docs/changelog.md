@@ -27,6 +27,8 @@
 ### Fixes
 
 - `.d` files show the WeiDU script icon under any file icon theme.
+- The binary editor fits a narrow editor: a list stacks above its detail, wide rows wrap, and a field's label moves
+  above its control, instead of the page running off the right edge.
 - A PVRZ page whose header declares more pixels than the per-frame cap is refused on open, instead of the
   editor allocating the full texture from a crafted header.
 

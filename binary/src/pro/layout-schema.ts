@@ -308,7 +308,8 @@ const proLabels: Record<string, string> = {
 export const proLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "pro",
-    maxContentWidthPx: 1000,
+    // The critter Stats panel's four 260px matrix groups, their gaps and the panel chrome; narrower wraps a group.
+    maxContentWidthPx: 1136,
     labels: proLabels,
     // Variant discriminators: shown for context but read-only (editing them desyncs the stamped variant).
     readOnlyFields: [p("header.objectType"), p("itemProperties.subType"), p("sceneryProperties.subType")],

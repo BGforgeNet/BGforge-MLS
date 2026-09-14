@@ -477,9 +477,10 @@ async function resizeAndSettle(width: number): Promise<void> {
     await page.setViewportSize({ width, height: 900 });
     for (let i = 0; i < 3; i++) await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
 }
-// No value control in the effect detail is squeezed below its width class or clips its value, at the default
-// width and at narrower ones (the split detail pane is where the 3-column feature block runs out of room).
-for (const width of [1280, 1000, 800]) {
+// No value control in the effect detail is squeezed below its width class or clips its value, and the page does not
+// scroll sideways, at the default width and at narrower ones: the split detail pane is where the 3-column feature
+// block runs out of room, 800 and 480 are the stacked tree-above-detail layout.
+for (const width of [1280, 1000, 800, 480]) {
     await resizeAndSettle(width);
     const clips = await collectClipViolations(page, `ITM tree effect @${width}`);
     check(

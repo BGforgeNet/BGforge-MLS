@@ -343,11 +343,21 @@ rather than the long-label one; both are "content wider than the panel".
 A multi-column fields grid (`FieldsBlock`, `FormSection`) treats its column count the same way. Its value
 tracks are `auto` and its controls may shrink, so without a fit a narrow pane squeezes a dropdown sized for its
 longest option and clips the label. `state/fit-kv-columns.ts` renders the grid at the full count and drops a
-column while any sized control renders narrower than its width class. The ITM effect feature block declares
-three columns and shows fewer in the tree's detail pane, which a narrow editor squeezes further. A detail layout
-nested in a list or tree (`ListEntryDetail`) takes no content-width cap of its own, since the page around it
-already applies one. Guarded by the clip gate's `shrunk` check in `render-itm.mts` at three
-viewports and in the cross-format clip sweep.
+column while any sized control renders narrower than its width class. It prefers a count that keeps the grid
+beside the other blocks of its panel (a flags box) over one that holds only because they wrapped below it. When
+even one column cannot hold a label beside its control, each label goes above its control (`kv-stacked`). The ITM
+effect feature block declares three columns and shows fewer in the tree's detail pane, which a narrow editor
+squeezes further. A detail layout nested in a list or tree (`ListEntryDetail`) takes no content-width cap of its
+own, since the page around it already applies one. Guarded by the clip gate's `shrunk` check in `render-itm.mts`
+and in the cross-format clip sweep.
+
+### Narrow editors: wrap, never scroll sideways
+
+The page must not scroll horizontally in a narrow editor. A list's side column stacks above its detail below the
+`.master-detail` media query's width, and rows of fixed-size items (panel blocks, flag columns and category
+columns, the matrix's column groups, row actions) wrap. A format's content-width cap must still hold its widest
+row on one line (PRO's cap fits the critter Stats matrix, asserted in `render-pro.mts`). Guarded by the clip gate's
+`overflow` check, which the clip sweep runs at every width in its `WIDTHS`.
 
 ### Multi-column fill: column-major (top-down first)
 

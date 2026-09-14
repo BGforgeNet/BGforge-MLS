@@ -44,7 +44,8 @@ The drivers are:
   grows the open chip.
 - `render-clip-sweep.mts` - the cross-format value-control clipping sweep. Opens every format, walks each
   primary tab (and selects the first list row to sweep detail forms), and runs the `clip-gate.ts` check on each
-  view - failing if any value control clips its text or any dropdown renders without a `dd-*` width class. The
+  view at several editor widths - failing if any value control clips or is squeezed, any dropdown renders
+  without a `dd-*` width class, or the page scrolls sideways. The
   one driver that verifies the single "no control clips" invariant across all formats, so a new clip anywhere
   is caught in one place. IE formats (external corpus) skip when absent; PRO/MAP always run.
 
