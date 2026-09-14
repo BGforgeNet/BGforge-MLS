@@ -545,6 +545,9 @@ importers:
       p-limit:
         specifier: ^7.3.2
         version: 7.3.2
+      sslc-emscripten-noderawfs:
+        specifier: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
+        version: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
       ts-morph:
         specifier: 'catalog:'
         version: 28.0.0
@@ -566,10 +569,6 @@ importers:
       yaml:
         specifier: 'catalog:'
         version: 2.9.0
-    optionalDependencies:
-      sslc-emscripten-noderawfs:
-        specifier: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
-        version: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
 
   transpilers:
     dependencies:
@@ -8535,8 +8534,7 @@ snapshots:
 
   spdx-license-ids@3.0.23: {}
 
-  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz:
-    optional: true
+  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz: {}
 
   stackback@0.0.2: {}
 

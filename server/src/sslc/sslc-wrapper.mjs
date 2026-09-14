@@ -16,17 +16,22 @@
  * Not a TypeScript file, unlike the rest of this directory: it is executed as-is rather than bundled, and
  * the module it loads is an Emscripten build that ships no types. The build copies it beside the server
  * bundle, where the same relative path from ssl_compiler.ts resolves as it does here in the source tree.
+ * ssl_compiler.ts also resolves the compiler module itself, which sits in a different place in the bundle
+ * and in the source tree, and passes its path in BGFORGE_SSLC_ENTRY.
  */
 
-// Named lowercase because it is a factory, not a constructor: the Emscripten build exports it
-// capitalised, and calling it that way reads as a missing `new`.
-import createCompiler from "sslc-emscripten-noderawfs";
+import { pathToFileURL } from "node:url";
 
 const stdout = [];
 const stderr = [];
 
 let returnCode;
 try {
+    const entry = process.env.BGFORGE_SSLC_ENTRY;
+    if (!entry) throw new Error("BGFORGE_SSLC_ENTRY is not set: no compiler module to load");
+    // Named lowercase because it is a factory, not a constructor: the Emscripten build exports it
+    // capitalised, and calling it that way reads as a missing `new`.
+    const { default: createCompiler } = await import(pathToFileURL(entry).href);
     const instance = await createCompiler({
         print: (text) => stdout.push(text),
         printErr: (text) => stderr.push(text),

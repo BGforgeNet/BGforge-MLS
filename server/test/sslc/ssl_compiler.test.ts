@@ -48,7 +48,7 @@ vi.mock("child_process", () => ({
     fork: (...args: unknown[]) => mockFork(...args),
 }));
 
-import { ssl_compile, isSslcAvailable } from "../../src/sslc/ssl_compiler";
+import { ssl_compile, isSslcAvailable, SSLC_ENTRY_ENV } from "../../src/sslc/ssl_compiler";
 
 describe("ssl_compile", () => {
     const existsSyncSpy = vi.spyOn(fs, "existsSync");
@@ -320,7 +320,7 @@ describe("ssl_compile", () => {
             expect(forkArgs).not.toContain("");
         });
 
-        it("sets correct fork options (silent, empty env, no execArgv)", async () => {
+        it("sets correct fork options (silent, inherited env plus the compiler entry, no execArgv)", async () => {
             const proc = createMockProcess();
             mockFork.mockReturnValue(proc);
 
@@ -331,7 +331,11 @@ describe("ssl_compile", () => {
             const forkOpts = mockFork.mock.calls[0]![2] as Record<string, unknown>;
             expect(forkOpts.silent).toBe(true);
             expect(forkOpts.execArgv).toEqual([]);
-            expect(forkOpts.env).toBeUndefined();
+            // existsSync is mocked true, so the first candidate - the bundle layout - is the one resolved.
+            expect(forkOpts.env).toEqual({
+                ...process.env,
+                [SSLC_ENTRY_ENV]: path.join(import.meta.dirname, "../../src/sslc/sslc-emscripten-noderawfs/sslc.mjs"),
+            });
             expect(forkOpts.cwd).toBe("/tmp/build");
         });
     });
@@ -385,7 +389,7 @@ describe("ssl_compile", () => {
             const result = await ssl_compile(baseOpts);
 
             expect(result.returnCode).toBe(1);
-            expect(result.stderr).toContain("The WebAssembly compiler is not available");
+            expect(result.stderr).toContain("The WebAssembly compiler is missing from this installation");
             expect(mockFork).not.toHaveBeenCalled();
         });
 

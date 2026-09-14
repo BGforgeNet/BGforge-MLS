@@ -46,10 +46,17 @@ esbuild ./server/src/worker/ts-morph-worker.ts --bundle --outfile=server/out/ts-
     "$imu_define" \
     "$@"
 
-# The WebAssembly compiler's wrapper. Copied rather than bundled: it is forked as a file, and the module
-# it loads is resolved from server/node_modules at run time. It must sit beside server.js, which is where
-# ssl_compiler.ts looks for it - the same relative path that finds it next to the source.
+# The WebAssembly compiler's wrapper. Copied rather than bundled: it is forked as a file. It must sit beside
+# server.js, which is where ssl_compiler.ts looks for it - the same relative path that finds it next to the source.
 cp server/src/sslc/sslc-wrapper.mjs server/out/
+
+# The compiler itself, copied from its dev dependency into the bundle directory. It is a GitHub-release tarball,
+# not a registry package, and pnpm refuses such a dependency inside an installed package by default, so the
+# published server carries the files instead of declaring it.
+rm -rf server/out/sslc-emscripten-noderawfs
+mkdir -p server/out/sslc-emscripten-noderawfs
+cp -L server/node_modules/sslc-emscripten-noderawfs/package.json server/node_modules/sslc-emscripten-noderawfs/sslc.mjs \
+    server/node_modules/sslc-emscripten-noderawfs/sslc.wasm server/out/sslc-emscripten-noderawfs/
 
 # Copy tree-sitter WASM files
 copy_wasm_to server/out

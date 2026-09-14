@@ -156,7 +156,8 @@ So, per bump:
   never running. To bump: change the version, re-download each asset, and replace every checksum together (a tag is
   mutable, the asset hash is what is actually verified).
 - `sslc-emscripten-noderawfs` (the built-in SSL compiler WASM, `server/package.json`) is an HTTPS GitHub-release
-  tarball, and its `pnpm-lock.yaml` entry carries a hand-maintained `integrity` field. pnpm fails closed
+  tarball. It is a dev dependency whose files the server build copies into `server/out`: pnpm refuses a URL
+  dependency inside an installed package by default, so the published server cannot declare it. Its `pnpm-lock.yaml` entry carries a hand-maintained `integrity` field. pnpm fails closed
   (`ERR_PNPM_MISSING_TARBALL_INTEGRITY`) on any tarball lockfile entry that lacks integrity, and URL-tarball resolvers
   only learn the hash on download - so when the package is reused from the store, the field is never emitted.
   Practical rule: **evolve the lockfile incrementally** (`pnpm install` / `pnpm update`); pnpm preserves the existing

@@ -50,15 +50,15 @@ rm -rf client/out
 git clean -fdX server/out
 ./scripts/prepublish.sh
 
-# Step 2: Deref pnpm symlinks for server runtime deps.
-for dep in server/node_modules/sslc-emscripten-noderawfs server/node_modules/esbuild-wasm; do
-    if [ -L "$dep" ]; then
-        target=$(readlink -f "$dep")
-        rm "$dep"
-        cp -rL "$target" "$dep"
-        echo "Dereffed: $dep"
-    fi
-done
+# Step 2: Deref the pnpm symlink for the server's one externalised runtime dep. (The SSL compiler is not one:
+# build-base-server.sh copies it into server/out.)
+esbuild_wasm=server/node_modules/esbuild-wasm
+if [ -L "$esbuild_wasm" ]; then
+    target=$(readlink -f "$esbuild_wasm")
+    rm "$esbuild_wasm"
+    cp -rL "$target" "$esbuild_wasm"
+    echo "Dereffed: $esbuild_wasm"
+fi
 
 # Record workspace package symlinks (target outside the pnpm store) before the
 # strip removes them, so restore_node_modules can recreate them. Dev-dep symlinks

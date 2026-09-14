@@ -26,8 +26,7 @@ ships - appears nowhere in that file. These are included because nothing exclude
 - `client/package.json`, `client/out/` - extension entry point, webview bundles, codicons
 - `client/src/**/*.html`, `client/src/**/*.css` - webview HTML/CSS templates
 - `server/package.json`, `server/LICENSE.txt`, `server/out/` - LSP server bundle, data JSONs, WASM parsers,
-  td-runtime.d.ts
-- `server/node_modules/sslc-emscripten-noderawfs/` - Fallout SSL compiler (WASM), loaded via `fork()`
+  td-runtime.d.ts, and the Fallout SSL compiler (WASM, loaded via `fork()`), which the build copies in
 - `server/node_modules/esbuild-wasm/` - esbuild WASM, used by transpilers (runtime files only: `esbuild.wasm`,
   `bin/esbuild`, `lib/main.js`, `wasm_exec*.js`, `package.json`)
 - `language-configurations/*.json` - language bracket/comment rules

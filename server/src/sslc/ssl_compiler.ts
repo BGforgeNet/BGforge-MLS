@@ -16,17 +16,24 @@ import { fork } from "child_process";
 const COMPILER_MODULE = path.join(__dirname, "sslc-wrapper.mjs");
 
 /**
- * Where the compiler package is installed, as seen from the bundle (`server/out`) and from this file in
- * the source tree. Both are checked because tests import this module from source while the shipped server
- * is one flat bundle, and the answer decides whether the compiler can run at all.
+ * The compiler's entry module, as seen from the bundle (the build copies the package into `server/out`, so
+ * the published server declares no URL-tarball dependency for a package manager to refuse) and from this
+ * file in the source tree, where tests import it and the package is a dev dependency.
  */
-const PACKAGE_DIRS = [
-    path.join(__dirname, "../node_modules/sslc-emscripten-noderawfs"),
-    path.join(__dirname, "../../node_modules/sslc-emscripten-noderawfs"),
+const COMPILER_ENTRIES = [
+    path.join(__dirname, "sslc-emscripten-noderawfs/sslc.mjs"),
+    path.join(__dirname, "../../node_modules/sslc-emscripten-noderawfs/sslc.mjs"),
 ];
 
+/** Environment variable carrying the resolved entry to the forked wrapper. */
+export const SSLC_ENTRY_ENV = "BGFORGE_SSLC_ENTRY";
+
+function compilerEntry(): string | undefined {
+    return COMPILER_ENTRIES.find((entry) => fs.existsSync(entry));
+}
+
 export function isSslcAvailable(): boolean {
-    return fs.existsSync(COMPILER_MODULE) && PACKAGE_DIRS.some((dir) => fs.existsSync(dir));
+    return fs.existsSync(COMPILER_MODULE) && compilerEntry() !== undefined;
 }
 
 export async function ssl_compile(opts: {
@@ -43,9 +50,10 @@ export async function ssl_compile(opts: {
     /** Gates the per-compile payload dump on "close" (see below). Defaults to false. */
     debug?: boolean;
 }) {
-    if (!isSslcAvailable()) {
+    const entry = compilerEntry();
+    if (!fs.existsSync(COMPILER_MODULE) || entry === undefined) {
         const msg =
-            "The WebAssembly compiler is not available. Install the sslc-emscripten-noderawfs package or configure an external compiler path in settings.";
+            "The WebAssembly compiler is missing from this installation. Reinstall the server or configure an external compiler path in settings.";
         conlog(msg);
         return {
             returnCode: 1,
@@ -86,6 +94,7 @@ export async function ssl_compile(opts: {
         p = fork(COMPILER_MODULE, cmdArgs, {
             execArgv: [], // Disable Node.js flags like --inspect
             cwd: opts.cwd,
+            env: { ...process.env, [SSLC_ENTRY_ENV]: entry },
             silent: true,
         });
     } catch (error) {

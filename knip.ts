@@ -115,7 +115,9 @@ const config: KnipConfig = {
             // to resolve `require("esbuild-wasm")` from server's node_modules at
             // runtime. Knip's per-workspace static analysis can't see the import
             // chain through the bundled-in non-workspace source.
-            ignoreDependencies: ["esbuild-wasm"],
+            // sslc-emscripten-noderawfs is imported by path, never by name: build-base-server.sh copies it into
+            // out/ and ssl_compiler.ts hands the forked wrapper its entry.
+            ignoreDependencies: ["esbuild-wasm", "sslc-emscripten-noderawfs"],
         },
         "plugins/tssl-plugin": {
             entry: ["src/index.ts", "test/*.test.ts"],
