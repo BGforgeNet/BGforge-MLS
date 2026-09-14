@@ -109,6 +109,33 @@ function pathCandidates(doc: string, tok: string): string[] | null {
     return candidates.length > 0 ? candidates : null;
 }
 
+/**
+ * Entries of a file tree drawn in a fenced block: a column-0 line naming a tracked directory (`binary/src/`)
+ * roots the tree, and each two-space-indented line lists entries under it (`index.ts`, `spec/`, or several
+ * separated by spaces or commas), with anything after `#` a comment. Deeper-indented lines are comment
+ * continuations. Globs and placeholders (`presentation-schema*.ts`, `<format>/`) are skipped, as inline.
+ */
+function treeEntries(text: string): string[] {
+    const out: string[] = [];
+    for (const block of text.matchAll(/```[^\n]*\n([\s\S]*?)```/g)) {
+        let root: string | undefined;
+        for (const line of (block[1] ?? "").split("\n")) {
+            const rootMatch = /^([\w.-]+(?:\/[\w.-]+)*)\/\s*(?:#.*)?$/.exec(line);
+            if (rootMatch?.[1] !== undefined) {
+                root = trackedDirs.has(rootMatch[1]) ? rootMatch[1] : undefined;
+                continue;
+            }
+            if (root === undefined || !/^ {2}\S/.test(line)) continue;
+            const listed = (line.split("#")[0] ?? "").split(/[\s,]+/).filter(Boolean);
+            for (const entry of listed) {
+                if (/[*{}<>]/.test(entry)) continue;
+                out.push(`${root}/${entry}`);
+            }
+        }
+    }
+    return out;
+}
+
 // A function or method cited as `name()` or `obj.name()`; the last identifier is the one checked.
 const SYMBOL_RE = /^(?:[A-Za-z_$][\w$]*\.)*([A-Za-z_$][\w$]*)\(\)$/;
 
@@ -124,10 +151,12 @@ function commandIsKnown(cmd: string): boolean {
 }
 
 const claims = DOCS.map((doc) => {
-    const tokens = [...new Set(backtickedTokens(fs.readFileSync(doc, "utf8")))];
+    const text = fs.readFileSync(doc, "utf8");
+    const tokens = [...new Set(backtickedTokens(text))];
     const absent = INTENTIONALLY_ABSENT[doc] ?? [];
     return {
         doc,
+        treeEntries: [...new Set(treeEntries(text))],
         paths: tokens.flatMap((tok) => {
             const candidates = absent.includes(tok) ? null : pathCandidates(doc, tok);
             return candidates ? [{ tok, candidates }] : [];
@@ -146,7 +175,12 @@ const checkedPathCount = claims.flatMap((c) => c.paths).length;
 const skippedPathCount = claims.flatMap((c) => c.skippedPaths).length;
 
 describe("doc references resolve", () => {
-    for (const { doc, paths, symbols, commands } of claims) {
+    for (const { doc, treeEntries: entries, paths, symbols, commands } of claims) {
+        it.each(entries)(`${doc}: file-tree entry %s exists`, (entry) => {
+            const exists = entry.endsWith("/") ? trackedDirs.has(entry.slice(0, -1)) : trackedFiles.has(entry);
+            expect(exists, `${doc} draws ${entry} in a file tree, but it is not tracked`).toBe(true);
+        });
+
         it.each(paths)(`${doc}: source path $tok is tracked`, ({ tok, candidates }) => {
             expect(
                 candidates.some((c) => trackedFiles.has(c)),
@@ -165,6 +199,7 @@ describe("doc references resolve", () => {
 
     it(`actually checked some references: ${checkedPathCount} source paths checked, ${skippedPathCount} path-shaped tokens skipped as unanchored`, () => {
         expect(checkedPathCount).toBeGreaterThan(skippedPathCount);
+        expect(claims.flatMap((c) => c.treeEntries).length).toBeGreaterThan(0);
         expect(claims.flatMap((c) => c.symbols).length).toBeGreaterThan(0);
         expect(claims.flatMap((c) => c.commands).length).toBeGreaterThan(0);
     });

@@ -131,6 +131,7 @@ modules.
 | `scripts/`                           | Build, test and data-generation scripts - see [scripts/README.md](../scripts/README.md)                                                    |
 | `actions/`                           | Reusable composite GitHub Actions - see [actions/README.md](../actions/README.md)                                                          |
 | `external/`                          | Real game and mod files for tests (gitignored, restored by `pnpm test:external`)                                                           |
+| `docs/`                              | Project documentation - see [docs/README.md](README.md)                                                                                    |
 
 The feature directories under `client/src/` that shape the rest of this page: `binary-editor/`, `dialog-editor/`
 (source dialogs and compiled `.dlg`), `image-editor/` (the animation editor, viewType `bgforge.animationEditor`),

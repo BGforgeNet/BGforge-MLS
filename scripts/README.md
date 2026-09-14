@@ -28,11 +28,11 @@ close-out is depth, not a category, so a broken category surfaces at edit time r
 - **Grammars** (`pnpm test:grammars`) -- run WHOLE by both. No shallower form exists that would be worth having.
 - **Server integration** (`server/test/integration/`) -- run WHOLE by both. A subset was measured and rejected:
   the per-file test time is lopsided (one file is over half of it), but wall time is not, because the suite's
-  15 files already run in parallel and its floor is whichever single file is slowest. Dropping the heaviest
+  files already run in parallel and its floor is whichever single file is slowest. Dropping the heaviest
   bought a few percent of the suite when that was measured. There is no cheap slice of this suite to take --
   shortening it means making an individual sweep cheaper, not running fewer of them.
 - **SSL corpus** -- `pnpm test` runs the canary (`compilers/ssl/test/integration/corpus-smoke.test.ts`): the
-  oracle pins plus a 24-script sample, seconds rather than minutes. It reports its own denominator, because a
+  oracle pins plus a small script sample, seconds rather than minutes. It reports its own denominator, because a
   green sample must not read as a swept corpus. `pnpm test:all` runs the full compile/decompile/optimise sweeps.
 
 ### Runner settings that were measured and rejected
@@ -41,8 +41,8 @@ Recorded so they are not re-tried. Each was measured against the whole unit-suit
 the bottleneck here, total CPU work is, so changes that only reshuffle work paid nothing. Re-measure before
 reviving one -- the figures behind these were taken on one machine and only the direction transfers.
 
-- **One vitest process aggregating every project** (the root `vitest.config.ts` shape) instead of the eleven
-  separate runs `test.sh` starts -- no better than the per-suite `--maxWorkers` caps, so the extra coupling
+- **One vitest process aggregating every project** (the root `vitest.config.ts` shape) instead of the
+  separate per-project runs `test.sh` starts -- no better than the per-suite `--maxWorkers` caps, so the extra coupling
   buys nothing.
 - **`pool: "threads"`** instead of the default `forks` -- slightly worse. Cheaper imports, dearer tests.
 - **Pinning `--maxWorkers`** above or below the default -- worse in both directions. The default is already at
@@ -50,8 +50,9 @@ reviving one -- the figures behind these were taken on one machine and only the 
 - **`deps.optimizer.ssr`** on the server suite -- slightly worse.
 
 What DID pay, for contrast: cutting the work itself (memoizing the spec-derived name/table lookups in
-`binary/src`), and `isolate: false` on the two suites whose per-file import cost dominates their test time
-(see `binary-editor/vitest.config.ts` for the constraint that puts on new tests there).
+`binary/src`), and `isolate: false` on the suites whose per-file import cost dominates their test time
+(`binary-editor/vitest.config.ts` states the constraint that puts on new tests; the other configs that set it
+point there).
 
 ### Excluded from `pnpm test`
 

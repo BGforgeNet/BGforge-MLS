@@ -79,7 +79,7 @@ Neither the published `@bgforge/mls-server` nor the VSIX declares an `@bgforge/*
 
 ## npm authentication (tokens and trusted publishing)
 
-Two workflows publish to npm: `publish-library.yml` (the four libraries, on `<lib>/vX.Y.Z` tags) and
+Two workflows publish to npm: `publish-library.yml` (the published libraries, on `<lib>/vX.Y.Z` tags) and
 `build.yml` (`@bgforge/mls-server`, on the extension's `vX.Y.Z` tag). Both authenticate with the `NPM_TOKEN`
 repository secret, passed to the publish step as `NODE_AUTH_TOKEN`, and both jobs carry `id-token: write` so
 the publish can attest SLSA provenance.
