@@ -41,10 +41,9 @@ step "Resetting External Repos"
 step "Building transpile library bundle"
 pnpm build:transpile
 
-# Resolve WeiDU BEFORE Phase 1. Most WeiDU-backed suites provision it themselves through
-# scripts/utils/src/weidu-binary.ts, but the DLG differential and the DLG parser's compiled fixtures read
-# WEIDU_BIN and SKIP without it, and they run in the unit phase - so the binary has to be on hand before it.
-# Cached after the first run.
+# Resolve WeiDU BEFORE Phase 1. No WeiDU-backed suite skips without a binary - each provisions one itself - so
+# exporting it here lets the parallel phases reuse one path instead of each suite running the provisioning
+# script. Cached after the first run.
 WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
 export WEIDU_BIN
 

@@ -150,13 +150,11 @@ So, per bump:
   dependencies are swept.
 - WeiDU is not an npm dependency but is pinned the same way, in `scripts/ensure-weidu.sh`: one version, one sha256
   per published asset. The test scripts and the CI build workflow call that script, which prefers a WeiDU already on
-  the host and otherwise downloads the pinned one into `.dev/`. It backs the WeiDU differentials - the TP2 and D
-  grammar differentials, the BAF differential and the BCS one - which treat WeiDU as the authority, and none of them
-  skips for a missing binary: `scripts/utils/src/weidu-binary.ts` provisions one rather than letting a suite pass by
-  never running. The DLG differential (`binary/test/dlg-weidu-differential.test.ts`) and the DLG parser's compiled
-  fixtures (`binary/test/dlg-parser.test.ts`) also use WeiDU but do skip: they read `WEIDU_BIN` and skip without it,
-  which is why the test scripts and CI resolve WeiDU before those suites run. To bump: change the version, re-download
-  each asset, and replace every checksum together (a tag is mutable, the asset hash is what is actually verified).
+  the host and otherwise downloads the pinned one into `.dev/`. It backs every suite that drives WeiDU, and none of
+  them skips for a missing binary: the vitest suites resolve it through `scripts/utils/src/weidu-binary.ts` and the
+  TD sample test calls the script directly, so an absent binary is provisioned rather than letting a suite pass by
+  never running. To bump: change the version, re-download each asset, and replace every checksum together (a tag is
+  mutable, the asset hash is what is actually verified).
 - `sslc-emscripten-noderawfs` (the built-in SSL compiler WASM, `server/package.json`) is an HTTPS GitHub-release
   tarball, and its `pnpm-lock.yaml` entry carries a hand-maintained `integrity` field. pnpm fails closed
   (`ERR_PNPM_MISSING_TARBALL_INTEGRITY`) on any tarball lockfile entry that lacks integrity, and URL-tarball resolvers

@@ -29,7 +29,12 @@ import { compileBafText } from "../../src/weidu-baf/compiler";
 import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
 import { bcsEngineForScriptStyle } from "../../../shared/bcs-engine";
 import { initParser, getParser } from "../../../shared/parsers/weidu-baf";
-import { exitStatus, resolveWeidu, WEIDU_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
+import {
+    exitStatus,
+    resolveWeidu,
+    WEIDU_HOOK_TIMEOUT_MS,
+    WEIDU_TIMEOUT_MS,
+} from "../../../scripts/utils/src/weidu-binary.ts";
 import { IE_FIXTURES } from "./test-helpers";
 
 /** An installed IE game directory whose tables both compilers read. Unset means "skip", not "use --nogame". */
@@ -74,7 +79,7 @@ describe.skipIf(files.length === 0 || !GAME)("built-in BAF compiler vs the refer
             symbols,
             engine,
         });
-    });
+    }, WEIDU_HOOK_TIMEOUT_MS);
 
     // A floor on the population, so a corpus that silently collapses to a handful cannot pass vacuously. The
     // counts are IN THE NAME, not a console.log: only the name survives under the default reporter and in a

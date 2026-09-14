@@ -103,7 +103,7 @@ jobs:
       - name: Build tree-sitter grammar
         run: pnpm build:grammar
 
-      # The DLG WeiDU suites skip without a binary (the other differentials provision their own). The test
+      # No WeiDU suite skips without a binary: each provisions the pinned one itself. The test
       # scripts call this too, so CI and a local run resolve the same pinned WeiDU; here it also lands on
       # PATH for the steps below. See scripts/ensure-weidu.sh.
       - name: Install WeiDU

@@ -26,6 +26,13 @@ export const WEIDU_TIMEOUT_MS = 15000;
 /** Provisioning may download and unpack an archive, so it gets a longer bound than a parse-check. */
 const ENSURE_TIMEOUT_MS = 120000;
 
+/**
+ * Budget for a `beforeAll` that calls `resolveWeidu()`: the provisioning bound plus room for the hook's own setup.
+ * Runner hook timeouts (vitest's 10s default, or a config's 60s) are shorter than a download, so a hook that
+ * provisions WeiDU passes this as its timeout argument.
+ */
+export const WEIDU_HOOK_TIMEOUT_MS = ENSURE_TIMEOUT_MS + 60000;
+
 /** True when the given binary answers --version. */
 function canRun(bin: string): boolean {
     try {
