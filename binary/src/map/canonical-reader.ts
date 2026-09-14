@@ -284,6 +284,14 @@ function parseObjects(group: ParsedGroup): z.infer<typeof mapObjectsSchema> {
     };
 }
 
+/**
+ * Each document object that passed the schema, mapped to the schema's output for it. Every serialize and
+ * structure op re-reads the document, and a full walk per read returned the same result. Keyed by identity, so
+ * a replaced document is validated afresh; the returned document is shared, so callers build new documents
+ * rather than writing into it.
+ */
+const validatedDocuments = new WeakMap<object, MapCanonicalDocument>();
+
 export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanonicalDocument {
     const headerGroup = getGroup(parseResult.root, "Header");
     const headerScalars = walkGroup(headerGroup, mapHeaderCanonicalSpec, mapHeaderPresentation);
@@ -323,7 +331,7 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
 
     const objects = parseObjects(getGroup(parseResult.root, "Objects Section"));
 
-    return parseWithSchemaValidation(
+    const document = parseWithSchemaValidation(
         mapCanonicalDocumentSchema,
         {
             header,
@@ -335,11 +343,19 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
         },
         "Invalid MAP canonical document",
     );
+    validatedDocuments.set(document, document);
+    return document;
 }
 
 export function getMapCanonicalDocument(parseResult: ParseResult): MapCanonicalDocument | undefined {
-    const parsed = mapCanonicalDocumentSchema.safeParse(parseResult.document);
-    return parsed.success ? parsed.data : undefined;
+    const candidate = parseResult.document;
+    const isObject = typeof candidate === "object" && candidate !== null;
+    const known = isObject ? validatedDocuments.get(candidate) : undefined;
+    if (known) return known;
+    const parsed = mapCanonicalDocumentSchema.safeParse(candidate);
+    if (!parsed.success) return undefined;
+    if (isObject) validatedDocuments.set(candidate, parsed.data);
+    return parsed.data;
 }
 
 export function createMapCanonicalSnapshot(parseResult: ParseResult): MapCanonicalSnapshot {
