@@ -3,8 +3,8 @@
 # Build editor-specific syntax highlighting bundles from YAML data and static files.
 # Produces versioned zip archives for TextMate (Sublime/JetBrains), Kate, Notepad++, and Geany.
 #
-# The four are independent - separate generators, separate staging directories, separate zips - and three
-# of them each pay a `tsx` startup, so they run in parallel rather than one after another.
+# The four are independent - separate generators, separate staging directories, separate zips - and each
+# pays a `tsx` startup, so they run in parallel rather than one after another.
 #
 # Each stages under dist/, which is gitignored, rather than at the repo root: the staging directory exists
 # only between its generator and its zip, and a `git add -A` landing in that window used to sweep it into a
@@ -60,15 +60,8 @@ build_tmbundle() {
 </plist>
 PLIST
 
-    # Copy language grammars, excluding VSCode-specific injection, tooltip and dialog-editor webview grammars.
-    local f base
-    for f in syntaxes/*.tmLanguage.json; do
-        base=$(basename "$f")
-        case "$base" in
-            bgforge-mls-* | *-tooltip.* | dialog-*) continue ;;
-        esac
-        cp "$f" "$dir/Syntaxes/"
-    done
+    # The language grammars, each with the file types it claims; injection, tooltip and webview grammars stay out.
+    pnpm exec tsx scripts/utils/src/generate-tmbundle-syntaxes.ts --out-dir "$dir/Syntaxes"
 
     (cd dist && zip -rq "$archive" "$bundle")
     rm -rf "$dir"

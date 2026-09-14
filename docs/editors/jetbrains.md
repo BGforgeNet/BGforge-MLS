@@ -57,8 +57,8 @@ Download `bgforge-mls-<version>.tmbundle.zip` from the
 The tmbundle includes grammars for Fallout SSL, WeiDU BAF, WeiDU D and WeiDU TP2, plus Fallout MSG, WeiDU TRA,
 Infinity 2DA, Fallout Worldmap, Fallout scripts.lst, WeiDU SLB, Sword Coast Stratagems SSL and WeiDU log.
 
-None of the bundled grammars declares file extensions, so installing the bundle maps no files to them; associate
-extensions with the grammars manually.
+Each grammar declares the extensions and file names from the table above, so installing the bundle maps those files
+to it. Sword Coast Stratagems SSL declares none, since `.ssl` goes to Fallout SSL.
 
 Note: `.h` is also the C and C++ header extension. The `*.h` mapping above matches by file name alone, so it sends
 every `.h` file to the server, C headers included - leave `*.h` out of the mapping if that is unwanted. The mapping

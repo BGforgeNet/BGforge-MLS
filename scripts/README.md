@@ -214,8 +214,10 @@ See [docs/data-pipeline.md](../docs/data-pipeline.md) for the full diagram of ho
 - `scripts/utils/src/yaml2json.ts`
   Converts tmLanguage YAML to JSON, expanding shorthand `name` inheritance. Called by `syntaxes-to-json.sh`.
 
-- `scripts/utils/src/generate-ksh.ts`, `scripts/utils/src/generate-udl.ts`, `scripts/utils/src/generate-geany.ts`
-  Generate the Kate KSyntaxHighlighting, Notepad++ UDL, and Geany filetype bundles. Called by `build-editors.sh`.
+- `scripts/utils/src/generate-ksh.ts`, `scripts/utils/src/generate-udl.ts`, `scripts/utils/src/generate-geany.ts`,
+  `scripts/utils/src/generate-tmbundle-syntaxes.ts`
+  Generate the Kate KSyntaxHighlighting, Notepad++ UDL, and Geany filetype bundles, and the TextMate bundle's
+  grammars with their file types. Called by `build-editors.sh`.
 
 - **`editor-captures.ts`**, **`generate-editor-queries.ts`**, **`check-editor-captures.ts`**
   Per-editor highlight queries. The canonical `grammars/<g>/queries/highlights.scm` uses Neovim capture

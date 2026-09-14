@@ -20,8 +20,7 @@ Install the [LSP](https://packagecontrol.io/packages/LSP) package via Package Co
 
 The release's `bgforge-mls-<version>.tmbundle.zip` carries the grammars as `.tmLanguage.json` files. Sublime Text's
 [syntax documentation](https://www.sublimetext.com/docs/syntax.html) names `.sublime-syntax` and `.tmLanguage` as
-the formats it reads and does not list the JSON form. None of the bundled grammars declares file extensions either,
-so they provide no file type detection.
+the formats it reads and does not list the JSON form, so the bundle's file type declarations do not reach it.
 
 File types come from `.sublime-syntax` files: `file_extensions` associates extensions with the syntax, and `scope`
 is what the LSP `selector` below matches. Create one per language in `Packages/User/` (accessible via
