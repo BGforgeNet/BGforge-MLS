@@ -60,12 +60,12 @@ build_tmbundle() {
 </plist>
 PLIST
 
-    # Copy language grammars, excluding VSCode-specific injection and tooltip grammars.
+    # Copy language grammars, excluding VSCode-specific injection, tooltip and dialog-editor webview grammars.
     local f base
     for f in syntaxes/*.tmLanguage.json; do
         base=$(basename "$f")
         case "$base" in
-            bgforge-mls-* | *-tooltip.*) continue ;;
+            bgforge-mls-* | *-tooltip.* | dialog-*) continue ;;
         esac
         cp "$f" "$dir/Syntaxes/"
     done

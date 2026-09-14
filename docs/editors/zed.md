@@ -114,7 +114,7 @@ zed::register_extension!(BgforgeMlsExtension);
 ```toml
 name = "Fallout SSL"
 grammar = "ssl"
-path_suffixes = ["ssl", "h"]
+path_suffixes = ["ssl"]
 line_comments = ["//"]
 block_comment = ["/*", "*/"]
 brackets = [
@@ -244,9 +244,19 @@ file. Use Zed's `file_types` setting to associate them by file name:
 }
 ```
 
-Note: Zed's built-in C++ language also claims `.h`, so both it and the Fallout SSL definition above match `.h`
-files. To choose one, map `.h` to it with the `file_types` setting
-([file associations](https://zed.dev/docs/configuring-languages#file-associations)).
+Fallout SSL headers use `.h`, which the definition above leaves out of `path_suffixes`: Zed's built-in C++ language
+claims it too, and between two languages claiming one suffix Zed picks by the order it registered them in, which no
+setting controls. Map `.h` with the `file_types` setting instead
+([file associations](https://zed.dev/docs/configuring-languages#file-associations)), which wins over the C++ claim -
+in your user settings for every project, or in a project's `.zed/settings.json` for that project only:
+
+```json
+{
+  "file_types": {
+    "Fallout SSL": ["h"]
+  }
+}
+```
 
 ### Tree-sitter grammars
 

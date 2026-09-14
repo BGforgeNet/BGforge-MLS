@@ -60,8 +60,12 @@ Infinity 2DA, Fallout Worldmap, Fallout scripts.lst, WeiDU SLB, Sword Coast Stra
 None of the bundled grammars declares file extensions, so installing the bundle maps no files to them; associate
 extensions with the grammars manually.
 
-Note: `.h` is also the C and C++ header extension, and the `*.h` mapping above associates every `.h` file with the
-server, C headers included. Leave `*.h` out of the mapping if that is unwanted.
+Note: `.h` is also the C and C++ header extension. The `*.h` mapping above matches by file name alone, so it sends
+every `.h` file to the server, C headers included - leave `*.h` out of the mapping if that is unwanted. The mapping
+does not change a file's IDE file type. A TextMate grammar highlights only files whose name matches no IDE file type
+other than plain text, so where `Settings > Editor > File Types` lists `*.h` under another file type, `.h` files keep
+that type and its highlighting whatever TextMate association you make. Remove `*.h` from that file type for the
+association to take effect; the change applies IDE-wide.
 
 ## TypeScript plugins (TSSL/TD)
 

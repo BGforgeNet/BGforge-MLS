@@ -49,4 +49,6 @@ These plugins are loaded by tsserver, which runs independently of the LSP server
 - **Kate**: Works with `typescript-language-server`, which the LSP Client's default configuration uses for TypeScript
 - **Geany**: Works with `typescript-language-server`, which the LSP Client plugin's default configuration uses for
   TypeScript
-- **Notepad++**: Works with `typescript-language-server` added as a server in NppLspClient
+- **Notepad++**: Works with `typescript-language-server` added as a server in NppLspClient, with the plugins passed in
+  its `initialization_options` rather than read from `tsconfig.json` - see
+  [Notepad++](notepadpp.md#typescript-plugins-tssltd)
