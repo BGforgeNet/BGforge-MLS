@@ -671,8 +671,9 @@ and skips macro bodies where the symbol name matches a macro parameter (paramete
 
 ### Cross-File References
 
-The `ReferencesIndex` (`shared/references-index.ts`) enables workspace-wide Find References
-without scanning all files on each request. It maps `symbolName -> uri -> Location[]`.
+The `ReferencesIndex` (`server/src/shared/references-index.ts`) enables workspace-wide Find References
+without re-reading or re-parsing files on each request: each file's references are extracted once, when it is
+indexed or changes. It maps `uri -> symbolName -> Location[]`, so a lookup walks every indexed file's map.
 
 ```
 Startup / File Change

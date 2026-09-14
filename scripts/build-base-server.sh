@@ -39,7 +39,7 @@ esbuild ./server/src/fallout-ssl/compile-worker.ts --bundle --outfile=server/out
 # unminified. It would also need package.sh to deref a dependency TREE (pnpm stores @ts-morph/common and
 # code-block-writer as siblings of the symlink target, not inside it) and to stop deleting
 # server/node_modules/@*/. If the VSIX needs to shrink further, esbuild-wasm's esbuild.wasm is
-# 3,785,482 bytes compressed - 37% of the artifact - and is the next target.
+# 3,785,482 bytes compressed and is the next target.
 esbuild ./server/src/worker/ts-morph-worker.ts --bundle --outfile=server/out/ts-morph-worker.js \
     --external:vscode --external:esbuild-wasm --format=cjs --platform=node \
     --banner:js="$imu_banner" \

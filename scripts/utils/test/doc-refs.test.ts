@@ -1,67 +1,116 @@
 /**
- * Drift guard for path and command references in the public docs.
+ * Drift guard for path, symbol and command references in the tracked docs.
  *
- * docs/architecture.md and docs/lsp-api.md cite source-file paths and command ids.
- * When code is renamed or moved, those citations rot into dangling pointers - a
- * whole `dialog-tree/` -> `dialog-editor/` rename once left the architecture doc
- * describing files that no longer existed, and the lsp-api doc described a
- * `workspace/symbol` encoding and custom methods the server never implemented.
- * This test pins every backticked repo-root source path to `git ls-files` and
- * every backticked bgforge command id to a real code usage, so a future rename
- * fails here instead of silently misleading third-party integrators.
+ * Docs cite source-file paths, function names and command ids. When code is renamed, moved or deleted,
+ * those citations rot into dangling pointers - a whole `dialog-tree/` -> `dialog-editor/` rename once
+ * left the architecture doc describing files that no longer existed, and the lsp-api doc described a
+ * `workspace/symbol` encoding and custom methods the server never implemented. This test pins every
+ * backticked source path to `git ls-files`, every backticked `name()` to a word in tracked code, and
+ * every backticked bgforge command id to a real code usage.
  *
- * The extractors are deliberately conservative (a guard that false-positives on a
- * correct doc trains readers to ignore it): only backticked tokens that
- * unambiguously look like a repo-root-anchored source path or a bgforge command id
- * are checked. Shorthand relative paths (`core/capabilities.ts`), globs, and
- * build-output paths are skipped rather than risk a false alarm.
+ * It catches a NAME that stopped existing, never a relationship that changed (a doc saying module A
+ * calls B, after A stopped): that class is kept down by docs pointing at module docstrings rather than
+ * restating them.
+ *
+ * The extractors are deliberately conservative (a guard that false-positives on a correct doc trains
+ * readers to ignore it): a path is checked only when it is anchored at the repo root or at the doc's own
+ * directory, and globs, placeholders and build-output paths are skipped.
  */
 
 import { execSync } from "node:child_process";
 import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
-
-const DOCS = ["docs/architecture.md", "docs/lsp-api.md"] as const;
 
 const trackedFiles = new Set(
     execSync("git ls-files", { encoding: "utf8", timeout: SPAWN_TIMEOUT_MS }).split("\n").filter(Boolean),
 );
+const trackedDirs = new Set<string>();
+for (const file of trackedFiles) {
+    for (let dir = path.posix.dirname(file); dir !== "."; dir = path.posix.dirname(dir)) trackedDirs.add(dir);
+}
 
-// Real repo top-level directories, so only repo-root-anchored path citations are checked.
-const topLevelDirs = new Set([...trackedFiles].map((f) => f.split("/")[0]));
+/**
+ * Every tracked markdown file except those whose job is to name code that is not there: changelogs record
+ * what was removed, and docs/todo.md describes code not yet written. Symlinks (each CLAUDE.md) would only
+ * re-check the AGENTS.md they point at.
+ */
+const DOCS = [...trackedFiles].filter(
+    (f) =>
+        f.endsWith(".md") &&
+        !/(^|\/)changelog\.md$/i.test(f) &&
+        f !== "docs/todo.md" &&
+        // A tracked doc deleted but not yet staged is still listed; skip it rather than fail the whole project.
+        fs.existsSync(f) &&
+        !fs.lstatSync(f).isSymbolicLink(),
+);
 
-// Every line mentioning "bgforge" across tracked non-doc files - contains each
-// command id / method literal the code actually uses (protocol constants,
-// package.json contributions, source registrations).
-const codeMentions = execSync("git grep -hF bgforge -- ':!docs/'", {
+/** Paths a doc cites precisely because they do not exist - recorded non-additions. */
+const INTENTIONALLY_ABSENT: Readonly<Record<string, readonly string[]>> = {
+    "docs/supply-chain.md": [".github/dependabot.yml"],
+};
+
+// Every line mentioning "bgforge" across tracked non-markdown files - contains each command id / method
+// literal the code actually uses (protocol constants, package.json contributions, source registrations).
+// All markdown is excluded, not just docs/, since every markdown file is itself a checked doc.
+const codeMentions = execSync("git grep -hF bgforge -- ':!*.md'", {
     encoding: "utf8",
     timeout: SPAWN_TIMEOUT_MS,
 });
 
-const read = (p: string): string => fs.readFileSync(p, "utf8");
+// Every identifier-shaped word in tracked code. Markdown is excluded so a doc cannot vouch for itself, and
+// data files and the lockfile so a name surviving only as a string there does not count as code.
+const codeWords = new Set(
+    // Not piped through `sort -u`: a pipe would report sort's exit status and hide a failed git grep.
+    execSync("git grep -hoE '[A-Za-z_$][A-Za-z0-9_$]*' -- ':!*.md' ':!*.json' ':!*.yml' ':!*.yaml'", {
+        encoding: "utf8",
+        timeout: SPAWN_TIMEOUT_MS,
+        maxBuffer: 256 * 1024 * 1024,
+    }).split("\n"),
+);
 
-/** All backticked inline-code spans in a markdown file. */
+/** All backticked inline-code spans in a markdown file, outside fenced blocks. */
 function backtickedTokens(text: string): string[] {
     const out: string[] = [];
-    for (const m of text.matchAll(/`([^`\n]+)`/g)) {
+    for (const m of text.replaceAll(/```[\s\S]*?```/g, "").matchAll(/`([^`\n]+)`/g)) {
         if (m[1] !== undefined) out.push(m[1]);
     }
     return out;
 }
 
-// A token treated as "this tracked source file exists". Conservative: repo-root
-// anchored (first segment is a real top-level dir), ends in a source extension,
-// carries no glob/placeholder metachars, and is not a build-output/dependency path.
-const SOURCE_EXT = /\.(ts|svelte|scm|sh|mjs)$/;
-const OUTPUT_OR_DEP = /^(client|server|format|binary|transpilers)\/out\/|(^|\/)node_modules\//;
-function isSourcePathClaim(tok: string): boolean {
-    if (!tok.includes("/")) return false;
-    if (/[*{}<>|\s]/.test(tok)) return false;
-    if (!topLevelDirs.has(tok.split("/")[0] ?? "")) return false;
-    if (OUTPUT_OR_DEP.test(tok)) return false;
-    return SOURCE_EXT.test(tok);
+const SOURCE_EXT = /\.(ts|mts|svelte|scm|sh|mjs|js|css|json|yml|yaml|py)$/;
+const OUTPUT_OR_DEP = /(^|\/)out\/|(^|\/)node_modules\//;
+
+/** A backticked token shaped like a source path, whether or not this guard can anchor it. */
+function looksLikeSourcePath(tok: string): boolean {
+    return tok.includes("/") && SOURCE_EXT.test(tok);
 }
+
+/**
+ * The tracked paths a token could mean, or null when it is not a path claim this guard checks: it must end
+ * in a source extension, carry no glob/placeholder metachars, not point into build output or dependencies,
+ * and its FIRST segment must be a real directory at the repo root or beside the doc. Anchoring on the first
+ * segment rather than the parent is what catches a renamed directory: a doc still citing
+ * `client/src/dialog-tree/panel.ts` anchors on `client` and fails, where a parent-directory anchor would skip
+ * it because `client/src/dialog-tree` no longer exists. A leading `./` is dropped and anchored the same way,
+ * since prose uses it for "from the repo root" (`./scripts/x.sh`) as often as for "beside this file".
+ */
+function pathCandidates(doc: string, tok: string): string[] | null {
+    if (!looksLikeSourcePath(tok) || /[*{}<>|\s$]/.test(tok) || OUTPUT_OR_DEP.test(tok)) return null;
+    const bare = tok.startsWith("./") ? tok.slice(2) : tok;
+    const first = bare.split("/")[0] ?? "";
+    const docDir = path.posix.dirname(doc);
+    const candidates: string[] = [];
+    if (trackedDirs.has(first)) candidates.push(bare);
+    if (docDir !== "." && trackedDirs.has(path.posix.join(docDir, first))) {
+        candidates.push(path.posix.normalize(path.posix.join(docDir, bare)));
+    }
+    return candidates.length > 0 ? candidates : null;
+}
+
+// A function or method cited as `name()` or `obj.name()`; the last identifier is the one checked.
+const SYMBOL_RE = /^(?:[A-Za-z_$][\w$]*\.)*([A-Za-z_$][\w$]*)\(\)$/;
 
 // bgforge / bgforge-mls command and method ids the docs may cite.
 const COMMAND_RE = /^(bgforge\.[\w.-]+|extension\.bgforge\.[\w.-]+|bgforge-mls\/[\w.-]+)$/;
@@ -74,24 +123,59 @@ function commandIsKnown(cmd: string): boolean {
     return prefix.length > 0 && codeMentions.includes(`"${prefix}"`);
 }
 
-describe("public doc references resolve", () => {
-    for (const doc of DOCS) {
-        const tokens = backtickedTokens(read(doc));
+const claims = DOCS.map((doc) => {
+    const tokens = [...new Set(backtickedTokens(fs.readFileSync(doc, "utf8")))];
+    const absent = INTENTIONALLY_ABSENT[doc] ?? [];
+    return {
+        doc,
+        paths: tokens.flatMap((tok) => {
+            const candidates = absent.includes(tok) ? null : pathCandidates(doc, tok);
+            return candidates ? [{ tok, candidates }] : [];
+        }),
+        symbols: tokens.flatMap((tok) => {
+            const name = SYMBOL_RE.exec(tok)?.[1];
+            return name === undefined ? [] : [{ tok, name }];
+        }),
+        commands: tokens.filter((t) => COMMAND_RE.test(t)),
+        // Path-shaped tokens no anchor reaches (globs, placeholders, shorthand like `core/x.ts`), counted so
+        // a shrinking guard shows up in the run instead of passing silently.
+        skippedPaths: tokens.filter((t) => looksLikeSourcePath(t) && !absent.includes(t) && !pathCandidates(doc, t)),
+    };
+});
+const checkedPathCount = claims.flatMap((c) => c.paths).length;
+const skippedPathCount = claims.flatMap((c) => c.skippedPaths).length;
 
-        const pathClaims = [...new Set(tokens.filter((t) => isSourcePathClaim(t)))];
-        it.each(pathClaims)(`${doc}: source path \`%s\` is tracked`, (p) => {
-            expect(trackedFiles.has(p), `${doc} cites ${p}, which is not a tracked file`).toBe(true);
+describe("doc references resolve", () => {
+    for (const { doc, paths, symbols, commands } of claims) {
+        it.each(paths)(`${doc}: source path $tok is tracked`, ({ tok, candidates }) => {
+            expect(
+                candidates.some((c) => trackedFiles.has(c)),
+                `${doc} cites ${tok}, which is not a tracked file`,
+            ).toBe(true);
         });
 
-        const commandClaims = [...new Set(tokens.filter((t) => COMMAND_RE.test(t)))];
-        it.each(commandClaims)(`${doc}: command \`%s\` is used in code`, (cmd) => {
+        it.each(symbols)(`${doc}: symbol $tok appears in code`, ({ tok, name }) => {
+            expect(codeWords.has(name), `${doc} cites ${tok}, but no tracked code mentions ${name}`).toBe(true);
+        });
+
+        it.each(commands)(`${doc}: command %s is used in code`, (cmd) => {
             expect(commandIsKnown(cmd), `${doc} cites command ${cmd}, absent from tracked source`).toBe(true);
         });
     }
 
-    it("actually checked some references (extractors are not silently empty)", () => {
-        const all = DOCS.flatMap((doc) => backtickedTokens(read(doc)));
-        expect(all.filter((t) => isSourcePathClaim(t)).length).toBeGreaterThan(0);
-        expect(all.filter((t) => COMMAND_RE.test(t)).length).toBeGreaterThan(0);
+    it(`actually checked some references: ${checkedPathCount} source paths checked, ${skippedPathCount} path-shaped tokens skipped as unanchored`, () => {
+        expect(checkedPathCount).toBeGreaterThan(skippedPathCount);
+        expect(claims.flatMap((c) => c.symbols).length).toBeGreaterThan(0);
+        expect(claims.flatMap((c) => c.commands).length).toBeGreaterThan(0);
+    });
+
+    it("every intentionally-absent path is still absent and still cited", () => {
+        for (const [doc, tokens] of Object.entries(INTENTIONALLY_ABSENT)) {
+            const cited = backtickedTokens(fs.readFileSync(doc, "utf8"));
+            for (const tok of tokens) {
+                expect(trackedFiles.has(tok), `${tok} now exists; drop it from INTENTIONALLY_ABSENT`).toBe(false);
+                expect(cited, `${doc} no longer cites ${tok}; drop it from INTENTIONALLY_ABSENT`).toContain(tok);
+            }
+        }
     });
 });

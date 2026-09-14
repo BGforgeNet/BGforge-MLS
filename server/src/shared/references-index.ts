@@ -1,7 +1,7 @@
 /**
  * Cross-file references index for workspace-wide Find References.
  *
- * Maps symbolName -> uri -> Location[] across all indexed files.
+ * Maps uri -> symbolName -> Location[] across all indexed files; a lookup walks every file's map.
  * Populated at startup during workspace scan, updated incrementally
  * via reloadFileData when files change.
  */
