@@ -1,4 +1,14 @@
 import { getSnapshotPath } from "@bgforge/binary";
+import type { Response } from "@bgforge/binary-editor";
+
+/** The snapshot JSON out of a worker reply. Throws on anything else, so a failed snapshot never reaches disk as an
+ *  empty sidecar. */
+export function snapshotJsonFrom(response: Response): string {
+    if (response.type !== "snapshot") {
+        throw new Error(response.type === "error" ? response.message : "Failed to create JSON snapshot");
+    }
+    return response.json;
+}
 
 export interface SaveWrite {
     path: string;

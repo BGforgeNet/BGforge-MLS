@@ -401,10 +401,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         primaryDestination: vscode.Uri,
     ): Promise<void> {
         const bytes = await document.getBytes();
-        const snapshotJson = await document.getSnapshotJson();
         const autoDumpJson = vscode.workspace
             .getConfiguration("bgforge.binaryEditor")
             .get<boolean>("autoDumpJson", false);
+        // Only asked for when it will be written, and before any write, so a snapshot failure fails the save
+        // whole rather than leaving the file saved beside an empty or stale sidecar.
+        const snapshotJson = autoDumpJson ? await document.getSnapshotJson() : "";
         for (const write of planSave({ targetPath, bytes, snapshotJson, autoDumpJson })) {
             // The primary artifact reuses the caller's URI (preserving its scheme); the sidecar derives from
             // that same destination, through the one helper that owns the scheme rule.

@@ -127,11 +127,11 @@
         <BetaNotice />
         <div class="toolbar-actions">
             <button class="toolbar-btn" onclick={() => bridge.dumpJson()}
-                    title="Export the current file contents as JSON to a new editor tab">
+                    title="Write the editor's contents, unsaved edits included, as a JSON sidecar (name.ext.json)">
                 <Icon name="export" /><span class="toolbar-btn-label">Dump JSON</span>
             </button>
             <button class="toolbar-btn" onclick={() => bridge.loadJson()}
-                    title="Import JSON from the active editor tab and apply it to the file">
+                    title="Apply the JSON sidecar (name.ext.json) to the editor as an undoable edit">
                 <Icon name="go-to-file" /><span class="toolbar-btn-label">Load JSON</span>
             </button>
         </div>

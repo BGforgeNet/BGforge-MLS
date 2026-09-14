@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planSave } from "../../src/binary-editor/save";
+import { planSave, snapshotJsonFrom } from "../../src/binary-editor/save";
 
 const bytes = new Uint8Array([1, 2, 3]);
 
@@ -17,5 +17,23 @@ describe("planSave", () => {
         expect(sidecar).toBeDefined();
         if (!sidecar) return;
         expect(Buffer.from(sidecar.bytes).toString("utf8")).toBe('{"a":1}');
+    });
+});
+
+describe("snapshotJsonFrom", () => {
+    it("returns the snapshot JSON from a snapshot reply", () => {
+        expect(snapshotJsonFrom({ type: "snapshot", json: '{"a":1}' })).toBe('{"a":1}');
+    });
+
+    it("throws the worker's message on an error reply instead of yielding an empty sidecar", () => {
+        expect(() => snapshotJsonFrom({ type: "error", message: "No format adapter for x" })).toThrow(
+            "No format adapter for x",
+        );
+    });
+
+    it("throws on a reply of the wrong kind", () => {
+        expect(() => snapshotJsonFrom({ type: "serialized", bytes: new Uint8Array() })).toThrow(
+            "Failed to create JSON snapshot",
+        );
     });
 });
