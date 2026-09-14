@@ -30,7 +30,7 @@ export default defineConfig({
             // workspace sources this config aliases in (binary/src, image/src) instead of restricting it.
             include: ["animation/src/**/*.ts"],
             // Round floors a point under the measured actuals, so a real regression trips them while a
-            // refactor that shifts the ratio a fraction does not. See docs/architecture.md "Coverage
+            // refactor that shifts the ratio a fraction does not. See docs/development.md "Coverage
             // thresholds" for when they move. set-stances.ts measures lower here than it did in the client,
             // because the client's set-viewer suite also drives it and stayed behind - that coverage is real
             // but is counted against neither package's sources, so these floors understate what is exercised.

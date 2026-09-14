@@ -199,7 +199,7 @@ function resourceWidth(row: Row): DropdownWidth {
 
 // ---- the single width-class classifier every renderer applies ----
 /**
- * The display-width CSS class for a field's value control: dropdowns use the `dd-{1..5}` scale (sized to
+ * The display-width CSS class for a field's value control: dropdowns use the `dd-{1..6}` scale (sized to
  * their own longest option), text inputs the `tier-{s,m,ml,l}` scale, and flag grids (full-width) get none.
  *
  * This is the ONE place that maps a row to its width class, applied by BOTH the field layout (Field.svelte)

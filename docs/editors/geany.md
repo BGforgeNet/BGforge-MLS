@@ -23,7 +23,9 @@ Download `bgforge-mls-geany-<version>.zip` from the [latest GitHub release](http
 - **Linux/macOS**: `~/.config/geany/filedefs/`
 - **Windows**: `%APPDATA%\geany\filedefs\`
 
-Restart Geany after installing. The definitions provide keyword, function, and constant highlighting plus comment and string coloring via the C lexer. The zip also includes a highlight-only definition (no LSP provider) for WeiDU TRA (`.tra`, C lexer for comments).
+Restart Geany after installing. The definitions provide keyword, function, and constant highlighting plus comment
+and string coloring via the C lexer. The zip also includes definitions for WeiDU TRA (`.tra`, C lexer for comments)
+and Fallout Worldmap (`worldmap.txt`).
 
 Note: `.h` files default to C++ in Geany. For Fallout header files, select the filetype manually via `Document > Set Filetype`.
 
@@ -55,7 +57,15 @@ lang_id_mappings=weidu-tp2;*.tp2;weidu-tp2;*.tpa;weidu-tp2;*.tph;weidu-tp2;*.tpp
 [fallout-worldmap-txt]
 cmd=bgforge-mls-server --stdio
 lang_id_mappings=fallout-worldmap-txt;worldmap.txt
+
+[weidu-tra]
+cmd=bgforge-mls-server --stdio
+lang_id_mappings=weidu-tra;*.tra
 ```
+
+For TRA the server provides formatting, outline, folding and parse-error diagnostics. It also serves MSG, 2DA,
+`scripts.lst`, `weidu.log`, SLB and Sword Coast Stratagems SSL, but the zip defines no Geany filetypes for them, and
+the LSP Client plugin configures servers per filetype.
 
 Note: If `bgforge-mls-server` is not on your system PATH, use the full path to the executable.
 
@@ -65,7 +75,9 @@ If you write `.tssl` or `.td` transpiler files, the server package includes Type
 
 ## Settings
 
-The LSP Client plugin supports `initialization_options` for passing settings to the server. Add to each language section:
+The server does not read LSP initialization options; it requests its settings with `workspace/configuration`. The
+LSP Client plugin answers that request from the JSON in `initialization_options`, looking up the requested `bgforge`
+section in it, so settings placed there under a `bgforge` key reach the server. Add to each language section:
 
 ```ini
 [fallout-ssl]
@@ -87,6 +99,11 @@ initialization_options={"bgforge": {"validate": "saveAndType", "weidu": {"path":
 cmd=bgforge-mls-server --stdio
 lang_id_mappings=weidu-tp2;*.tp2;weidu-tp2;*.tpa;weidu-tp2;*.tph;weidu-tp2;*.tpp
 initialization_options={"bgforge": {"validate": "saveAndType", "weidu": {"path": "weidu", "gamePath": ""}}}
+
+[weidu-tra]
+cmd=bgforge-mls-server --stdio
+lang_id_mappings=weidu-tra;*.tra
+initialization_options={"bgforge": {"diagnostics": true}}
 ```
 
 Alternatively, put the JSON in a file and reference it:

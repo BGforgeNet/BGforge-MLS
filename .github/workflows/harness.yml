@@ -5,7 +5,7 @@ name: "Harness"
 # gates - catching render/mount/CSP/layout regressions the node/jsdom vitest suites cannot see.
 #
 # Kept in its OWN job rather than the main "Build" gate so the Chromium download (~150MB) and the browser
-# runs add no wall-clock to every other check. See the harness READMEs and docs/architecture.md.
+# runs add no wall-clock to every other check. See the harness READMEs and docs/development.md.
 
 on:
   pull_request:

@@ -152,9 +152,9 @@ function parseInventoryHeaderGroup(data: Uint8Array, offset: number): { group: P
 
 /**
  * Decode the per-subtype trailing payload that follows the 4-byte data flags
- * for an Item record. Field shapes mirror fallout2-ce `proto.cc:objectDataRead`
- * (lines 583-599): armor/container/drug carry no trailer; weapon, ammo, misc,
- * and key each carry their type-specific int32 fields.
+ * for an Item record. Field shapes mirror what the Fallout 2 engine reads at map
+ * load: armor/container/drug carry no trailer; weapon, ammo, misc, and key each
+ * carry their type-specific int32 fields.
  *
  * Returns the new cursor offset and the field list to splice into the object
  * group. Caller is responsible for resolving `subType` (typically via the
@@ -183,8 +183,8 @@ export function decodeItemSubtypeTrailer(
 }
 
 /**
- * Decode the per-subtype trailing payload for a Scenery record. Mirrors
- * fallout2-ce `proto.cc:objectDataRead` (lines 605-633). Ladders read 8 bytes
+ * Decode the per-subtype trailing payload for a Scenery record. Mirrors what
+ * the Fallout 2 engine reads at map load. Ladders read 8 bytes
  * on v20 (Fallout 2) but only 4 bytes on v19 (Fallout 1, builtTile only).
  */
 export function decodeScenerySubtypeTrailer(
@@ -332,8 +332,8 @@ function parseObjectAt(
             currentOffset += 16;
         } else if (pidType === PID_TYPE_ITEM || pidType === PID_TYPE_SCENERY) {
             // Item / Scenery records carry a subtype-keyed payload after the data
-            // header whose layout fallout2-ce determines via `proto->item.type` /
-            // `proto->scenery.type` (proto.cc:objectDataRead). PROs are not
+            // header whose layout the engine determines from the item or scenery
+            // subtype in the referenced proto. PROs are not
             // packaged alongside `.map` files in user mod trees, so we resolve
             // the subtype through a precomputed pid lookup. Unresolved pids
             // (modded territory not in the bundled table) keep the legacy

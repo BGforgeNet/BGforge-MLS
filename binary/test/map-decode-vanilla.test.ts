@@ -113,9 +113,9 @@ describe("vanilla MAP item/scenery decode via bundled pidtypes resolver", () => 
     });
 
     it("newr2 keeps an objects-tail even with full proto coverage (engine-unloadable record)", () => {
-        // newr2.map contains an object-array record fallout2-ce itself can't
-        // load: a parent with pid=-1 (Type255) whose inventory references an
-        // item with pid=0, which `protoGetProto` would fail on. The parser
+        // newr2.map contains an object-array record the Fallout 2 engine itself
+        // can't load: a parent with pid=-1 (Type255) whose inventory references an
+        // item with pid=0, whose proto lookup would fail. The parser
         // bails at that record and captures the rest opaquely so the file
         // still round-trips byte-identically. This test pins that contract:
         // a future change that "fixes" the lock by silently advancing past

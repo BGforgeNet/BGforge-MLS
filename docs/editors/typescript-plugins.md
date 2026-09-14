@@ -45,3 +45,8 @@ These plugins are loaded by tsserver, which runs independently of the LSP server
 - **Emacs**: Works with `tide` or `lsp-mode` TypeScript support
 - **Sublime Text**: Works with the `LSP-typescript` package
 - **Helix**: Works with `typescript-language-server`
+- **Zed**: Works with its TypeScript servers, `vtsls` (the default) or `typescript-language-server`
+- **Kate**: Works with `typescript-language-server`, which the LSP Client's default configuration uses for TypeScript
+- **Geany**: Works with `typescript-language-server`, which the LSP Client plugin's default configuration uses for
+  TypeScript
+- **Notepad++**: Works with `typescript-language-server` added as a server in NppLspClient

@@ -73,7 +73,7 @@ gate and the sibling to copy: `docs/development.md`.
   `showWarning()`, `showError()`, `showErrorWithActions()` from `user-messages.ts`. Enforced by an oxlint rule.
 - **Webview CSP:** `style-src` must include `{{cspSource}}`, not a bare nonce - the real panel silently drops a
   nonce-only stylesheet while headless renders still pass. Load CSS as `webview.asWebviewUri()` `<link>`, keep the
-  nonce for `script-src`, add each CSS dir to `localResourceRoots`. Why: `docs/architecture.md` (Webview CSP).
+  nonce for `script-src`, add each CSS dir to `localResourceRoots`. Why: the header of `client/src/webview-html.ts`.
   Guard: `client/test/webview-csp.test.ts`.
 
 ## Generated files - never hand-edit

@@ -30,9 +30,9 @@ const documentSettings: Map<NormalizedUri, Thenable<MLSsettings>> = new Map();
  * Start whichever ts-morph worker this document will need, on open rather than at server start.
  *
  * Each worker costs resident memory and thread and ts-morph setup, and a workspace with no
- * TypeScript-transpiler sources never uses either - so starting both unconditionally charged every
+ * TypeScript-transpiler sources never uses either - so starting both unconditionally would charge every
  * session for a feature most never reach. Opening still precedes the first compile by a debounce at
- * minimum (nothing here compiles), so the head start the prewarm exists for survives the move.
+ * minimum (nothing here compiles), so starting on open keeps the head start the prewarm exists for.
  *
  * Keyed on the file extension, not the language id: .tssl/.tbaf/.td all register as `typescript`, so a
  * language-id gate would fire on any plain .ts file in the workspace. Both calls are idempotent.

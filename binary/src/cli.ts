@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * CLI tool to parse Fallout PRO and MAP binary files and output structured JSON.
- * Also supports loading JSON back to binary via --load.
- * Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [-r] [-q]
+ * CLI tool to parse the binary formats in `parserRegistry` (Fallout PRO/MAP, Infinity Engine ITM/SPL/EFF/CRE/DLG)
+ * and output structured JSON. Also supports loading JSON back to binary via --load.
+ * Usage: fgbin <file|dir> [--save] [--check] [--load] [-r] [-q]
  */
 
 import * as fs from "fs";
@@ -178,15 +178,17 @@ async function processFile(
     });
 }
 
-const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
-  --save    Save parsed JSON alongside the binary file (.pro.json/.map.json)
+const HELP = `Usage: fgbin <file|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
+  Supported files: ${EXTENSIONS.join(", ")}
+  --save    Save parsed JSON alongside the binary file (file.pro -> file.pro.json)
   --check   Compare parsed output against existing JSON snapshot (exit 1 if diff)
   --load    Load JSON and write binary using the parser's native extension
   --extensions    Print supported file extensions (one per line) and exit
   --parse-only    Parse and report errors without building the JSON snapshot; exit code is the verdict.
                   For corpus sweeps that only check that files parse. Not valid with --save/--check/--load.
-  --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict;
-                  required again on --load for JSON snapshots created from ambiguous MAP bytes)
+  --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict).
+                  Not used by --load: a MAP snapshot reloads permissively only when it carries an
+                  objects-tail opaque range
   --proto-dir <dir>  Load MAP proto subtype overrides from <dir>/{items,scenery} instead of the
                      default sibling <mapDir>/../proto/. Affects MAP inputs only; errors if <dir>
                      is missing. Other formats (.pro/.itm/...) ignore it.
@@ -203,8 +205,8 @@ Examples:
   fgbin file.pro.json --load      # Convert JSON back to binary (.pro/.map/etc.)
   fgbin world.map --proto-dir mods/foo/proto
                                    # Decode MAP object subtypes against a non-sibling proto/ tree
-  fgbin sfsheng.map.json --load --graceful-map
-                                   # Reload an ambiguous MAP snapshot saved with --graceful-map`;
+  fgbin sfsheng.map --save --graceful-map
+                                   # Snapshot an ambiguous MAP; --load on the snapshot needs no flag`;
 
 /**
  * Load a JSON file and serialize it back to binary format.

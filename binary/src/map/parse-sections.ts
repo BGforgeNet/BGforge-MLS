@@ -280,8 +280,9 @@ export function parseScripts(
         // Label the list by its scripts' actual SID type, not the read index. Fallout maps omit the global
         // `system` list (system scripts are not map-bound), so the on-disk lists are spatial/timed/item/critter
         // (types 1-4); labelling by read index would name them system/spatial/timer/item (0-3), one off. Each
-        // list is homogeneous (the engine stores gScriptLists[SID_TYPE(sid)]), so the first slot's type names
-        // the list. An empty list has no slot to read, so fall back to the index+1 mapping (also types 1-4).
+        // list is homogeneous (the engine files each script into the list for its SID type), so the first slot's
+        // type names the list. An empty list has no slot to read, so fall back to the index+1 mapping (also types
+        // 1-4).
         const listType =
             count > 0 && currentOffset + 4 <= data.length
                 ? getScriptType(new DataView(data.buffer, data.byteOffset + currentOffset, 4).getUint32(0, false))

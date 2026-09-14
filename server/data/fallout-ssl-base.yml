@@ -1046,7 +1046,7 @@ base_functions:
         Returns a pointer to the source object (activator) for this action. The source object for a pickup_proc (pickup an object script_action) would be the critter picking the object up, for instance.
 
     # https://github.com/sfall-team/sfall/blob/a89e6723552c39a4522c8572260f1ca1ec3cc924/artifacts/ddraw.ini#L733
-    # https://github.com/alexbatalov/fallout2-ce/blob/31afb4d56817a7473c949aafd9070bd3a26a9d7b/src/interpreter_extra.cc#L1897
+    # The LVAR 0 mood check described below is the Fallout 2 engine's own handling of this call.
     - name: start_gdialog
       detail: void start_gdialog(int msgFileNum, ObjectPtr who, int mood, int headNum, int backgroundIdx)
       doc: |-

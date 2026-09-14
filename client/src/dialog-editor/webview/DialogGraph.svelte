@@ -104,7 +104,7 @@
     let highlightedBranchKey = $state<string | null>(null);
     // The editor's selection is ONE state plus at most one mutually-exclusive UI sub-mode. `select` is the
     // single setter that writes the whole tuple (`selected` + the five flags above) coherently, so no entry
-    // point hand-resets a subset - the co-varying-state-one-setter rule (architecture.md). Modelled as a
+    // point hand-resets a subset and leaves the fields disagreeing. Modelled as a
     // discriminated union so an impossible combination (editing an option AND renaming the node) can't be
     // expressed. Adding a sub-mode is a one-line change here, not an edit spread across every selection site.
     type Selection =

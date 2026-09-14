@@ -1,549 +1,337 @@
 # Server Internals
 
-See also: [docs/development.md](../docs/development.md) | [docs/architecture.md](../docs/architecture.md) | [scripts/README.md](../scripts/README.md)
+See also: [docs/development.md](../docs/development.md) | [docs/architecture.md](../docs/architecture.md) |
+[scripts/README.md](../scripts/README.md)
 
-LSP server providing IDE features for niche scripting languages used in classic RPG modding.
+Internals of the LSP server, for contributors working in `server/`. How the server fits into the rest of the system
+is [docs/architecture.md](../docs/architecture.md); the wire contract for clients is
+[docs/lsp-api.md](../docs/lsp-api.md). Module detail lives in each module's header comment, which this page points
+at rather than restates.
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Directory Map](#directory-map)
+- [Startup and Lifecycle](#startup-and-lifecycle)
+- [Request Routing](#request-routing)
+- [Provider Capabilities](#provider-capabilities)
+- [Symbols and Indexes](#symbols-and-indexes)
+- [Diagnostics](#diagnostics)
+- [Worker Threads](#worker-threads)
+- [Translation](#translation)
+- [IE Resources and Strrefs](#ie-resources-and-strrefs)
+- [Dialog Editor, Server Side](#dialog-editor-server-side)
+- [Tree-Sitter Integration](#tree-sitter-integration)
+- [Feature Matrix](#feature-matrix)
+- [Latency Budgets](#latency-budgets)
+- [Testing](#testing)
+- [Adding a New Provider](#adding-a-new-provider)
 
 ## Overview
 
 ```
-+------------------+    IPC/stdio   +------------------+
-|   Editor Client  | <------------> |   LSP Server     |
-|                  |                |   (server.ts)    |
-+------------------+                +------------------+
-                                            |
-                                            v
-                                   +------------------+
-                                   | ProviderRegistry |
-                                   +------------------+
-                                            |
-              +-----------------------------+-----------------------------+
-              |              |              |              |              |
-              v              v              v              v              v
-        +---------+    +---------+    +---------+    +---------+    +---------+
-        | Fallout |    | WeiDU   |    | WeiDU   |    | WeiDU   |    | Fallout |
-        |   SSL   |    |   BAF   |    |    D    |    |   TP2   |    |Worldmap |
-        +---------+    +---------+    +---------+    +---------+    +---------+
-```
-
-## Core Concepts
-
-### Single Source of Truth: Symbols
-
-Symbols from headers and static data are stored in a unified index:
-
-- **Static Symbols** (global) - Built-in functions from YAML/JSON (e.g., COPY_EXISTING)
-- **Workspace Symbols** - From .h/.tph header files, indexed via `reloadFileData()`
-- **Local Symbols** - Current file's variables, computed on-demand via `localCompletion()` and `extractLocalSymbols()`. Both skip phantom assignment nodes created by tree-sitter error recovery (see `isPhantomAssignment()` in `tree-utils.ts`).
-
-**No duplication by design**: When querying completions, `getCompletions(uri)` passes `excludeUri` to skip the current file's indexed symbols. Local symbols are always computed fresh from the editor buffer. This ensures each symbol has exactly one source.
-
-**Null for missing data**: Static symbols have `location: null` and `source.uri: null` (not empty strings). This is enforced at input time by `static-loader.ts`, and TypeScript ensures null checks at all usage sites. Use `lookupDefinition()` for go-to-definition - it returns `null` for static symbols.
-
-### Pre-Computed Responses
-
-LSP responses are computed once at parse time, not on each request:
-
-```
-Header File Change
-       |
-       v
-  +---------+       +------------------+
-  | Parser  | ----> | IndexedSymbol    |
-  +---------+       |------------------|
-                    | .name            |
-                    | .location        |
-                    | .completion  <------- Ready for getCompletions()
-                    | .hover       <------- Ready for getHover()
-                    | .signature   <------- Ready for getSignature()
-                    +------------------+
-```
-
-## Directory Structure
-
-```
-server/src/
-|
-+-- server.ts                 # LSP entry point: connection setup, debouncer wiring, handler registration
-+-- provider-registry.ts      # Routes requests to providers
-+-- language-provider.ts      # Provider interface
-|
-+-- handlers/                 # Per-feature LSP request handlers (extracted from server.ts)
-|   +-- context.ts            # HandlerContext: shared dependencies passed to each handler
-|   +-- initialize.ts         # onInitialize / onInitialized
-|   +-- config.ts             # Configuration change handlers
-|   +-- document-lifecycle.ts # onDidOpen / onDidChange / onDidSave / onDidClose
-|   +-- completion.ts         # onCompletion + onCompletionResolve
-|   +-- hover.ts              # onHover
-|   +-- definition.ts         # onDefinition
-|   +-- references.ts         # onReferences
-|   +-- rename.ts             # onPrepareRename + onRenameRequest
-|   +-- rename-suppression.ts # Suppresses rename feedback during in-flight workspace edits
-|   +-- symbols.ts            # onDocumentSymbol + onWorkspaceSymbol
-|   +-- formatting.ts         # onDocumentFormatting
-|   +-- signature.ts          # onSignatureHelp
-|   +-- folding.ts            # onFoldingRanges
-|   +-- selection-range.ts    # onSelectionRanges
-|   +-- inlay-hints.ts        # inlayHint.on
-|   +-- semantic-tokens.ts    # semanticTokens.on
-|   +-- code-action.ts        # onCodeAction - quick fixes for diagnostics
-|   +-- execute-command.ts    # onExecuteCommand + dialog editor commands
-|
-+-- core/
-|   +-- symbol.ts             # IndexedSymbol type definitions
-|   +-- symbol-index.ts       # Symbols class - unified storage & query
-|   +-- static-loader.ts      # Loads built-in symbols from JSON
-|   +-- normalized-uri.ts     # Branded NormalizedUri type, URI encoding canonicalization
-|   +-- parse-result.ts       # ParseResult type used by compilation diagnostics
-|   +-- capabilities.ts       # Provider capability interfaces (FormattingCapability, SymbolCapability, etc.)
-|   +-- languages.ts          # Language IDs & file extensions
-|   +-- patterns.ts           # Regex patterns
-|   +-- location-utils.ts     # Position/range helpers
-|   +-- position-utils.ts     # Document position helpers
-|   +-- file-index.ts         # Per-extension URI index used by providers
-|   +-- file-watcher-manager.ts # File watcher subscriptions for indexed extensions
-|   +-- workspace-scanner.ts  # Initial workspace scan dispatcher
-|   +-- format-only-provider.ts # Lightweight provider base for format-only languages
-|   +-- compile-with-tmp-file.ts # Tmp-file lifecycle helper used by SSL/WeiDU compilers (with abort signal)
-|   +-- uri-debouncer.ts      # UriDebouncer<K>: per-URI scheduled callback with cancel/dispose
-|
-+-- fallout-ssl/              # Fallout 1/2 scripting
-|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
-|   +-- provider.ts
-|   +-- compiler.ts           # External / built-in sslc orchestration
-|   +-- header-parser.ts      # .h file parsing
-|   +-- symbol.ts             # DocumentSymbol extraction (procedures with param/var children)
-|   +-- symbol-definitions.ts # Built-in + project-wide symbol assembly
-|   +-- local-symbols.ts      # Per-file local symbol scan
-|   +-- completion-context.ts # Cursor-context classification for completion
-|   +-- definition.ts
-|   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
-|   +-- reference-finder.ts   # Scope-restricted reference finding (rename + references)
-|   +-- rename.ts             # Single-file + workspace-wide rename orchestration
-|   +-- symbol-scope.ts       # Scope determination (file vs procedure) for rename
-|   +-- scope-kinds.ts        # Scope-kind enum shared by rename/references
-|   +-- signature.ts
-|   +-- semantic-tokens.ts
-|   +-- jsdoc-format.ts       # JSDoc rendering for hover/completion
-|   +-- macro-utils.ts        # Macro expansion + deprecated-flag handling
-|   +-- utils.ts              # Tree-sitter helpers (parse + traversal)
-|
-+-- weidu-baf/                # WeiDU BAF scripts
-|   +-- provider.ts           # Format + compile only; BAF has no named symbols
-|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
-+-- weidu-d/                  # WeiDU dialog files
-|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
-|   +-- provider.ts
-|   +-- state-utils.ts        # Dialog-scoped state label utilities (shared by definition, rename, hover)
-|   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
-|   +-- reference-finder.ts   # Scope-restricted reference finding
-|   +-- rename.ts             # Dialog-scoped state label rename
-|   +-- definition.ts
-|   +-- hover.ts              # JSDoc hover for state labels
-|   +-- symbol.ts             # DocumentSymbol extraction
-|   +-- ast-utils.ts          # Tree-sitter helpers
-|   +-- file-parser.ts        # .d file parser (drives indexer)
-|   +-- dialog.ts             # Dialog editor integration (server/td/dialog.ts mirror)
-|   +-- dialog-utils.ts       # Dialog-tree shape helpers
-|   +-- dialog-modify.ts      # Dialog-tree mutators (used by webview-driven edits)
-+-- weidu-tp2/                # WeiDU mod installers
-|   +-- tree-sitter.d.ts      # Generated node-type declarations (imports SyntaxType)
-|   +-- syntax-type.ts        # Re-export shim of the shared SyntaxType enum
-|   +-- provider.ts
-|   +-- references.ts         # Find References (single-file + cross-file via ReferencesIndex)
-|   +-- reference-finder.ts   # Scope-restricted reference finding
-|   +-- rename.ts
-|   +-- definition.ts
-|   +-- hover.ts
-|   +-- hover-content.ts      # Hover markdown builders shared with header-parser
-|   +-- callable-symbols.ts   # FUNCTION/MACRO/ACTION definitions
-|   +-- callable-definitions.ts
-|   +-- variable-symbols.ts   # INT_VAR / STR_VAR definitions
-|   +-- local-symbols.ts      # Per-file scan
-|   +-- header-parser.ts      # External .tpa/.tph header parsing
-|   +-- symbol-discovery.ts   # Workspace-wide symbol assembly
-|   +-- symbol.ts
-|   +-- ast-utils.ts
-|   +-- tree-utils.ts
-|   +-- scope-kinds.ts
-|   +-- semantic-tokens.ts
-|   +-- snippets.ts
-|   +-- completion/           # Cursor-context-driven completion subsystem
-+-- weidu-log/                # WeiDU.log go-to-definition
-+-- infinity-2da/             # Infinity Engine 2DA semantic tokens
-+-- fallout-worldmap/         # Fallout worldmap.txt
-|
-+-- sslc/                     # Built-in WASM SSL compiler bridge (sslc-emscripten-noderawfs)
-+-- tssl/                     # TSSL dialog bridge (depends on tree-sitter + LSP)
-+-- td/                       # TD dialog bridge (depends on tree-sitter + LSP)
-+-- handlers/                 # Per-feature LSP request handlers (HandlerContext shared)
-|
-+-- shared/
-|   +-- references-index.ts   # ReferencesIndex for cross-file Find References
-|   +-- jsdoc.ts              # JSDoc parsing
-|   +-- jsdoc-completions.ts  # JSDoc-driven completion contribution
-|   +-- jsdoc-types.ts        # JSDoc type lookup
-|   +-- signature.ts          # Signature help utilities
-|   +-- semantic-tokens.ts    # Shared semantic-token helpers
-|   +-- folding-ranges.ts     # Shared folding-range helper
-|   +-- selection-ranges.ts   # Shared selection-range helper
-|   +-- format-edits.ts       # Document format-edit helpers
-|   +-- format-options.ts     # Format option resolution
-|   +-- comment-check.ts
-|   +-- completion-context.ts # Cross-language completion context types
-|   +-- fallout-types.ts      # Fallout-domain shared types
-|   +-- provider-helpers.ts   # Cross-provider utility helpers
-|   +-- static-data.ts        # Static map loader (game-data JSON)
-|   +-- text-cache.ts         # Version-keyed per-document parse cache
-|   +-- time-handler.ts       # Slow-request threshold wrapper
-|
-+-- translation.ts            # .tra/.msg translation service
-+-- compile.ts                # Compilation dispatch
-+-- user-messages.ts          # User-facing message wrappers (auto-decode file:// URIs)
-+-- settings.ts               # User settings
-+-- process-runner.ts         # Compiler-spawn helper (wrapper whitelist, shell-true guards)
-+-- logger.ts                 # Logging (routes through the LSP connection console)
-+-- path-utils.ts             # Filesystem path/containment/glob helpers
-```
-
-Cross-package note: the **root-level `shared/` workspace** (not `server/src/shared/`) owns the
-tree-sitter parser factory (`shared/parsers/parser-factory.ts`, `parser-manager.ts`) and the
-per-language parser facade modules. The server, the format CLI, and any future consumer all
-load parsers through that workspace - the server-internal `shared/` directory above is for
-cross-provider helpers, not parser bootstrap.
-
-## Data Flow
-
-### Initialization
-
-```
-Extension Activated
-       |
-       v
-+----------------+
-| server.ts      |
-| onInitialized  |
-+----------------+
-       |
-       v
-+------------------+     Sequential init     +------------------+
-| ParserManager    | ------------------->    | tree-sitter-     |
-| initAll()        |   (WASM constraint)     | {lang}.wasm      |
-+------------------+                         +------------------+
-       |
-       v
-+------------------+                         +------------------+
-| ProviderRegistry |  ------------------>    | Each Provider    |
-| init()           |                         | init()           |
-+------------------+                         +------------------+
-       |                                            |
-       v                                            v
-+------------------+                         +------------------+
-| Scan workspace   |                         | Load static      |
-| for headers      |                         | symbols (JSON)   |
-+------------------+                         +------------------+
-       |                                            |
-       v                                            v
-+------------------+                         +------------------+
-| Parse .h/.tph    |                         | Symbols          |
-| files            |                         | loadStatic()     |
-+------------------+                         +------------------+
-       |
-       v
-+------------------+
-| Symbols          |
-| updateFile()     |
-+------------------+
-```
-
-### Hover Request
-
-```
-                             onHover(position)
-                                    |
-                                    v
-                          +------------------+
-                          | Extract symbol   |
-                          | at position      |
-                          +------------------+
-                                    |
-                                    v
-    +---------------------------------------------------------------+
-    |                      Try in order:                             |
-    +---------------------------------------------------------------+
-    |                                                                |
-    |   1. Translation Hover                                         |
-    |   +------------------+                                         |
-    |   | translation      |  For @123, NOption(123), tra(N) refs   |
-    |   | .getHover()      |                                         |
-    |   +------------------+                                         |
-    |           |                                                    |
-    |           | null = not a translation reference                  |
-    |           v                                                    |
-    |   2. Local Hover (AST-based)                                   |
-    |   +------------------+                                         |
-    |   | provider.hover() |  Returns HoverResult discriminated      |
-    |   +------------------+  union (handled/notHandled)             |
-    |           |                                                    |
-    |           | handled=false = not found locally                   |
-    |           v                                                    |
-    |   3. Data Hover (unified symbol resolution)                    |
-    |   +------------------+                                         |
-    |   | resolveSymbol()  |  Local-first, then headers/static       |
-    |   | .hover           |  SSL: engine proc doc appended to       |
-    |   +------------------+  local procedure hover at build time    |
-    |                                                                |
-    +---------------------------------------------------------------+
-                                    |
-                                    v
-                          +------------------+
-                          | Return first     |
-                          | non-null result  |
-                          +------------------+
-```
-
-### Definition Request
-
-```
-                          onDefinition(position)
-                                    |
-                                    v
-    +---------------------------------------------------------------+
-    |                      Try in order:                             |
-    +---------------------------------------------------------------+
-    |                                                                |
-    |   1. Provider Definition (AST-based)                           |
-    |   +------------------+                                         |
-    |   | provider         |  SSL: procedures/macros/vars/exports/  |
-    |   | .definition()    |       #includes                        |
-    |   |                  |  TP2: variables/functions/INCLUDEs     |
-    |   +------------------+  D: dialog-scoped state labels          |
-    |           |                                                    |
-    |           | null = not found locally                            |
-    |           v                                                    |
-    |   2. Translation Definition                                    |
-    |   +------------------+                                         |
-    |   | translation      |  @123 -> line in .tra/.msg file        |
-    |   | .getDefinition() |                                         |
-    |   +------------------+                                         |
-    |           |                                                    |
-    |           | null = not a translation ref                        |
-    |           v                                                    |
-    |   3. Data Definition (from headers)                            |
-    |   +------------------+                                         |
-    |   | provider         |  Symbol location from indexed headers   |
-    |   | .getSymbolDefn() |  Returns null for static (no location)  |
-    |   +------------------+                                         |
-    |                                                                |
-    +---------------------------------------------------------------+
-```
-
-### File Change
-
-```
-Document Changed (debounced 300ms)
-              |
-              v
-    +------------------+
-    | Is watched file? |
-    | (.h, .tph, etc.) |
-    +------------------+
-         /          \
-       Yes           No
-        |             |
-        v             v
-+----------------+  +----------------+
-| provider       |  | Local symbols  |
-| .reloadFile()  |  | only (no index |
-+----------------+  | update)        |
-        |           +----------------+
+ LSP client (IPC or stdio)
+        |
         v
-+------------------+
-| Symbols          |   Symbol store (headers)
-| .updateFile()    |
-+------------------+
-| WsSymbolIndex    |   Workspace symbols (Ctrl+T)
-| .updateFile()    |
-+------------------+
-| ReferencesIndex  |   Cross-file references
-| .updateFile()    |
-+------------------+
+ src/server.ts ---------- creates the connection, debouncers and HandlerContext; registers handlers
+        |
+        v
+ src/handlers/*.ts ------ one module per LSP method group; each runs its own fallthrough chain
+        |          \
+        |           +---> ServerContext: translation service, configured game, settings
+        v
+ ProviderRegistry ------- resolves language id (and alias), normalizes URIs, dispatches
+        |
+        +--> fallout-ssl  weidu-baf  weidu-d  weidu-tp2           full providers
+        +--> fallout-worldmap-txt  weidu-log  infinity-2da        small providers
+        +--> weidu-tra  fallout-msg  fallout-scripts-lst          format-only providers
+        |    aliases: weidu-slb, weidu-ssl -> weidu-baf
+        |
+        +--> worker threads: ts-morph (TSSL compile; TD/TBAF transpile; TD/TSSL dialog parse), SSL compile
 ```
 
-## Symbol Type System
+The registered set and the aliases are in `src/handlers/initialize.ts`.
 
-### Discriminated Union
+Two conventions hold server-wide:
 
-`IndexedSymbol` is a union type where `.kind` determines available fields:
+- **URIs are normalized at the gateway.** `ProviderRegistry` passes every URI through `normalizeUri()`, and storage
+  keyed by URI takes the `NormalizedUri` branded type (`src/core/normalized-uri.ts`). Why:
+  [docs/architecture.md](../docs/architecture.md#uri-normalization-gateway-pattern).
+- **User-visible messages go through `src/user-messages.ts`**, which decodes `file://` URIs into readable paths;
+  an oxlint rule (`.oxlint/oxlint-plugin-no-showmessage.mjs`) rejects a direct `connection.window.show*Message()`.
+  Debug logs keep raw URIs.
 
-| Type              | Extra Field | Description                   |
-| ----------------- | ----------- | ----------------------------- |
-| `CallableSymbol`  | `.callable` | Functions, procedures, macros |
-| `VariableSymbol`  | `.variable` | Variables, parameters         |
-| `ConstantSymbol`  | `.constant` | Constant values               |
-| `StateSymbol`     | -           | Dialog states (D files)       |
-| `ComponentSymbol` | -           | TP2 mod components            |
+## Directory Map
 
-### Symbol Kinds
+Directory level only; each module's header says what it does.
 
-| Category   | Kind           | Example                    |
-| ---------- | -------------- | -------------------------- |
-| Callables  | `Function`     | DEFINE_ACTION_FUNCTION     |
-|            | `Procedure`    | SSL procedure              |
-|            | `Macro`        | #define, DEFINE\_\*\_MACRO |
-|            | `Action`       | WeiDU action (BAF/D/TP2)   |
-|            | `Trigger`      | WeiDU trigger (BAF/D)      |
-| Data       | `Variable`     | OUTER_SET, SET             |
-|            | `Constant`     | #define constant           |
-|            | `Parameter`    | INT_VAR, STR_VAR           |
-|            | `LoopVariable` | PHP_EACH iteration var     |
-| Structures | `State`        | Dialog state (D files)     |
-|            | `Component`    | TP2 mod component          |
+| Path                                                                             | Contents                                                                                                                                                                                  |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/server.ts`                                                                  | Entry point: connection, document manager, debouncers, handler registration, shutdown                                                                                                     |
+| `src/handlers/`                                                                  | LSP handlers, plus `context.ts` (the `HandlerContext` every handler receives)                                                                                                             |
+| `src/provider-registry.ts`, `src/language-provider.ts`                           | The registry, and the `LanguageProvider` type composed from `src/core/capabilities.ts`                                                                                                    |
+| `src/server-context.ts`, `src/lsp-connection.ts`, `src/settings-service.ts`      | Session state holders, populated at startup - see [Startup and Lifecycle](#startup-and-lifecycle)                                                                                         |
+| `src/settings.ts`, `src/server-capabilities.ts`                                  | Settings shape and normalization; the capabilities advertised in the initialize response                                                                                                  |
+| `src/core/`                                                                      | Symbol and file indexes, static data loading, capability interfaces, language ids, name case, workspace scan and file watching, compile lifecycle helpers                                 |
+| `src/shared/`                                                                    | Cross-provider helpers: references index, folding/selection/comment factories, JSDoc, signatures, semantic tokens, formatting edits, syntax diagnostics, parse scheduling, request timing |
+| `src/fallout-ssl/`, `src/weidu-baf/`, `src/weidu-d/`, `src/weidu-tp2/`           | Full language providers                                                                                                                                                                   |
+| `src/fallout-worldmap/`, `src/weidu-log/`, `src/infinity-2da/`                   | Small providers (worldmap completion and hover, WeiDU.log definition, 2DA tokens and format)                                                                                              |
+| `src/compile.ts`, `src/weidu-compile.ts`, `src/sslc/`                            | Compile dispatch, the WeiDU bridge, the WebAssembly `sslc` bridge                                                                                                                         |
+| `src/diagnostics.ts`, `src/diagnostic-store.ts`, `src/tree-sitter-validation.ts` | Compiler diagnostics, the per-source store, the syntax pass                                                                                                                               |
+| `src/worker/`, `src/transpile/`, `src/tssl/`                                     | Worker plumbing; the transpile worker client; the TSSL compiler client and its dialog parser                                                                                              |
+| `src/td/`                                                                        | The TD dialog source parser (ts-morph)                                                                                                                                                    |
+| `src/translation.ts`, `src/translation/`                                         | The translation service facade and its loader, features and write-back modules                                                                                                            |
+| `src/ie-resources/`                                                              | Configured game install, strref sites and strref hovers/hints                                                                                                                             |
+| `src/dialog.ts`                                                                  | The SSL dialog parser for the dialog editor                                                                                                                                               |
+| `shared/parsers/` (repo root)                                                    | Tree-sitter parser factory, manager and per-language facades, shared with `@bgforge/format`                                                                                               |
 
-### Scope Hierarchy
+## Startup and Lifecycle
 
-| Scope     | Visibility                                  |
-| --------- | ------------------------------------------- |
-| Global    | Built-in functions, always visible          |
-| Workspace | From headers (.h, .tph), visible everywhere |
-| File      | Current file only (script-scope variables)  |
-| Function  | Inside procedure/function body only         |
-| Loop      | Loop iteration variable (e.g., PHP_EACH)    |
+**`onInitialize`** (`src/handlers/initialize.ts`) does everything a request needs before the initialize response
+goes out, so the client never races a half-initialized server:
 
-Lookup precedence (highest to lowest): Loop > Function > File > Workspace > Global
+1. Reads `.bgforge.yml` project settings and starts the translation load, not awaited.
+2. Registers the tree-sitter parsers and loads them with `ParserManager.initAll()`.
+3. Registers the providers and aliases, then `registry.init()` initializes each provider in turn. The workspace
+   scan that fills the indexes starts after that in the background, held behind the translation load
+   (`scanAfter`); requests served before it finishes read a partial index. It logs
+   `LSP_LOG_WORKSPACE_SCAN_COMPLETE` when done - see [lsp-api.md](../docs/lsp-api.md).
+4. Builds the `ServerContext` and returns the capabilities from `src/server-capabilities.ts`.
 
-## Provider Interface
+**`onInitialized`** registers for configuration changes, fetches the real `bgforge` settings, and registers the
+file watchers built from each provider's `indexExtensions`.
 
-```typescript
-interface LanguageProvider {
-  id: string;
+**State holders.** `src/server-context.ts` holds the session state (settings, translation service, configured game)
+behind a barrier promise, so a handler that arrives before `onInitialize` finishes awaits instead of failing.
+`src/lsp-connection.ts` and `src/settings-service.ts` hold the connection and the per-document settings getter,
+so modules can reach them without importing `src/server.ts`.
 
-  // Lifecycle
-  init(context: ProviderContext): Promise<void>;
+**Settings** arrive through `workspace/configuration`. The session copy is refreshed in `onInitialized` and on
+`onDidChangeConfiguration` (`src/handlers/config.ts`), which pushes it into the registry's provider context too.
+Per-document settings are fetched with the document's scope and cached until the next configuration change
+(`makeGetDocumentSettings()` in `src/handlers/document-lifecycle.ts`).
 
-  // Gate: suppress features in comments
-  shouldProvideFeatures?(text, position): boolean;
+**Documents** (`src/handlers/document-lifecycle.ts`): open, change and save reload the provider's file data and the
+translation data, and run the diagnostic passes described under [Diagnostics](#diagnostics). Reloads on change
+are debounced per URI; a save cancels a pending compile and runs its own. Opening a `.tssl`, `.tbaf` or `.td`
+document starts the worker it will need. Watched-file events outside open documents go through
+`ProviderRegistry.handleWatchedFileChange()` (`src/core/file-watcher-manager.ts`), which calls `reloadFileData()`
+or `onWatchedFileDeleted()` on whichever provider claims the extension.
 
-  // AST-based features (parse current document)
-  format?(text, uri): FormatResult;
-  symbols?(text): DocumentSymbol[];
-  foldingRanges?(text): FoldingRange[];
-  selectionRanges?(text, positions): SelectionRange[];
-  definition?(text, position, uri): Location | null;
-  hover?(text, symbol, uri, position): HoverResult; // discriminated union
-  filterCompletions?(items, text, position, uri, trigger?): CompletionItem[];
-  localSignature?(text, symbol, paramIndex): SignatureHelp | null;
-  rename?(text, position, newName, uri): WorkspaceEdit | null;
-  prepareRename?(text, position): { range; placeholder } | null;
-  inlayHints?(text, uri, range): InlayHint[];
-  workspaceSymbols?(query): SymbolInformation[];
+**Shutdown** (`src/server.ts`) disposes the debouncers, aborts in-flight compiles and stops the two ts-morph workers.
 
-  // Data features (unified symbol resolution)
-  resolveSymbol?(name, text, uri): IndexedSymbol | undefined; // single lookup entry point
-  getCompletions?(uri): CompletionItem[];
-  getSignature?(uri, symbol, paramIndex): SignatureHelp | null;
-  getSymbolDefinition?(symbol): Location | null;
+## Request Routing
 
-  // File watching
-  indexExtensions?: string[];
-  reloadFileData?(uri, text): void;
-  onWatchedFileDeleted?(uri): void;
-  onDocumentClosed?(uri): void;
+`src/handlers/*.ts` receive the LSP requests. A handler resolves the document and asks `ProviderRegistry`, which
+maps the language id (resolving aliases), normalizes the URI and calls the provider method if the provider has
+one. Precedence between resolution sources is written at the handler, not in shared helpers, so each feature's
+order is explicit in one place.
 
-  // Compilation
-  compile?(uri, text, interactive): Promise<void>;
-}
-```
+**Hover** (`src/handlers/hover.ts`):
 
-**HoverResult**: Discriminated union replacing the ambiguous `Hover | null | undefined`:
+1. No word at the cursor, or the provider's feature gate says the cursor is in a comment: nothing.
+2. TLK strref under the cursor, for a language whose provider locates strrefs.
+3. Translation reference (`@123`, `mstr(123)`, `tra(123)`).
+4. The provider's own AST-based hover. It returns `HoverResult` (`src/core/capabilities.ts`), which separates
+   "nothing to show, stop" from "not mine, keep looking".
+5. Cursor inside a string: nothing. Otherwise the data hover, from `resolveSymbol()` over headers and static data.
 
-- `{ handled: true, hover: Hover }` - provider found a result (show it)
-- `{ handled: true, hover: null }` - provider handled it, nothing to show (block fallthrough)
-- `{ handled: false }` - provider didn't handle it, fall through to data-driven hover
+**Definition** (`src/handlers/definition.ts`): comment gate; the provider's AST-based definition; translation
+definition; then, outside strings, the symbol's indexed location.
 
-Factory helpers: `HoverResult.found(hover)`, `HoverResult.empty()`, `HoverResult.notHandled()`
+**Inlay hints** (`src/handlers/inlay-hints.ts`) merge the provider's hints, strref hints and translation hints
+rather than taking the first non-empty source, since one line can carry both kinds of reference.
+
+**Call hierarchy** (`src/handlers/call-hierarchy.ts`) stamps the language id on each prepared item, because the
+follow-up incoming/outgoing requests carry no document. The graphs are `src/fallout-ssl/call-hierarchy.ts` and
+`src/weidu-tp2/call-hierarchy.ts`.
+
+**Workspace symbols** aggregate every provider for a plain `workspace/symbol`. The
+`bgforge.workspaceSymbols.<languageId>` command scopes the search to one language, and the VS Code client sends
+it for the active editor's language - see [lsp-api.md](../docs/lsp-api.md).
+
+## Provider Capabilities
+
+A provider is `ProviderBase` plus any subset of the capability interfaces in `src/core/capabilities.ts`; each
+provider's `implements` clause says which. `src/core/format-only-provider.ts` builds the format-only providers.
+
+Shared behaviour reaches providers through factory functions configured per language (block types, comment
+types, return modes) in `src/shared/`, not through inheritance. The indexing lifecycle is shared too:
+`ProviderRegistry` owns the startup scan, watched-file handling and reload dispatch through `indexExtensions`, while
+each provider decides which indexed symbols are visible to fallback lookup, completion or rename.
+
+## Symbols and Indexes
+
+`Symbols` (`src/core/symbol-index.ts`) stores `IndexedSymbol`s (`src/core/symbol.ts`) per file, with the design
+principles in its header: file-level updates, immutable symbols, scope-aware queries, and responses (completion
+item, hover, signature) computed when a file is indexed rather than per request. `src/core/file-index.ts` keeps
+`Symbols` and the `ReferencesIndex` (`src/shared/references-index.ts`) in lockstep from each file's
+`ParseResult`. A symbol's source is one of:
+
+- **Static** - engine data, loaded by `loadStaticSymbols()` (`src/core/static-loader.ts`) from the JSON the
+  [data pipeline](../docs/data-pipeline.md) generates; it has no location.
+- **Workspace** - parsed from a header (`.h`, `.tph`); visible to hover, definition and completion fallback
+  everywhere.
+- **Navigation** - parsed from any other indexed file (an `.ssl` script, a `.tp2`); feeds workspace symbols and
+  cross-file navigation but never global fallback lookup, so one script's names do not resolve in another.
+
+Local symbols of the open document are computed from its text on request and the document's own indexed entry is
+excluded from completion (`excludeUri`), so a name has one source at a time.
+
+**Name case.** Symbol and reference keys fold per language (`src/core/name-case.ts`): Fallout SSL folds case, so
+cross-file lookups match any spelling; WeiDU D labels and TP2 names compare exactly.
+
+**References and rename.** Each language's `parseFile()` emits the file's references once, when it is indexed, so
+Find References and rename query `ReferencesIndex` instead of re-reading the workspace. Only file-scoped symbols get
+cross-file results; procedure-, function- and loop-scoped names stay single-file. Workspace-wide SSL rename uses
+the same index rather than an include graph, which is what catches a header using a symbol it does not include
+itself (`src/fallout-ssl/rename.ts`).
+
+Per-language implementations that look alike but encode different semantics:
+
+| Feature              | Why per-language                                                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Definition           | Different scoping models: SSL procedures and macros, TP2 functions and variables, D dialog-scoped labels                          |
+| Document symbols     | SSL has explicit `variable` declarations; TP2 keeps the first occurrence of each variable                                         |
+| Reference extraction | SSL indexes every identifier; TP2 only function and macro names; D uses `dialogFile:label` composite keys                         |
+| Rename               | SSL is workspace-wide for header symbols; TP2 and D rename within the file                                                        |
+| References           | SSL skips procedure-local shadows; D merges cross-file label references, returning only those when the label is defined elsewhere |
+| Folding              | Language-specific block node types passed to the shared `createFoldingRangesProvider()`                                           |
+
+**Tree-sitter error recovery.** Error recovery can fabricate valid-looking nodes from broken input. TP2 completion
+defends against phantom zero-width assignments in two layers; the reasoning and the alternatives considered are
+in `isPhantomAssignment()`'s JSDoc (`src/weidu-tp2/tree-utils.ts`). TP2 document symbols skip nodes with
+`hasError` but still recurse into their children.
+
+## Diagnostics
+
+Three producers publish diagnostics for one file, and `textDocument/publishDiagnostics` replaces a file's whole
+set on every send. `src/diagnostic-store.ts` therefore keeps one bucket per (URI, source) - `compiler`,
+`tree-sitter`, `translation` - and republishes the union on every change.
+
+**Syntax pass.** `src/tree-sitter-validation.ts` parses the document and publishes ERROR and MISSING nodes
+(`src/shared/tree-sitter-diagnostics.ts`) for every language with a registered parser, on change and save, gated
+by `bgforge.diagnostics` and independent of `bgforge.validate`. A large document coalesces the pass instead of
+running it per keystroke (`src/shared/parse-scheduling.ts`). Quick fixes (`src/handlers/code-action.ts`) act only
+on its MISSING-token diagnostics.
+
+**Translation pass.** Unresolved translation references, published on open, change and save beside the syntax
+pass.
+
+**Compilers.** `bgforge.validate` decides whether a compile runs on save, on type (debounced) or only on command.
+`compile()` in `src/compile.ts` routes to a provider's `compile()` or to the TypeScript-based chains; the handlers
+call it fire-and-forget through `src/handlers/compile-error.ts`.
+
+| Source       | Back end                                                                                                                                                                         | Where                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `.ssl`       | An external compiler (`bgforge.falloutSSL.compilePath`), else `bgforge.falloutSSL.compiler`: WebAssembly `sslc` in a forked process, or the extension's own compiler on a worker | `src/fallout-ssl/compiler.ts`, `src/sslc/`, `src/fallout-ssl/compile-worker.ts` |
+| `.baf`       | `bgforge.weidu.compiler`: WeiDU, or the extension's own BAF compiler (`compilers/bcs`) in-process                                                                                | `src/weidu-baf/diagnostics.ts`                                                  |
+| `.d`, `.tp2` | WeiDU `--parse-check`                                                                                                                                                            | `src/weidu-compile.ts`                                                          |
+| `.tssl`      | Compiled straight to INT on the TSSL worker; `.ssl` output only with `bgforge.tssl.emitSsl`                                                                                      | `src/tssl/compile-int.ts`                                                       |
+| `.tbaf`      | Transpiled on the transpile worker, then the `.baf` back end above                                                                                                               | `src/compile.ts`                                                                |
+| `.td`        | Transpiled on the transpile worker, then WeiDU when a WeiDU path and game path are set                                                                                           | `src/compile.ts`                                                                |
+
+The rules around the back ends live in the module headers: the tmp file beside the source and its watcher
+exclusion (`src/fallout-ssl/compiler.ts`), per-URI abort and tmp cleanup (`src/core/compile-with-tmp-file.ts`),
+queueing compiles that share a directory (`src/core/directory-gate.ts`), fallback diagnostics for unparseable
+output (`src/diagnostics.ts`), and WeiDU output parsing (`src/weidu-compile.ts`). A diagnostic reported against a
+transpiler's generated file is moved back onto the source line that produced it
+(`src/core/generated-diagnostics.ts`).
+
+## Worker Threads
+
+`src/worker/worker-client.ts` is the server side of every worker: start and keep the thread, match replies to
+requests, bound each request, fail in-flight work when the thread dies.
+
+- **ts-morph worker** (`src/worker/ts-morph-worker.ts`) - one bundle, two instances, so a dialog parse never
+  queues behind a TSSL compile. The TSSL compiler instance (`src/tssl/compile-worker-client.ts`) holds the
+  ts-morph project between compiles. The transpile instance (`src/transpile/transpile-worker-client.ts`) runs the
+  TD and TBAF transpilers and the TD and TSSL dialog parses. The compiler instance starts on the first open of a
+  `.tssl`, the transpile instance on the first open of a `.tbaf` or `.td` (`prewarmWorkerFor()` in
+  `src/handlers/document-lifecycle.ts`) or else on its first request, such as a TSSL dialog parse; both stop at
+  shutdown.
+- **SSL compile worker** (`src/fallout-ssl/compile-worker.ts`) - the extension's own SSL compiler, built as its own
+  bundle beside `server.js` (a worker thread starts from its own file - `scripts/build-base-server.sh`); started on
+  the first compile that selects it.
+
+## Translation
+
+`src/translation.ts` is the facade over `src/translation/`: it owns the shared state and the request guards, and
+delegates to the loader, the features (hover, definition, references, inlay hints, diagnostics) and write-back.
+No provider implements translation features; the handlers call the service directly.
+
+- `.ssl` and `.tssl` reference `.msg` entries through calls such as `mstr(123)` and `NOption(123)`;
+  `.baf`, `.d` and `.tp2` reference `.tra` entries as `@123`; `.tbaf` and `.td` use `tra(123)`. The patterns are in
+  `src/core/patterns.ts`.
+- A consumer's translation file is named by a `/** @tra file */` comment on its first line, or matched by basename
+  when `auto_tra` is on. The directory is `mls.translation.directory` in `.bgforge.yml`.
+- The translation files are loaded at startup and re-indexed on change; a reverse index from each translation file
+  to its consumers answers Find References from a `.tra`/`.msg` entry.
+
+## IE Resources and Strrefs
+
+`src/ie-resources/configured-game.ts` opens the Infinity Engine install named by `bgforge.weidu.gamePath` through
+`@bgforge/binary/archive`, and resolves TLK strrefs and IDS tables against it. A provider that implements
+`StrRefCapability` reports where the strrefs sit (`src/ie-resources/strref-sites.ts`, used by BAF), and
+`src/ie-resources/strref-features.ts` turns those sites into hovers and inlay hints for any such language. Strref
+hover is the first source in the hover chain. The built-in BAF compiler reads the same opened game for its tables.
+
+## Dialog Editor, Server Side
+
+The dialog editor asks the server for two commands (`src/handlers/execute-command.ts`); the client does all
+editing - see [docs/architecture.md](../docs/architecture.md#client-and-server).
+
+- **`bgforge.parseDialog`** picks a parser by language and extension and returns the dialog tree with the
+  document's translation strings: `src/dialog.ts` (SSL), `src/weidu-d/dialog.ts` with `dialog-utils.ts` and
+  `dialog-modify.ts` beside it (D, including the blocks that patch existing dialogs), and the ts-morph source
+  parsers `src/td/dialog-source.ts` and `src/tssl/dialog-source.ts`, which run on the transpile worker.
+- **`bgforge.saveDialogTra`** writes edited strings to the resolved `.tra`/`.msg` (`src/translation/write-back.ts`).
+
+The dialog model and its per-language edit and serialize modules are in the repo-root `shared/`, used by the
+client.
 
 ## Tree-Sitter Integration
 
 ### Parser Initialization
 
-```
-+------------------+     +------------------+     +------------------+
-| ParserManager    | --> | createCached     | --> | tree-sitter-     |
-| initAll()        |     | ParserModule()   |     | {lang}.wasm      |
-+------------------+     +------------------+     +------------------+
-                                |
-                                v
-                         +------------------+
-                         | Parser instance  |
-                         | (per language)   |
-                         +------------------+
-```
+`ParserManager` (`shared/parsers/parser-manager.ts`) owns parser lifecycle for the server and `@bgforge/format`.
+`initAll()` loads the grammars one at a time, because concurrent `Language.load()` calls race on web-tree-sitter's
+shared `TRANSFER_BUFFER`; that runs in `onInitialize` before any provider initializes. The provider loop in
+`registry.init()` is sequential too, for its own reason, commented there. Each language's facade
+(`shared/parsers/<lang>.ts`) re-exports the manager's calls for that language, and tests use `initOne()` to load a
+single parser. The server installs an LSP-routed logger with `setParserLogger()`.
 
-**ParserManager** (`shared/parsers/parser-manager.ts`) centralizes parser lifecycle.
-Parsers are registered and initialized sequentially (WASM `TRANSFER_BUFFER` constraint)
-before providers start. Each language's wrapper module (`shared/parsers/<lang>.ts`) is a
-thin re-export that delegates to the manager. Tests can use `initOne()` to initialize a
-single parser without the full server startup. The manager and per-language wrappers
-live in `shared/parsers/` so the @bgforge/format CLI can consume them through the same
-import surface; server installs an LSP-routed logger via `setParserLogger()` at startup.
+### Node types and caching
 
-### SyntaxType Enum
-
-Each grammar generates a runtime `syntax-type.ts` (the `SyntaxType` enum) plus a `tree-sitter.d.ts` (node-type
-declarations that import the enum as a type) for type-safe node type comparisons. The enum is a runtime module,
-not a `.d.ts` member, so any bundler (esbuild, Rolldown/tsdown) resolves its values.
-
-The enum's canonical home is `shared/syntax-types/{lang}.ts`; `server/src/{lang}/syntax-type.ts` is a one-line
-re-export shim of it. This lets `@bgforge/format` consume the enum (`../../../shared/syntax-types/{lang}`)
-without importing `server/` internals, which would otherwise form a `format` <-> `server` source cycle. Server
-code imports the shim unchanged:
-
-```typescript
-// Generated from grammar - use instead of hardcoded strings
-import { SyntaxType } from "./syntax-type";
-
-if (node.type === SyntaxType.State) { ... }  // Good
-if (node.type === "state") { ... }           // Bad - no type checking
-```
-
-Generate types for a grammar:
-
-```bash
-cd grammars/{lang} && pnpm generate:types
-```
-
-This copies the generated `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax-type.ts` to
-`shared/syntax-types/{lang}.ts`.
-
-### Parse Caching
-
-`parseWithCache(text)` checks a 64-entry LRU cache keyed by the document text before parsing. This avoids re-parsing on repeated requests (e.g., multiple hovers on same file).
+Node types are compared through the generated `SyntaxType` enums, never string literals; generation is described
+in [grammars/README.md](../grammars/README.md) (Type Generation). Parsed trees are cached by document text in
+`shared/parsers/parser-factory.ts`.
 
 ## Feature Matrix
 
-| Provider     | Completion | Hover | Signature | Definition | References | Format | Symbols | Workspace Symbols | Rename | Inlay | Folding | Selection Range | Diagnostics | Quick Fixes | JSDoc | Semantic Tokens |
-| ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :----: | :-----: | :---------------: | :----: | :---: | :-----: | :-------------: | :---------: | :---------: | :---: | :-------------: |
-| fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .msg  |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
-| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |   Y    |         |        n/a        |  n/a   | .tra  |    Y    |        Y        |      Y      |      Y      |  n/a  |                 |
-| weidu-d      |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |      Y      |   Y   |                 |
-| weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |   Y    |    Y    |         Y         |   Y    | .tra  |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
-| weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
-| worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |  n/a   |   n/a   |        n/a        |  n/a   |  n/a  |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
-| weidu-tra    |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |             |       |                 |
-| fallout-msg  |            |   Y   |           |     Y      |     Y      |   Y    |    Y    |                   |        |       |    Y    |                 |             |             |       |                 |
-| infinity-2da |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |             |       |        Y        |
-| scripts-lst  |            |       |           |            |            |   Y    |         |                   |        |       |         |                 |             |             |       |                 |
+| Provider     | Completion | Hover | Signature | Definition | References | Call Hierarchy | Format | Symbols | Workspace Symbols | Rename |    Inlay     | Folding | Selection Range | Diagnostics | Quick Fixes | JSDoc | Semantic Tokens |
+| ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :------------: | :----: | :-----: | :---------------: | :----: | :----------: | :-----: | :-------------: | :---------: | :---------: | :---: | :-------------: |
+| fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |       Y        |   Y    |    Y    |         Y         |   Y    |     .msg     |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
+| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |      n/a       |   Y    |         |        n/a        |  n/a   | .tra, strref |    Y    |        Y        |      Y      |      Y      |  n/a  |                 |
+| weidu-d      |     Y      |   Y   |           |     Y      |     Y      |                |   Y    |    Y    |         Y         |   Y    |     .tra     |    Y    |        Y        |      Y      |      Y      |   Y   |                 |
+| weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |       Y        |   Y    |    Y    |         Y         |   Y    |     .tra     |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
+| weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |      n/a       |  n/a   |   n/a   |        n/a        |  n/a   |     n/a      |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
+| worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |      n/a       |  n/a   |   n/a   |        n/a        |  n/a   |     n/a      |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
+| weidu-tra    |            |   Y   |           |     Y      |     Y      |                |   Y    |    Y    |                   |        |              |    Y    |                 |      Y      |             |       |                 |
+| fallout-msg  |            |   Y   |           |     Y      |     Y      |                |   Y    |    Y    |                   |        |              |    Y    |                 |      Y      |             |       |                 |
+| infinity-2da |            |       |           |            |            |                |   Y    |         |                   |        |              |         |                 |             |             |       |        Y        |
+| scripts-lst  |            |       |           |            |            |                |   Y    |         |                   |        |              |         |                 |             |             |       |                 |
+
+`Y` is implemented, `n/a` does not apply, blank is not implemented. Hover, definition and references on
+`weidu-tra`/`fallout-msg` come from the translation service; their diagnostics from the syntax pass. `strref` in
+the Inlay column means TLK string references, which also get a hover.
 
 ### Deliberate N/A
 
 These features are absent because they do not apply to the language, not because they are unimplemented:
 
-- **BAF Symbols / Definition / Rename** - BAF files are flat sequences of IF/THEN/RESPONSE blocks with no named
-  procedures, functions, or reusable constructs to navigate to or rename.
+- **BAF Symbols / Definition / Rename / Call Hierarchy** - BAF files are flat sequences of IF/THEN/RESPONSE blocks
+  with no named procedures, functions, or reusable constructs to navigate to or rename.
 - **BAF JSDoc** - no user-defined constructs to document.
 - **Worldmap** - a simple key-value config file, no programming constructs.
 - **TP2 Signature Help** - TP2 calls take named keyword parameters (`INT_VAR`/`STR_VAR`/`RET` blocks), not positional
@@ -552,251 +340,68 @@ These features are absent because they do not apply to the language, not because
 - **TP2 Parameter Inlay Hints** - parameters are already named explicitly in the source (`INT_VAR foo = 0`) and
   documented via hover and completion. There is nothing implicit to annotate.
 
-## Request Routing
+### Two Feature Matrices (README + `server/INTERNALS.md`)
 
-1. `server.ts` receives LSP request (e.g., `connection.onHover`)
-2. `ProviderRegistry` looks up provider by `langId` (or alias)
-3. Provider method called (local AST-based or data-based)
-4. Result returned to client
+The feature matrix appears in two forms serving different audiences; both are maintained.
 
-### Language Aliases
+- **README** - user-facing languages ("Fallout SSL", "WeiDU TP2"), check marks, includes a "Dialog editor" row.
+  Optimized for someone deciding whether the extension supports their workflow.
+- **This table** - provider names (`fallout-ssl`, `weidu-tp2`), the `Y`/`n/a`/blank distinction, and the extra
+  providers and columns that matter only to implementers.
 
-| Alias     | Routes to |
-| --------- | --------- |
-| weidu-slb | weidu-baf |
-| weidu-ssl | weidu-baf |
+Collapsing to either form would hide information the other audience needs. Both are updated when a user-visible
+feature ships; `scripts/utils/test/feature-matrix-sync.test.ts` fails when the two disagree on the feature/language
+surface they share.
 
-## Shared Utilities (`shared/`)
+## Latency Budgets
 
-Reusable infrastructure that providers consume via configuration, not inheritance:
+The server wraps most of its LSP handlers with `timeHandler` (`src/shared/time-handler.ts`) - not all of them:
+signature help and inlay hints, among others, are unwrapped, so `rg timeHandler server/src/handlers` is the list.
+When a handler exceeds the threshold it logs a `[lsp-timing]` warning to the LSP console. The threshold is
+`DEFAULT_THRESHOLD_MS = 50` ms and can be overridden at startup via the `BGFORGE_LSP_SLOW_MS` environment variable.
 
-| Module                  | Pattern                                                                                 | Used By             |
-| ----------------------- | --------------------------------------------------------------------------------------- | ------------------- |
-| `parser-factory.ts`     | Factory: `createCachedParserModule(wasm, name)`                                         | All 4 LSP providers |
-| `folding-ranges.ts`     | Factory: `createFoldingRangesProvider(init, parse, blockTypes)`                         | All 4 LSP providers |
-| `selection-ranges.ts`   | Factory: `createSelectionRangesProvider(init, parse)`                                   | All 4 LSP providers |
-| `comment-check.ts`      | Factory: `createIsInsideComment(init, parse, commentTypes)`                             | BAF, D, TP2         |
-| `provider-helpers.ts`   | Helpers: `resolveSymbolWithLocal()`, `formatWithValidation()`, `getStaticCompletions()` | All providers       |
-| `references-index.ts`   | Index: `ReferencesIndex` for cross-file Find References                                 | SSL, TP2, D         |
-| `jsdoc.ts`              | Parser: `parse(text, { returnMode })` - unnamed (SSL) or named (TP2) returns            | SSL, TP2, D         |
-| `jsdoc-completions.ts`  | Completions: JSDoc tag and type completions                                             | SSL, TP2            |
-| `signature.ts`          | Data: `SigInfoEx`, `loadStatic()`, `getRequest()`, `getResponse()`                      | SSL (TP2 ready)     |
-| `completion-context.ts` | Framework: `CompletionCategory`, `CompletionItemWithCategory`, context-based filtering  | TP2                 |
-| `format-edits.ts`       | Edits: `createFullDocumentEdit()` (`validateFormatting()` comes from `@bgforge/format`) | All 4               |
-| `format-options.ts`     | Config: `getFormatOptions()` from `.editorconfig`                                       | All 4               |
-| `tooltip-format.ts`     | Formatting: `buildSignatureBlock()`, `buildWeiduHoverContent()`, `formatDeprecation()`  | All providers       |
-| `tooltip-table.ts`      | Tables: `buildWeiduTable()` (4-col), `buildFalloutArgsTable()` (2-col)                  | SSL, BAF, D, TP2    |
-| `semantic-tokens.ts`    | Encoding: `SemanticTokenSpan`, `encodeSemanticTokens()`, legend                         | SSL, TP2            |
+The threshold is a per-request budget, not an aggregate: a single request that takes longer than 50 ms triggers a
+warning regardless of prior request history. Startup is not wrapped: `onInitialize` is one-off work (loading the
+grammars, providers and static data), not a per-request cost.
 
-### Design pattern
-
-Features are shared via **factory functions with language-specific configuration**, not class inheritance. Each provider passes its own block types, comment types, or return modes to shared factories. This keeps providers decoupled while eliminating boilerplate.
-
-Example: folding ranges require only a `Set<SyntaxType>` of foldable node types per language - the walking algorithm is shared.
-
-The indexing lifecycle is also shared, but symbol visibility rules remain provider-specific. `ProviderRegistry` owns startup scan, watched-file create/change/delete handling, and reload dispatch via each provider's `indexExtensions`; providers still decide which indexed symbols are visible to fallback lookup, completion, or rename.
-
-## Compilation
-
-Compilation dispatch (`compile.ts`) routes to providers or transpiler chains:
-
-```
-onDidSave / onDidChangeContent / manual command
-       |
-       v
-  compile(uri, langId, text)
-       |
-       +-- Provider has compile()? --> provider.compile(uri, text, interactive)
-       |       SSL: sslc WASM (built-in) or compile.exe (external, with Wine path fix)
-       |       BAF/D/TP2: weidu --parse-check (requires game path for BAF/D)
-       |
-       +-- Transpiler file?
-               .td   --> TD transpiler --> .d file --> weidu compile
-               .tbaf --> TBAF transpiler --> .baf file --> weidu compile
-               .tssl --> TSSL transpiler --> .ssl file --> sslc compile
-```
-
-**Temporary files**: External compilers need files on disk. SSL writes `.tmp.ssl` (exported as `TMP_SSL_NAME` in `fallout-ssl/compiler.ts`) in the same directory as the source file so that relative `#include` paths resolve correctly. WeiDU writes to a system temp directory (`os.tmpdir()/bgforge-mls`) with unique filenames per URI (MD5 hash prefix) to prevent concurrent compilations of same-extension files from overwriting each other. The `.tmp.ssl` name is excluded from VS Code file watchers via `configurationDefaults` in `package.json` - these two locations must be kept in sync. Both SSL and WeiDU write tmp files inside `try/finally` so that cleanup runs even if `writeFile` fails (e.g., `ENOSPC`).
-
-**Compile debouncing**: `onDidChangeContent` debounces compilation via the `compileDebouncer` (`UriDebouncer` instance, 300ms) to prevent rapid-fire compiler spawning when `validateOnChange` is enabled. `onDidSave` and manual compile are not debounced. Both `compileDebouncer` and `fileReloadDebouncer` are disposed in `onShutdown`. Both SSL and WeiDU compilation are async (return `Promise<void>`), which is essential for debouncing to work - if `compile()` returned synchronously, the debounce timer couldn't prevent overlapping processes.
-
-**Process cancellation**: Both SSL and WeiDU compilers track in-flight compilations per URI via `AbortController`. When a new compilation starts for the same URI, the previous one is aborted - `runProcess()` passes the abort signal to `cp.execFile`, and results from aborted compiles are silently discarded. The built-in WASM compiler (`ssl_compile`) also supports cancellation by killing the forked child process when the signal fires.
-
-**Cleanup**: Both SSL and WeiDU compilation use `try/finally` to ensure tmp files are always deleted, even if the compiler throws. Cleanup errors (e.g., `EPERM`) are logged and swallowed - they must not mask compiler results or cause unhandled rejections. External compiler processes are promisified so callers (e.g., transpile chains TD->D->WeiDU, TBAF->BAF->WeiDU, TSSL->SSL->sslc) correctly await completion. File I/O uses `fs.promises` (async) to avoid blocking the LSP thread. Fire-and-forget compile calls in `server.ts` use `.catch()` to log and swallow rejections.
-
-**Shared compilation infrastructure**: Both SSL and WeiDU compilers share `runProcess()` (Promise-wrapped `execFile` with logging and optional `AbortSignal`) and `removeTmpFile()` (cleanup with ENOENT tolerance) from `process-runner.ts`, and `addFallbackDiagnostic()` (returns a new `ParseResult` with a line-1 diagnostic appended - does not mutate the input), `reportCompileResult()` (shows interactive success/failure messages based on `ParseResult` - intentionally treats warnings as failures since sslc warnings indicate real issues), and `sendParseResult()` (aggregates diagnostics by URI) from `diagnostics.ts`. Output parsing is language-specific: `parseCompileOutput()` in `compiler.ts` (uses extracted `resolveMatchFilePath()` and `execAll()` helpers) and `parseWeiduOutput()` in `weidu-compile.ts`.
-
-**Diagnostics**: Compiler output parsed via regex into `ParseResult { errors, warnings }`. `sendParseResult()` aggregates by URI and sends LSP diagnostics. Both compilers always send diagnostics (even on success) to clear stale errors from previous runs. Multi-file error reporting supported (SSL includes can fail in header files). WeiDU deduplicates errors by location since WeiDU emits both `PARSE ERROR` and `ERROR` for the same location. WeiDU error messages include up to 4 detail lines from WeiDU output verbatim. When a compiler fails but output isn't parseable (e.g., binary not found, unexpected output format), both compilers use `addFallbackDiagnostic()` instead of silently clearing diagnostics. WeiDU shows an actionable `showError` when the binary is not found (ENOENT). All transpiler branches (TD, TBAF, TSSL) clear diagnostics before compilation.
-
-**SSL dual-mode**: Built-in sslc-emscripten (WASM, forked process) or external compile.exe. Falls back to built-in if external unavailable. When user declines the fallback prompt, compilation returns early without attempting the failed external compiler.
-
-**BAF dual back end**: `bgforge.weidu.compiler` selects between the WeiDU binary (the reference, and the default) and
-the extension's own built-in compiler. Dispatch is in `weidu-baf/diagnostics.ts`, covering both the `.baf` and `.tbaf`
-entry points. The built-in compiles the editor's text directly and needs no WeiDU binary, but it handles only
-self-contained BAF: it refuses a file using `%variable%` or a `@123` translation reference, since those values exist
-only once a mod is being installed.
-
-## Translation Service
-
-Centralized service (`translation.ts`) for `.tra`/`.msg` translation files. Provides hover, inlay hints, go-to-definition, and find-references for translation references. No provider implements these - it's a single shared implementation.
-
-**Supported patterns** (by file type):
-
-- `.ssl`, `.tssl`: `mstr(123)`, `NOption(123)`, `Reply(456)`, etc. -> `.msg` files
-- `.baf`, `.d`, `.tp2`: `@123` -> `.tra` files
-- `.tbaf`, `.td`: `tra(123)` -> `.tra` files
-
-**Translation file resolution**: Checks `/** @tra filename */` comment in first line, falls back to auto-matching by basename if `auto_tra` setting is enabled.
-
-**Inlay hints**: Shows truncated string previews (max 30 chars) as inline `/* text */` comments after each reference. Tooltip shows full text if truncated.
-
-**Find references**: From a `.tra`/`.msg` file, finds all usages of an entry across consumer files. Cursor can be on the entry number or anywhere in the value (including multiline). Uses a reverse index (`traFileKey -> Set<consumerPath>`) built at startup and updated on document open/save/change. Consumer files are matched by `@tra` comment or basename convention.
-
-**Caching**: All `.tra`/`.msg` files in configured translation directory loaded at startup. Updated incrementally on file save/change. The consumer reverse index is updated atomically with the forward index.
-
-### Rename (Scope-Aware)
-
-Rename uses a three-module pipeline: `symbol-scope.ts` -> `reference-finder.ts` -> `rename.ts`.
-
-**Scope determination** (`symbol-scope.ts`): Given a cursor position, determines whether
-the symbol is file-scoped (procedure name, macro, export) or procedure-scoped (param,
-variable, for/foreach var). Returns `SslSymbolScope` with the scope type and, for
-procedure-scoped symbols, the containing procedure node.
-
-**Reference finding** (`reference-finder.ts`): Collects all identifier references within
-the correct scope. For procedure-scoped symbols, walks only the procedure subtree. For
-file-scoped symbols, walks the entire tree but skips procedures that shadow the name
-with a local definition, skips `macro_params` nodes (which contain real identifier children),
-and skips macro bodies where the symbol name matches a macro parameter (parameter shadowing).
-
-### Cross-File References
-
-The `ReferencesIndex` (`server/src/shared/references-index.ts`) enables workspace-wide Find References
-without re-reading or re-parsing files on each request: each file's references are extracted once, when it is
-indexed or changes. It maps `uri -> symbolName -> Location[]`, so a lookup walks every indexed file's map.
-
-```
-Startup / File Change
-       |
-       v
-+------------------+     +------------------+
-| parseFile()      | --> | ReferencesIndex  |
-| (per-language    |     | .updateFile()    |
-|  AST extractor)  |     +------------------+
-+------------------+
-
-Find References Request
-       |
-       v
-+------------------+     +------------------+
-| references.ts    | --> | ReferencesIndex  |
-| (single-file     |     | .lookup()        |
-|  analysis)       |     +------------------+
-+------------------+
-       |
-       v
-  Merge local + cross-file results
-```
-
-**Per-language call-site extractors** (each language's `parseFile()`, in `header-parser.ts` for SSL/TP2 and `file-parser.ts` for D, which emits the `refs` map on its `ParseResult`):
-
-- **SSL**: Collects all `Identifier` nodes grouped by name. Cross-file lookup uses exact match.
-- **TP2**: Collects `FUNCTION_DEF_TYPES` and `FUNCTION_CALL_TYPES` name fields. Keys are case-sensitive. Variables are not indexed - they are function/loop-scoped.
-- **D**: Collects state label references with `dialogFile:labelName` composite keys. Dialog files are normalized to lowercase. Workspace symbols use the same dialog-scoped key so labels like `0` remain distinguishable in multi-dialog files.
-
-**Index population**: Populated uniformly by `ProviderRegistry` using each provider's `indexExtensions`. The same extension list drives startup scan, watched-file create/change/delete handling, and provider reload cleanup. Open documents still update incrementally via `onDidChangeContent`.
-
-**Workspace symbol routing**: The server still supports global aggregation, but the VS Code client now scopes `workspace/symbol` queries to the active editor language for `fallout-ssl`, `weidu-d`, and `weidu-tp2`. This avoids cross-language pollution in Ctrl+T while preserving the registry's global fallback behavior for other clients.
-
-**Scoping**: Only file-scoped symbols get cross-file results. Procedure-local variables (SSL), function/loop-scoped variables (TP2), and intra-dialog labels (D) remain single-file only. The `references.ts` module in each language checks the symbol scope before querying the index. For SSL, when a symbol is not defined in the current file (e.g., a macro from an included header), `findReferences` falls back to the ReferencesIndex for cross-file references and file-scope AST search for local occurrences.
-
-**SSL visibility boundary**: SSL indexes both `.h` and `.ssl` files. Header symbols are loaded as `SourceType.Workspace` and are globally visible for fallback hover/definition/rename. Source-file `.ssl` symbols are loaded as `SourceType.Navigation`: they power workspace symbols and cross-file navigation data, but must not participate in global fallback symbol resolution for unrelated scripts.
-
-**Single-file rename** (`rename.ts`): Uses scope info to rename only within the correct scope.
-
-**Workspace-wide rename** (`rename.ts`): For symbols defined in header files:
-
-1. Find the definition URI (local AST or symbol store lookup)
-2. Query `refsIndex.lookupUris(symbolName)` for all files that reference the name
-3. For each candidate file, use scope-aware reference finding (skips procedure-local shadows)
-4. Skip files that redefine the symbol at file scope (a different procedure/macro with same name)
-5. Return `documentChanges` (TextDocumentEdit[]) for atomic cross-file undo
-
-Uses the same `ReferencesIndex` as Find References rather than a separate include graph.
-This handles cases where headers use symbols they don't directly `#include` - e.g., `den.h`
-uses `GVAR_DEN_GANGWAR` from `global.h`, relying on `.ssl` files to include both.
-
-## Key Design Decisions
-
-Moved to [`docs/architecture.md`](../docs/architecture.md#key-design-decisions) - see that document for the consolidated design decisions, including tree-sitter error recovery defenses, URI normalization, and per-language implementation rationale.
-
-## Static Data Pipeline
-
-```
-+------------------+     +------------------+     +------------------+
-| YAML data files  | --> | generate-data.ts | --> | completion.      |
-| (game functions) |     | (shared building |     | {lang}.json      |
-|                  |     |  blocks)         |     | (pre-formatted)  |
-+------------------+     +------------------+     +------------------+
-                                                         |
-                                                         v
-                                                  +------------------+
-                                                  | loadStaticSymbols|
-                                                  +------------------+
-                                                         |
-                                                         v
-                                                  +------------------+
-                                                  | Symbols          |
-                                                  | .loadStatic()    |
-                                                  +------------------+
-```
-
-All formatting is pre-computed at build time by `generate-data.ts`. WeiDU/TP2 items use `buildWeiduHoverContent()` - the same composition function used by runtime JSDoc hover formatters - ensuring identical output. Fallout items use the lower-level building blocks (`buildSignatureBlock`, `buildFalloutArgsTable`, `formatDeprecation`) directly. The static loader is a pure pass-through - no runtime transforms. See `server/data/README.md` for the YAML schema and formatting pipeline.
-
-**Engine procedure hover enrichment (Fallout SSL only):** `extract-engine-proc-docs.ts` reads the `engine_procedures` stanza from `fallout-ssl-base.yml` and writes `fallout-ssl-engine-proc-docs.json` - a name->doc map. `local-symbols.ts` imports this at bundle time and passes the doc to `buildProcedureSymbol` for any engine procedure name. The engine doc is appended after user JSDoc (separated by `---`), or shown alone if the user wrote no JSDoc. This enriches the local hover without touching the static symbol pipeline.
+Revisit the threshold when a provider is added or a data source grows significantly, re-measuring the wrapped
+handlers with the new language loaded.
 
 ## Testing
 
-See [scripts/README.md](../scripts/README.md) for all test commands.
+Commands: [scripts/README.md](../scripts/README.md).
 
 ### Test layers
 
-| Layer             | Config                          | What it covers                                                                                                                                                                        | Fixtures                                         |
-| ----------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| Unit tests        | `vitest.config.mts`             | Pure logic, utilities, parsers, transpilers                                                                                                                                           | Inline strings                                   |
-| Integration tests | `vitest.integration.config.mts` | AST-derived LSP features (symbols, definition, references, rename, folding, formatting, signature, hover, local symbols, workspace symbols, completion context) against real mod code | `external/` repos (cloned by `test-external.sh`) |
-| Smoke test        | `vitest.smoke.config.mts`       | Server starts and responds over stdio                                                                                                                                                 | Built server bundle                              |
-
-Integration tests live in `test/integration/` and cover SSL, BAF, D, and TP2. They test all AST-derived LSP features: symbols, definition, references, rename, folding, formatting, signature, hover (JSDoc), local symbols, workspace symbols, and completion context. Static-data-only features (completion/hover from YAML) are covered by unit tests.
-
-The shared LSP connection mock is in `test/integration/setup.ts`, loaded via `setupFiles` in the integration config.
+| Layer       | Config                          | What it covers                                                                                                                |
+| ----------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Unit        | `vitest.config.mts`             | Server logic against inline sources; carries the coverage floors                                                              |
+| Integration | `vitest.integration.config.mts` | LSP features over real mod code in `external/` (`test/integration/`), with the connection mock in `test/integration/setup.ts` |
+| Smoke       | `vitest.smoke.config.mts`       | The built bundles: the server over stdio, `lsp-probe`, and the ts-morph worker in both roles                                  |
+| Benchmarks  | `test/perf/`                    | `pnpm bench`; not a gate                                                                                                      |
+| Mutation    | `vitest.mutation.config.mts`    | The unit suite without `external/` fixtures, for pointing Stryker at the server                                               |
 
 ### Coverage scope
 
-Unit coverage measures every source file the tests actually import, with two exclusions:
-
-- `src/**/format/**/*.ts` - tree-sitter format sub-modules that operate on parsed AST nodes. Exercised by grammar-corpus tests (`grammars/*/test/corpus`), not unit tests. Top-level format orchestrators (`infinity-2da/format.ts`, `weidu-tra/format.ts`, `fallout-msg/format.ts`) remain unit-tested and measured.
-- Every per-language `provider.ts` LSP dispatcher (`fallout-ssl`, `weidu-tp2`, `weidu-d`, `weidu-baf`, `fallout-worldmap`, `infinity-2da`, `weidu-log`) - thin glue whose methods delegate to unit-tested sub-modules. End-to-end behaviour is verified by `test/integration/` against real mod files, and the delegated logic by each sub-module's own unit tests. Excluded uniformly so a dispatcher is not duplicated by redundant unit tests; any new provider dispatcher belongs here too.
-
-Thresholds: 91% lines, 80% branches, 96% functions, 90% statements - enforced by `pnpm exec vitest run --coverage`. Branches are held to 80% (vs 90% on the other metrics) because tree-sitter happy-path traversals dominate over error-recovery branches in the surface area; demanding 90% branch coverage would force tests for parser failure modes that are already exercised end-to-end by the integration suite.
+Unit coverage measures every source file the unit tests import. Every per-language `provider.ts` dispatcher is
+excluded (`vitest.config.mts`): each is thin glue whose methods delegate to unit-tested sub-modules, with
+end-to-end behaviour verified by `test/integration/` against real mod files. They are excluded uniformly so a
+dispatcher is not covered by redundant unit tests, and any new provider dispatcher belongs in that list too. The
+floors themselves are in the config; how floors are set and moved is in
+[docs/development.md](../docs/development.md#coverage-thresholds).
 
 ## Adding a New Provider
 
-1. Add language ID to `shared/languages.ts` (and re-export from `server/src/core/languages.ts` if server-internal code needs it)
-2. Create tree-sitter grammar in `grammars/{lang}/`
-3. Add `@asgerf/dts-tree-sitter` devDependency and `generate:types` script to grammar's `package.json` (the script copies `tree-sitter.d.ts` to `server/src/{lang}/` and `syntax-type.ts` to `shared/syntax-types/{lang}.ts`)
-4. Run `pnpm generate:types` to generate `tree-sitter.d.ts` + the `SyntaxType` enum, then add a `server/src/{lang}/syntax-type.ts` re-export shim (`export { SyntaxType } from "../../../shared/syntax-types/{lang}";`)
-5. Run `pnpm build:grammar` to compile WASM
-6. Register the parser in `server.ts` via `parserManager.register(LANG_ID, "tree-sitter-{lang}.wasm", "Name")`
-7. Create `src/{lang}/parser.ts` as a thin re-export from `ParserManager` (see existing parser.ts files)
-8. Create `src/{lang}/provider.ts` implementing `ProviderBase` and the relevant capability interfaces (e.g., `FormattingCapability`, `CompletionCapability`)
-9. Register provider in `server.ts` via `registry.register(provider)`
-10. Add static data to `data/{lang}.yml` (if needed)
-
-## Performance Considerations
-
-- **Parse caching**: 64-entry LRU cache avoids re-parsing (`DEFAULT_MAX_CACHE_SIZE`, `shared/parsers/parser-factory.ts`)
-- **Debounced reload**: 300ms delay on document changes
-- **Pre-computed responses**: No computation on LSP requests
-- **File-level updates**: Only changed file re-indexed
-- **Sequential init**: Required by tree-sitter, adds a fixed startup cost
+1. Add the language id to `shared/languages.ts` and the language to `package.json` `contributes.languages`.
+2. Create the grammar in `grammars/<lang>/`, with the `@asgerf/dts-tree-sitter` devDependency and a
+   `generate:types` script modelled on an existing grammar's `package.json`; generate the types as
+   [grammars/README.md](../grammars/README.md) describes, and add the `src/<lang>/syntax-type.ts` re-export.
+3. Add the parser facade `shared/parsers/<lang>.ts` and register the parser in `src/handlers/initialize.ts`
+   (`parserManager.register()`).
+4. Create `src/<lang>/provider.ts` implementing `ProviderBase` and the capability interfaces it supports, and
+   register it in `src/handlers/initialize.ts`. A language that indexes user-defined names also declares its name
+   case in `src/core/name-case.ts`.
+5. Advertise any capability the server does not yet offer in `src/server-capabilities.ts`.
+6. Add the dispatcher to the coverage exclusions in `vitest.config.mts`.
+7. Add a row to the [Feature Matrix](#feature-matrix), and to the README matrix if the language is user-facing.
+8. Add engine data under `data/` if needed - see [docs/data-pipeline.md](../docs/data-pipeline.md).

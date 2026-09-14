@@ -29,7 +29,9 @@ Download `bgforge-mls-notepadpp-<version>.zip` from the [latest GitHub release](
 3. Restart Notepad++
 4. Repeat for each language
 
-The UDL files provide file type detection (by extension) and basic highlighting (keywords, functions, constants, comments, strings, folding). The zip also includes highlight-only definitions (no LSP provider) for Fallout MSG (`.msg`), WeiDU TRA (`.tra`), Infinity 2DA (`.2da`), and Fallout scripts.lst (`scripts.lst`).
+The UDL files provide file type detection (by extension) and basic highlighting (keywords, functions, constants,
+comments, strings, folding). The zip also includes definitions for Fallout MSG (`.msg`), WeiDU TRA (`.tra`),
+Infinity 2DA (`.2da`), Fallout scripts.lst (`scripts.lst`) and Fallout Worldmap (`worldmap.txt`).
 
 Note: `.h` files default to C in Notepad++. The `fallout-ssl` UDL overrides this globally. If you also work with C headers, edit the UDL and remove `h` from the `Ext.` field.
 
@@ -69,9 +71,40 @@ mode = "io"
 executable = 'bgforge-mls-server'
 args = '--stdio'
 auto_start_server = true
+
+[lspservers.fallout-msg]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
+
+[lspservers.weidu-tra]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
+
+[lspservers.infinity-2da]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
+
+[lspservers.fallout-scripts-lst]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
 ```
 
-Note: If `bgforge-mls-server` is not on your system PATH, use the full path to the executable, e.g., `executable = 'C:\Users\<you>\AppData\Roaming\npm\bgforge-mls-server.cmd'`.
+The UDL names double as the language IDs the server dispatches on, so keep them as imported.
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column) and `scripts.lst` (formatting). The zip has no
+UDLs for SLB, Sword Coast Stratagems SSL or `weidu.log`, which the server also serves.
+
+Note: If `bgforge-mls-server` is not on your system PATH, use the full path to it in pnpm's global bin directory,
+which `pnpm bin -g` prints.
 
 ## TypeScript plugins (TSSL/TD)
 

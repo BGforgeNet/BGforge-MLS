@@ -370,7 +370,7 @@ const layoutVariantSchema = z
 /**
  * A format's full layout: one variant per object/sub type the parser can report (PRO dispatches by
  * object type and item/scenery subtype). The active variant is chosen by the `variantId` the parser
- * stamps on the parse result; absent that, the first declared variant is used.
+ * stamps on the parse result; a result with no `variantId`, or one no variant declares, gets no layout.
  */
 export const formatLayoutSchema = z.strictObject({
     schemaVersion: z.literal(1),

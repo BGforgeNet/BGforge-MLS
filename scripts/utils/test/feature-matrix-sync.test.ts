@@ -4,7 +4,7 @@
  * The matrix exists in two deliberately different shapes - README is user-facing
  * (features as rows, checkmarks, four languages), INTERNALS is implementer-facing
  * (providers as rows, Y/n-a/blank, extra providers and columns). Both must be
- * updated when a user-visible feature ships (docs/architecture.md, "Two Feature
+ * updated when a user-visible feature ships (server/INTERNALS.md, "Two Feature
  * Matrices"), and nothing enforced that until this test: for every feature and
  * language BOTH tables carry, the supported/unsupported verdicts must agree.
  *

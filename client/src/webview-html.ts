@@ -8,6 +8,12 @@
  *
  * Kept out of `webview-assets.ts` because that module must stay free of a runtime `vscode` import - the pure
  * dialog HTML builder and its unit test load it outside the extension host.
+ *
+ * Webview CSP: scripts are locked to a per-load nonce, but `style-src` must name `{{cspSource}}`. VS Code wraps
+ * the webview in its own CSP layer that honours only style sources it can attribute to the webview origin, so a
+ * nonce-only `style-src` passes any headless or standalone render yet is silently dropped in the real panel,
+ * which then comes up unstyled while its script still runs. Stylesheets therefore load as `asWebviewUri` links,
+ * each directory declared in `localResourceRoots`; `client/test/webview-csp.test.ts` pins the shape.
  */
 
 import * as path from "path";
@@ -40,8 +46,8 @@ export interface SharedWebviewHtmlSpec {
  * Resolve one panel's template against a live webview: the shared stylesheets, its own, its bundle and the CSP.
  *
  * Styles load as <link> elements resolved through asWebviewUri and authorised by `style-src {{cspSource}}`, not
- * inlined with a nonce - the wrapped webview silently drops a nonce-only style-src. See docs/architecture.md
- * (Webview CSP). codicon.css links directly too: its @font-face url resolves relative to the stylesheet's own
+ * inlined with a nonce - the wrapped webview silently drops a nonce-only style-src (see the file header).
+ * codicon.css links directly too: its @font-face url resolves relative to the stylesheet's own
  * webview URI, so no font-URL rewrite is needed.
  */
 export function buildSharedWebviewHtml(webview: vscode.Webview, spec: SharedWebviewHtmlSpec): string {

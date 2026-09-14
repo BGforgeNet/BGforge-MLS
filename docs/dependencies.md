@@ -1,4 +1,10 @@
-# Pinned dependency constraints
+# Dependencies
+
+Dependency bumps stay within the current major version. `pnpm update -r` is run periodically to pick up minor and
+patch releases across the workspace; major bumps (including 0.x -> 0.y where y > current, which npm treats as
+breaking) are deferred until an explicit, motivated upgrade pass. This trades currency for stability: strict mode,
+`verbatimModuleSyntax`, and the custom TS config make major-bump churn expensive, and the extension's user surface is
+small enough that we gain little from being on the absolute newest release of every library.
 
 Each entry below documents why a dependency is held at a specific version or range rather than left to float.
 Consult this list before any dependency bump.
@@ -9,14 +15,9 @@ Tools announce their own changes through build and test output: a deprecation, a
 next major, a hint that some config now wants stating explicitly. None of it fails a build, so "it still builds"
 reports nothing about it.
 
-`scripts/test.sh` used to make that invisible by design - each parallel job writes to `tmp/test-logs/`, and a
-successful run printed only `ok <label>`. Four notices accumulated unread that way: Vite's plan to load configs
-natively, rolldown's plugin-timing advisory, tsdown's `deps.onlyBundle` hint, and zizmor's offline notice. The Vite
-one described a future hard failure across every vitest config in the repo.
-
-The runner now scans each job's log for warning markers and reports them even when the job passes. It reports
-rather than fails, deliberately: an upstream advisory lands on someone else's schedule and should not block
-unrelated work. Acting on it is still this list's job, not a later one's.
+The test scripts run their jobs in parallel with each job's output in a log file, and `scripts/parallel-lib.sh`
+reports the advisory lines it finds in a passing job's log rather than failing the job - an upstream advisory lands
+on someone else's schedule and should not block unrelated work. Acting on it is still this list's job.
 
 So, per bump:
 
@@ -28,26 +29,144 @@ So, per bump:
 
 ## Per-dependency holds
 
-- The lockstep groups (LSP triplet, `ts-morph`, `typescript`, `vitest` with `@vitest/coverage-v8`, `@types/node`, `esbuild` with `esbuild-wasm`, `tree-sitter-cli` with `web-tree-sitter`) are defined once in the `catalog:` map in `pnpm-workspace.yaml` and referenced as `"catalog:"` from every member `package.json`. This makes lockstep mechanical rather than convention-only: editing a version means editing the catalog entry, and a manifest that drifts to a literal out-of-lockstep range fails `pnpm install` instead of silently diverging. The hold rationale for the LSP triplet, `ts-morph`/`typescript`, `@types/node` and `tree-sitter-cli` still lives in the bullets below - the catalog only centralizes the version string. The catalog also carries single-version entries for deps that several packages declare independently (`@asgerf/dts-tree-sitter`, `cac`, `diff`, `fast-check`, `fast-glob`, `quick-lru`, `tsdown`, `yaml`); those are not lockstep groups, just one bump site each.
-- The LSP triplet is current at `vscode-languageclient` / `vscode-languageserver` `10.1.1` and `vscode-languageserver-protocol` `3.18.3` (both `10.1.1` packages pin protocol `3.18.3`, so the three stay aligned). `vscode-languageserver-textdocument` (`^1.0.14`, declared by `server/` alone) moves with them. The rule stands: the client/server/protocol triplet moves TOGETHER, never independently - bumping the protocol patch alone breaks the `client.sendRequest(ExecuteCommandRequest.type, ...)` overloads. The `10.x` move raised the minimum supported VS Code from `^1.73.0` to `^1.91.0` (`engines.vscode` in the root `package.json` and `client/package.json`, plus `@types/vscode`); the `9.x` line stalled at `9.0.1` and was skipped. On the next LSP major, move all three in lockstep and re-check the `engines.vscode` floor.
-- The three `pnpm.overrides` entries (`mocha>diff`, `mocha>serialize-javascript`, `qs`) exist for security-advisory reasons; the per-advisory rationale and the drop policy live in the comment block above `overrides:` in `pnpm-workspace.yaml`. Revisit only when the underlying advisories are closed.
-- `ts-morph` is at `^28.0.0` across the server runtime and all transpiler subpackages, which bundles TypeScript 6.0.2 and matches the project's own `typescript ^6.0.3` pin. ts-morph bundles its TypeScript dependency rather than treating it as a peer, so the ts-morph version effectively chooses the TS compiler that runs against transpiler ASTs regardless of the workspace `typescript` pin - which is why the two move together and never separately. The earlier hold at `^27.0.2`/TS 5.9 had an exit condition of "a matured 7.x TypeScript line AND a ts-morph major bundling that line". The second half does not exist and is not close: ts-morph 28 is the newest release and bundles 6.0, so honouring that condition meant staying on 5.9 indefinitely. 6.x is the reachable step, and is also where the rest of the toolchain currently tops out - `svelte-check`'s peer range is `^5.0.0 || ^6.0.0`, so it does not accept TS 7 at all. One caveat carried knowingly: ts-morph 28.0.0 (2026-04-12) has no `28.0.1` and no `28.1` behind it, which the usual matured-major preference would want, but ts-morph ships infrequently (27.0.2 to 28.0.0 was six months) so the absence of a patch is weak evidence either way. Next move is TS 7, gated on a ts-morph major bundling it AND on `svelte-check` accepting it.
-- The `typescript ^6.0.3` pin is held BY that lockstep: 6.0.3 is where the 6.x line stopped, and it is the line ts-morph 28 bundles. Because ts-morph carries its own TypeScript, the workspace `typescript` could move on its own - `tsc --noEmit` and `svelte-check` would use the newer compiler while transpiler ASTs stayed on ts-morph's. That skew is what the alignment exists to avoid: a construct the gate accepts and the transpiler's parser does not is a defect nothing in CI would surface. The two TS Language Service plugins are NOT part of that skew, contrary to how this entry used to read: they import `typescript` as a type-only import and run against the compiler the host tsserver injects at load time, so the workspace pin decides only which API shapes they type-check against, never which they call. Moving 5.9 -> 6.0 needed four changes, every one a changed DEFAULT rather than an API break: an explicit `"types": ["node"]` in `tsconfig.base.json` and an explicit `"rootDir"` in the two configs that reach outside their own directory (6.0 narrows automatic `@types` inclusion and defaults `rootDir` to the config's own directory); a `*.css` ambient declaration for the dialog editor's side-effect stylesheet import, since `noUncheckedSideEffectImports` now defaults on; and `--ignoreConfig` in the three `typecheck-samples.sh` scripts, which pass file arguments from a directory holding a `tsconfig.json` (TS5112). The `.css` one is worth remembering: `tsc` does not read `.svelte` files, so a full green tsc sweep across every config missed it entirely and only `svelte-check` caught it.
-- `@types/node` tracks the latest LTS Node major, currently `^24.x`. The extension targets LTS Node only (minimum supported is 20), so do not bump `@types/node` to odd-numbered "Current" majors (e.g. 25.x) - that would expose type definitions for APIs not present at the supported runtime floor. Move it forward only when a new even-numbered Node release reaches LTS. That is a calendar trigger nothing in the repo can fire, so it needs checking rather than waiting on: an even major is released in April and enters LTS the following October. Node 26 is out (26.8.1) but still Current - `curl -s https://nodejs.org/dist/index.json` reports `"lts": false` for it and `"lts": "Krypton"` for 24, which is the check to re-run before assuming the hold still applies.
-- `ini` (runtime dep of `@bgforge/format`) is held at `^6.x`; `7.0.0` is a major with potential parse/stringify behavior changes that need a changelog review before adoption. It also carries a second, independent hold reason: ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) drops Node 20/21, which the extension still supports (`server/package.json` engines `>=20`). Both reasons must clear before the bump.
-- `playwright` (devDep) is pinned to an EXACT version (no caret) because the webview harnesses launch a browser from Playwright's version-keyed cache: the devbox and the `Harness` CI job download that browser via `playwright install`, and a caret drift to a version whose browser revision is not cached would break the harness run until a re-download. Bump the pin and re-run `playwright install` together. Its browser postinstall is skipped by pnpm's build-script gate (not in `onlyBuiltDependencies`), so a plain `pnpm install` never pulls ~150MB of browser - the harness paths install Chromium explicitly.
-- `bits-ui` (client devDep, bundled into the binary-editor and animation-editor webviews) is exact-pinned (no caret). Its primitives (Tabs, Combobox, Checkbox, the flag-group controls) render user-visible chrome, so version moves are deliberate: bump the pin and verify via the render harness drivers that exercise those primitives (`render-primitives.mts`, `render-resource-picker.mts`, `render-creature-palette.mts`) - never let a caret drift change webview rendering as a side effect of an unrelated install.
-- `esbuild-wasm` is caret-pinned (`^0.28.2`), but bumps must re-verify the child-runtime workaround: esbuild-wasm's Node build spawns `node <bin/esbuild>` via a bare PATH lookup, and `transpilers/common/node-runtime.ts` points that lookup at the editor's own runtime before esbuild spawns. The fix is coupled to esbuild-wasm's spawn mechanism, so after any version move confirm the spawn shape is unchanged (see the node-runtime.ts header) and re-run the transpile smoke path.
-- `tree-sitter-cli` is exact-pinned (no caret) at `0.27.0` so a regenerated parser is reproducible from the manifest alone, and it shares a catalog group with `web-tree-sitter` because the CLI decides the parser ABI that runtime has to load. Nothing tracked changes when the pin moves: the generated `src/` and every `.wasm` are gitignored, and `shared/syntax-types/*.ts` came out byte-identical across `0.26.13` and `0.27.0`. It sat at `0.26.9` for a while because `0.26.10` flipped one `weidu-tra` highlight assertion from `@string` to `@string.special` (`grammars/weidu-tra/test/highlight/basics.tra`, the `[` opening a sound ref). That flip is a FIX, not a regression: `sound_ref` is `seq("[", /[^\]\n]+/, "]")`, so the bracket is part of the node that `highlights.scm` captures as `@string.special`, and the old `@string` came from the query-anchoring bugs `0.26.10`-`0.26.12` fixed. The expectation was updated to match. Re-run `pnpm build:grammar && pnpm test:grammars` before moving the pin, and change a corpus expectation only where the grammar rule confirms the new capture.
-- `knip` is tilde-pinned at `~6.25.0`. `6.26.0` rewrote `.svelte` import resolution and false-flags deps imported only from `.svelte` files (`@xyflow/svelte`, `bits-ui`) as unused; still reproducing on `6.32.2`. The rationale and the re-test procedure live at the top of `knip.ts`, beside the config the reports would otherwise be silenced in. The range is deliberately a tilde: under a caret the hold rested on the lockfile alone and `pnpm update` walked straight past it.
-- `@types/vscode` is tilde-pinned to the `engines.vscode` floor (`~1.91.0`), never a caret. `engines.vscode` states the oldest VS Code the extension runs on; `@types/vscode` decides which API surface the compiler accepts. A caret floats the types to the newest published minor, so a call to an API absent from the floor VS Code type-checks cleanly and fails only at a user's runtime. Raising the floor is one deliberate change touching all three declarations together: `engines.vscode` in the root and `client/package.json`, and the pin. `pnpm outdated` reports this dependency as permanently behind - that is the pin working. Guard: `scripts/utils/test/vscode-types-floor.test.ts`.
-- The `@stryker-mutator/*` triple (`core`, `typescript-checker`, `vitest-runner`) is held at `^9.6.1`. `10.0.0` is a young major with no patch and no `10.1` minor behind it. Its documented breaking change is a Node 22 floor, harmless here (Stryker is dev-only, CI runs Node 24), but it also adds an `empty-expression-mutator`, which changes the mutant population that the `break` threshold in `stryker.conf.json` is calibrated against. Move once the 10.x line has matured, and re-run `pnpm test:mutation` against that threshold in the same change.
-- `@vscode/codicons` is held at `^0.0.45` because the only newer publish is the `0.0.46-24` prerelease. Move when a stable `0.0.46` ships.
-- `zod` (runtime dep of `@bgforge/binary`, `^4.5.4`) ships about 58 KB of locale data into the client bundle that nothing reads. `zod/v4/classic/external.js` re-exports the locales as a namespace (`export * as locales`), and a namespace object keeps every member live, so no bundler tree-shakes the other 52 languages out. Both documented workarounds were measured and rejected as costing more than 58 KB is worth: patching the package means editing 12 files (js, `.d.cts`, `.d.ts` and src across classic/mini/core) to keep runtime and types in step - 3 files if you accept types that claim 53 locales which no longer exist - and the alternative, moving the client off the esbuild CLI onto the JS API so a plugin can rewrite the re-export, means reimplementing `scripts/build-base-client.sh`'s flags including watch mode. Revisit if upstream splits the locales behind their own entry point.
-  One thing to re-check on any bump rather than assume: since 4.4.1 `zod/v4/package.json` declares `"sideEffects": false`, which lets a bundler drop the `config(en())` call that registers English and silently degrades every message to `"Invalid input"` (upstream issue 5953). It does NOT happen here - bundling 4.5.4 under this client's esbuild settings and running it against an unbundled control produced identical descriptive messages - and the reason is the same namespace export above, which keeps the locale module alive. So a future fix for the size problem could reintroduce the message bug; verify messages, not just bundle size.
-- `pnpm` itself is pinned by the root `packageManager` field, currently `12.3.4`. `pnpm outdated` never reports it, so it needs checking by hand when the npm deps are swept; `pnpm/action-setup` takes no `version:`, so CI follows this field (the pinned pnpm needs `pnpm/action-setup` v6.1.0 or later). The version is load-bearing, not just reproducible: `minimumReleaseAge` and tarball-integrity preservation are pnpm behaviours other entries here rely on. pnpm also records the pin in a first YAML document of `pnpm-lock.yaml`, so the lockfile changes on every bump, and a tool reading the lockfile must accept multi-document YAML.
-- `oxlint`, `@oxlint/plugins` and `oxfmt` are EXACT-pinned (no caret) - this is a reproducibility pin, not a hold: a newer release is taken once it has aged past the adoption cooldown, in a change of its own. A caret on a linter makes the set of enabled rules a property of whenever the lockfile was last refreshed, so the same commit lints clean on one machine and red on another; `.oxlintrc.json` records four separate waves of rules that began firing on a minor bump, each needing a decision. `@oxlint/plugins` must move in the same change as `oxlint` and to the same version - it supplies the plugin API that `.oxlint/oxlint-plugin-no-showmessage.mjs` is written against. Bumping means reading the release notes for newly-enabled rules, running `pnpm exec oxlint` on a clean tree, and deciding each new finding rather than mass-disabling.
-- `oxlint-tsgolint` (the type-aware backend behind `pnpm lint:types`) is caret-ranged, but its version tracks the TypeScript-Go release it embeds (`7.0.2001` embeds TS 7.0.x), NOT oxlint's. That embedded compiler is what builds the program, so it is stricter than the workspace `typescript` pin: it rejects `moduleResolution: node` (removed in TS 7), which is what moved both TS plugins to `node16`. After a bump, confirm the run still reports zero `tsconfig-error` lines - a config it refuses analyses nothing and reports zero findings, which reads exactly like clean. This is also the one place a TS 7 constraint already binds while the workspace `typescript` pin sits on 6.0.
-- The lint binaries are pinned and checksum-verified the same way WeiDU is, in the scripts that fetch them rather than in a manifest: `actionlint` and `zizmor` in `scripts/lint-workflows.sh`, `shellcheck` and `shfmt` in `scripts/lint-shell.sh`. `shellcheck` is the one that is fetched even when the host already has it, because GitHub-hosted runners preinstall it and the runner image decides the version otherwise. Each records one sha256 per published asset, so bump the version and replace every hash together - a tag is mutable, the asset hash is what is actually verified. These are not covered by `pnpm outdated`; check them against upstream releases whenever the npm dependencies are swept.
-- WeiDU is not an npm dependency but is pinned the same way, in `scripts/ensure-weidu.sh`: version `251.00`, one sha256 per published asset (Linux, macOS x64, macOS arm64). The test scripts and the CI build workflow call that script, which prefers a WeiDU already on the host and otherwise downloads the pinned one into `.dev/`. It backs the grammar differential, which treats the real parser as the authority on legal TP2 syntax and SKIPS when no binary is found - so an unpinned or missing WeiDU turns that suite into a silent no-op rather than a failure. To bump: change the version, re-download each asset, and replace all three checksums together (a tag is mutable, the asset hash is what is actually verified).
-- `sslc-emscripten-noderawfs` (the built-in SSL compiler WASM, `server/package.json`) is an HTTPS GitHub-release tarball, and its `pnpm-lock.yaml` entry carries a hand-maintained `integrity` field. pnpm fails closed (`ERR_PNPM_MISSING_TARBALL_INTEGRITY`) on any tarball lockfile entry that lacks integrity, and URL-tarball resolvers only learn the hash on download - so when the package is reused from the store, the field is never emitted. Practical rule: **evolve the lockfile incrementally** (`pnpm install` / `pnpm update`); pnpm preserves the existing integrity across those, so `pnpm update` keeps working. Do **not** `rm pnpm-lock.yaml` to regenerate from scratch - that drops the field and breaks `pnpm update` until it is re-added. The release asset is immutable, so the hash is stable; if a full regen is ever unavoidable, restore the line `resolution: {integrity: sha512-rfaUD8f+Bsj2baPKZ3ZTzLqa4FK+2pHc17KmyFiiBC9iue7GeCCc5pz27oBhwh9Ev7j8F37IQWtqH1KsthZUbg==, tarball: <url>}`. The same dep is also listed under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` (a non-registry tarball has no publish timestamp for the 7-day `minimumReleaseAge` window to check). After any bump of this dependency, regenerate the committed corpus oracles with `pnpm ssl-oracles` - the SSL integration sweeps pin the dependency's identity and refuse to run against a manifest generated for another build.
+- The lockstep groups and the single-version entries are defined once in the `catalog:` map in
+  `pnpm-workspace.yaml` and referenced as `"catalog:"` from every member `package.json`. Editing a version
+  therefore means editing the one catalog entry every member resolves. The lockstep groups
+  are the LSP triplet, `ts-morph` with `typescript`, `vitest` with `@vitest/coverage-v8`, `esbuild` with
+  `esbuild-wasm`, and `tree-sitter-cli` with `web-tree-sitter`; every other catalog entry is a single-version entry,
+  one bump site for a dependency several packages declare. The hold rationale for the LSP triplet,
+  `ts-morph`/`typescript`, `@types/node` and `tree-sitter-cli` lives in the bullets below, and the catalog comment
+  beside the `vitest` and `esbuild` pairs says why each pair moves together - the catalog only centralizes the version
+  strings.
+- The LSP triplet (`vscode-languageclient`, `vscode-languageserver`, `vscode-languageserver-protocol`) moves TOGETHER,
+  never independently: each client/server release pins one protocol version, and bumping the protocol patch alone
+  breaks the `client.sendRequest(ExecuteCommandRequest.type, ...)` overloads. `vscode-languageserver-textdocument`
+  (declared by `server/` alone) moves with them. A client major can raise the minimum supported VS Code, so on the
+  next LSP major move all three in lockstep and re-check the `engines.vscode` floor.
+- The `overrides:` entries in `pnpm-workspace.yaml` exist for security-advisory reasons; the per-advisory rationale
+  and the drop policy live in the comment block above them. Revisit only when the underlying advisories
+  are closed.
+- `ts-morph` and the workspace `typescript` move together and never separately. ts-morph bundles its TypeScript
+  rather than treating it as a peer, so the ts-morph version chooses the TS compiler that runs against transpiler
+  ASTs regardless of the workspace `typescript` pin, while `tsc --noEmit` and `svelte-check` use the workspace one.
+  Letting them skew allows a construct the gate accepts and the transpiler's parser does not - a defect nothing in CI
+  would surface. So `typescript` stays on the line the current ts-morph major bundles. The two TS Language Service
+  plugins are not part of that skew: they import `typescript` as a type-only import and run against the compiler the
+  host tsserver injects at load time, so the workspace pin decides only which API shapes they type-check against.
+  Next move is TS 7, gated on a ts-morph major bundling it AND on `svelte-check` accepting it (its `typescript` peer
+  range decides). `tsc` does not read `.svelte` files, so after the move run `pnpm typecheck:svelte` as well as
+  every `tsc` config.
+- `@types/node` tracks the latest LTS Node major. The published packages support LTS Node only (`engines.node`
+  `>=20`), so do not bump `@types/node` to odd-numbered "Current" majors - that would expose type definitions for APIs
+  not present at the supported runtime floor. Move it forward only when a new even-numbered Node release reaches LTS.
+  That is a calendar trigger nothing in the repo can fire, so it needs checking rather than waiting on: an even major
+  is released in April and enters LTS the following October, and `curl -s https://nodejs.org/dist/index.json` reports
+  each release's `lts` field.
+- `ini` (runtime dep of `@bgforge/format`) is held at `^6.x`; `7.0.0` is a major with potential parse/stringify
+  behavior changes that need a changelog review before adoption. It also carries a second, independent hold reason:
+  ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) drops Node 20/21, which the published packages still support
+  (`engines.node` `>=20`). Both reasons must clear before the bump.
+- `playwright` (devDep) is pinned to an EXACT version (no caret) because the webview harnesses launch a browser from
+  Playwright's version-keyed cache: a development machine and the `Harness` CI job download that browser via
+  `playwright install`, and a caret drift to a version whose browser revision is not cached would break the harness
+  run until a re-download. Bump the pin and re-run `playwright install` together. A plain `pnpm install` never
+  downloads a browser - the harness paths install Chromium explicitly.
+- `bits-ui` (client devDep, bundled into the binary-editor and animation-editor webviews) is exact-pinned (no caret).
+  Its primitives (Tabs, Combobox, Checkbox, the flag-group controls) render user-visible chrome, so version moves are
+  deliberate: bump the pin and verify via the render harness drivers that exercise those primitives
+  (`render-primitives.mts`, `render-resource-picker.mts`, `render-creature-palette.mts`) - never let a caret drift
+  change webview rendering as a side effect of an unrelated install.
+- `esbuild-wasm` is caret-pinned, but bumps must re-verify the child-runtime workaround: esbuild-wasm's Node build
+  spawns `node <bin/esbuild>` via a bare PATH lookup, and `transpilers/common/node-runtime.ts` points that lookup at
+  the editor's own runtime before esbuild spawns. The fix is coupled to esbuild-wasm's spawn mechanism, so after any
+  version move confirm the spawn shape is unchanged (see the node-runtime.ts header) and re-run the transpile smoke
+  path.
+- `tree-sitter-cli` is exact-pinned (no caret) so a regenerated parser is reproducible from the manifest alone, and
+  it shares a catalog group with `web-tree-sitter` because the CLI decides the parser ABI that runtime has to load.
+  Nothing tracked but `shared/syntax-types/*.ts` can change when the pin moves: the generated `src/` and every
+  `.wasm` are gitignored. A CLI release can change highlight captures, fixes included, so re-run
+  `pnpm build:grammar && pnpm test:grammars` before moving the pin, and change a corpus expectation only where the
+  grammar rule confirms the new capture.
+- `knip` is tilde-pinned. A newer minor false-flags deps imported only from `.svelte` files as unused; the rationale,
+  the version last re-tested and the re-test procedure live at the top of `knip.ts`, beside the config the reports
+  would otherwise be silenced in. The range is deliberately a tilde: under a caret the hold would rest on the lockfile
+  alone and `pnpm update` would walk straight past it.
+- `@types/vscode` is tilde-pinned to the `engines.vscode` floor, never a caret. `engines.vscode` states the oldest VS
+  Code the extension runs on; `@types/vscode` decides which API surface the compiler accepts. A caret floats the types
+  to the newest published minor, so a call to an API absent from the floor VS Code type-checks cleanly and fails only
+  at a user's runtime. Raising the floor is one deliberate change touching all three declarations together:
+  `engines.vscode` in the root and `client/package.json`, and the pin. `pnpm outdated` reports this dependency as
+  permanently behind - that is the pin working. Guard: `scripts/utils/test/vscode-types-floor.test.ts`.
+- The `@stryker-mutator/*` triple (`core`, `typescript-checker`, `vitest-runner`) is held on the 9.x line. `10.0.0`
+  sets a Node 22 floor, harmless here (Stryker is dev-only, CI runs Node 24), but it also adds an
+  `empty-expression-mutator`, which changes the mutant population that the `break` threshold in `stryker.conf.json` is
+  calibrated against. Move once the 10.x line has matured (a patch or minor behind `10.0.0`), and re-run
+  `pnpm test:mutation` against that threshold in the same change.
+- `@vscode/codicons` is held at `^0.0.45` while the only newer publish is a `0.0.46` prerelease. Move when a stable
+  `0.0.46` ships.
+- `zod` (runtime dep of `@bgforge/binary`) ships about 58 KB of locale data into the client bundle that nothing reads.
+  `zod/v4/classic/external.js` re-exports the locales as a namespace (`export * as locales`), and a namespace object
+  keeps every member live, so no bundler tree-shakes the other languages out. Both documented workarounds cost more
+  than 58 KB is worth: patching the package means editing a dozen files (js, `.d.cts`, `.d.ts` and src across
+  classic/mini/core) to keep runtime and types in step, and the alternative, moving the client off the esbuild CLI
+  onto the JS API so a plugin can rewrite the re-export, means reimplementing `scripts/build-base-client.sh`'s flags
+  including watch mode. Revisit if upstream splits the locales behind their own entry point.
+  One thing to re-check on any bump rather than assume: since 4.4.1 `zod/v4/package.json` declares
+  `"sideEffects": false`, which lets a bundler drop the `config(en())` call that registers English and silently
+  degrades every message to `"Invalid input"` (upstream issue 5953). It does NOT happen here - bundling under this
+  client's esbuild settings and running it against an unbundled control produced identical descriptive messages - and
+  the reason is the same namespace export above, which keeps the locale module alive. So a future fix for the size
+  problem could reintroduce the message bug; verify messages, not just bundle size.
+- `pnpm` itself is pinned by the root `packageManager` field. `pnpm outdated` never reports it, so it needs checking
+  by hand when the npm deps are swept. `pnpm/action-setup` takes no `version:`, so CI follows this field, and the
+  action has to be a release that can install the pinned pnpm (v6.1.0 or later for the current pin). The version is
+  load-bearing, not just reproducible: `minimumReleaseAge`, tarball-integrity preservation, and `pnpm publish`
+  performing the npm OIDC exchange and provenance signing itself ([releasing.md](releasing.md)) are pnpm behaviours
+  other entries rely on. pnpm also records the pin in a first YAML document of `pnpm-lock.yaml`, so the lockfile
+  changes on every bump, and a tool reading the lockfile must accept multi-document YAML.
+- `oxlint`, `@oxlint/plugins` and `oxfmt` are EXACT-pinned (no caret) - this is a reproducibility pin, not a hold: a
+  newer release is taken once it has aged past the adoption cooldown, in a change of its own. A caret on a linter
+  makes the set of enabled rules a property of whenever the lockfile was last refreshed, so the same commit lints
+  clean on one machine and red on another; `.oxlintrc.json` records rules that began firing on a minor bump, each
+  needing a decision. `@oxlint/plugins` must move in the same change as `oxlint` and to the same version - it
+  supplies the plugin API that `.oxlint/oxlint-plugin-no-showmessage.mjs` is written against. Bumping means reading
+  the release notes for newly-enabled rules, running `pnpm exec oxlint` on a clean tree, and deciding each new
+  finding rather than mass-disabling.
+- `oxlint-tsgolint` (the type-aware backend behind `pnpm lint:types`) is caret-ranged, but its version tracks the
+  TypeScript-Go release it embeds (`7.0.x` embeds TS 7.0), NOT oxlint's. That embedded compiler builds the program,
+  so it is stricter than the workspace `typescript` pin: it rejects `moduleResolution: node` (removed in TS 7), which
+  is why both TS plugins use `node16`. That setting resolves and emits CommonJS in a package that declares no
+  `"type"`, so `export = init` stays legal, and the shipped bundle does not depend on it, since
+  `scripts/build-ts-plugin.sh` uses esbuild `--format=cjs`. A program that fails to construct reports zero findings,
+  not an error per file, which reads exactly like clean - so after a bump, and after any tsconfig change, confirm the
+  run still reports zero `tsconfig-error` lines. This is also the one place a TS 7 constraint already binds while the
+  workspace `typescript` pin sits on 6.x.
+- The lint binaries are pinned and checksum-verified the same way WeiDU is, in the scripts that fetch them rather
+  than in a manifest: `actionlint` and `zizmor` in `scripts/lint-workflows.sh`, `shellcheck` and `shfmt` in
+  `scripts/lint-shell.sh`. `shellcheck` is the one that is fetched even when the host already has it, because
+  GitHub-hosted runners preinstall it and the runner image decides the version otherwise. Each records one sha256 per
+  published asset, so bump the version and replace every hash together - a tag is mutable, the asset hash is what is
+  actually verified. These are not covered by `pnpm outdated`; check them against upstream releases whenever the npm
+  dependencies are swept.
+- WeiDU is not an npm dependency but is pinned the same way, in `scripts/ensure-weidu.sh`: one version, one sha256
+  per published asset. The test scripts and the CI build workflow call that script, which prefers a WeiDU already on
+  the host and otherwise downloads the pinned one into `.dev/`. It backs the WeiDU differentials - the TP2 and D
+  grammar differentials, the BAF differential and the BCS one - which treat WeiDU as the authority, and none of them
+  skips for a missing binary: `scripts/utils/src/weidu-binary.ts` provisions one rather than letting a suite pass by
+  never running. The DLG differential (`binary/test/dlg-weidu-differential.test.ts`) and the DLG parser's compiled
+  fixtures (`binary/test/dlg-parser.test.ts`) also use WeiDU but do skip: they read `WEIDU_BIN` and skip without it,
+  which is why the test scripts and CI resolve WeiDU before those suites run. To bump: change the version, re-download
+  each asset, and replace every checksum together (a tag is mutable, the asset hash is what is actually verified).
+- `sslc-emscripten-noderawfs` (the built-in SSL compiler WASM, `server/package.json`) is an HTTPS GitHub-release
+  tarball, and its `pnpm-lock.yaml` entry carries a hand-maintained `integrity` field. pnpm fails closed
+  (`ERR_PNPM_MISSING_TARBALL_INTEGRITY`) on any tarball lockfile entry that lacks integrity, and URL-tarball resolvers
+  only learn the hash on download - so when the package is reused from the store, the field is never emitted.
+  Practical rule: **evolve the lockfile incrementally** (`pnpm install` / `pnpm update`); pnpm preserves the existing
+  integrity across those, so `pnpm update` keeps working. Do **not** `rm pnpm-lock.yaml` to regenerate from scratch -
+  that drops the field and breaks `pnpm update` until it is re-added. The release asset is immutable, so the hash is
+  stable; if a full regen is ever unavoidable, restore the line
+  `resolution: {integrity: sha512-rfaUD8f+Bsj2baPKZ3ZTzLqa4FK+2pHc17KmyFiiBC9iue7GeCCc5pz27oBhwh9Ev7j8F37IQWtqH1KsthZUbg==, tarball: <url>}`.
+  The same dep is also listed under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` (a non-registry tarball has no
+  publish timestamp for the `minimumReleaseAge` window to check). After any bump of this dependency, regenerate the
+  committed corpus oracles with `pnpm ssl-oracles` - the SSL integration sweeps pin the dependency's identity and
+  refuse to run against a manifest generated for another build.

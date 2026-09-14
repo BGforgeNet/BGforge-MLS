@@ -621,7 +621,7 @@ const diceFold = await page.evaluate(() => {
 check("tree: ITM damage dice fold into one X d Y + Z cell", diceFold.ok, diceFold.detail);
 
 // Dropdown widths are decoupled from the text-input tiers and sized to each dropdown's OWN longest option
-// (controls.ts dropdownWidth -> dd-{1..5}). The Ammo "Arrow" Yes/No dropdown carries only "0 No"/"1 Yes", so it
+// (controls.ts dropdownWidth -> dd-{1..6}). The Ammo "Arrow" Yes/No dropdown carries only "0 No"/"1 Yes", so it
 // lands on the tightest dd-1 box; a wordy dropdown like Damage Type takes a far wider box. Assert the class and
 // that the tiny dropdown is materially narrower than the wide one (it used to inherit the same M/L tier width).
 const ddWidths = await page.evaluate(() => {

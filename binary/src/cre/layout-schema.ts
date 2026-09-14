@@ -655,9 +655,10 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             panels: [
                                 {
                                     title: "Sound Slots",
-                                    // 5 columns x 20 rows (column-major): 100 sound strref slots, 20 per column.
+                                    // 100 sound strref slots, filled column-major into at most 4 columns (fewer
+                                    // when the panel is too narrow to hold them).
                                     blocks: [
-                                        // Three columns, not five: each slot is a strref sized to show its
+                                        // Four columns, not five: each slot is a strref sized to show its
                                         // dialog.tlk line, and five of those overflowed the panel horizontally.
                                         { kind: "grid", columns: 4, items: slotKeys("soundSlots", "sound", 100) },
                                     ],

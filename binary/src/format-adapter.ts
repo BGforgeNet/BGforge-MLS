@@ -60,7 +60,7 @@ export interface BinaryFormatAdapter {
      * than silently inherit a reflection heuristic:
      *  - "clear": the format caches a canonical document (own property or lazy getter/setter) that is
      *    rebuildable from the display tree; the editor sets `parseResult.document = undefined` so the
-     *    next serialize/snapshot rebuilds from the edited tree. All current formats use this.
+     *    next serialize/snapshot rebuilds from the edited tree. Every format except DLG uses this.
      *  - "none": the format keeps no editor-invalidatable cached document, or its document is
      *    authoritative and must NOT be cleared. The editor leaves `document` untouched.
      */

@@ -169,7 +169,7 @@ export default defineConfig({
             // --coverage, and vitest exits non-zero on threshold breach. Round
             // floors a point under the measured actuals, so a real regression
             // trips them while a refactor that shifts the ratio a fraction does
-            // not. See docs/architecture.md "Coverage thresholds".
+            // not. See docs/development.md "Coverage thresholds".
             thresholds: {
                 lines: 96,
                 functions: 96,

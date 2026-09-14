@@ -70,12 +70,20 @@ grammar = "ini"
 file-types = [{ glob = "worldmap.txt" }]
 language-servers = ["bgforge-mls"]
 
-# Highlight-only languages (no LSP provider)
+[[language]]
+name = "weidu-slb"
+scope = "source.weidu-slb"
+file-types = ["slb"]
+comment-tokens = ["//"]
+block-comment-tokens = { start = "/*", end = "*/" }
+language-servers = ["bgforge-mls"]
+
 [[language]]
 name = "fallout-msg"
 scope = "source.fallout-msg"
 grammar = "fallout_msg"
 file-types = ["msg"]
+language-servers = ["bgforge-mls"]
 
 [[language]]
 name = "weidu-tra"
@@ -85,7 +93,36 @@ file-types = ["tra"]
 comment-tokens = ["//"]
 block-comment-tokens = { start = "/*", end = "*/" }
 auto-pairs = { "\"" = "\"", "~" = "~" }
+language-servers = ["bgforge-mls"]
+
+[[language]]
+name = "infinity-2da"
+scope = "source.infinity-2da"
+file-types = ["2da"]
+language-servers = ["bgforge-mls"]
+
+[[language]]
+name = "fallout-scripts-lst"
+scope = "source.fallout-scripts-lst"
+file-types = [{ glob = "scripts.lst" }]
+language-servers = ["bgforge-mls"]
+
+[[language]]
+name = "weidu-log"
+scope = "source.weidu-log"
+file-types = [{ glob = "weidu.log" }]
+language-servers = ["bgforge-mls"]
 ```
+
+The `name` of each `[[language]]` is the language ID Helix sends to the server, which dispatches on it, so keep the
+names as written. SLB, 2DA, `scripts.lst` and `weidu.log` have no tree-sitter grammar and get no highlighting here -
+only the server features.
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column), `scripts.lst` (formatting) and `weidu.log`
+(go-to-definition from a mod entry to its `.tp2`). SLB is served as WeiDU BAF. So is Sword Coast Stratagems SSL
+(language `weidu-ssl`), which shares the `.ssl` extension with Fallout SSL - define it per project, in a
+`.helix/languages.toml`, rather than globally.
 
 Note: `.h` files default to C in Helix. The config above overrides this globally. Remove `"h"` from the list if you also work with C headers.
 
@@ -104,8 +141,8 @@ curl -fsSL -o /tmp/bgforge-grammars.zip \
 unzip -oq /tmp/bgforge-grammars.zip -d ~/.local/share/bgforge-mls
 ```
 
-Add grammar entries to `~/.config/helix/languages.toml` and add `grammar` to each `[[language]]` block
-above to link them. `source.path` takes an absolute path -- expand `~` yourself, Helix does not:
+Add grammar entries to `~/.config/helix/languages.toml`; the `grammar` keys in the `[[language]]` blocks
+above already name them. `source.path` takes an absolute path -- expand `~` yourself, Helix does not:
 
 ```toml
 [[grammar]]

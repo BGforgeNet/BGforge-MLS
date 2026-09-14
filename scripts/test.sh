@@ -41,11 +41,10 @@ step "Resetting External Repos"
 step "Building transpile library bundle"
 pnpm build:transpile
 
-# Four suites drive the real WeiDU as their authority and SKIP without one, so resolve it BEFORE Phase 1
-# rather than letting one quietly drop itself. Three (the BCS and DLG differentials, and the DLG parser's
-# compiled fixtures) run in the unit phase, so resolving this at Phase 3 - where only the TP2 grammar
-# differential needed it - left them skipping on any host without a WeiDU already on PATH. Cached after
-# the first run.
+# Resolve WeiDU BEFORE Phase 1. Most WeiDU-backed suites provision it themselves through
+# scripts/utils/src/weidu-binary.ts, but the DLG differential and the DLG parser's compiled fixtures read
+# WEIDU_BIN and SKIP without it, and they run in the unit phase - so the binary has to be on hand before it.
+# Cached after the first run.
 WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
 export WEIDU_BIN
 

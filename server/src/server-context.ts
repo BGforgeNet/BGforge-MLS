@@ -1,8 +1,8 @@
 /**
  * ServerContext - session-scoped container for LSP server state constructed
- * during `onInitialize` and read by request handlers. Module-level mutable
- * `let` globals in server.ts were moved here to satisfy rules/coding.md
- * "avoid shared mutable module state and import-time side effects".
+ * during `onInitialize` and read by request handlers. The state lives here
+ * rather than in mutable module-level `let` globals in server.ts, so it is
+ * created by initialization instead of as an import-time side effect.
  *
  * The internal barrier promise (`contextReady`) ensures that handlers racing
  * the initialization window never see an error - they simply await until the

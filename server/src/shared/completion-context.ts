@@ -77,7 +77,7 @@ export type CompletionCategory = (typeof CompletionCategory)[keyof typeof Comple
 
 /**
  * Extended completion item with optional category metadata.
- * The category field is added by generate-data at build time.
+ * The category field is added by generate-data when it writes the JSON.
  */
 export interface CompletionItemWithCategory extends CompletionItem {
     /**

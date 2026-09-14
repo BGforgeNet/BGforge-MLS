@@ -8,7 +8,7 @@
  *
  * The ts-morph project is built once and kept, because standing one up is what that time buys: after
  * the first compile the same document recompiles in a small fraction of it. `prewarmTsslCompileWorker`
- * pays it at server start instead of inside the author's first compile.
+ * pays it when the first .tssl document opens instead of inside the author's first compile.
  *
  * The thread and its message loop live in `../worker/ts-morph-worker.ts`, which serves this and the
  * transpilers from one bundle so ts-morph ships once rather than once per entry point.

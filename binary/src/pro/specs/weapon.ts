@@ -15,7 +15,7 @@ export const weaponSpec = {
     apCost1: { codec: u32 },
     apCost2: { codec: u32 },
     criticalFail: { codec: u32 },
-    // Granted perk (fallout2-ce Perk enum); signed because -1 = none. Open: sfall can add perks beyond 119.
+    // Granted perk (a Fallout 2 engine perk); signed because -1 = none. Open: sfall can add perks beyond 119.
     perk: { codec: i32, enum: Perk, enumOpen: true },
     rounds: { codec: u32 },
     caliber: { codec: u32, enum: Caliber },

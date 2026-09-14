@@ -6,12 +6,9 @@ Every rule below, with its reasoning and the defects that produced it:
 
 ## The shared-layer rule
 
-Fields render through MULTIPLE components under `components/` - `Field.svelte`, `blocks/FieldsBlock.svelte`,
-`blocks/GridBlock.svelte`, `blocks/MatrixBlock.svelte`, with `CellControl.svelte` dispatching controls
-underneath. A per-field presentation property (tooltip, range hint, advisory, link affordance) added to ONE
-of them is a defect unless every other
-renderer either gets it through one shared helper - never a per-block copy - or is explicitly declared N/A with
-the reason. A field's presentation must not depend on which block kind the schema happened to place it in.
+A per-field presentation property added to ONE field renderer reaches every other through one shared helper, or
+is declared N/A there with the reason. The renderer list and the affordances it covers: the doc above,
+"Field-presentation features cover every block renderer, through one shared layer".
 
 ## Intentional - do not "fix"
 

@@ -43,16 +43,15 @@ export const objectBaseSpec = {
     // Engine-internal int32 with no authored meaning; hidden from the object detail (round-trips via the doc).
     field74: { codec: i32, role: "reserved" as const, hidden: true },
     // The object's script reference. The engine binds an object to its script
-    // by `sid` alone: scriptGetScript() linearly searches the map's script
-    // lists for a slot whose `sid` matches (fallout2-ce src/scripts.cc). `sid`
-    // is `(scriptType << 24) | id`; -1 means no script.
+    // by `sid` alone: it linearly searches the map's script lists for a slot
+    // whose `sid` matches. `sid` is `(scriptType << 24) | id`; -1 means no
+    // script.
     //
     // Not a validatable cross-record reference either. A non-(-1) `sid` with no
-    // matching script slot is NOT corruption: at map load objectLoadAllInternal
-    // does `if (scriptGetScript(sid) == -1) obj->sid = -1;` - it silently drops
-    // the unresolved sid, no error (fallout2-ce src/object.cc). Objects also get
-    // scripts from their proto via objectSetScriptFromProto at creation,
-    // independent of the map's stored script lists, so a scripted object need
+    // matching script slot is NOT corruption: at map load the engine resets an
+    // object's sid to -1 when no script slot matches - it silently drops the
+    // unresolved sid, no error. Objects also get scripts from their proto at
+    // creation, independent of the map's stored script lists, so a scripted object need
     // not have a local script slot at all. Verified against the fixture corpus:
     // unmatched object sids occur only in maps that already fail to fully parse
     // (objects-tail opaque), i.e. parser artifacts, not real dangling refs. So
@@ -61,8 +60,7 @@ export const objectBaseSpec = {
     sid: { codec: i32 },
     // NOT a cross-record reference, despite the name. This is an engine runtime
     // cache, not the link the engine reads - object->script binding is by `sid`
-    // (above), and fallout2-ce marks this field `// TODO: remove` on its Object
-    // struct (src/obj_types.h). It holds a non-positional engine value (e.g.
+    // (above). It holds a non-positional engine value (e.g.
     // 511, 750, 1473 in artemple.map, with only a handful of scripts present),
     // so it is neither an index into nor a count of the script table. Tagged
     // `reserved`: round-tripped byte-identically, locked in the editor, never

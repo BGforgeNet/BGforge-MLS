@@ -31,21 +31,25 @@ vim.filetype.add({
     tpa = "weidu-tp2",
     tph = "weidu-tp2",
     tpp = "weidu-tp2",
+    slb = "weidu-slb",
+    msg = "fallout-msg",
+    tra = "weidu-tra",
+    ["2da"] = "infinity-2da",
   },
   filename = {
     ["worldmap.txt"] = "fallout-worldmap-txt",
-  },
-})
-
--- MSG and TRA are highlight-only (no LSP provider), so no filetype needed
--- for the language server. Register them if using tree-sitter highlighting:
-vim.filetype.add({
-  extension = {
-    msg = "fallout-msg",
-    tra = "weidu-tra",
+    ["scripts.lst"] = "fallout-scripts-lst",
+    ["weidu.log"] = "weidu-log",
   },
 })
 ```
+
+The filetype names are the language IDs the server dispatches on, so keep them as written.
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column), `scripts.lst` (formatting) and `weidu.log`
+(go-to-definition from a mod entry to its `.tp2`). SLB is served as WeiDU BAF. So is Sword Coast Stratagems SSL
+(filetype `weidu-ssl`), which shares the `.ssl` extension with Fallout SSL - set it per project rather than globally.
 
 Note: `.h` files default to C in Neovim. The config above overrides this globally. For per-project control, use `.nvimrc` or `exrc` instead.
 
@@ -78,7 +82,10 @@ vim.api.nvim_create_autocmd("FileType", {
 ```lua
 vim.lsp.config["bgforge-mls"] = {
   cmd = { "bgforge-mls-server", "--stdio" },
-  filetypes = { "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "fallout-worldmap-txt" },
+  filetypes = {
+    "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "weidu-slb", "weidu-ssl", "fallout-worldmap-txt",
+    "fallout-msg", "weidu-tra", "infinity-2da", "fallout-scripts-lst", "weidu-log",
+  },
   root_markers = { ".git" },
 }
 
@@ -276,7 +283,10 @@ Pass settings under the `bgforge` namespace in the `settings` table:
 ```lua
 vim.lsp.config["bgforge-mls"] = {
   cmd = { "bgforge-mls-server", "--stdio" },
-  filetypes = { "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "fallout-worldmap-txt" },
+  filetypes = {
+    "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "weidu-slb", "weidu-ssl", "fallout-worldmap-txt",
+    "fallout-msg", "weidu-tra", "infinity-2da", "fallout-scripts-lst", "weidu-log",
+  },
   root_markers = { ".git" },
   settings = {
     bgforge = {

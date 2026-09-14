@@ -129,8 +129,8 @@ connection.onShutdown(() => {
 });
 
 // The two ts-morph workers are stood up by the first open of a document that needs one, not here - see
-// prewarmWorkerFor in handlers/document-lifecycle.ts. Starting both unconditionally charged every session
-// the resident memory and setup time of both, for a feature only .tssl/.tbaf/.td authors reach.
+// prewarmWorkerFor in handlers/document-lifecycle.ts. Starting both here would charge every session the
+// resident memory and setup time of both, for a feature only .tssl/.tbaf/.td authors reach.
 
 // Attach the document manager and start the LSP transport.
 documents.listen(connection);

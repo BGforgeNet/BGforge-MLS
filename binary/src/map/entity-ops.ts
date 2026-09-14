@@ -6,16 +6,9 @@
  * canonical writer, and let the caller reparse. Keeps add/remove on the
  * same byte-rebuild pipeline as every other MAP write - no buffer splicing.
  *
- * Scope is intentionally limited to header-counted uniform-int32 arrays
- * (Global/Local Variables). The objects section and the script section are
- * deliberately excluded:
- *
- * - Object records embed PIDs whose subtype payload layouts (Item, Scenery,
- *   Wall, Tile) are described in external `.pro` files that are not packaged
- *   alongside `.map` files in user mod trees. Without that metadata, the
- *   parser can't determine where each record ends, so the canonical doc can't
- *   represent the section completely enough to encode it deterministically
- *   after a structural mutation.
+ * Scope is limited to header-counted uniform-int32 arrays (Global/Local
+ * Variables). Objects have their own builders in `object-ops.ts`. The script
+ * section is deliberately excluded:
  *
  * - Script extents always carry 16 fixed slots regardless of `count`. Slots
  *   round-trip byte-identically because the canonical doc keeps all 16 per

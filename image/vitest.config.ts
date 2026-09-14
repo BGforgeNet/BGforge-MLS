@@ -19,7 +19,7 @@ export default defineConfig({
             include: ["src/**/*.ts"],
             // Round floors a point under the measured actuals, so a real regression trips them
             // while a refactor that shifts the ratio a fraction does not. See
-            // docs/architecture.md "Coverage thresholds" for when they move.
+            // docs/development.md "Coverage thresholds" for when they move.
             thresholds: { lines: 99, functions: 99, branches: 88, statements: 97 },
         }),
     },

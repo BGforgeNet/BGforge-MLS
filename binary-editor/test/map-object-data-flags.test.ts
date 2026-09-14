@@ -1,7 +1,7 @@
 /**
- * A MAP object's "Data Flags" (the per-object `data.flags` dword, distinct from the main object flags bitfield)
- * renders as a real flag field with named bits, not a bare integer. fallout2-ce defines two bits on it:
- * OBJ_LOCKED 0x02000000 and OBJ_JAMMED 0x04000000 (door/container Locked/Jammed) - src/obj_types.h.
+ * A MAP object's "Data Flags" (the per-object data-flags dword, distinct from the main object flags bitfield)
+ * renders as a real flag field with named bits, not a bare integer. The Fallout 2 engine defines two bits on it:
+ * locked 0x02000000 and jammed 0x04000000 (door/container Locked/Jammed).
  */
 
 import fs from "node:fs";

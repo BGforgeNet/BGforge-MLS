@@ -2,8 +2,8 @@
 # Coverage for the packages a change touched, so a threshold breach is found in seconds
 # rather than at the end of test:all.
 #
-# The coverage/mutation floors live only in test:all, so without this the only way to learn
-# a percentage is a full-gate run - and closing a 0.02% miss then costs another one. Each
+# Outside this script the coverage floors are enforced only by test:all, so without it the only way to
+# learn a percentage is a full-gate run - and closing a 0.02% miss then costs another one. Each
 # package's own vitest config carries its thresholds, so running it here enforces exactly
 # what the gate will enforce.
 #

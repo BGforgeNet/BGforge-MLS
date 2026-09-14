@@ -79,10 +79,10 @@ configuration.
 ## Running individual tests
 
 ```bash
-# Server unit tests (vitest)
-cd server && pnpm test:unit                              # All unit tests
-cd server && pnpm exec vitest run test/td.test.ts        # Single file
-cd server && pnpm exec vitest run --coverage             # With coverage
+# One package's unit tests, from the repo root (project names are in each package's vitest config)
+pnpm test:project server                                 # All server unit tests
+pnpm test:project server td.test                         # Single file
+pnpm test:cov server                                     # With that package's coverage thresholds
 
 # Server integration tests (real fixtures from external repos)
 cd server && pnpm test:integration                       # All integration tests

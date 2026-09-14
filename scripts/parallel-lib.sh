@@ -17,7 +17,7 @@
 # Advisory lines that build and lint tools print on a run they still exit 0 from - a deprecation, a
 # default the tool plans to adopt, a hint that some config now wants stating. Nothing fails on these,
 # and "silent on success" above meant nothing showed them either, so four of them accumulated unread
-# across one dependency sweep (docs/dependencies.md records which). Anchored where the tool anchors
+# across one dependency sweep. Anchored where the tool anchors
 # them, so prose that merely contains "warning" - a test name, an assertion message - does not match;
 # validated against a corpus where 169 such lines produced no hits.
 # Not `readonly`: this file is sourced, and re-sourcing would then abort the caller under `set -e`.

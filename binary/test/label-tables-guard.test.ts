@@ -64,7 +64,8 @@ function discoverTables(): Map<string, LabelTable> {
 
 // --- A. Source registry --------------------------------------------------------------------------
 // One authoritative-source citation per table. IE tables cite the local IESDP docs/IDS/2da; Fallout tables
-// cite sfall Enums.h / fallout2-ce headers (or the falloutmods PRO wiki where the engine leaves a bit unnamed).
+// cite sfall Enums.h, the scripting headers or the Fallout 2 engine behaviour (or the falloutmods PRO wiki where
+// the engine leaves a bit unnamed).
 // Keep in sync with the tables: the completeness test below fails on any table missing here or any stale entry.
 const TABLE_SOURCES: Record<string, string> = {
     // ITM (IESDP itm_v1.htm + 2da)
@@ -112,46 +113,46 @@ const TABLE_SOURCES: Record<string, string> = {
     "cre.CreItemFlags": "IESDP cre_v1.htm item flags",
     "cre.CRE_SELECTED_WEAPON_OPTIONS": "IESDP cre_v1.htm selected-weapon slot (slots.ids index - 35)",
 
-    // PRO (sfall Enums.h / fallout2-ce; falloutmods wiki where engine leaves a bit unnamed)
+    // PRO (sfall Enums.h / Fallout 2 engine; falloutmods wiki where engine leaves a bit unnamed)
     "pro.ObjectType": "sfall Enums.h ObjType",
-    "pro.ItemSubType": "fallout2-ce proto_types.h ITEM_TYPE_*",
-    "pro.ScenerySubType": "fallout2-ce proto_types.h SCENERY_TYPE_* (placement naming)",
+    "pro.ItemSubType": "Fallout 2 engine item types (scripting headers item_type_*)",
+    "pro.ScenerySubType": "sfall Enums.h ScenerySubType (placement naming)",
     "pro.DamageType": "sfall Enums.h DamageType",
     "pro.MaterialType": "sfall Enums.h Material",
     "pro.FRMType": "sfall Enums.h ObjType/ArtType (art directory order)",
     "pro.BodyType": "sfall Enums.h BodyType",
     "pro.KillType": "sfall Enums.h KillType",
     "pro.ElevatorType": "generic indexed labels (no named engine enum; ELEVATOR.INI indices)",
-    "pro.WeaponAnimCode": "fallout2-ce art.h WeaponAnimation (FRM suffix letters)",
-    "pro.Caliber": "fallout2-ce proto_types.h CALIBER_TYPE_*",
-    "pro.AttackSubType": "fallout2-ce item.cc _attack_subtype (sfall EngineUtils weapon_types)",
-    "pro.Perk": "sfall Enums.h Perk (fallout2-ce perk_defs.h)",
+    "pro.WeaponAnimCode": "Fallout 2 engine weapon animation codes (FRM suffix letters)",
+    "pro.Caliber": "Fallout 2 engine caliber types (19 values)",
+    "pro.AttackSubType": "Fallout 2 engine attack subtypes (sfall EngineUtils weapon_types)",
+    "pro.Perk": "sfall Enums.h Perk",
     "pro.StatType": "sfall Enums.h Stat",
-    "pro.HeaderFlags": "sfall Enums.h ObjectFlag (fallout2-ce obj_types.h ObjectFlags)",
-    "pro.ItemFlagsExt": "fallout2-ce proto_types.h ItemProtoExtendedFlags (high 3 bytes, >>8)",
-    "pro.WallLightFlags": "fallout2-ce PROTO_EXT_FLAG_*_CORNER (>>16) + falloutmods wiki orientation",
-    "pro.ActionFlags": "fallout2-ce proto_types.h ItemProtoExtendedFlags (low 16; proto.cc:264)",
-    "pro.ContainerFlags": "falloutmods PRO wiki (openFlags bits unnamed in sfall/fallout2-ce)",
-    "pro.CritterFlags": "sfall Enums.h CritterFlags (fallout2-ce obj_types.h CritterFlags)",
-    "pro.CritterFlagsExt": "fallout2-ce proto_types.h ItemProtoExtendedFlags (LOOK/CAN_TALK_TO)",
+    "pro.HeaderFlags": "sfall Enums.h ObjectFlag",
+    "pro.ItemFlagsExt": "Fallout 2 engine proto extended flags (high 3 bytes, >>8)",
+    "pro.WallLightFlags": "Fallout 2 engine wall corner flags (>>16) + falloutmods wiki orientation",
+    "pro.ActionFlags": "Fallout 2 engine proto extended flags (low 16, tested unshifted)",
+    "pro.ContainerFlags": "falloutmods PRO wiki (openFlags bits unnamed in sfall and the engine)",
+    "pro.CritterFlags": "sfall Enums.h CritterFlags",
+    "pro.CritterFlagsExt": "Fallout 2 engine proto extended flags (look / can talk to)",
     "pro.Gender": "sfall Enums.h Gender",
-    "pro.ScriptType": "sfall Enums.h Scripts::ScriptTypes (fallout2-ce scripts.h)",
+    "pro.ScriptType": "sfall Enums.h Scripts::ScriptTypes",
 
-    // MAP (sfall Enums.h / fallout2-ce)
-    "map.MapVersion": "fallout2-ce map.cc map versions 19/20",
-    "map.ScriptType": "sfall Enums.h ScriptTypes (fallout2-ce scripts.h)",
-    "map.ScriptProc": "fallout2-ce scripts.h SCRIPT_PROC_*",
-    "map.Skill": "fallout2-ce skill_defs.h (sfall Enums.h)",
-    "map.MapElevation": "fallout2-ce map_defs.h ELEVATION_COUNT",
+    // MAP (sfall Enums.h / Fallout 2 engine)
+    "map.MapVersion": "Fallout 2 engine map versions 19/20",
+    "map.ScriptType": "sfall Enums.h ScriptTypes",
+    "map.ScriptProc": "Fallout 2 engine script procedures (SSL procedure names)",
+    "map.Skill": "sfall Enums.h Skill",
+    "map.MapElevation": "Fallout 2 engine elevation count (3)",
     "map.Rotation": "Fallout hex direction order NE/E/SE/SW/W/NW",
-    "map.MapFlags": "fallout2-ce map.cc map header flags",
-    "map.ScriptFlags": "fallout2-ce scripts.h SCRIPT_FLAG_* (anonymous; labels are behavioral readings)",
-    "map.ObjectFlags": "fallout2-ce obj_types.h ObjectFlags (sfall ObjectFlag)",
-    "map.ObjectDataFlags": "fallout2-ce obj_types.h OBJ_LOCKED/OBJ_JAMMED",
-    "map.DoorOpenFlags": "fallout2-ce obj_types.h DOOR_FLAG_LOCKED/JAMMED + proto_instance.cc 0x01 open bit",
-    "map.ElevatorType": "fallout2-ce elevator.h Elevator enum (values 0-23; 14 unnamed)",
-    "map.ItemSubType": "fallout2-ce proto_types.h ITEM_TYPE_*",
-    "map.ScenerySubType": "fallout2-ce proto_types.h SCENERY_TYPE_* (direction naming)",
+    "map.MapFlags": "Fallout 2 engine map header flags",
+    "map.ScriptFlags": "Fallout 2 engine script flags (unnamed; labels are behavioral readings)",
+    "map.ObjectFlags": "sfall Enums.h ObjectFlag",
+    "map.ObjectDataFlags": "Fallout 2 engine object data flags locked/jammed (sfall Enums.h MiscFlags)",
+    "map.DoorOpenFlags": "Fallout 2 engine door flags locked/jammed + 0x01 open bit (sfall Enums.h MiscFlags)",
+    "map.ElevatorType": "Fallout 2 engine elevator table (values 0-23; 14 unnamed)",
+    "map.ItemSubType": "Fallout 2 engine item types (scripting headers item_type_*)",
+    "map.ScenerySubType": "Fallout 2 engine scenery types (direction naming)",
 
     // ie-common (IESDP)
     "ie-common.Opcodes": "IESDP _opcodes/opNNN.html opname",

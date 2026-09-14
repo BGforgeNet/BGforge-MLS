@@ -115,4 +115,4 @@ fgfmt file.d --check
 ## Related
 
 - [WeiDU D Grammar README](./README.md) - D syntax reference
-- [Format CLI](../../docs/architecture.md#format-cli) - General format CLI documentation
+- [Format CLI](../../format/README.md) - General format CLI documentation

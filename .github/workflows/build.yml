@@ -103,9 +103,9 @@ jobs:
       - name: Build tree-sitter grammar
         run: pnpm build:grammar
 
-      # The grammar differential suite skips without a WeiDU binary, so without a binary it would pass
-      # by never running. The test scripts call this too, so CI and a local run resolve the same pinned
-      # WeiDU; here it also lands on PATH for the steps below. See scripts/ensure-weidu.sh.
+      # The DLG WeiDU suites skip without a binary (the other differentials provision their own). The test
+      # scripts call this too, so CI and a local run resolve the same pinned WeiDU; here it also lands on
+      # PATH for the steps below. See scripts/ensure-weidu.sh.
       - name: Install WeiDU
         run: ./scripts/ensure-weidu.sh
 
@@ -173,7 +173,7 @@ jobs:
         run: ./scripts/verify-grammar-bundle.sh
 
       # Two separate uploads so the VSIX can be fetched on its own, apart from the
-      # editor bundles and SBOM. Default 90-day retention is excessive for branch
+      # editor and grammar bundles. Default 90-day retention is excessive for branch
       # builds; 14 days is enough to inspect a CI artifact from a recent push or PR.
       - name: Upload VSIX
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -185,14 +185,13 @@ jobs:
 
       # The `dist/*.zip` glob carries the editor bundles AND the tree-sitter grammar bundle, so an
       # unreleased grammar fix is consumable from this artifact rather than from a channel of its own.
-      - name: Upload editor and grammar bundles and SBOM
+      - name: Upload editor and grammar bundles
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: "!startsWith(github.ref, 'refs/tags/')"
         with:
           name: bgforge-mls-bundles
-          path: |
-            dist/*.zip
-            dist/sbom.cdx.json
+          # The SBOM is generated on tag builds only, and this step skips those.
+          path: dist/*.zip
           retention-days: 14
 
       # The GitHub Release (carrying the SLSA-provenance subjects and the SBOM) is

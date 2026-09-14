@@ -127,9 +127,9 @@ export const ObjectFlags: Record<number, string> = {
 };
 
 /**
- * Per-object data flags (`obj->data.flags`) - distinct from the main object flags bitfield above. fallout2-ce
- * defines two bits (src/obj_types.h): OBJ_LOCKED / OBJ_JAMMED, which doors and containers read as Locked /
- * Jammed (DOOR_FLAG_* / CONTAINER_FLAG_* alias the same bits). Other object types leave this 0.
+ * Per-object data flags - distinct from the main object flags bitfield above. The Fallout 2 engine defines two
+ * bits on this field, locked and jammed, which doors and containers read as Locked / Jammed (their door and
+ * container flags alias the same bits). Other object types leave this 0.
  */
 export const ObjectDataFlags: Record<number, string> = {
     0x02000000: "Locked",
@@ -137,10 +137,10 @@ export const ObjectDataFlags: Record<number, string> = {
 };
 
 /**
- * Door scenery instance open-flags (`obj->data.scenery.door.openFlags` / `cur_open_flags`) - the per-subtype
- * trailer dword of a door object, distinct from the object `dataFlags` above. fallout2-ce names three bits:
- * 0x01 = currently open (proto_instance.cc toggles it on open/close), and DOOR_FLAG_LOCKED / DOOR_FLAG_JAMMGED
- * (src/obj_types.h) which alias the same 0x02000000 / 0x04000000 values as OBJ_LOCKED / OBJ_JAMMED.
+ * Door scenery instance open-flags (sfall's `cur_open_flags`) - the per-subtype trailer dword of a door object,
+ * distinct from the object `dataFlags` above. The Fallout 2 engine defines three bits: 0x01 = currently open
+ * (toggled when the door opens or closes), and locked / jammed, which alias the same 0x02000000 / 0x04000000
+ * values as the object data flags.
  */
 export const DoorOpenFlags: Record<number, string> = {
     0x00000001: "Open",
@@ -149,9 +149,9 @@ export const DoorOpenFlags: Record<number, string> = {
 };
 
 /**
- * Elevator scenery type (`obj->data.scenery.elevator.type`) - an index into the engine's hardcoded elevator
- * table. Labels humanized from fallout2-ce src/elevator.h (the `Elevator` enum, values 0-23). Index 14 has no
- * engine name (`ELEVATOR_14`), so it falls through to the walker's `Unknown (14)` display.
+ * Elevator scenery type - an index into the Fallout 2 engine's hardcoded elevator table (values 0-23), labelled
+ * by each elevator's location. Index 14 has no engine name, so it falls through to the walker's `Unknown (14)`
+ * display.
  */
 export const ElevatorType: Record<number, string> = {
     0: "Brotherhood of Steel (Main)",
@@ -180,8 +180,8 @@ export const ElevatorType: Record<number, string> = {
 };
 
 /**
- * Item object subtype codes (the resolved `proto->item.type`). Labels the read-only "Sub Type" note and selects
- * the per-subtype trailer layout. Values per fallout2-ce src/proto_types.h (ITEM_TYPE_*).
+ * Item object subtype codes (the item type resolved from the object's proto). Labels the read-only "Sub Type"
+ * note and selects the per-subtype trailer layout. Values match the scripting headers' `item_type_*` defines.
  */
 export const ItemSubType: Record<number, string> = {
     0: "Armor",
@@ -194,8 +194,8 @@ export const ItemSubType: Record<number, string> = {
 };
 
 /**
- * Scenery object subtype codes (the resolved `proto->scenery.type`). Values per fallout2-ce src/proto_types.h
- * (SCENERY_TYPE_*); the two ladder codes read "Ladder Up" / "Ladder Down".
+ * Scenery object subtype codes (the scenery type resolved from the object's proto). Values per the Fallout 2
+ * engine's scenery types (sfall Enums.h `ScenerySubType`); the two ladder codes read "Ladder Up" / "Ladder Down".
  */
 export const ScenerySubType: Record<number, string> = {
     0: "Door",

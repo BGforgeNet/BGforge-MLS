@@ -1,18 +1,20 @@
-# Ignore Files
+# Ignore Files and Lint Policy
 
 Each ignore mechanism explains itself at the site: `.gitignore`, `.vscodeignore` and `.oxlintrc.json` carry a
 comment beside every non-obvious pattern, and those files are the authority on what is excluded. Read them first.
 
 This document holds only what no single file can state - facts that span two of them, behaviour of the tools that
-read them, and measurements someone would otherwise have to redo.
+read them, and measurements someone would otherwise have to redo. Its last section is lint policy, which is not an
+ignore mechanism but is decided in the same config.
 
-| Mechanism        | Controls                                                                          |
-| ---------------- | --------------------------------------------------------------------------------- |
-| `.gitignore`     | What git tracks (plus a `.gitignore` per grammar directory, for test artifacts)   |
-| `.vscodeignore`  | What ships in the VSIX                                                            |
-| `.editorconfig`  | Indent and line width; oxfmt reads it, so it is where the 120-column limit lives  |
-| `.oxfmtrc.json`  | Per-filetype indent, and the authoritative list of files excluded from formatting |
-| `.oxlintrc.json` | Lint categories, per-rule severity, and per-directory idiom exemptions            |
+| Mechanism              | Controls                                                                                     |
+| ---------------------- | -------------------------------------------------------------------------------------------- |
+| `.gitignore`           | What git tracks (plus nested `.gitignore` files beside the build and test output they cover) |
+| `.vscodeignore`        | What ships in the VSIX                                                                       |
+| `package.json` `files` | What ships in each published npm tarball                                                     |
+| `.editorconfig`        | Indent and line width; oxfmt reads it, so it is where the 120-column limit lives             |
+| `.oxfmtrc.json`        | Per-filetype indent, and the authoritative list of files excluded from formatting            |
+| `.oxlintrc.json`       | Lint categories, per-rule severity, and per-directory idiom exemptions                       |
 
 ## What ships in the VSIX
 
@@ -20,9 +22,11 @@ read them, and measurements someone would otherwise have to redo.
 ships - appears nowhere in that file. These are included because nothing excludes them:
 
 - `package.json`, `README.md`, `LICENSE.txt` - auto-included by vsce
+- `SECURITY.md` - the vulnerability-reporting policy
 - `client/package.json`, `client/out/` - extension entry point, webview bundles, codicons
 - `client/src/**/*.html`, `client/src/**/*.css` - webview HTML/CSS templates
-- `server/package.json`, `server/out/` - LSP server bundle, data JSONs, WASM parsers, td-runtime.d.ts
+- `server/package.json`, `server/LICENSE.txt`, `server/out/` - LSP server bundle, data JSONs, WASM parsers,
+  td-runtime.d.ts
 - `server/node_modules/sslc-emscripten-noderawfs/` - Fallout SSL compiler (WASM), loaded via `fork()`
 - `server/node_modules/esbuild-wasm/` - esbuild WASM, used by transpilers (runtime files only: `esbuild.wasm`,
   `bin/esbuild`, `lib/main.js`, `wasm_exec*.js`, `package.json`)
@@ -32,21 +36,19 @@ ships - appears nowhere in that file. These are included because nothing exclude
 - `themes/bgforge-*.json`, `themes/seti.woff`, `themes/icons/` - BGforge themes
 - `resources/bgforge.png` - extension icon
 
+One more entry ships although `.vscodeignore` excludes root `node_modules/`: `node_modules/bgforge-tssl-plugin/` and
+`node_modules/bgforge-td-plugin/`, which `scripts/package.sh` adds to the VSIX after vsce has packaged it. That
+script's header describes the steps it takes to make pnpm's layout packageable.
+
 A denylist fails open, so this list is orientation, not a guarantee: `scripts/verify-package-contents.sh` runs at
 the end of `package.sh` and fails the build when an unexpected path or size appears in the VSIX. That guard, not
 this list, is what actually holds.
 
-### Packaging notes
+## What ships in the npm tarballs
 
-`scripts/package.sh` handles three pnpm/vsce compatibility issues:
-
-1. **pnpm symlinks**: `server/node_modules/` entries are pnpm symlinks that vsce's zip writer (yazl) crashes on. The script derefs runtime deps (`sslc-emscripten-noderawfs`, `esbuild-wasm`), strips all remaining symlinks and pnpm internal dirs, then restores via `pnpm install` after packaging.
-
-2. **`--no-dependencies`**: vsce's `npm list --production` check fails with pnpm's node_modules layout. The `--no-dependencies` flag skips this check.
-
-3. **TS plugin injection**: vsce with `--no-dependencies` does not include root `node_modules/` contents regardless of `.vscodeignore` patterns. The TS plugins (`bgforge-tssl-plugin`, `bgforge-td-plugin`) are injected into the VSIX via `zip -g` after packaging, using a `.pkg-inject/` temp directory.
-
-The script runs the prepublish build first (with full deps available), then uses `SKIP_PREPUBLISH=1` to skip the rebuild when vsce invokes `vscode:prepublish` after the strip.
+The published packages - `@bgforge/mls-server`, `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile` and
+`@bgforge/tssl` - take the opposite shape: each `package.json` `files` field is an **allowlist**, so a tarball carries
+only what that field names plus the files npm always includes. Neither `.gitignore` nor `.vscodeignore` affects them.
 
 ## Formatting exclusions
 
@@ -75,13 +77,11 @@ full-tree run ever reaches them however the lint config is written - linting the
 The asymmetry therefore covers generated files that are **tracked** (the `server/out/` data JSONs, the
 `shared/syntax-types/` modules), not gitignored build output.
 
-## Relaxing a lint rule
+## Lint rule policy
 
-A rule that must be relaxed for one file gets an `overrides` entry naming that rule, never an `ignorePatterns`
-entry: the latter drops the file from every enabled rule to silence one. `server/src/user-messages.ts` is the worked
-example - it is the wrapper the `no-showmessage` rule points callers at, so that single rule is switched off for
-it there. The render harnesses and the ambient `*-runtime.d.ts` declarations were both converted from blanket
-exclusions to rule-scoped overrides for the same reason.
+Which rules run beyond the categories `.oxlintrc.json` enables, and which were measured and left out. A rule relaxed
+for one file is an `overrides` entry in `.oxlintrc.json`, never an `ignorePatterns` entry, and its comment there says
+why.
 
 ### The type-aware pass runs separately
 
@@ -89,16 +89,9 @@ exclusions to rule-scoped overrides for the same reason.
 exactly three rules - `no-floating-promises`, `no-misused-promises`, `await-thenable` - and allows everything else,
 because the full type-aware set is dominated by `prefer-readonly-parameter-types` and the `no-unsafe-*` family
 (~14000 findings, almost all style). The three it does run cannot be expressed syntactically, and they found four
-real defects when first enabled. It is wired into `scripts/test.sh` Phase 1 and pre-commit.
-
-It covers every workspace. It briefly did not: both TS Language Service plugins pinned `moduleResolution: node`,
-removed in TS 7, so their programs failed to construct and neither `src` tree was analysed. They now use `node16`,
-which resolves and emits CommonJS in a package that declares no `"type"` - so `export = init` stays legal - and the
-shipped bundle never depended on the setting anyway, since `scripts/build-ts-plugin.sh` uses esbuild `--format=cjs`.
-
-A program that fails to construct reports zero findings, not an error per file: `client` and `server` were in that
-state until their `rootDir` was made explicit, and read as clean while nothing had been analysed. Treat a sudden
-drop to zero findings as a config failure until the run's `tsconfig-error` count is confirmed to be zero.
+real defects when first enabled. It is wired into `scripts/test.sh` Phase 1 and pre-commit, and it covers every
+workspace. What its backend requires of a tsconfig, and how a config it refuses reads as clean, is in the
+`oxlint-tsgolint` entry of [dependencies.md](dependencies.md).
 
 **`no-unnecessary-type-assertion` is not in the enabled set, and cannot be.** Its 318 findings were swept in one
 pass and 269 were genuine - mostly `as unknown as T` double casts. The other 49 are assertions `tsc` REQUIRES: it
@@ -111,10 +104,9 @@ tsgolint bump, since this is a divergence between its program and `tsc`, not a p
 
 ### The test-lint pass, and what it leaves out
 
-`pnpm lint:tests` runs the vitest plugin with a named allowlist - committed `.only`, duplicate titles, duplicate
-and misordered hooks, the two structural checks, and `no-conditional-expect`. The plugin is not enabled wholesale:
-with the repo's categories, its full set produces roughly 16000 findings, nearly all style
-(`prefer-expect-assertions` alone is 7559).
+`pnpm lint:tests` runs the vitest plugin with the named allowlist in the `lint:tests` script in `package.json`. The
+plugin is not enabled wholesale: with the repo's categories, its full set produces roughly 16000 findings, nearly all
+style (`prefer-expect-assertions` alone is 7559).
 
 `no-conditional-expect` was cleared across 98 sites rather than suppressed. Three shapes came out of it, and the
 same three are what a new finding will be: an `if` re-checking what an earlier `expect` established purely to

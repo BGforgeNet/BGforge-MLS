@@ -138,6 +138,17 @@ Expected output ends with `ALL OPS PASS` / `ALL ITM OPS PASS` / `ALL SPL OPS PAS
 summary for the other drivers), exit 0. Any assertion failure prints `FAIL  <label>  <detail>` and exits
 non-zero.
 
+## Reading the screenshots
+
+What to check in a screenshot, and which patterns are intentional: `binary-editor/AGENTS.md`. What the harness
+itself leaves in one, and which is not a defect:
+
+- The empty area at the bottom of some screenshots is the capture viewport: a full-page shot of a short form
+  still extends to the viewport height.
+- `shot-primitives.png` is a standalone gallery of raw controls, not the dense field layout, so the tier sizing
+  does not apply there.
+- Some drivers capture at device scale 1 rather than 2, so minor softness is expected.
+
 ## Where these run in CI
 
 The drivers run as a regression suite in the separate `Harness` workflow, via `scripts/test-harness.sh` (which

@@ -3,8 +3,8 @@
  * or set at construction), so a display relabel can never silently un-hide them. The field stays in the model
  * for byte round-trip; the renderer (FormSection) skips rows where `hidden === true`.
  *
- * fallout2-ce confirms the script-slot fields carry no authored meaning: field_4 (scr_next) and field_48 are
- * read/written but referenced nowhere; field_50 is runtime string-lookup scratch.
+ * The Fallout 2 engine gives the hidden script-slot fields no authored meaning: the slot's 0x04 and 0x48 fields
+ * are read/written but consumed nowhere; the 0x50 field is runtime string-lookup scratch.
  */
 
 import fs from "node:fs";

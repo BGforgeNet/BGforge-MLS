@@ -27,8 +27,8 @@ export default defineConfig({
         // and the server/test/td + server/test/tbaf fixture-driven integration
         // suites in scripts/test.sh - not by this vitest project. The values are
         // round floors a point or two under the unit-suite actuals, and ratchet
-        // only on deliberate coverage work. See docs/architecture.md "Coverage
-        // thresholds" for the full layering.
+        // only on deliberate coverage work. See docs/development.md "Coverage
+        // thresholds" for how floors are set.
         coverage: coverageConfig({
             reportsDirectory: "coverage/transpile",
             // Scoped to this package's own sources. Without it v8 measures whatever the tests happened to

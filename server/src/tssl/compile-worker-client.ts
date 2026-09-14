@@ -3,7 +3,7 @@
  *
  * The thread, the id matching, the timeout and the teardown are `../worker/worker-client.ts`, shared
  * with the transpiler. What is here is adding the `kind` that selects the compiler half of that shared
- * bundle, rebuilding a refusal as the positioned error a caller reports from, and the startup prewarm.
+ * bundle, rebuilding a refusal as the positioned error a caller reports from, and the prewarm.
  *
  * One worker is started by the first open of a .tssl document (`prewarmWorkerFor` in
  * handlers/document-lifecycle.ts) and kept: it holds the ts-morph project, which costs more to build

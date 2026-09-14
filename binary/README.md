@@ -58,21 +58,33 @@ format-adapter registration, and presentation-schema lookups.
 ## `fgbin` CLI
 
 ```
-fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|file.dlg|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
+fgbin <file.pro|file.map|file.itm|file.spl|file.eff|file.cre|file.dlg|dir> [--save] [--check] [--load] [--parse-only] [--graceful-map] [--proto-dir <dir>] [-r] [-q] [--jobs <n>] [--exclude-from <path>] [--exclude-base <dir>]
+fgbin --extensions
 ```
+
+With no mode flag, the JSON snapshot is printed to stdout.
 
 - `--save` - write parsed JSON snapshot alongside the binary file
   (`.pro.json` / `.map.json` / `.itm.json` / `.spl.json` / `.eff.json` / `.cre.json` / `.dlg.json`)
 - `--check` - exit 1 if the binary does not match its existing JSON snapshot
 - `--load` - read a JSON snapshot and write the binary back out using the
   parser's native extension
+- `--parse-only` - parse and report errors without building the snapshot; the
+  exit code is the verdict. Cannot be combined with `--save`, `--check` or `--load`
 - `--graceful-map` - opt into permissive MAP boundary guessing for ambiguous
-  files (default is strict)
+  files (default is strict). Not used by `--load`: a MAP snapshot reloads
+  permissively only when it carries an `objects-tail` opaque range
 - `--proto-dir <dir>` - load MAP object-subtype overrides from
   `<dir>/{items,scenery}` instead of the default sibling `<mapDir>/../proto/`.
   Affects MAP inputs only; exits 1 if `<dir>` is missing
 - `-r` - recurse into directories
 - `-q` - quiet mode (suppress summary)
+- `--jobs <n>` - process a directory's files with N parallel workers
+- `--exclude-from <path>` - skip the files listed in `<path>` (`#` comments and
+  blank lines ignored)
+- `--exclude-base <dir>` - resolve `--exclude-from` entries against `<dir>`
+  instead of the target
+- `--extensions` - print the supported file extensions, one per line, and exit
 
 ## Supported file types
 

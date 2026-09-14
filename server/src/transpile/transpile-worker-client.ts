@@ -5,8 +5,10 @@
  * with the compiler. What is here is reading this protocol's response - `result` for a transpile,
  * `parsed` for a dialog parse - and rebuilding a refusal as the error the caller reports from.
  *
- * The worker is started at server start rather than by the first request, so the thread and ts-morph
- * setup happens on a thread nobody is waiting on. A warm round trip is a small fraction of the transpile
+ * The worker is started by the first open of a .tbaf or .td document (`prewarmWorkerFor` in
+ * handlers/document-lifecycle.ts) rather than by the first request, so the thread and ts-morph setup
+ * happens on a thread nobody is waiting on. Opening a .tssl starts only the compile worker, so in a session
+ * with no .tbaf or .td open the first TSSL dialog parse starts this one. A warm round trip is a small fraction of the transpile
  * it carries, so the boundary is not where the time goes.
  */
 

@@ -381,8 +381,8 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                 },
                 // A weapon has two attack modes; each is (mode, AP cost, range). The mode lives in the common
                 // item byte and the AP/range in the weapon struct - fuse each across that parse boundary into
-                // one boxed group so the two modes read as coherent units (fallout2-ce Weapon.maxRange[2] /
-                // movePointCost[2] are indexed by mode: index 0 primary, index 1 secondary).
+                // one boxed group so the two modes read as coherent units (the engine indexes the weapon's range and AP
+                // cost pairs by mode: index 0 primary, index 1 secondary).
                 {
                     title: "Attack",
                     blocks: [
@@ -423,7 +423,7 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                             p("ammoStats.damageMultiplier"),
                             p("ammoStats.damageDivisor"),
                         ],
-                        // Ammo scales target damage by multiplier/divisor (fallout2-ce Ammo damageMult/damageDiv);
+                        // Ammo scales target damage by multiplier/divisor (as the engine applies it);
                         // fold the pair into one "N / M" cell so it reads as the single fraction it is.
                         joins: [
                             {
@@ -445,8 +445,8 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                 ],
             },
         ]),
-        // A drug's effect data is three parallel arrays (fallout2-ce Drug: stats[3], immediateEffect[3],
-        // delayed[2].effect[3]): each affected stat gets an instant amount plus two delayed amounts. Render it
+        // A drug's effect data is three parallel arrays (three stats, three instant amounts, and two delayed
+        // phases of three amounts): each affected stat gets an instant amount plus two delayed amounts. Render it
         // stat-major as one matrix (a row per affected stat) instead of the old phase-major panels that forced
         // the reader to mentally zip stat0 with amount0. The two onset durations are per-phase, not per-stat, so
         // they sit in a small Delays panel beside the matrix's Delayed 1 / Delayed 2 columns.

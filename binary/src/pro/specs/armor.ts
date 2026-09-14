@@ -19,7 +19,7 @@ export const armorSpec = {
     dtElectrical: { codec: u32 },
     dtEmp: { codec: u32 },
     dtExplosion: { codec: u32 },
-    // Granted perk (fallout2-ce Perk enum); signed because -1 = none. Open: sfall can add perks beyond 119.
+    // Granted perk (a Fallout 2 engine perk); signed because -1 = none. Open: sfall can add perks beyond 119.
     perk: { codec: i32, enum: Perk, enumOpen: true },
     maleFrmId: { codec: i32 },
     femaleFrmId: { codec: i32 },

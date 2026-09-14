@@ -13,7 +13,7 @@
             `style-src {{cspSource}}`. They are NOT inlined as nonce'd style elements: VS Code's wrapped
             webview only honours style-src sources it can attribute to the webview origin (cspSource). A
             bare `style-src 'nonce-...'` is honoured by raw Chromium but silently ignored by the VS Code
-            webview layer, leaving the panel unstyled. See docs/architecture.md (Webview CSP).
+            webview layer, leaving the panel unstyled. See client/src/webview-html.ts.
         -->
         <link href="{{codiconsUri}}" rel="stylesheet" />
         <link href="{{baseUri}}" rel="stylesheet" />

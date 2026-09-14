@@ -94,7 +94,7 @@ BGforge MLS runs in desktop VS Code and in code-server. It is not supported on v
 1. Check [general settings](docs/settings.md).
 1. Check [file associations](docs/file_associations.md).
 1. Check [hotkeys](#hotkeys).
-1. Enable [custom theme](docs/theme.md) and [icon theme](docs/icon-theme.md).
+1. Enable [custom theme](docs/themes.md#color-theme) and [icon theme](docs/themes.md#icon-theme).
 1. (Infinity Engine) Install [IElib](https://ielib.bgforge.net).
 
 ## Hotkeys

@@ -11,7 +11,7 @@
 
 import { timed } from "../../../shared/timing";
 
-/** Default slow-request threshold in milliseconds. See docs/architecture.md#latency-budgets. */
+/** Default slow-request threshold in milliseconds. See server/INTERNALS.md#latency-budgets. */
 const ENV_THRESHOLD_MS = parseInt(process.env["BGFORGE_LSP_SLOW_MS"] ?? "", 10);
 export const DEFAULT_THRESHOLD_MS: number = Number.isFinite(ENV_THRESHOLD_MS) ? ENV_THRESHOLD_MS : 50;
 

@@ -36,8 +36,33 @@ schema_version = 1
 
 [language_servers.bgforge-mls]
 name = "BGforge MLS"
-languages = ["Fallout SSL", "WeiDU BAF", "WeiDU D", "WeiDU TP2", "Fallout Worldmap"]
+languages = [
+  "Fallout SSL", "WeiDU BAF", "WeiDU D", "WeiDU TP2", "WeiDU SLB", "Fallout Worldmap",
+  "Fallout MSG", "WeiDU TRA", "Infinity 2DA", "Fallout scripts.lst", "WeiDU log",
+]
+
+[language_servers.bgforge-mls.language_ids]
+"Fallout SSL" = "fallout-ssl"
+"WeiDU BAF" = "weidu-baf"
+"WeiDU D" = "weidu-d"
+"WeiDU TP2" = "weidu-tp2"
+"WeiDU SLB" = "weidu-slb"
+"Fallout Worldmap" = "fallout-worldmap-txt"
+"Fallout MSG" = "fallout-msg"
+"WeiDU TRA" = "weidu-tra"
+"Infinity 2DA" = "infinity-2da"
+"Fallout scripts.lst" = "fallout-scripts-lst"
+"WeiDU log" = "weidu-log"
 ```
+
+`language_ids` is required: without it Zed sends the lowercased language name (`fallout ssl`) as the LSP language
+ID, which the server does not recognize, so the file gets no server features.
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column), `scripts.lst` (formatting) and `weidu.log`
+(go-to-definition from a mod entry to its `.tp2`). SLB is served as WeiDU BAF. So is Sword Coast Stratagems SSL
+(language ID `weidu-ssl`), which shares the `.ssl` extension with Fallout SSL; to use it, define another language
+for it the same way and associate it per project.
 
 ### `Cargo.toml`
 
@@ -146,7 +171,16 @@ brackets = [
 ]
 ```
 
-**`languages/fallout-msg/config.toml`** (highlight-only, no LSP provider):
+**`languages/weidu-slb/config.toml`**:
+
+```toml
+name = "WeiDU SLB"
+path_suffixes = ["slb"]
+line_comments = ["//"]
+block_comment = ["/*", "*/"]
+```
+
+**`languages/fallout-msg/config.toml`**:
 
 ```toml
 name = "Fallout MSG"
@@ -157,7 +191,7 @@ brackets = [
 ]
 ```
 
-**`languages/weidu-tra/config.toml`** (highlight-only, no LSP provider):
+**`languages/weidu-tra/config.toml`**:
 
 ```toml
 name = "WeiDU TRA"
@@ -171,21 +205,48 @@ brackets = [
 ]
 ```
 
+**`languages/infinity-2da/config.toml`**:
+
+```toml
+name = "Infinity 2DA"
+path_suffixes = ["2da"]
+```
+
 **`languages/fallout-worldmap/config.toml`**:
 
 ```toml
 name = "Fallout Worldmap"
 ```
 
-Fallout Worldmap has no `path_suffixes` to avoid matching all `.txt` files. Use Zed's `file_types` setting to associate `worldmap.txt`:
+**`languages/fallout-scripts-lst/config.toml`**:
+
+```toml
+name = "Fallout scripts.lst"
+```
+
+**`languages/weidu-log/config.toml`**:
+
+```toml
+name = "WeiDU log"
+```
+
+SLB, 2DA, Fallout Worldmap, scripts.lst and WeiDU log have no tree-sitter grammar, so they get no highlighting here -
+only the server features. The last three have no `path_suffixes`, to avoid matching every `.txt`, `.lst` and `.log`
+file. Use Zed's `file_types` setting to associate them by file name:
 
 ```json
 {
   "file_types": {
-    "Fallout Worldmap": ["**/worldmap.txt"]
+    "Fallout Worldmap": ["**/worldmap.txt"],
+    "Fallout scripts.lst": ["**/scripts.lst"],
+    "WeiDU log": ["**/weidu.log"]
   }
 }
 ```
+
+Note: Zed's built-in C++ language also claims `.h`, so both it and the Fallout SSL definition above match `.h`
+files. To choose one, map `.h` to it with the `file_types` setting
+([file associations](https://zed.dev/docs/configuring-languages#file-associations)).
 
 ### Tree-sitter grammars
 
@@ -216,66 +277,28 @@ path = "fallout-ssl"
 Repeat per grammar, changing `path` to `weidu-baf`, `weidu-d`, `weidu-tp2`, `fallout-msg`, `weidu-tra`.
 Re-run the `git add`/`commit` after downloading a newer bundle and update the commit.
 
-Alternatively, build from the repository itself. That needs the
-[tree-sitter CLI](https://github.com/tree-sitter/tree-sitter/blob/master/crates/cli/README.md) to
-generate the parser into `grammars/<name>/src` in a clone first, then point `repository` at that clone
-the same way -- Zed will not run the generator for you. Add grammar entries to `extension.toml`, updating
-the `commit` SHA to the latest from the [repository](https://github.com/BGforgeNet/BGforge-MLS):
-
-```toml
-[grammars.ssl]
-repository = "https://github.com/BGforgeNet/BGforge-MLS"
-commit = "dbdde670606b1b5d103f848cb22bb62a2e639fd8"
-path = "grammars/fallout-ssl"
-
-[grammars.baf]
-repository = "https://github.com/BGforgeNet/BGforge-MLS"
-commit = "dbdde670606b1b5d103f848cb22bb62a2e639fd8"
-path = "grammars/weidu-baf"
-
-[grammars.weidu_d]
-repository = "https://github.com/BGforgeNet/BGforge-MLS"
-commit = "dbdde670606b1b5d103f848cb22bb62a2e639fd8"
-path = "grammars/weidu-d"
-
-[grammars.weidu_tp2]
-repository = "https://github.com/BGforgeNet/BGforge-MLS"
-commit = "dbdde670606b1b5d103f848cb22bb62a2e639fd8"
-path = "grammars/weidu-tp2"
-
-[grammars.fallout_msg]
-repository = "https://github.com/BGforgeNet/BGforge-MLS"
-commit = "dbdde670606b1b5d103f848cb22bb62a2e639fd8"
-path = "grammars/fallout-msg"
-
-[grammars.weidu_tra]
-repository = "https://github.com/BGforgeNet/BGforge-MLS"
-commit = "dbdde670606b1b5d103f848cb22bb62a2e639fd8"
-path = "grammars/weidu-tra"
-```
+A commit of the BGforge MLS repository cannot stand in for the bundle: git does not track the generated
+`grammars/<name>/src/parser.c`, so the repository has no parser for Zed to compile.
 
 ### Highlight queries
 
 Copy the highlight queries into each language directory (`languages/<lang>/highlights.scm`), from the
-bundle you extracted above so the queries match the parsers they were generated with:
+bundle you extracted above so the queries match the parsers they were generated with. Take them from each
+grammar's `queries/zed/` directory, not `queries/` - the latter uses Neovim capture names, several of which
+Zed names differently or does not style:
 
 ```bash
 BUNDLE="$HOME/.local/share/bgforge-mls/bgforge-mls-tree-sitter-grammars"
 EXT_DIR="$HOME/zed-extensions/bgforge-mls"
 
 for lang in fallout-ssl weidu-baf weidu-d weidu-tp2 fallout-msg weidu-tra; do
-  cp "$BUNDLE/$lang/queries/highlights.scm" "$EXT_DIR/languages/$lang/highlights.scm"
+  cp "$BUNDLE/$lang/queries/zed/highlights.scm" "$EXT_DIR/languages/$lang/highlights.scm"
 done
 ```
-
-These use Neovim capture names, which Zed resolves fine: it styles a capture by the longest dotted prefix
-its theme defines, so `@keyword.modifier` picks up `keyword` where a theme has no entry of its own for it.
 
 ### Install
 
 Open Zed, go to `Extensions`, click `Install Dev Extension`, and point to the directory.
-
-Note: `.h` files default to C in Zed. The config above overrides this globally. For per-project control, add `file_types` overrides in `.zed/settings.json`.
 
 ## TypeScript plugins (TSSL/TD)
 

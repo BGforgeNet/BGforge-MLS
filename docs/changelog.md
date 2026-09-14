@@ -952,7 +952,7 @@ Fixed crash on mod directory open on Windows.
   - Clarified `set_obj_visibility` description.
 - IE
   - Updated [IESDP](https://gibberlings3.github.io/iesdp/) and [IElib](https://ielib.bgforge.net/) defines.
-  - Added custom [icon theme](https://github.com/BGforgeNet/BGforge-MLS/blob/master/docs/icon-theme.md).
+  - Added custom [icon theme](https://github.com/BGforgeNet/BGforge-MLS/blob/master/docs/themes.md#icon-theme).
   - Added rudimentary gcc [preprocessing](https://forums.bgforge.net/viewtopic.php?f=35&t=334) support.
 
 ## 1.15.3

@@ -119,7 +119,7 @@ const FRM_DEATH = [
 ];
 
 // Armed actions: second letter is 'c' + (animation - ANIM_take_out); 'a'/'b' are armed
-// stand/walk and 'm' the knife/spear throw (_art_get_code's special cases).
+// stand/walk and 'm' the knife/spear throw (the engine's special cases when it builds the code).
 const FRM_ARMED: Record<string, string> = {
     a: "stand",
     b: "walk",

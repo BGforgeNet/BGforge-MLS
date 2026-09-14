@@ -146,4 +146,4 @@ indent_size = 4
 ## Related
 
 - [WeiDU BAF Grammar README](./README.md) - BAF syntax reference
-- [Format CLI](../../docs/architecture.md#format-cli) - General format CLI documentation
+- [Format CLI](../../format/README.md) - General format CLI documentation
