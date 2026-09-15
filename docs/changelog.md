@@ -55,6 +55,11 @@
 - TBAF and TD insert a substituted value literally: a value containing `$&` or `$1` is no longer read as a
   replacement pattern.
 
+### GitHub Actions
+
+- `actions/tssl` (`v1.0.3`): `check: true` fails the job when a generated `.ssl` was never committed, not only
+  when a committed one is stale. It used to pass on an uncommitted file.
+
 ### Performance
 
 - Animation playback takes far less main-thread time per frame and holds the declared frame rate.
