@@ -4,27 +4,17 @@
 
 ### Image gallery
 
-- New image gallery. `BGforge: Game Image Gallery` browses the images of the game at
+- New image gallery. Command `BGforge: Game Image Gallery` browses the images of the game at
   `bgforge.weidu.gamePath`, `BGforge: Workspace Image Gallery` browses the open folder. Both draw a
   thumbnail grid filtered by name, resource type and format, and draw a picked file on the panel's own
   animation surface.
 - A game gallery carries a second tab for the animation sets the install declares. Picking one draws the
   whole set, whose members can be edited and saved back, or converted into another engine's animation
   files.
-- A BAM opened from a game offers the animation set it belongs to, opening it in its own tab. Where several
-  sets share the file, as recoloured creatures and class variants do, it asks which.
-- An install whose animations cannot be listed says so in the "BGforge MLS" output channel and is retried
-  on the next request, instead of showing an empty gallery for the rest of the session.
-- The gallery reports a message it does not recognise from its own view, rather than ignoring it.
 
-### Animation editor
+### Animation browser
 
-- An Infinity Engine creature animation can be drawn and exported in a real creature's colours, picked from the
-  open game's creatures, instead of the placeholder gradients the file ships with. Export warns that those colours
-  are baked in.
-- Each sprite stands on a fixed point in its tile, so switching action, sequence or direction no longer moves or
-  rescales the art, and the zoom stays where it was set. A tile grows with its art, so zoomed sprites no longer
-  overlap their neighbours, and Auto zoom stops at 400%.
+- Animation browser now supports entire sets of Infinity Engine creature animations, when an IE game is open.
 - Creature BAMs that store the western directions and mirror the eastern ones open as a compass rose, as does a
   single nine-direction block such as the Throne of Bhaal dragons, instead of a flat row of cycles.
 - Converting an FRM to a BAM writes its directions in the right rotation order.
