@@ -55,11 +55,6 @@
 - TBAF and TD insert a substituted value literally: a value containing `$&` or `$1` is no longer read as a
   replacement pattern.
 
-### GitHub Actions
-
-- `actions/tssl` (`v1.0.3`): `check: true` fails the job when a generated `.ssl` was never committed, not only
-  when a committed one is stale. It used to pass on an uncommitted file.
-
 ### Performance
 
 - Animation playback takes far less main-thread time per frame and holds the declared frame rate.
@@ -226,12 +221,6 @@ Same options as sslc.
 - `@inline` honours every body a macro can stand for: several calls, a returned call behind type
   assertions, and a returned expression. Only the first call used to be kept, and the rest of the body was
   dropped from the compiled script without a word.
-
-### GitHub Actions
-
-- New: `actions/tssl` compiles a mod's `.tssl` sources in CI, failing the job on a compile error. It commits
-  nothing by default, bytecode being a build artifact rather than a tracked file; `transpile: true` keeps the
-  generated `.ssl` in sync instead.
 
 ### Fixes
 
@@ -536,10 +525,6 @@ When a game is opened, mod file values (IDS, 2DA references, strings from `dialo
 - Fields inside a MAP's undecodable region now carry a "read-only" hover tooltip explaining why they cannot be edited, and the edit-rejection message describes them as "read-only" rather than "locked" to keep them distinct from the in-game "Locked" object flag.
 - `fgbin` rejects oversized binary input files (e.g. a `.map` exceeding 16 MB) with a clear error before allocating a Buffer, so a malformed or accidentally-truncated download cannot trigger a multi-GB allocation.
 - The MAP parser caps inventory recursion depth at 2 (game format invariant: items can carry an inventory exactly one level deep). Crafted MAPs that advertise nested-inside-nested inventories now surface as a parse error instead of recursing until the JS stack overflows.
-
-### GitHub Actions
-
-- New: `actions/binary` refreshes / checks JSON snapshots for every format `@bgforge/binary` recognises.
 
 ### Transpilers
 
