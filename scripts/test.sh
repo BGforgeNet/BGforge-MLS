@@ -32,22 +32,14 @@ mkdir -p "$LOG_DIR"
 source "$SCRIPT_DIR/parallel-lib.sh"
 
 # Binary unit tests read external/ fixtures; reset so local drift (e.g. editor
-# saves against fixture files) doesn't fail them. Fast when already clean.
+# saves against fixture files) doesn't fail them. Fast when already clean. It also clones a missing repo,
+# and Phase 1's script tests read the IESDP checkout, so this one stays ahead of Phase 1.
 step "Resetting External Repos"
 "$SCRIPT_DIR/reset-external.sh"
 
-# Build the transpile library bundle before Phase 1 so bundle.test.ts can load
-# transpilers/out/index.js. The build is quick and must precede the parallel block.
-step "Building transpile library bundle"
-pnpm build:transpile
-
-# Resolve WeiDU BEFORE Phase 1. No WeiDU-backed suite skips without a binary - each provisions one itself - so
-# exporting it here lets the parallel phases reuse one path instead of each suite running the provisioning
-# script. Cached after the first run.
-WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
-export WEIDU_BIN
-
 # --- Phase 1: Static analysis + dead code (all independent, run in parallel) ---
+# First, so a lint or type error fails the run before any setup the later phases need. This is the only
+# pre-push signal: the repository has no git hooks, and CI runs the same phase first.
 # Coverage runs are deliberately NOT in this block - see Phase 1.5 for why.
 # The webview Playwright harnesses are typechecked now that playwright is a pinned devDep (it resolves in
 # CI): the dialog-editor harness under client/src is covered by "Typecheck client"; the binary-editor
@@ -77,10 +69,21 @@ parallel \
     "Test lint" "pnpm lint:tests" \
     "Lint scripts" "./scripts/lint-scripts.sh" \
     "Lint md-links" "pnpm lint:md-links" \
-    "Format check" "oxfmt --check" \
+    "Format check" "pnpm lint:format" \
     "Script tests" "pnpm test:scripts" \
     "Knip" "knip" \
     "Knip prod" "pnpm knip:prod"
+
+# Build the transpile library bundle before the unit tests so bundle.test.ts can load
+# transpilers/out/index.js. The build is quick and must precede the parallel block.
+step "Building transpile library bundle"
+pnpm build:transpile
+
+# Resolve WeiDU before the unit tests. No WeiDU-backed suite skips without a binary - each provisions one itself -
+# so exporting it here lets the parallel phases reuse one path instead of each suite running the provisioning
+# script. Cached after the first run.
+WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
+export WEIDU_BIN
 
 # --- Phase 1.5: Unit tests ---
 # Coverage instrumentation roughly triples the unit-test wall time, so the

@@ -47,7 +47,7 @@ step "Dialog source parser reuse performance (serial, no coverage)"
 TEST_COVERAGE=0 vitest run --config server/vitest.config.mts \
     server/test/dialog-source-project-reuse.test.ts --maxWorkers=4
 
-# test.sh resolves this before its own Phase 1, but that export dies with the subprocess above, and the
+# test.sh resolves this before its unit tests, but that export dies with the subprocess above, and the
 # suites below need it too - so resolve it again here. Cached, so the second call costs nothing.
 WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
 export WEIDU_BIN

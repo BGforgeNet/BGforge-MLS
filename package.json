@@ -28,7 +28,6 @@
     "main": "./client/out/extension.js",
     "scripts": {
         "vscode:prepublish": "./scripts/prepublish.sh",
-        "prepare": "lefthook install",
         "build": "./scripts/build-packages.sh",
         "build:dev": "./scripts/build-dev.sh",
         "dev:web": "./scripts/dev-web.sh",
@@ -84,6 +83,7 @@
         "lint:types": "oxlint --type-aware -A all -D typescript/no-floating-promises -D typescript/no-misused-promises -D typescript/await-thenable",
         "lint:tests": "oxlint --vitest-plugin -A all -D vitest/no-focused-tests -D vitest/no-identical-title -D vitest/no-import-node-test -D vitest/valid-describe-callback -D vitest/no-duplicate-hooks -D vitest/prefer-hooks-in-order -D vitest/require-local-test-context-for-concurrent-snapshots -D vitest/no-conditional-expect -D vitest/require-to-throw-message",
         "lint:md-links": "remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
+        "lint:format": "oxfmt --check",
         "ie-update": "./scripts/ie-update.sh",
         "ie-binary-update": "./scripts/ie-binary-update.sh",
         "fallout-update": "./scripts/fallout-update.sh",
@@ -121,7 +121,6 @@
         "esbuild-svelte": "^0.9.5",
         "jsonc-parser": "^3.3.1",
         "knip": "~6.25.0",
-        "lefthook": "^2.1.12",
         "mocha": "^11.8.0",
         "oxfmt": "0.65.0",
         "oxlint": "1.80.0",

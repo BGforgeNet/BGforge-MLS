@@ -70,7 +70,6 @@ editors/
 AGENTS.md
 **/AGENTS.md
 **/INTERNALS.md
-lefthook.yml
 stryker.conf.json
 tsconfig.base.json
 vitest.config.ts

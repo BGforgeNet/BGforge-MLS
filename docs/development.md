@@ -25,14 +25,15 @@ This project uses `pnpm` exclusively - `pnpm exec <command>`, never `npx`.
 ## Quick start
 
 ```bash
-pnpm install          # also installs the lefthook pre-commit hooks
+pnpm install
 pnpm build:grammar    # tree-sitter WASMs - gitignored, and every build below copies them
 pnpm build            # client, server, webviews, TS plugins, CLIs
 pnpm test             # dev-loop suite
 ```
 
-`pnpm build:grammar` is needed again only after a grammar change. Run the pre-commit hooks by hand with
-`pnpm exec lefthook run pre-commit`.
+`pnpm build:grammar` is needed again only after a grammar change. There are no git hooks: run `pnpm test` before
+pushing. Its first phase is the static checks (lint, format, typecheck, dead code), and it stops at the first
+failure - the same phase CI's test step opens with.
 
 ## Everyday commands
 

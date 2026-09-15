@@ -54,16 +54,13 @@ catalog:
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive
 # `@vscode/vsce` optionalDependency - still declared by vsce 3.9.2 and still resolved in the
 # lockfile, so what is denied is its native build, not its presence. `@vscode/vsce-sign` only matters
-# when signing the VSIX, which is not done in this build. `lefthook`'s postinstall
-# downloads the platform binary used by `pnpm exec lefthook install` (wired via the
-# root `prepare` script).
+# when signing the VSIX, which is not done in this build.
 allowBuilds:
   esbuild: true
   tree-sitter-cli: true
   "@vscode/vsce-sign": false
   keytar: false
   tree-sitter: false
-  lefthook: true
 
 # Transitive pins addressing security advisories. Each is still load-bearing: with
 # it removed, `pnpm install` resolves the dependency back to a vulnerable version

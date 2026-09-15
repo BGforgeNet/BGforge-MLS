@@ -87,7 +87,7 @@ why.
 `pnpm lint:types` is a second oxlint run with `--type-aware`, backed by the `oxlint-tsgolint` binary. It enables
 only the promise-safety rules named in the `lint:types` script in `package.json` and allows everything else,
 because the full type-aware set is dominated by `prefer-readonly-parameter-types` and the `no-unsafe-*` family,
-whose findings are almost all style. The rules it does run cannot be expressed syntactically. It is wired into `scripts/test.sh` Phase 1 and pre-commit, and it covers every
+whose findings are almost all style. The rules it does run cannot be expressed syntactically. It is wired into `scripts/test.sh` Phase 1, and it covers every
 workspace. What its backend requires of a tsconfig, and how a config it refuses reads as clean, is in the
 `oxlint-tsgolint` entry of [dependencies.md](dependencies.md).
 
