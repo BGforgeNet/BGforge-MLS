@@ -315,7 +315,7 @@ describe("convertOpenSet", () => {
         ]);
         // The action, not the file it came from: an armoured set draws the same action out of a file per
         // level, so naming one of them would pick a level arbitrarily. The source files are listed once.
-        expect(result.losses).toEqual(["Attack has no counterpart in the target"]);
+        expect(result.losses).toEqual(["Attack 2 has no counterpart in the target"]);
         // The informational half stays separate: nothing here is a reason to hesitate.
         expect(result.notes.some((note) => note.includes("loss"))).toBe(false);
     });
