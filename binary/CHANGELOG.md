@@ -16,6 +16,21 @@ the display/presentation layer or already reachable through the `./archive` entr
   and `getDomainRange` remain.
 - `parseBif`, `parseTlk` and `engineOverrideFolders`: import them from `@bgforge/binary/archive`.
 - `DEFAULT_ENGINE`: `opcodeReading` and `engineForFlavour` own the engine match and its fallback.
+- The optional `isStructuralFieldId` and `buildStructuralTransitionBytes` hooks of `BinaryFormatAdapter`, and
+  the PRO adapter's implementation of them. Nothing in the repository called them.
+
+### Fixed
+
+- `fgbin --jobs` passes `--proto-dir` to its workers. They used to run without the override.
+
+### Changed
+
+- `Game.write` and `Game.writeAuxFile` throw on a name that is not a plain file name - empty, `.`, `..`, or
+  containing a path separator - instead of joining it under the game folder.
+- A flag-array entry the schema rejects is named in the error, with the reason: not a flag table key nor a
+  `bit<N>` position, a position past the codec word, or a position a named flag already occupies.
+- Graceful MAP parsing tries the script count the file declares before scoring every candidate, and a MAP
+  canonical document is validated once rather than on every serialize and structure operation.
 
 ## 0.7.0
 
