@@ -22,9 +22,9 @@ import {
     runSave,
 } from "./save-flow";
 import { sidecarPalPath } from "./sidecar";
-import { animationIdHex, setTitle } from "@bgforge/animation";
+import { type AnimationSet, animationIdHex, setTitle } from "@bgforge/animation";
 import { defaultPrefix, suggestTargetId } from "./conversion";
-import { parseAnimationSetUri } from "../ie-resources/uri";
+import { parseAnimationSetUri, parseResourceUri } from "../ie-resources/uri";
 import { openAnimationSet } from "../ie-resources/open-set";
 import {
     type AnimationView,
@@ -60,6 +60,17 @@ const WEBVIEW_JS = path.join("client", "out", "image-editor", "webview", "main.j
 
 /** An animation resref opens with a 4-character code naming the animation; the rest is variant and action. */
 const ANIMATION_CODE_CHARS = 4;
+
+/** A set as the host's quick pick offers it, in both set pickers. */
+function setPickItem(set: AnimationSet): { label: string; description: string; id: number } {
+    return {
+        label: setTitle(set),
+        // The id is what the tables key on, so it is the reader's own reference - and it is what makes two
+        // sets sharing a name (a family's generations) tellable apart.
+        description: animationIdHex(set.id),
+        id: set.id,
+    };
+}
 
 /**
  * The view an open (or a post-edit refresh) sends: geometry for every frame, pixels only for the one
@@ -369,6 +380,9 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             case "pickSet":
                 await this.pickSet(document, surface);
                 break;
+            case "openDrawnBy":
+                await this.openDrawnBy(document, surface);
+                break;
             case "beginSaveAs": {
                 const found = lookupSet(this.saveContext, document);
                 if (found === undefined) break;
@@ -454,13 +468,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     private async pickSet(document: ImageEditorDocument, surface: AnimationSurface): Promise<void> {
         const address = parseAnimationSetUri(document.uri);
         if (address === undefined || this.animationSets === undefined) return;
-        const items = this.animationSets.list(address.gameDir).map((set) => ({
-            label: setTitle(set),
-            // The id is what the tables key on, so it is the reader's own reference - and it is what
-            // makes two sets sharing a name (a family's generations) tellable apart.
-            description: animationIdHex(set.id),
-            id: set.id,
-        }));
+        const items = this.animationSets.list(address.gameDir).map((set) => setPickItem(set));
         if (items.length === 0) return;
         const picked = await vscode.window.showQuickPick(items, {
             title: "Show which animation set?",
@@ -468,6 +476,28 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         });
         if (picked === undefined || picked.id === address.id) return;
         await surface.showSet(address.gameDir, picked.id);
+    }
+
+    /**
+     * Open the set drawing this game file, asking which only where several do - recoloured creatures and
+     * class variants share their files, and which one is shown decides the palette and the stances.
+     */
+    private async openDrawnBy(document: ImageEditorDocument, surface: AnimationSurface): Promise<void> {
+        const [only, ...rest] = document.drawnBy;
+        if (only === undefined) return;
+        const { gameDir } = parseResourceUri(document.uri);
+        if (rest.length === 0) {
+            await surface.showSet(gameDir, only.id);
+            return;
+        }
+        const picked = await vscode.window.showQuickPick(
+            document.drawnBy.map((set) => setPickItem(set)),
+            {
+                title: `Show which animation set drawing ${path.posix.basename(document.uri.path)}?`,
+                matchOnDescription: true,
+            },
+        );
+        if (picked !== undefined) await surface.showSet(gameDir, picked.id);
     }
 
     async saveCustomDocument(document: ImageEditorDocument, _token: vscode.CancellationToken): Promise<void> {

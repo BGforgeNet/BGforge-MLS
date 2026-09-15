@@ -11,6 +11,8 @@
 - A game gallery carries a second tab for the animation sets the install declares. Picking one draws the
   whole set, whose members can be edited and saved back, or converted into another engine's animation
   files.
+- A BAM opened from a game offers the animation set it belongs to, opening it in its own tab. Where several
+  sets share the file, as recoloured creatures and class variants do, it asks which.
 - An install whose animations cannot be listed says so in the "BGforge MLS" output channel and is retried
   on the next request, instead of showing an empty gallery for the rest of the session.
 - The gallery reports a message it does not recognise from its own view, rather than ignoring it.

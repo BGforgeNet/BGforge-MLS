@@ -164,6 +164,7 @@ function setSource(io: StanceIo = ioFor(FILES)): AnimationSetSource {
             return answer;
         },
         list: () => [SET],
+        drawnBy: () => [],
     };
 }
 

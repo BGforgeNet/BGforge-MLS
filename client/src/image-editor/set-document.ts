@@ -62,6 +62,37 @@ export interface AnimationSetSource {
     lookup(gameDir: string, id: number): AnimationSetLookup;
     /** Every set the install declares, in index order. Empty outside a game. */
     list(gameDir: string): readonly AnimationSet[];
+    /**
+     * Every set drawing the install's file `resref`, in index order. Empty outside a game.
+     *
+     * A list, not a set: recoloured creatures and class variants of one body share their files, so one file
+     * routinely belongs to several.
+     */
+    drawnBy(gameDir: string, resref: string): readonly AnimationSet[];
+}
+
+/**
+ * Which sets draw each file, over one install's index: its members at every armour level they draw.
+ *
+ * Built once per index rather than per file opened, because inverting a whole install walks every set's
+ * members and probes the archive for each.
+ */
+function invertIndex(sets: readonly AnimationSet[], io: StanceIo): Map<string, AnimationSet[]> {
+    const drawers = new Map<string, AnimationSet[]>();
+    for (const set of sets) {
+        const files = new Set<string>();
+        for (const level of drawnArmourLevels(set, io.exists)) {
+            for (const member of setMembers(set, level, io.exists)) {
+                for (const part of member.parts) files.add(part.toUpperCase());
+            }
+        }
+        for (const file of files) {
+            const list = drawers.get(file);
+            if (list === undefined) drawers.set(file, [set]);
+            else list.push(set);
+        }
+    }
+    return drawers;
 }
 
 /**
@@ -79,6 +110,9 @@ export function createAnimationSetSource(deps: {
     animations: AnimationIndexResolver;
     gameAt: (dir: string) => Game | undefined;
 }): AnimationSetSource {
+    // Keyed by the index itself: the resolver hands back one array per install for as long as it caches it,
+    // so a different install - or the same one re-read - is a different key and never a stale answer.
+    const inverted = new WeakMap<readonly AnimationSet[], Map<string, AnimationSet[]>>();
     return {
         lookup: (gameDir, id) => {
             const game = deps.gameAt(gameDir);
@@ -91,6 +125,17 @@ export function createAnimationSetSource(deps: {
         // Not gated on the game being open: the index resolver opens the configured install itself, the
         // same way the lookup above does.
         list: (gameDir) => deps.animations(gameDir) ?? [],
+        drawnBy: (gameDir, resref) => {
+            const sets = deps.animations(gameDir);
+            const game = deps.gameAt(gameDir);
+            if (sets === undefined || game === undefined) return [];
+            let drawers = inverted.get(sets);
+            if (drawers === undefined) {
+                drawers = invertIndex(sets, stanceIo(game));
+                inverted.set(sets, drawers);
+            }
+            return drawers.get(resref.toUpperCase()) ?? [];
+        },
     };
 }
 

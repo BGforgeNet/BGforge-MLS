@@ -398,6 +398,62 @@ describe("createAnimationSetSource", () => {
         expect(source.list("/games/bgee")).toEqual([set]);
         expect(source.list("/games/tob")).toEqual([]);
     });
+
+    describe("drawnBy", () => {
+        // Two sets over one body, the way recoloured creatures and class variants share art, and one apart.
+        const body = setOf({ layout: "actions" });
+        const recolour = setOf({ id: 0x1235, name: "TEST_RECOLOUR", layout: "actions" });
+        const apart = setOf({ id: 0x2000, name: "OTHER", prefixByArmour: new Map([[1, "OTHB"]]), layout: "actions" });
+        const files = new Set(["TSTBSD", "TSTBWK", "OTHBSD"]);
+        function installGame(): Game & { probes: number } {
+            const install = {
+                probes: 0,
+                canRead: (resref: string, ext: string) => {
+                    install.probes += 1;
+                    return ext === "bam" && files.has(resref.toUpperCase());
+                },
+                read: () => undefined,
+                identity: { flavour: "bgee" },
+            };
+            // A stub of the two members the source reaches, as the `game` above is; a whole Game is an archive.
+            return install as unknown as Game & { probes: number };
+        }
+        const index = [body, recolour, apart];
+
+        it("names every set drawing a file, in index order, whatever the resref's case", () => {
+            const install = installGame();
+            const source = createAnimationSetSource({
+                animations: () => index,
+                gameAt: (dir) => (dir === "/games/bgee" ? install : undefined),
+            });
+
+            expect(source.drawnBy("/games/bgee", "tstbsd")).toEqual([body, recolour]);
+            expect(source.drawnBy("/games/bgee", "OTHBSD")).toEqual([apart]);
+        });
+
+        it("names none for a file no set draws, or outside the install", () => {
+            const install = installGame();
+            const source = createAnimationSetSource({
+                animations: (dir) => (dir === "/games/bgee" ? index : undefined),
+                gameAt: (dir) => (dir === "/games/bgee" ? install : undefined),
+            });
+
+            expect(source.drawnBy("/games/bgee", "SPWHITE")).toEqual([]);
+            expect(source.drawnBy("/games/tob", "TSTBSD")).toEqual([]);
+        });
+
+        it("inverts an install's index once, not on every file opened", () => {
+            const install = installGame();
+            const source = createAnimationSetSource({ animations: () => index, gameAt: () => install });
+
+            source.drawnBy("/games/bgee", "TSTBSD");
+            const afterFirst = install.probes;
+            source.drawnBy("/games/bgee", "TSTBWK");
+
+            expect(afterFirst).toBeGreaterThan(0);
+            expect(install.probes).toBe(afterFirst);
+        });
+    });
 });
 
 describe("setView", () => {

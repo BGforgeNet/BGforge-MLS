@@ -134,7 +134,7 @@ function ioFor(files: Record<string, Uint8Array>): StanceIo {
 
 /** The set source as the editor takes it: a lookup plus the list its own set picker offers. */
 function setSource(lookup: AnimationSetSource["lookup"]): AnimationSetSource {
-    return { lookup, list: () => [SET] };
+    return { lookup, list: () => [SET], drawnBy: () => [] };
 }
 
 /** The lookup's answer for a set that resolves, carrying the install it was read from. */

@@ -26,8 +26,8 @@ import {
 import type { DocumentBackup } from "./backup";
 import { ImageDocumentModel } from "./document-model";
 import { type AnimationSetSource, AnimationSetState, type SetPick, isEastPair, setView } from "./set-document";
-import { parseAnimationSetUri, resourceUri } from "../ie-resources/uri";
-import { animationIdHex, replacementPaletteNames } from "@bgforge/animation";
+import { GAME_RESOURCE_SCHEME, parseAnimationSetUri, parseResourceUri, resourceUri } from "../ie-resources/uri";
+import { type AnimationSet, animationIdHex, replacementPaletteNames, setTitle } from "@bgforge/animation";
 import { FR_SPLIT_MEMBERS, frSplitCombinedPath, frSplitSiblingPaths, isFrSplitPath } from "./fr-split";
 import { baseCandidatePath, eastCompanionCandidates, isBamPath } from "./ie-pair";
 import { composePvrzResolver } from "./pvrz-resolver";
@@ -86,6 +86,8 @@ export class ImageEditorDocument implements vscode.CustomDocument {
      * and the action currently shown. Swapping the action swaps the model, which is why it is not readonly.
      */
     readonly setState: AnimationSetState | undefined;
+    /** Behind `drawnBy`, assigned once by `open`. */
+    private drawers: readonly AnimationSet[] = [];
     private model: ImageDocumentModel;
 
     private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
@@ -174,6 +176,21 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         if (setAddress !== undefined) {
             return ImageEditorDocument.openSet(uri, setAddress, animationSets, backup);
         }
+        const document = await ImageEditorDocument.openFile(uri, backup, resourceBytes);
+        // Only a file read out of a game: a set draws the install's copy, so for a file on disk - a mod's own,
+        // even one named like a game file - "the set drawing this" would show something other than the file.
+        if (uri.scheme === GAME_RESOURCE_SCHEME && isBamPath(uri.path)) {
+            const { gameDir, resref } = parseResourceUri(uri);
+            document.drawers = animationSets?.drawnBy(gameDir, resref) ?? [];
+        }
+        return document;
+    }
+
+    private static async openFile(
+        uri: vscode.Uri,
+        backup: DocumentBackup | undefined,
+        resourceBytes: GameResourceBytes | undefined,
+    ): Promise<ImageEditorDocument> {
         if (isFrSplitPath(uri.fsPath)) {
             const { animation, sidecarBytes } = await ImageEditorDocument.readFrSplit(uri.fsPath);
             // Present and save under the combined <base>.frm identity, not the opened .frN member.
@@ -592,6 +609,11 @@ export class ImageEditorDocument implements vscode.CustomDocument {
         });
     }
 
+    /** The sets drawing this file, where it was read out of a game. Empty for a file on disk and for a set. */
+    get drawnBy(): readonly AnimationSet[] {
+        return this.drawers;
+    }
+
     toView(options?: { include?: ReadonlySet<number> }): AnimationView {
         // dirName lives here, not in the model: the model is deliberately path-free, and the
         // document owns the file identity (see saveUri). Only FRM naming reads it, and an FRM is
@@ -605,6 +627,9 @@ export class ImageEditorDocument implements vscode.CustomDocument {
             ...(this.setState === undefined
                 ? {}
                 : { set: setView(this.setState, parseAnimationSetUri(this.uri)?.gameDir ?? "") }),
+            ...(this.drawnBy.length === 0
+                ? {}
+                : { drawnBy: this.drawnBy.map((set) => ({ id: set.id, title: setTitle(set) })) }),
         };
     }
 

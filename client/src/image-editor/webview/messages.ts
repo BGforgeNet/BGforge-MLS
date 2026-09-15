@@ -181,6 +181,11 @@ interface AnimationViewBase {
     composedFiles: number;
     /** Present only for a document opened on a whole animation set. */
     set?: SetView;
+    /**
+     * The sets drawing this file, where it was opened out of a game and at least one does. Absent for a file
+     * on disk: a set draws the install's copy, which is not the file being edited.
+     */
+    drawnBy?: { id: number; title: string }[];
 }
 
 /** FRM, BAM v1 and BAMC: each frame's span of the shared buffer holds palette indices. */
@@ -205,9 +210,9 @@ export type AnimationView = IndexedAnimationView | RgbaAnimationView;
 
 /**
  * The fields only the DOCUMENT can answer: where the file sits, how many files were combined into it,
- * and which set it belongs to. The model is deliberately path-free and knows none of them.
+ * which set it is, and which sets draw it. The model is deliberately path-free and knows none of them.
  */
-type DocumentOwned = "dirName" | "composedFiles" | "set";
+type DocumentOwned = "dirName" | "composedFiles" | "set" | "drawnBy";
 
 /**
  * The view as the model builds it - everything but the three above, which `ImageEditorDocument.toView`
@@ -317,6 +322,8 @@ export type WebviewToHost =
     // Set documents only: offer the install's sets and open the one chosen. The list is the host's to
     // show - an install declares hundreds, and the host's own quick pick is already a search over them.
     | { type: "pickSet" }
+    // Game files only: open the set drawing this file, asking which where several do (see `drawnBy`).
+    | { type: "openDrawnBy" }
     /**
      * Set documents only: the Save As dialog.
      *
@@ -463,6 +470,7 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
         case "save":
         case "requestCreatures":
         case "pickSet":
+        case "openDrawnBy":
         case "beginSaveAs":
         case "chooseSaveFolder":
             return true;

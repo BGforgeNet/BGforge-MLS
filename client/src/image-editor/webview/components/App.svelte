@@ -54,6 +54,7 @@
     import SaveAsDialog from "./SaveAsDialog.svelte";
     import CreatureControls from "./CreatureControls.svelte";
     import SetControls from "./SetControls.svelte";
+    import DrawnByControls from "./DrawnByControls.svelte";
     import MetaControls from "./MetaControls.svelte";
     import PlaybackControls from "./PlaybackControls.svelte";
     import Toolbar from "./Toolbar.svelte";
@@ -72,7 +73,8 @@
         /**
          * Whether the set's own controls belong on screen. False where the surrounding surface has moved
          * the reader on to something else - the gallery's file tab - and the set is still drawn only
-         * because nothing has replaced it yet.
+         * because nothing has replaced it yet. Unset, the open document decides: a set shows them, and a
+         * game file shows the way to the sets drawing it.
          */
         showSet?: boolean;
         /**
@@ -587,7 +589,7 @@
             {/if}
         </div>
         <aside class="controls-column">
-            {#if showSet !== false}
+            {#if showSet ?? view?.set !== undefined}
                 <!-- First in the column: it selects WHAT is shown, where everything below it selects how. -->
                 <SetControls
                     set={view?.set ?? null}
@@ -596,6 +598,8 @@
                     onStanceChange={(key) => bridge.send({ type: "selectSetStance", key })}
                     onPickSet={() => bridge.send({ type: "pickSet" })}
                 />
+            {:else if showSet === undefined && view?.drawnBy !== undefined}
+                <DrawnByControls sets={view.drawnBy} onOpen={() => bridge.send({ type: "openDrawnBy" })} />
             {/if}
             <ViewControls
                 {zoom}

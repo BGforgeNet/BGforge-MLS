@@ -166,7 +166,12 @@ const REQUEST = {
     destination: "folder" as const,
 };
 
-function setSource(declared: readonly AnimationSet[] = [SET], archive = io): AnimationSetSource {
+/** `drawers` answers every file alike: which sets draw which file is `createAnimationSetSource`'s own test. */
+function setSource(
+    declared: readonly AnimationSet[] = [SET],
+    archive = io,
+    drawers: readonly AnimationSet[] = [],
+): AnimationSetSource {
     return {
         lookup: (_dir, id) => {
             const set = declared.find((entry) => entry.id === id);
@@ -175,7 +180,23 @@ function setSource(declared: readonly AnimationSet[] = [SET], archive = io): Ani
             return answer;
         },
         list: () => declared,
+        drawnBy: () => drawers,
     };
+}
+
+/** One of the game's own files, addressed the way the resource view opens it. */
+function gameFileUri(resref: string): vscode.Uri {
+    const uriPath = `/${resref.toLowerCase()}.bam`;
+    const query = `g=${encodeURIComponent(GAME_DIR)}`;
+    const uri = {
+        scheme: GAME_SCHEME,
+        path: uriPath,
+        query,
+        fsPath: uriPath,
+        toString: () => `${GAME_SCHEME}:${uriPath}?${query}`,
+        with: (change: { path?: string }) => ({ ...uri, path: change.path ?? uriPath }),
+    };
+    return uri as unknown as vscode.Uri;
 }
 
 /** A set address, as the gallery mints one: the label in the path, the identity in the query. */
@@ -302,6 +323,79 @@ describe("picking another set", () => {
         showQuickPickMock.mockResolvedValue(answer);
 
         await send({ type: "pickSet" });
+
+        expect(surface.showSet).not.toHaveBeenCalled();
+    });
+});
+
+describe("opening the set a game file belongs to", () => {
+    async function openGameFile(drawers: readonly AnimationSet[]) {
+        const provider = new ImageEditorProvider(context, undefined, undefined, setSource([SET], io, drawers));
+        const document = await provider.openDocument(gameFileUri("TSTBSD"));
+        const surface = surfaceStub();
+        const { channel, posted, send } = makeChannel();
+        provider.attach(document, channel, surface);
+        return { surface, posted, send };
+    }
+
+    function initView(posted: readonly HostToWebview[]) {
+        const init = posted.find((message) => message.type === "init");
+        if (init?.type !== "init") throw new Error("no init was posted");
+        return init.view;
+    }
+
+    it("names the sets drawing it in the view, by id and title", async () => {
+        const { posted, send } = await openGameFile([SET, OTHER_SET]);
+
+        await send({ type: "ready" });
+
+        expect(initView(posted).drawnBy).toEqual([
+            { id: 0x1234, title: "TEST_ANIM" },
+            { id: 0x6004, title: "OTHER_ANIM" },
+        ]);
+    });
+
+    it("carries no such list for a file no set draws", async () => {
+        const { posted, send } = await openGameFile([]);
+
+        await send({ type: "ready" });
+
+        expect(initView(posted)).not.toHaveProperty("drawnBy");
+    });
+
+    it("opens the only set drawing it straight away", async () => {
+        const { surface, send } = await openGameFile([OTHER_SET]);
+
+        await send({ type: "openDrawnBy" });
+
+        expect(showQuickPickMock).not.toHaveBeenCalled();
+        expect(surface.showSet).toHaveBeenCalledWith(GAME_DIR, 0x6004);
+    });
+
+    it("offers only the sets drawing it when there are several, and opens the one chosen", async () => {
+        const { surface, send } = await openGameFile([SET, OTHER_SET]);
+        showQuickPickMock.mockImplementation((items: { id: number }[]) =>
+            Promise.resolve(items.find((item) => item.id === OTHER_SET.id)),
+        );
+
+        await send({ type: "openDrawnBy" });
+
+        expect(showQuickPickMock.mock.calls[0]?.[0]).toEqual([
+            { label: "TEST_ANIM", description: "0x1234", id: 0x1234 },
+            { label: "OTHER_ANIM", description: "0x6004", id: 0x6004 },
+        ]);
+        expect(showQuickPickMock.mock.calls[0]?.[1]).toEqual({
+            title: "Show which animation set drawing tstbsd.bam?",
+            matchOnDescription: true,
+        });
+        expect(surface.showSet).toHaveBeenCalledWith(GAME_DIR, 0x6004);
+    });
+
+    it("opens nothing when the choice is dismissed", async () => {
+        const { surface, send } = await openGameFile([SET, OTHER_SET]);
+        showQuickPickMock.mockResolvedValue(undefined);
+
+        await send({ type: "openDrawnBy" });
 
         expect(surface.showSet).not.toHaveBeenCalled();
     });
@@ -751,14 +845,19 @@ describe("a document that is not a set", () => {
         ["planSave", { type: "planSave", request: REQUEST } as const],
         ["runSave", { type: "runSave", request: REQUEST } as const],
         ["pickSet", { type: "pickSet" } as const],
+        // A file on disk is not the game's copy, so it is not offered the sets drawing the game's - even where
+        // the install has sets that draw a file of that name.
+        ["openDrawnBy", { type: "openDrawnBy" } as const],
     ])("ignores %s", async (_label, message) => {
-        const provider = new ImageEditorProvider(context, undefined, undefined, setSource());
+        const provider = new ImageEditorProvider(context, undefined, undefined, setSource([SET], io, [SET]));
         const document = await provider.openDocument(fileUri("/art/TSTBSD.bam"));
         const { channel, posted, send } = makeChannel();
-        provider.attach(document, channel, surfaceStub());
+        const surface = surfaceStub();
+        provider.attach(document, channel, surface);
 
         await send(message);
 
+        expect(surface.showSet).not.toHaveBeenCalled();
         expect(posted).toEqual([]);
         expect(showOpenDialogMock).not.toHaveBeenCalled();
         expect(showQuickPickMock).not.toHaveBeenCalled();
