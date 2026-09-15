@@ -160,10 +160,8 @@ describe("schemeMembers", () => {
     });
 
     /**
-     * The section whose layout the archive settles offers both families at once, cycle-numbered first.
-     * A set of either shape resolves through one call, which is what lets the picker ask the archive rather
-     * than the declaration - and the order matters only in that the few sets shipping cycles ship nothing
-     * else, so the action-code probe behind them costs lookups and finds nothing.
+     * The section whose layout the archive settles resolves either family through one call, which is what
+     * lets the picker ask the archive rather than the declaration.
      */
     it("offers both namings for the section whose layout the archive decides", () => {
         const cycles = schemeMembers("actionsOrCycles", "MDOG", has("MDOGG1", "MDOGG2"), undefined);
@@ -172,6 +170,19 @@ describe("schemeMembers", () => {
         expect(cycles.map((member) => member.resref)).toEqual(["MDOGG1", "MDOGG2"]);
         // In the scheme's own action order, not the order the archive happens to answer in.
         expect(actions.map((member) => member.resref)).toEqual(["MDOGDE", "MDOGWK"]);
+    });
+
+    // Two such sets share their prefix with a split-band monster of another section, whose cycle files then
+    // resolve for them too - and listed that monster's attacks and stances in the other creature's picker.
+    it("leaves a neighbour's cycle files out of a set that ships action-code files", () => {
+        const members = schemeMembers(
+            "actionsOrCycles",
+            "MTRO",
+            has("MTROG1", "MTROG2", "MTROWK", "MTRODE"),
+            undefined,
+        );
+
+        expect(members.map((member) => member.resref)).toEqual(["MTRODE", "MTROWK"]);
     });
 
     /**

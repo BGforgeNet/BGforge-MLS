@@ -84,8 +84,11 @@ interface NamedBlock {
      * Parenthesised, where `ordinal` is bare. That split is not cosmetic: a family that merely REPEATS a
      * stance numbers it, and a family that distinguishes one names it, so the two read differently on
      * purpose and cannot be collapsed into a single free string without losing which is which.
+     *
+     * Per code where a shared band pins a detail for only one of its sequences: a strike says nothing about
+     * the spell played from the same frames.
      */
-    detail?: string;
+    detail?: string | Partial<Record<SequenceCode, string>>;
     /** Which repeat of the stance this is, where a family ships several - "Stand 2". */
     ordinal?: number;
     unused?: never;
@@ -121,17 +124,27 @@ function joined(parts: readonly string[]): string {
  * The block's own qualifiers around a name.
  *
  * They qualify the BAND, so a shared band carries them on every sequence it is played for rather than on
- * one of them.
+ * one of them - except a detail the block gives per code, which only that code's sequence carries.
  */
-function qualified(base: string, group: NamedBlock): string {
-    const numbered = group.ordinal === undefined ? base : `${base} ${group.ordinal}`;
-    return group.detail === undefined ? numbered : `${numbered} (${group.detail})`;
+function qualified(base: string, ordinal: number | undefined, detail: string | undefined): string {
+    const numbered = ordinal === undefined ? base : `${base} ${ordinal}`;
+    return detail === undefined ? numbered : `${numbered} (${detail})`;
+}
+
+/** The detail one sequence of the block carries: the whole block's, or what its per-code map gives that code. */
+function detailOf(group: NamedBlock, code: SequenceCode): string | undefined {
+    return typeof group.detail === "object" ? group.detail[code] : group.detail;
 }
 
 /** What the block depicts, as words: the vocabulary's name per code, plus whatever the block qualifies. */
 function words(group: IeGroup): string {
     if (group.codes === undefined) return "(unused)";
-    return qualified(joined(group.codes.map((code) => SEQUENCES[code])), group);
+    // A whole-block detail trails the joined names, as the ordinal does; a per-code one sits on its own name.
+    const whole = typeof group.detail === "object" ? undefined : group.detail;
+    const names = group.codes.map((code) =>
+        qualified(SEQUENCES[code], undefined, whole === undefined ? detailOf(group, code) : undefined),
+    );
+    return qualified(joined(names), group.ordinal, whole);
 }
 
 /**
@@ -164,6 +177,8 @@ export interface BlockSequence {
     name: string;
     /** What it depicts, where the block or the code pins it. */
     id?: NeutralActionId;
+    /** The grip, weapon or strike this row pins - see `NamedBlock.detail`. */
+    detail?: string;
     /** Set where the band is drawn back to front - see `reversedSequence`. */
     reversed?: true;
 }
@@ -179,10 +194,12 @@ export function blockSequences(group: IeGroup): BlockSequence[] {
     if (group.codes === undefined) return [];
     return group.codes.map((code) => {
         const id = sequenceId(group, code);
+        const detail = detailOf(group, code);
         return {
             code,
-            name: capitalized(qualified(SEQUENCES[code], group)),
+            name: capitalized(qualified(SEQUENCES[code], group.ordinal, detail)),
             ...(id === undefined ? {} : { id }),
+            ...(detail === undefined ? {} : { detail }),
             ...(reversedSequence(group, code) ? { reversed: true as const } : {}),
         };
     });
@@ -322,6 +339,20 @@ const WIDE_ATTACKS: IeGroup[] = [
     { codes: ["A3"], ordinal: 3 },
 ];
 
+/**
+ * The attack file both layered families share, on the engine reimplementation's reading: three strikes told
+ * apart by the swing, with the spells played from the slash's frames. Not the published list's attack-and-spell
+ * pairs, which put a spell on the last block too; the death knight's art draws an attack there.
+ *
+ * Worded as the character scheme spells each strike, so a conversion files a band under that strike's code
+ * rather than under whichever attack is free.
+ */
+const LAYERED_G2: IeGroup[] = [
+    { codes: ["A1"], id: "attack", detail: decodeActionCode("character", "A3").detail },
+    { codes: ["A2", "CA", "SP"], detail: { A2: decodeActionCode("character", "A1").detail } },
+    { codes: ["A3"], id: "attack", detail: decodeActionCode("character", "A5").detail },
+];
+
 const ANKHEG_G3: IeGroup[] = [
     { codes: ["A1"], id: "attack" },
     // Pinned, unlike the paired cast blocks above: those refuse an id because the sources disagree about
@@ -335,9 +366,9 @@ const ANKHEG_G3: IeGroup[] = [
  * animation's declared section, which is read first where the caller knows it. All of token, scheme and
  * count are needed: one token names several families, and a G1 of nine coarse blocks is a different
  * animation from a G1 of nine fine ones. Even those three collide across sections, which is what the
- * section-qualified keys settle: a three-block ie8 `G2` is `A1/A2/A3` in the layered families, `A1/A3/CA`
- * in the older monster one, and the burrowing trio in the ankheg one. A BAM stores no sequence names; the
- * filename convention is the only in-reach source, so an unmatched key falls back to numbered groups. The
+ * section-qualified keys settle: a three-block ie8 `G2` is three strikes in the layered families, `A1/A3/CA` in the
+ * older monster one, and the burrowing trio in the ankheg one. A BAM stores no sequence names; the filename convention is the only in-reach source, so an
+ * unmatched key falls back to numbered groups. The
  * optional trailing "e" covers eastern *E.BAM companions. Block sets the documentation does not pin down
  * are deliberately absent rather than guessed - a numbered group is honest, a wrong name is not.
  */
@@ -469,6 +500,8 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
         { codes: ["GH"], id: "get-hit" },
         { codes: ["DE"], id: "die" },
     ],
+    "monster_layered/g2/ie8/3": LAYERED_G2,
+    "monster_layered_spell/g2/ie8/3": LAYERED_G2,
     "monster_ankheg/g1/ie8/4": ANKHEG_G1,
     "monster_ankheg/g2/ie8/3": ANKHEG_G2,
     "monster_ankheg/g3/ie8/2": ANKHEG_G3,
@@ -478,9 +511,17 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
     // The older monster family's attacks: A1, then A3, then a cast - not the layered families' pair of
     // ambiguous blocks, which is what the bare `g2/ie8/3` key names. A file two blocks long holds the first
     // two, the layout addressing a stance by position. `A3` stays unpinned wherever it appears: the code
-    // list gives it two meanings, and the action table takes the same posture on it.
-    "monster_old/g2/ie8/3": [{ codes: ["A1"], id: "attack" }, { codes: ["A3"] }, { codes: ["CA"], id: "spell" }],
-    "monster_old/g2/ie8/2": [{ codes: ["A1"], id: "attack" }, { codes: ["A3"] }],
+    // list gives it two meanings, and the action table takes the same posture on it. Numbered all the same,
+    // since the shipped art draws it as this family's second strike and it would otherwise read as the first.
+    "monster_old/g2/ie8/3": [
+        { codes: ["A1"], id: "attack" },
+        { codes: ["A3"], ordinal: 2 },
+        { codes: ["CA"], id: "spell" },
+    ],
+    "monster_old/g2/ie8/2": [
+        { codes: ["A1"], id: "attack" },
+        { codes: ["A3"], ordinal: 2 },
+    ],
     "monster_large/g1/ie8/3": [
         { codes: ["SD"], id: "stand" },
         { codes: ["SC"], id: "ready" },
@@ -491,7 +532,8 @@ const IE_SEQUENCE_NAMES: Partial<Record<BlockKey, IeGroup[]>> = {
         { codes: ["A2"], id: "attack", ordinal: 2 },
     ],
     "monster_large/g3/ie8/4": [
-        { codes: ["A3"] },
+        // The third strike, after the two the attack file holds - numbered on from them, as the art draws one.
+        { codes: ["A3"], ordinal: 3 },
         { codes: ["GH"], id: "get-hit" },
         // As above: this family's three files carry no get-up block, so the death is what runs backwards.
         { codes: ["DE", "GU"] },

@@ -242,6 +242,45 @@ describe("stancesOfMembers", () => {
         expect(declared.map((s) => s.label)).toEqual(["Stand (hidden)", "Emerge", "Get up", "Hide"]);
     });
 
+    it.each([
+        ["monster_layered", "MGNLG2"],
+        ["monster_layered_spell", "MDKNG2"],
+    ] as const)(
+        "names the %s family's strikes, qualifying only the attack of the band a spell shares",
+        (section, resref) => {
+            const stances = stancesOfMembers([member("G2", resref)], () => bands(3, 8), section);
+
+            expect(stances.map((s) => [s.band, s.label, s.action.id, s.action.detail])).toEqual([
+                [0, "Attack (backslash)", "attack", "backslash"],
+                [1, "Attack (slash)", "attack", "slash"],
+                [1, "Cast spell", "spell", undefined],
+                [1, "Conjure spell", "spell", undefined],
+                [2, "Attack (jab)", "attack", "jab"],
+            ]);
+        },
+    );
+
+    it("numbers a second strike the older monster family ships, so its two attacks read apart", () => {
+        const stances = stancesOfMembers([member("G2", "MWLFG2")], () => bands(3, 8), "monster_old");
+
+        expect(stances.map((s) => s.label)).toEqual(["Attack", "Attack 2", "Cast spell"]);
+    });
+
+    it("numbers the large family's third strike on from the two its attack file holds", () => {
+        const g2 = stancesOfMembers([member("G2", "MOGRG2")], () => bands(2, 8), "monster_large");
+        const g3 = stancesOfMembers([member("G3", "MOGRG3")], () => bands(4, 8), "monster_large");
+
+        expect([...g2, ...g3].map((s) => s.label)).toEqual([
+            "Attack",
+            "Attack 2",
+            "Attack 3",
+            "Get hit",
+            "Die",
+            "Get up",
+            "Twitch",
+        ]);
+    });
+
     it("numbers the bands of a layout nothing documents, keeping the file's name", () => {
         // A wrong stance name is worse than an honest number - the same posture the block table takes.
         const stances = stancesOfMembers([member("G2", "MWYVG2")], () => bands(5, 10, undefined));

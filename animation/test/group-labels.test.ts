@@ -55,6 +55,12 @@ describe("ieGroups", () => {
         expect(labelAt(ieGroups("moghg2.bam", 3, "ie8", "monster_old"), 2)).toBe("CA - cast spell");
     });
 
+    test("qualifies only the sequence a per-code detail names in a shared block's label", () => {
+        expect(labelAt(ieGroups("mgnlg2.bam", 3, "ie8", "monster_layered"), 1)).toBe(
+            "A2/CA/SP - attack (slash), cast spell or conjure spell",
+        );
+    });
+
     test("keeps a section's names across the band width its mirror flag chooses", () => {
         expect(labelsOf("makhg3.bam", 2, "ie8", "monster_ankheg")).toEqual(["A1 - attack", "CA - cast spell"]);
         expect(labelsOf("makhg3.bam", 2, "ie9", "monster_ankheg")).toEqual(["A1 - attack", "CA - cast spell"]);

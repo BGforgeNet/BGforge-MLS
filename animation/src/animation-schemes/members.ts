@@ -270,11 +270,15 @@ function candidates(layout: Layout, resref: string, exists: (resref: string) => 
                 action: decodeActionCode("action-codes", code),
                 parts: withEast(`${resref}${code}`),
             }));
-        case "actionsOrCycles":
+        case "actionsOrCycles": {
             // No quadrant candidate, deliberately - see the `actionsOrCycles` layout for the neighbour
-            // whose files it resolved. Cycles first, since the few animations that ship them ship nothing
-            // else, and an action-code probe on the same prefix costs only lookups.
-            return [...candidates("cycles", resref, exists), ...candidates("actions", resref, exists)];
+            // whose files it resolved. Cycle files only where no action-code file resolves: the few animations
+            // that ship them ship nothing else, and a set that has both is sharing its prefix with a split-band
+            // monster of another section, whose files they are.
+            const actions = candidates("actions", resref, exists);
+            const own = actions.some((member) => member.parts.some((part) => exists(part)));
+            return own ? actions : [...candidates("cycles", resref, exists), ...actions];
+        }
         case "mixed": {
             // One animation here quarters a SPLIT-BAND set: each group has a file per band and every one of
             // those is itself cut into quarters, `<resref>G<group><quadrant><band>`, with the band-less name

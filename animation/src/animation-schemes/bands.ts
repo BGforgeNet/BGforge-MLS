@@ -221,7 +221,7 @@ export function stancesOfMembers(
                     label: bandLabel(member, sequence?.name, band, file.bands.length),
                     ...(sequence === undefined ? {} : { code: sequence.code }),
                     ...(sequence?.reversed === true ? { reversed: true as const } : {}),
-                    action: bandAction(member.action, sequence?.id, group?.detail),
+                    action: bandAction(member.action, sequence?.id, sequence?.detail),
                     resref: member.resref,
                     parts: member.parts,
                     band,
