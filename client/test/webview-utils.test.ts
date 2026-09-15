@@ -8,7 +8,34 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { installInitTimeout, isBenignWebviewError, observeSlowFrames } from "../src/webview-utils";
+import { installInitTimeout, isBenignWebviewError, isHostMessage, observeSlowFrames } from "../src/webview-utils";
+
+describe("isHostMessage", () => {
+    // The origin below is the one a live code-server drive recorded on real host messages (changeSet,
+    // diagnostics). A plain object stands in for the event: this suite runs without a DOM.
+    const WEBVIEW_ORIGIN = "http://localhost:30003";
+
+    beforeEach(() => {
+        vi.stubGlobal("origin", WEBVIEW_ORIGIN);
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    test("accepts a message carrying the webview's own origin, as every relayed host message does", () => {
+        expect(isHostMessage({ origin: WEBVIEW_ORIGIN } as MessageEvent)).toBe(true);
+    });
+
+    test("rejects a message from another origin", () => {
+        expect(isHostMessage({ origin: "https://example.invalid" } as MessageEvent)).toBe(false);
+        expect(isHostMessage({ origin: "" } as MessageEvent)).toBe(false);
+    });
+
+    test("ignores the source, which the webview wrapper makes unusable by pointing window.parent at the webview", () => {
+        expect(isHostMessage({ origin: WEBVIEW_ORIGIN, source: {} } as MessageEvent)).toBe(true);
+    });
+});
 
 describe("isBenignWebviewError", () => {
     // Chromium fires a window `error` event for "ResizeObserver loop completed with undelivered

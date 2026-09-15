@@ -1,6 +1,6 @@
 import { mount } from "svelte";
 import App from "./components/App.svelte";
-import { installFatalErrorHandler } from "../../webview-utils";
+import { installFatalErrorHandler, isHostMessage } from "../../webview-utils";
 import { TILE_SIZES } from "../../ie-resources/tile-sizes";
 import type { WebviewToHost } from "./messages";
 
@@ -35,7 +35,7 @@ if (target) {
 // The serializer that restores this panel after a window reload reads exactly what is stored here, so which
 // corpus the panel was showing has to be persisted the moment the host says.
 globalThis.addEventListener("message", (event: MessageEvent<{ type?: string; source?: string }>) => {
-    if (event.data.type === "init") vscode.setState({ source: event.data.source });
+    if (isHostMessage(event) && event.data.type === "init") vscode.setState({ source: event.data.source });
 });
 
 vscode.postMessage({ type: "ready" } satisfies WebviewToHost);

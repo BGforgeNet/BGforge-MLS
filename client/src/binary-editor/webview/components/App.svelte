@@ -4,7 +4,7 @@
     import type { HostToWebview } from "../messages";
     import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
     import { clearSelectionMemory } from "../state/list-selection-memory";
-    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
+    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, isHostMessage } from "../../../webview-utils";
     import LayoutRenderer from "./LayoutRenderer.svelte";
     import BetaNotice from "../../../webview-ui/BetaNotice.svelte";
     import Icon from "../../../webview-ui/Icon.svelte";
@@ -42,6 +42,7 @@
             opError = message;
         };
         const onMsg = (event: MessageEvent<HostToWebview>) => {
+            if (!isHostMessage(event)) return;
             const m = event.data;
             if (bridge.handle(m)) return; // resolved a pending request, or surfaced an unmatched error
             if (m.type === "init") {

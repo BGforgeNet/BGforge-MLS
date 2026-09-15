@@ -36,6 +36,7 @@
     import { hasSourceSpans, nodeDeletable, nodeEditable, nodeRenamable } from "../../../../shared/dialog-editability";
     import { dlgAddress } from "../../../../shared/dialog-dlg-edit";
     import { hasHost, postToHost } from "./host";
+    import { isHostMessage } from "../../webview-utils";
     import {
         renderFamily,
         resolveText,
@@ -958,6 +959,7 @@
     // listener registers once.
     $effect(() => {
         function onReparse(e: MessageEvent): void {
+            if (!isHostMessage(e)) return;
             const decision = decideReparse(e.data as ReparseMessage | null, localSeq);
             if (decision.kind === "ignore") return;
             adoptModel(decision.model, decision.allocations, decision.messages);

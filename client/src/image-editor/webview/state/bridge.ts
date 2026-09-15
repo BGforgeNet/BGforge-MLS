@@ -1,4 +1,5 @@
 import type { HostToWebview, WebviewToHost } from "../messages";
+import { isHostMessage } from "../../../webview-utils";
 
 /**
  * Thin postMessage wrapper for the animation-editor webview. Unlike the binary editor's Bridge, the
@@ -30,9 +31,11 @@ export class Bridge {
     }
 }
 
-/** The default: every message the webview's own window receives, unwrapped from the raw MessageEvent. */
+/** The default: every host message the webview's own window receives, unwrapped from the raw MessageEvent. */
 function windowMessages(cb: (m: HostToWebview) => void): () => void {
-    const listener = (event: MessageEvent<HostToWebview>) => cb(event.data);
+    const listener = (event: MessageEvent<HostToWebview>) => {
+        if (isHostMessage(event)) cb(event.data);
+    };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
 }

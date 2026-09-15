@@ -2,8 +2,9 @@
  * Shared helpers for the in-webview bundles (binary, dialog, and animation editors):
  * `installFatalErrorHandler` (global error/rejection reporting),
  * `installInitTimeout` + `DEFAULT_INIT_TIMEOUT_MS` (bounded host-reply wait),
- * and `isBenignWebviewError` (ResizeObserver-notice filtering, also used
- * directly by tests). These run in the webview's browser context, so the
+ * `isBenignWebviewError` (ResizeObserver-notice filtering, also used
+ * directly by tests), and `isHostMessage` (the origin check every window
+ * `message` handler applies). These run in the webview's browser context, so the
  * module must stay free of Node and vscode-host APIs; esbuild inlines it
  * into each webview bundle.
  */
@@ -38,6 +39,15 @@ export interface FatalErrorHandlerOptions {
 export function isBenignWebviewError(message: string): boolean {
     // Chromium's actual wording carries a trailing period; the pre-Chrome-64 wording did not - accept both.
     return /^ResizeObserver loop (limit exceeded|completed with undelivered notifications)\.?$/.test(message);
+}
+
+/**
+ * Whether a window `message` event came from the host. VS Code's webview wrapper relays each host message with
+ * its own origin as the target origin, so a delivered one always carries this document's origin; a render
+ * harness posting to itself does too. Not a source check: the wrapper sets `window.parent` to the webview itself.
+ */
+export function isHostMessage(event: MessageEvent): boolean {
+    return event.origin === globalThis.origin;
 }
 
 /**

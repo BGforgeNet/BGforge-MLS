@@ -4,6 +4,7 @@
     import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
     import { type GalleryTab, resolveTab, showTabStrip, viewerMounted } from "../tabs";
     import BetaNotice from "../../../webview-ui/BetaNotice.svelte";
+    import { isHostMessage } from "../../../webview-utils";
     import Grid from "./Grid.svelte";
     import SetPicker from "./SetPicker.svelte";
     import Tabs from "./Tabs.svelte";
@@ -100,6 +101,7 @@
     const hex = (id: number): string => `0x${id.toString(16).padStart(4, "0")}`;
 
     function onMessage(event: MessageEvent<HostToWebview>): void {
+        if (!isHostMessage(event)) return;
         const message = event.data;
         if (message.type === "init") {
             title = message.title;

@@ -169,7 +169,15 @@ if (table === undefined || eeDir === undefined) {
     throw new Error(`${table === undefined ? "--table" : "--ee"} is required`);
 }
 const target = path.join(TABLE_DIR, `${table}.ts`);
-if (!fs.existsSync(target)) throw new Error(`no table at ${path.relative(REPO_ROOT, target)}`);
+// Read once, up front, rather than checking existence and reading later: the write below then compares against
+// exactly the bytes it replaces.
+let current: string;
+try {
+    current = fs.readFileSync(target, "utf8");
+} catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+    throw new Error(`no table at ${path.relative(REPO_ROOT, target)}`, { cause: error });
+}
 
 const rows = readRows(eeDir);
 const classicDir = arg("classic");
@@ -184,9 +192,9 @@ if (classicDir !== undefined) {
     );
 }
 
-const updated = splice(fs.readFileSync(target, "utf8"), render(rows));
+const updated = splice(current, render(rows));
 if (process.argv.includes("--check")) {
-    if (updated === fs.readFileSync(target, "utf8")) {
+    if (updated === current) {
         process.stdout.write(`${table}: up to date (${rows.length} rows)\n`);
     } else {
         process.stderr.write(`${table}: out of date - rerun without --check\n`);

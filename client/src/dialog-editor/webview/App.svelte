@@ -3,7 +3,7 @@
     import type { DialogModel } from "../../../../shared/dialog-model";
     import { hasHost } from "./host";
     import { reduceDialogView, shouldTimeOut } from "./app-messages";
-    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../webview-utils";
+    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, isHostMessage } from "../../webview-utils";
 
     // Production webview root: the extension host posts a DialogModel; on each
     // message (initial load and live file edits) the model updates reactively and
@@ -15,6 +15,7 @@
     let timedOut = $state(false);
 
     function onMessage(e: MessageEvent): void {
+        if (!isHostMessage(e)) return;
         // Branching logic (and its tests) lives in app-messages.ts; here we only apply the
         // result to reactive state. A fresh model clears any stale timeout.
         const next = reduceDialogView({ model, error }, e.data);
