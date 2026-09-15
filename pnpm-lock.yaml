@@ -172,7 +172,6 @@ overrides:
   mocha>diff: '>=8.0.3'
   mocha>serialize-javascript: '>=7.0.5'
   qs: '>=6.16.0'
-  js-yaml: '>=4.3.2 <5'
 
 importers:
 

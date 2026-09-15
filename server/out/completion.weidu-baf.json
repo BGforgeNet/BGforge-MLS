@@ -516,7 +516,7 @@
         "category": "actions",
         "documentation": {
             "kind": "markdown",
-            "value": "```weidu-baf-tooltip\nChangeRace(O:Object, I:Value*Race)\n```\nThis action changes the race of the target creature to the specified value. Values are from [race.ids](https://gibberlings3.github.io/iesdp/files/ids/bg2/race.htm).\n```\nIF\n  Global\"KR_RACE_CHANGE\",\"LOCALS\",0)\nTHEN\n  RESPONSE #100\n    SetGlobal\"KR_RACE_CHANGE\",\"LOCALS\",1)\n    ChangeRace(Myself,DRAGON)\nEND\n```"
+            "value": "```weidu-baf-tooltip\nChangeRace(O:Object, I:Value*Race)\n```\nThis action changes the race of the target creature to the specified value. Values are from [race.ids](https://gibberlings3.github.io/iesdp/files/ids/bg2/race.htm).\n```\nIF\n  Global\"KR_RACE_CHANGE\",\"LOCALS\",0)\nTHEN\n  RESPONSE #100\n    SetGlobal(\"KR_RACE_CHANGE\",\"LOCALS\",1)\n    ChangeRace(Myself,DRAGON)\nEND\n```"
         }
     },
     {

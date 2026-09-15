@@ -430,7 +430,7 @@ actions:
           Global"KR_RACE_CHANGE","LOCALS",0)
         THEN
           RESPONSE #100
-            SetGlobal"KR_RACE_CHANGE","LOCALS",1)
+            SetGlobal("KR_RACE_CHANGE","LOCALS",1)
             ChangeRace(Myself,DRAGON)
         END
         ```

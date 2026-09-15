@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.16.0
 
 ### Image gallery
 
@@ -17,6 +17,33 @@
   on the next request, instead of showing an empty gallery for the rest of the session.
 - The gallery reports a message it does not recognise from its own view, rather than ignoring it.
 
+### Animation editor
+
+- An Infinity Engine creature animation can be drawn and exported in a real creature's colours, picked from the
+  open game's creatures, instead of the placeholder gradients the file ships with. Export warns that those colours
+  are baked in.
+- Each sprite stands on a fixed point in its tile, so switching action, sequence or direction no longer moves or
+  rescales the art, and the zoom stays where it was set. A tile grows with its art, so zoomed sprites no longer
+  overlap their neighbours, and Auto zoom stops at 400%.
+- Creature BAMs that store the western directions and mirror the eastern ones open as a compass rose, as does a
+  single nine-direction block such as the Throne of Bhaal dragons, instead of a flat row of cycles.
+- Converting an FRM to a BAM writes its directions in the right rotation order.
+
+### Binary editor
+
+- A creature's seven colour fields show the colours they select, and the swatch opens a picker over the open game's
+  whole colour table.
+- A creature's animation field links to that animation in the game gallery.
+
+### Other editors
+
+- `@bgforge/mls-server` installs globally with pnpm: the SSL compiler now ships inside the package instead of as a
+  download URL pnpm refuses.
+- The TD TypeScript plugin finds its runtime when loaded from the npm server package.
+- The setup guides configure the TSSL and TD plugins through each editor's TypeScript language server settings,
+  replacing a `tsconfig.json` setup that did not load them.
+- The TextMate bundle no longer carries the dialog editor's internal grammars.
+
 ### Diagnostics
 
 - A syntax error reporting a missing token now offers a quick fix that inserts it.
@@ -25,6 +52,19 @@
 
 - TD transpilation fails with a positioned error when a trigger, an action or literal text contains `~`,
   instead of emitting a WeiDU string the tilde terminates early.
+- TBAF and TD insert a substituted value literally: a value containing `$&` or `$1` is no longer read as a
+  replacement pattern.
+
+### Performance
+
+- Animation playback takes far less main-thread time per frame and holds the declared frame rate.
+- Find references on a translation entry no longer blocks the server for the whole request in a workspace with
+  thousands of files using it.
+- MAP files open faster in the binary editor, and adding an object to one is faster.
+
+### Data
+
+- Refreshed Infinity Engine BAF documentation from IESDP (2026-09-15).
 
 ### Fixes
 
@@ -34,7 +74,17 @@
 - The TextMate bundle's grammars declare their file extensions and names, so a JetBrains IDE maps those files to
   them when the bundle is installed.
 - A PVRZ page whose header declares more pixels than the per-frame cap is refused on open, instead of the
-  editor allocating the full texture from a crafted header.
+  editor allocating the full texture from a crafted header. A BAM v1 whose frames would decode past the same
+  kind of cap is refused too.
+- A BAM keeps its palette's transparency: it was dropped on open and zeroed on save. A BAM with an empty cycle
+  opens instead of being refused.
+- The dialog, script, binary and image editors pick up a game opened after they were drawn, instead of keeping the
+  names they resolved without one.
+- The SSL dialog outline no longer goes blank on a node that calls the same target from several branches.
+- A binary-editor JSON sidecar that cannot be produced fails the dump or save with an error, instead of writing an
+  empty file.
+- Writing a game resource refuses a name that is not a plain file name, such as one containing a path
+  separator or `..`.
 
 ## 3.15.0
 
