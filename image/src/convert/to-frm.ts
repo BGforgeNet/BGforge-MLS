@@ -4,6 +4,8 @@ import {
     type Frame,
     type Sequence,
     FRM_FACINGS,
+    mirrorFacing,
+    mirrorFrame,
     transparentIndexOf,
 } from "../model/animation.ts";
 import { interpretIeDirections } from "../model/ie-direction.ts";
@@ -13,8 +15,24 @@ import { facingsForCycleCount, frmSlotOrder, FRM_FACING_SET } from "./directions
 import { normalizeTransparentToZero, remapToDefault, remapToNearest } from "./palette-remap.ts";
 import { DEFAULT_FALLOUT_PALETTE } from "../palette/default-palette.ts";
 
+/**
+ * What to do when the source's rotations are not all the same length.
+ *
+ * An FRM header carries ONE frames-per-direction for all six rotations, and an Infinity Engine source
+ * routinely differs by a frame or two between facings, so the difference has to be resolved in the data.
+ * None of the three is free, which is why the caller picks:
+ *
+ * - `hold` keeps every frame and repeats each short rotation's final pose to fill the gap.
+ * - `clip` cuts every rotation back to the shortest, ending them together and discarding the rest.
+ * - `wrap` keeps every frame and continues each short rotation from its own start, which is what a player
+ *   stepping one shared timeline does with a short cycle - at the cost of restarting it mid-loop.
+ */
+export type UnevenRotations = "hold" | "clip" | "wrap";
+
 export interface FrmConvertOpts {
     paletteMode?: "sidecar" | "nearest";
+    /** How rotations of differing length are made equal. Holds the last frame unless told otherwise. */
+    unevenRotations?: UnevenRotations;
     /** Non-directional source only: the cycle index that fills all 6 FRM rotations (single-orientation). */
     singleCycle?: number;
     /** IE multi-block source only: the 8-slot direction block whose cycles fill the FRM rotations (its
@@ -126,29 +144,12 @@ function buildSingleOrientationSlots(anim: IndexedAnimation, cycleIndex: number)
 }
 
 // Eastern FRM rotations and the stored west cycle each mirrors across the vertical axis - what the
-// engine does at render time for animations without a *E companion file.
-const MIRROR_EAST: ReadonlyArray<{ east: Facing; west: Facing }> = [
-    { east: "NE", west: "NW" },
-    { east: "E", west: "W" },
-    { east: "SE", west: "SW" },
-];
-
-/** Horizontal flip. A BAM anchor is the centre PIXEL (offsetX = centerX), so it mirrors with the row. */
-function mirrorFrame(frame: Frame): Frame {
-    const pixels = new Uint8Array(frame.width * frame.height);
-    for (let y = 0; y < frame.height; y++) {
-        for (let x = 0; x < frame.width; x++) {
-            pixels[y * frame.width + (frame.width - 1 - x)] = frame.pixels[y * frame.width + x] ?? 0;
-        }
-    }
-    return {
-        width: frame.width,
-        height: frame.height,
-        pixels,
-        offsetX: frame.width - 1 - frame.offsetX,
-        offsetY: frame.offsetY,
-    };
-}
+// engine does at render time for animations without a *E companion file. Derived from the facing
+// mapping rather than restated, so the two cannot disagree about which cycle reflects onto which.
+const MIRROR_EAST: ReadonlyArray<{ east: Facing; west: Facing }> = (["NE", "E", "SE"] as const).map((east) => ({
+    east,
+    west: mirrorFacing(east),
+}));
 
 /**
  * One IE direction block as a standalone facing-tagged source: the chosen group's slots become the
@@ -211,7 +212,62 @@ function extractIeGroup(anim: IndexedAnimation, groupIndex: number, report: Loss
  * shared across rotations (FRM cannot share a frame object across directions) and padding short
  * rotations to the longest with fully-transparent frames.
  */
-function buildDirectionalSlots(anim: IndexedAnimation, report: LossReport): SlotBuild {
+/**
+ * Make every rotation the same length, the way the caller asked.
+ *
+ * An FRM header carries ONE frames-per-direction for all six, and an Infinity Engine source routinely
+ * differs by a frame or two between facings - a stand whose facings run 76 to 81 is ordinary - so this is
+ * not an edge case, it is what every directional conversion does. See `UnevenRotations` for the three
+ * answers and what each costs.
+ *
+ * A rotation with NO frames has no pose to hold and nothing to loop, so it takes a transparent fill under
+ * every mode. That fill is the SOURCE's transparent index rather than a bare 0: the palette paths map that
+ * index to the FRM's own slot 0, and a literal 0 would read as the source's colour 0 wherever they differ.
+ */
+function equaliseRotations(
+    frameRefsPerSlot: number[][],
+    pool: Frame[],
+    transparent: number,
+    uneven: UnevenRotations,
+    report: LossReport,
+): void {
+    const lengths = frameRefsPerSlot.map((refs) => refs.length);
+    const maxLen = lengths.reduce((max, length) => Math.max(max, length), 0);
+    // The shortest NON-EMPTY rotation: cutting to a rotation this source ships no art for would empty the
+    // whole animation, which is not what "end them together" asks for.
+    const drawn = lengths.filter((length) => length > 0);
+    const minLen = drawn.length === 0 ? 0 : Math.min(...drawn);
+    const target = uneven === "clip" ? minLen : maxLen;
+
+    for (let slot = 0; slot < frameRefsPerSlot.length; slot++) {
+        const refs = frameRefsPerSlot[slot];
+        if (!refs) throw new Error(`convertToFrm: missing frame refs for slot ${slot}`);
+        const from = refs.length;
+        if (from === target) continue;
+        const facingName = FRM_FACINGS[slot];
+        if (facingName === undefined) throw new Error(`convertToFrm: missing FRM facing at slot ${slot}`);
+
+        if (from > target) {
+            refs.length = target;
+            report.add("clipped-sequence", `direction ${facingName} cut from ${from} to ${target} frames`);
+            continue;
+        }
+        while (refs.length < target) {
+            // `from`, not the growing length: wrapping reads the rotation's OWN cycle, so it must not
+            // start reading the frames it has just appended.
+            const source = uneven === "wrap" && from > 0 ? refs[refs.length % from] : refs[from - 1];
+            if (source !== undefined) {
+                refs.push(source);
+                continue;
+            }
+            pool.push({ width: 1, height: 1, pixels: new Uint8Array([transparent]), offsetX: 0, offsetY: 0 });
+            refs.push(pool.length - 1);
+        }
+        report.add("padded-sequence", `direction ${facingName} padded from ${from} to ${target} frames`);
+    }
+}
+
+function buildDirectionalSlots(anim: IndexedAnimation, report: LossReport, uneven: UnevenRotations): SlotBuild {
     const facings = resolveFacings(anim);
 
     // Reject an ambiguous layout: two source directions claiming the same FRM facing cannot both occupy
@@ -297,33 +353,7 @@ function buildDirectionalSlots(anim: IndexedAnimation, report: LossReport): Slot
         dirOffsetsY.push(0);
     }
 
-    // Pad every direction to the longest one with synthesized fully-transparent frames. The fill is
-    // the SOURCE's transparent index: the palette paths below map that index to the FRM's slot 0
-    // (a bare 0 would read as the source's color 0 whenever transparentIndex != 0).
-    const maxLen = frameRefsPerSlot.reduce((max, refs) => Math.max(max, refs.length), 0);
-    for (let slot = 0; slot < frameRefsPerSlot.length; slot++) {
-        const refs = frameRefsPerSlot[slot];
-        if (!refs) throw new Error(`convertToFrm: missing frame refs for slot ${slot}`);
-        const from = refs.length;
-        if (from >= maxLen) continue;
-        const lastIdx = refs[refs.length - 1];
-        const lastFrame = lastIdx !== undefined ? pool[lastIdx] : undefined;
-        const width = lastFrame?.width ?? 1;
-        const height = lastFrame?.height ?? 1;
-        while (refs.length < maxLen) {
-            pool.push({
-                width,
-                height,
-                pixels: new Uint8Array(width * height).fill(transparent),
-                offsetX: 0,
-                offsetY: 0,
-            });
-            refs.push(pool.length - 1);
-        }
-        const facingName = FRM_FACINGS[slot];
-        if (facingName === undefined) throw new Error(`convertToFrm: missing FRM facing at slot ${slot}`);
-        report.add("padded-sequence", `direction ${facingName} padded from ${from} to ${maxLen} frames`);
-    }
+    equaliseRotations(frameRefsPerSlot, pool, transparent, uneven, report);
 
     return { pool, frameRefsPerSlot, dirOffsetsX, dirOffsetsY };
 }
@@ -362,7 +392,7 @@ export function convertToFrm(
     const { pool, frameRefsPerSlot, dirOffsetsX, dirOffsetsY } =
         singleCycle !== undefined
             ? buildSingleOrientationSlots(source, singleCycle)
-            : buildDirectionalSlots(source, report);
+            : buildDirectionalSlots(source, report, opts?.unevenRotations ?? "hold");
 
     const defaultRemap = remapToDefault(pool, source.palette, transparentIndexOf(source.meta));
     let paletteFrames = defaultRemap.frames;

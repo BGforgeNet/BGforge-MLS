@@ -1,0 +1,172 @@
+import { describe, expect, it } from "vitest";
+import { type AnimationSet, firstArmour } from "../src/animation-index";
+import { setPreviewResref, setTile } from "../src/set-tiles";
+
+function setOf(partial: Partial<AnimationSet>): AnimationSet {
+    return {
+        id: 0x6000,
+        code: "",
+        name: "",
+        prefixByArmour: new Map(),
+        paperdollPrefix: undefined,
+        scheme: { kind: "character" },
+        ...partial,
+    };
+}
+
+const cleric = setOf({
+    id: 0x6004,
+    code: "CGMC",
+    name: "CLERIC_MALE_GNOME",
+    prefixByArmour: new Map([
+        [2, "CDMB"],
+        [1, "CDMB"],
+        [4, "CDMC"],
+    ]),
+});
+
+/** The archive answers for whatever the test names; a set's members are decided against it, never assumed. */
+const has = (...names: string[]) => {
+    const present = new Set(names);
+    return (resref: string): boolean => present.has(resref);
+};
+const nothing = has();
+
+describe("firstArmour", () => {
+    it("is the lowest level the set has, whatever order the map was built in", () => {
+        expect(firstArmour(cleric)).toBe(1);
+    });
+
+    it("is undefined for a set with no levels", () => {
+        expect(firstArmour(setOf({}))).toBeUndefined();
+    });
+});
+
+describe("setPreviewResref", () => {
+    it("stands the set at its lowest armour level", () => {
+        expect(setPreviewResref(cleric, nothing)).toBe("CDMB1G1");
+    });
+
+    it("has no preview for a scheme with no layout at all", () => {
+        const unknown = setOf({
+            id: 0xa000,
+            code: "MWYV",
+            scheme: { kind: "unimplemented", reason: "the monster_wyvern scheme..." },
+            prefixByArmour: new Map([[1, "MWYV"]]),
+        });
+        expect(setPreviewResref(unknown, has("MWYVG1"))).toBeUndefined();
+    });
+
+    /**
+     * A set whose tables name a layout but no armour levels at all. The lowest level stands in as 1 so the
+     * prefix lookup still has a key to ask with - it comes back empty, and the tile says the set draws
+     * nothing rather than throwing on the way there.
+     */
+    it("has no preview for a layout set that declares no armour levels", () => {
+        const bare = setOf({
+            id: 0x9100,
+            scheme: { kind: "layout" },
+            layout: "cycles",
+            prefixByArmour: new Map(),
+        });
+        expect(setPreviewResref(bare, has("MOGRG1"))).toBeUndefined();
+    });
+
+    it("stands a non-character layout at the first member the archive answers for", () => {
+        const ogre = setOf({
+            id: 0x9000,
+            scheme: { kind: "layout" },
+            layout: "cycles",
+            prefixByArmour: new Map([[1, "MOGR"]]),
+        });
+        // G1 is the first name the layout builds, but this install ships only G2 - the file decides.
+        expect(setPreviewResref(ogre, has("MOGRG2"))).toBe("MOGRG2");
+    });
+
+    it("has no preview where the layout names nothing the install ships", () => {
+        const ogre = setOf({
+            id: 0x9000,
+            scheme: { kind: "layout" },
+            layout: "cycles",
+            prefixByArmour: new Map([[1, "MOGR"]]),
+        });
+        expect(setPreviewResref(ogre, nothing)).toBeUndefined();
+    });
+});
+
+describe("setTile", () => {
+    it("labels a set with the name the creature field would show", () => {
+        // ANIMATE's name, not ANISND's code: the link from a creature's animation field lands here, and
+        // the two ends must name the same animation the same way.
+        expect(setTile(cleric, nothing).label).toBe("CLERIC_MALE_GNOME");
+    });
+
+    it("falls back to the code, then to the id, for a set the tables barely name", () => {
+        expect(setTile(setOf({ id: 0x6004, code: "CGMC" }), nothing).label).toBe("CGMC");
+        expect(setTile(setOf({ id: 0xe440 }), nothing).label).toBe("0xe440");
+    });
+
+    // The three reasons a row draws nothing are different answers to "what do I do about this?", and only
+    // the middle one is ours to fix.
+    it("says the naming is undeclared - not the animation - and offers the code to search on", () => {
+        // Every row that reaches this note IS named by the tables; what is missing is any statement of
+        // what its files are called.
+        const tile = setTile(
+            setOf({
+                code: "SPRI",
+                name: "FIRE_RING",
+                scheme: { kind: "unimplemented", reason: "no INI declaration" },
+            }),
+            nothing,
+        );
+        expect(tile.unsupported).toBe("Nothing declares which files this animation draws (code SPRI).");
+        expect(tile.resref).toBeUndefined();
+    });
+
+    it("leaves the code out of that note where the tables name none", () => {
+        const tile = setTile(setOf({ scheme: { kind: "unimplemented", reason: "no INI declaration" } }), nothing);
+        expect(tile.unsupported).toBe("Nothing declares which files this animation draws.");
+    });
+
+    it("keeps the layout's own reason where the layout is the thing we cannot read", () => {
+        const tile = setTile(
+            setOf({
+                prefixByArmour: new Map([[1, "MXXX"]]),
+                scheme: { kind: "unimplemented", reason: "the moon scheme is not implemented yet" },
+            }),
+            nothing,
+        );
+        expect(tile.unsupported).toBe("the moon scheme is not implemented yet");
+    });
+
+    it("says the install ships no art where the layout is known and nothing resolves", () => {
+        // The common case by far, and the one that used to read as a missing feature: a game's tables name
+        // animations belonging to other games in the family.
+        const tile = setTile(
+            setOf({
+                prefixByArmour: new Map([[1, "MBAS"]]),
+                layout: "cycles",
+                scheme: { kind: "layout" },
+            }),
+            nothing,
+        );
+        expect(tile.unsupported).toBe("This install ships no files for this animation.");
+    });
+
+    it("leaves a layout set whose files resolve with no note, the same as a character one", () => {
+        const tile = setTile(
+            setOf({
+                scheme: { kind: "layout" },
+                layout: "cycles",
+                prefixByArmour: new Map([[1, "MOGR"]]),
+            }),
+            has("MOGRG1"),
+        );
+        expect(tile.resref).toBe("MOGRG1");
+        expect(tile.unsupported).toBeUndefined();
+    });
+
+    it("leaves a drawable set with no reason attached", () => {
+        expect(setTile(cleric, nothing).unsupported).toBeUndefined();
+    });
+});

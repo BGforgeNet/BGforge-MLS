@@ -1,16 +1,15 @@
 <script lang="ts">
+    import Checkbox from "../../../webview-ui/Checkbox.svelte";
     import type { Background } from "../render/indexed-to-rgba";
+    // Continuous fractional zoom. The ladder lives beside the auto-zoom that has to respect it, so the
+    // control and the automatic choice cannot disagree about the range - see render/tile.ts.
+    import { ZOOM_MAX, ZOOM_MIN, ZOOM_PRESETS, ZOOM_STEP } from "../render/tile";
 
     const BACKGROUND_OPTIONS: { value: Background; label: string }[] = [
         { value: "transparent", label: "Transparent" },
         { value: "checkered", label: "Checkered" },
         { value: "green", label: "Green" },
     ];
-    // Continuous fractional zoom, 50% - 400%. Step 0.05 = 5% increments.
-    const ZOOM_MIN = 0.5;
-    const ZOOM_MAX = 4;
-    const ZOOM_STEP = 0.05;
-    const ZOOM_PRESETS = [0.5, 1, 2, 4]; // 50% / 100% / 200% / 400% - one-click common levels
 
     function isPreset(preset: number): boolean {
         return Math.abs(zoom - preset) < 0.001;
@@ -28,6 +27,7 @@
 
     const {
         zoom,
+        fillZoom,
         background,
         showOffsetMarker,
         onZoomChange,
@@ -36,6 +36,8 @@
         viewState,
     }: {
         zoom: number;
+        /** The scale at which the drawn animation fills its tile - what the Auto button sets. */
+        fillZoom: number;
         background: Background;
         showOffsetMarker: boolean;
         onZoomChange: (zoom: number) => void;
@@ -43,6 +45,10 @@
         onToggleOffsetMarker: () => void;
         viewState?: { get: () => unknown; set: (state: unknown) => void };
     } = $props();
+
+    /** What Auto would choose - already capped to this control's own range (tile.autoZoom). */
+    const fill = $derived(clampZoom(fillZoom));
+    const isAuto = $derived(Math.abs(zoom - fill) < 0.001);
 
     function isRecord(v: unknown): v is Record<string, unknown> {
         return typeof v === "object" && v !== null;
@@ -57,6 +63,8 @@
     $effect(() => {
         const persisted = viewState?.get();
         if (!isRecord(persisted)) return;
+        // The animation opening fits the sprite itself, so a restored zoom only holds until then; it is
+        // the backdrop this is really keeping across a reload.
         if (typeof persisted.zoom === "number") onZoomChange(clampZoom(persisted.zoom));
         if (isBackground(persisted.background)) onBackgroundChange(persisted.background);
     });
@@ -102,6 +110,16 @@
                 {Math.round(preset * 100)}%
             </button>
         {/each}
+        <button
+            type="button"
+            class="bg-option"
+            class:active={isAuto}
+            aria-pressed={isAuto}
+            title="Largest scale at which the whole animation still fits its tile - what a view opens at, and what it returns to on every switch"
+            onclick={() => handleZoomChange(fill)}
+        >
+            Auto
+        </button>
     </div>
     <div class="view-field" role="radiogroup" aria-label="Background">
         <span class="view-label">Background</span>
@@ -119,11 +137,10 @@
             {/each}
         </div>
     </div>
-    <label
-        class="view-field view-checkbox"
+    <Checkbox
+        label="Offset marker"
+        checked={showOffsetMarker}
+        onchange={onToggleOffsetMarker}
         title="Show a crosshair at each frame's anchor point - the offset origin the frame is positioned from in the preview"
-    >
-        <input type="checkbox" checked={showOffsetMarker} onchange={onToggleOffsetMarker} />
-        <span class="view-label">Offset marker</span>
-    </label>
+    />
 </div>

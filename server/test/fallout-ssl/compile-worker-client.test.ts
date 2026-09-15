@@ -118,7 +118,7 @@ describe("compile worker client", () => {
     it("starts a fresh worker after one dies", async () => {
         const dead = compileOnWorker({ ...REQUEST });
         current().emit("error", new Error("worker exploded"));
-        await expect(dead).rejects.toThrow();
+        await expect(dead).rejects.toThrow("The SSL compiler failed to run: worker exploded");
 
         const retry = compileOnWorker({ ...REQUEST });
         current().emit("message", { id: current().posted[0]!.id, errors: [], warnings: [] });

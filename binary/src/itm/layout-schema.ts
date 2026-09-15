@@ -76,7 +76,6 @@ const itmLabels: Record<string, string> = {
 export const itmLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "itm",
-    maxContentWidthPx: 1180,
     labels: itmLabels,
     variants: {
         item: {

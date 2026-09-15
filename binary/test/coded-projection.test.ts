@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-    compileFlagTable,
-    emptyFlagArray,
-    flagArrayToInt,
-    intToFlagArray,
-    slugifyCodedName,
-} from "../src/spec/coded-projection";
+import { compileFlagTable, flagArrayToInt, intToFlagArray, slugifyCodedName } from "../src/spec/coded-projection";
 import { flagArrayZodSchema } from "../src/spec/derive-zod";
 
 describe("slugifyCodedName", () => {
@@ -153,19 +147,18 @@ describe("flagArrayToInt", () => {
     });
 });
 
-describe("emptyFlagArray", () => {
-    it("returns an empty array", () => {
-        const table = { 0x01: "Hidden", 0x02: "BigGun" };
-        expect(emptyFlagArray(table)).toEqual([]);
-    });
-});
-
 describe("flagArrayZodSchema", () => {
     const table = {
         0x01: "Hidden",
         0x02: "BigGun",
         0x04: "PickUp",
     };
+
+    /** Every rejection message, so a case pins WHICH refusal fired and on which entry. */
+    const messages = (input: unknown): string[] =>
+        flagArrayZodSchema(table, 8)
+            .safeParse(input)
+            .error?.issues.map((issue) => issue.message) ?? [];
 
     it("accepts an empty array", () => {
         const schema = flagArrayZodSchema(table, 8);
@@ -179,19 +172,18 @@ describe("flagArrayZodSchema", () => {
     });
 
     it("rejects unknown flag names", () => {
-        const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["unknown"])).toThrow();
+        expect(messages(["unknown"])).toEqual(['"unknown" is neither a flag table key nor a "bit<N>" position']);
     });
 
     it("rejects duplicate entries", () => {
         const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["hidden", "hidden"])).toThrow();
+        expect(() => schema.parse(["hidden", "hidden"])).toThrow("flag array must not contain duplicate entries");
     });
 
     it("rejects non-array shapes", () => {
         const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse("hidden")).toThrow();
-        expect(() => schema.parse({ flags: [] })).toThrow();
+        expect(() => schema.parse("hidden")).toThrow("expected array, received string");
+        expect(() => schema.parse({ flags: [] })).toThrow("expected array, received object");
     });
 
     it("accepts bit<N> for unnamed positions within codec width", () => {
@@ -202,13 +194,11 @@ describe("flagArrayZodSchema", () => {
 
     it("rejects bit<N> with N >= codecBitWidth", () => {
         // u8 codec -> N must be in [0, 8).
-        const schema = flagArrayZodSchema(table, 8);
-        expect(() => schema.parse(["bit8"])).toThrow();
+        expect(messages(["bit8"])).toEqual(['"bit8" is past the codec word: N must be in [0, 8)']);
     });
 
     it("rejects bit<N> overlapping a named-bit position", () => {
-        const schema = flagArrayZodSchema(table, 8);
         // bit 0 is named "hidden" (mask 0x01); a literal "bit0" must use the slug.
-        expect(() => schema.parse(["bit0"])).toThrow();
+        expect(messages(["bit0"])).toEqual(['"bit0" overlaps the flag named at position 0: use its table key instead']);
     });
 });

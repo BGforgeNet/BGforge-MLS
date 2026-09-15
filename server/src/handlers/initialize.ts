@@ -82,10 +82,10 @@ export function register(ctx: HandlerContext): void {
         const translation = new Translation(projectSettings.translation, workspaceRoot, () => {
             fireRefresh(() => ctx.connection.languages.inlayHint.refresh());
         });
-        // Not awaited: this is ~700 ms of a ~750 ms handshake, and the client cannot send a request until
-        // the initialize response goes out. The provider scan is held behind it (`scanAfter` below), so the
-        // load still lands at its old wall-clock time instead of being starved behind the workspace parse -
-        // backgrounding it alone pushed `@N` previews from ~750 ms out to ~5.3 s.
+        // Not awaited: this is nearly the whole handshake, and the client cannot send a request until the
+        // initialize response goes out. The provider scan is held behind it (`scanAfter` below), so the load
+        // still lands when it used to instead of being starved behind the workspace parse - backgrounding it
+        // alone pushed `@N` previews out by several times their previous latency.
         //
         // The re-apply is chained on because every Translation method returns early while `initialized` is
         // false: a document opened during the load had its onDidOpen pair dropped, and the load replaces

@@ -51,7 +51,6 @@ interface TDCompileResult {
 const td = createTranspiler<TDTranspileResult>({
     sourceExtension: EXT_TD,
     targetExtension: ".d",
-    name: "TD",
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)
@@ -85,7 +84,8 @@ function parseBundled(bundled: string, text: string, filePath: string, traTag: s
     // whole transpile; a concurrent transpile would overwrite their
     // virtual files mid-walk. Fresh-Project construction at per-compile
     // granularity is a small fraction of total compile time.
-    const project = new Project({ useInMemoryFileSystem: true });
+    // No lib files: every read below is syntactic, so the type checker is never consulted.
+    const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
     const sourceFile = project.createSourceFile("bundled.ts", bundled);
 
     // 3. Parse AST to IR, using original file path for the header comment
@@ -145,7 +145,8 @@ export function detectOrphansFromOriginal(originalText: string, ir: TDScript): T
     // the source file outlives a single synchronous call (three descendant
     // walks below), so a shared Project would be racy under concurrent
     // compiles. Construction cost is small relative to per-compile work.
-    const project = new Project({ useInMemoryFileSystem: true });
+    // No lib files: the walks below are syntactic, so the type checker is never consulted.
+    const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
     const sf = project.createSourceFile("original.td", originalText);
 
     // Collect all function declarations from original source

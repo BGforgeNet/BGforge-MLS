@@ -12,8 +12,8 @@
  *
  * No lib files are loaded. Every caller here asks only for syntactic answers - an AST walk or
  * `getSyntacticDiagnostics` - and none reaches the type checker, so the declarations the default
- * `lib.es2022.full.d.ts` would bind are never consulted. Loading them anyway cost 356 ms of the
- * first parse against 31 ms without, and 76 MB of resident heap; on the server that first parse
+ * `lib.es2022.full.d.ts` would bind are never consulted. Loading them anyway cost an order of magnitude
+ * on the first parse, plus the resident heap to hold them; on the server that first parse
  * runs on the thread answering hover and completion. `TSSL_COMPILER_OPTIONS` pins the same default
  * away for the compile path, which does need types - see its rationale for the measurement there.
  */

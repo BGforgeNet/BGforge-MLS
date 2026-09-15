@@ -11,6 +11,9 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
+// Mutual recursion, not a layering slip: a control-flow statement nests a block of statements, so
+// `control-flow` calls back into this module's `formatNode`/`formatBlock`, and `expressions` shares
+// its format context.
 import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, formatSwitchStmt } from "./control-flow";
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";

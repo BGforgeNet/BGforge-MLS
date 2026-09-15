@@ -7,13 +7,14 @@
     // by staying absent rather than flagging an unresolved name; confining the field to what is installed today
     // would reject correct input. The list is a suggestion set, never the domain.
     import type { Row } from "@bgforge/binary-editor";
-    import Combobox from "../primitives/Combobox.svelte";
+    import Combobox from "../../../../webview-ui/Combobox.svelte";
     import { useResourceList } from "../../state/resource-list-context";
 
     const { row, onedit }: { row: Row; onedit: (value: string) => void } = $props();
     const fetchList = useResourceList();
 
-    let resrefs = $state<readonly string[]>([]);
+    // Raw: the install's resref list, replaced wholesale - it runs to five figures.
+    let resrefs = $state.raw<readonly string[]>([]);
     // Loaded on first open rather than on mount: a record carries many resref fields and their lists run to
     // thousands of entries, so fetching every one up front would cost far more than the few a user opens.
     let requested = false;

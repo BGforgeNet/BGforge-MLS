@@ -46,7 +46,7 @@ export const DamageType: Record<number, string> = {
 
 // Material types
 // Material 0..7 plus the -1 "no proto default" sentinel emitted by the
-// engine's proto_scenery_init (proto.cc:956). Item, wall, and tile protos
+// engine when it initialises a new scenery proto. Item, wall, and tile protos
 // initialise material to 1 (Metal), so -1 is observed primarily on scenery in
 // vanilla; modded data may set it elsewhere, hence sentinel handling on every
 // material field that uses this lookup.
@@ -107,10 +107,10 @@ export const KillType: Record<number, string> = {
 };
 
 // Elevator types - 0x00-0x17 plus the -1 "no proto default" sentinel
-// emitted by the engine's proto_scenery_subdata_init (proto.cc:976). The
+// the engine emits when it initialises a new elevator proto. The
 // per-object map record always supplies the live value at runtime; for
 // script-spawned elevators (rare) the proto value is the seed, and -1 there
-// signals "no default - caller must set it" (scripts.cc:1152 bails on -1).
+// signals "no default - caller must set it" (the engine bails on -1).
 export const ElevatorType: Record<number, string> = {
     [-1]: "None",
     0: "Elevator 0",
@@ -148,8 +148,8 @@ export const WeaponAnimCode: Record<number, string> = {
     4: "Spear",
     5: "Pistol",
     6: "SMG",
-    // 7/8 per fallout2-ce art.h WeaponAnimation (the code maps to a critter-art FRM suffix letter):
-    // 7 = SHOTGUN (FRM 'j'), 8 = LASER_RIFLE (FRM 'k'). Was "Rifle"/"Big Gun" - the wrong weapon for those
+    // 7/8 per the Fallout 2 engine's weapon animation codes (the code maps to a critter-art FRM suffix letter):
+    // 7 = shotgun (FRM 'j'), 8 = laser rifle (FRM 'k'). Was "Rifle"/"Big Gun" - the wrong weapon for those
     // animation slots (Sledgehammer/Rocket Launcher at 3/10 are kept as informal names for the same animation).
     7: "Shotgun",
     8: "Laser Rifle",
@@ -162,8 +162,8 @@ export const WeaponAnimCode: Record<number, string> = {
     15: "Sfall 15",
 };
 
-// Weapon ammo caliber - values 0x00-0x12 (CALIBER_TYPE_NONE..CALIBER_TYPE_7_62). Names and ordering
-// cross-checked against fallout2-ce `proto_types.h` (CALIBER_TYPE_* enum, COUNT = 19).
+// Weapon ammo caliber - values 0x00-0x12 (None..7.62). Names and ordering cross-checked against the Fallout 2
+// engine's caliber types (19 values).
 export const Caliber: Record<number, string> = {
     0: "None",
     1: "Rocket",
@@ -187,7 +187,7 @@ export const Caliber: Record<number, string> = {
 };
 
 // Item attack-mode subtype - the per-nibble value of the item-common "Attack modes" byte (primary in the low
-// nibble, secondary in the high nibble). Names and 0-8 ordering are from fallout2-ce `item.cc` `_attack_subtype`
+// nibble, secondary in the high nibble). Names and 0-8 ordering are from the Fallout 2 engine's attack subtypes
 // (cross-checked against sfall `EngineUtils.cpp` `weapon_types`). 4-bit field, so values 9-15 are unused.
 export const AttackSubType: Record<number, string> = {
     0: "None",
@@ -201,8 +201,8 @@ export const AttackSubType: Record<number, string> = {
     8: "Continuous",
 };
 
-// Perk granted by a weapon or armor (proto `perk` field; -1 = none). Names and 0..118 ordering are from
-// fallout2-ce `perk_defs.h` (the `Perk` enum); labels are humanized from the enum tokens. Open: sfall registers
+// Perk granted by a weapon or armor (proto `perk` field; -1 = none). Names and 0..118 ordering are the Fallout 2
+// engine's perk list (sfall Enums.h `Perk`); labels are humanized from the enum tokens. Open: sfall registers
 // extra "fake perks" beyond the engine's 119 (`Modules/Perks.cpp`), so callers mark the field `enumOpen`.
 export const Perk: Record<number, string> = {
     [-1]: "None",
@@ -394,9 +394,9 @@ export const HeaderFlags: Record<number, string> = {
     0x80000000: "ShootThru",
 };
 
-// The HIGH 3 bytes of the proto `extendedFlags` dword. item-common reads `flagsExt` as u24 (top 3 bytes) and
+// The HIGH 3 bytes of the proto extended-flags dword. item-common reads `flagsExt` as u24 (top 3 bytes) and
 // the attack-mode nibbles as the separate low byte (item-common.ts), and the .pro stores the dword big-endian,
-// so every value here is the real ItemProtoExtendedFlags (fallout2-ce proto_types.h) shifted right 8 bits:
+// so every value here is the engine's real extended-flag value shifted right 8 bits:
 // BigGun 0x100->0x1, TwoHand 0x200->0x2, Use 0x800->0x8, UseOnSmth 0x1000->0x10, Look 0x2000->0x20,
 // PickUp 0x8000->0x80, Hidden 0x08000000->0x080000. Correct AS SHIFTED - do NOT "unshift" to the raw engine
 // values; that would mismatch the u24 field (CritterFlagsExt below reads the full u32 and keeps raw values).
@@ -410,9 +410,9 @@ export const ItemFlagsExt: Record<number, string> = {
     0x080000: "Hidden",
 };
 
-// Wall/scenery read the proto `extendedFlags` dword as wallLightFlags:u16 (HIGH 16 bits) + actionFlags:u16
+// Wall/scenery read the proto extended-flags dword as wallLightFlags:u16 (HIGH 16 bits) + actionFlags:u16
 // (low 16). The corner bits are the real corner flags >> 16: NorthCorner 0x10000000->0x1000 ...
-// WestCorner 0x80000000->0x8000 (fallout2-ce proto_types.h PROTO_EXT_FLAG_*_CORNER). The N/S (0x0000) vs E/W
+// WestCorner 0x80000000->0x8000 (the engine's wall corner flags). The N/S (0x0000) vs E/W
 // (0x0800) orientation is per the falloutmods PRO wiki - 0x0800 here is the HIDDEN bit (0x08000000>>16) reused
 // for walls and is not engine-named.
 export const WallLightFlags: Record<number, string> = {
@@ -424,11 +424,10 @@ export const WallLightFlags: Record<number, string> = {
     0x8000: "WestCorner",
 };
 
-// Low 16 bits of the proto `extendedFlags` dword (the actionFlags:u16 half, read AFTER wallLightFlags). These
-// are the real ItemProtoExtendedFlags, NOT shifted - the engine tests `extendedFlags & PROTO_EXT_FLAG_CAN_USE
-// (0x800)` directly (fallout2-ce proto.cc:264, and CAN_USE_ON/LOOK/CAN_TALK_TO/CAN_PICK_UP). The prior table
-// placed these at 0x8-0x80 (an extra 8-bit shift); corroborated by CritterFlagsExt, which reads the full u32
-// and correctly has Look=0x2000 / Can talk to=0x4000. 0x0001 = PROTO_EXT_FLAG_MAGIC_HANDS_GROUND (scenery).
+// Low 16 bits of the proto extended-flags dword (the actionFlags:u16 half, read AFTER wallLightFlags). These
+// are the engine's real extended flags, NOT shifted - the engine tests the use bit (0x800) directly, and likewise
+// use-on / look / talk-to / pick-up. CritterFlagsExt, which reads the full u32, agrees: Look=0x2000 /
+// Can talk to=0x4000. 0x0001 = the engine's magic-hands-ground flag (scenery).
 export const ActionFlags: Record<number, string> = {
     0x0001: "Magic hands (ground)",
     0x0800: "Use",
@@ -438,9 +437,9 @@ export const ActionFlags: Record<number, string> = {
     0x8000: "Pick up",
 };
 
-// Container proto `openFlags` (full u32). fallout2-ce does not name these bits (the named CONTAINER_FLAG_LOCKED
-// / _JAMMED are runtime OBJECT data flags, not proto openFlags), so these labels are from the falloutmods PRO
-// wiki and are UNVERIFIED against sfall/fallout2-ce.
+// Container proto `openFlags` (full u32). The Fallout 2 engine does not name these bits (its container locked /
+// jammed flags are runtime OBJECT data flags, not proto openFlags), so these labels are from the falloutmods PRO
+// wiki and are UNVERIFIED against sfall or the engine.
 export const ContainerFlags: Record<number, string> = {
     0x00000001: "CannotPickUp",
     0x00000008: "MagicHandsGrnd",
@@ -461,10 +460,10 @@ export const CritterFlags: Record<number, string> = {
 };
 
 /**
- * Critter proto `flagsExt` (the proto "Flags Ext" / `extendedFlags` action-flag bitfield - distinct from the
+ * Critter proto `flagsExt` (the proto "Flags Ext" action-flag bitfield - distinct from the
  * common object `flags` and the critter behavior `critterFlags`). Only two bits are defined for critters; the
- * values are cross-checked against fallout2-ce `ItemProtoExtendedFlags` (`PROTO_EXT_FLAG_LOOK` /
- * `_CAN_TALK_TO`) and the falloutmods PRO_File_Format wiki.
+ * values are cross-checked against the engine's extended flags (look / can talk to) and the falloutmods
+ * PRO_File_Format wiki.
  */
 export const CritterFlagsExt: Record<number, string> = {
     0x00002000: "Look",

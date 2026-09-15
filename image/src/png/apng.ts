@@ -1,4 +1,4 @@
-import zlib from "zlib";
+import zlib from "node:zlib";
 import { type Rgba } from "../model/animation.ts";
 import { MAX_FRAME_PIXELS } from "../limits.ts";
 import { PNG_SIGNATURE, readChunks, writeChunk } from "./chunk.ts";

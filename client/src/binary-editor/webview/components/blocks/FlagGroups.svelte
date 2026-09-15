@@ -4,10 +4,12 @@
     // `columns` lay left-to-right, each column stacks one or more boxed, labelled subgroups, and each checkbox
     // names its own backing field + single-bit mask. Toggling composes back into that byte via the same
     // compose/decompose helpers FlagColumns uses, so the round-trip identity is unchanged.
+    // Row affordances (FieldAffordances, DocLink) are N/A here: no element draws a field - its bits scatter under
+    // category legends and its name never renders - so there is nothing to put them beside.
     import type { FieldRef, Row } from "@bgforge/binary-editor";
     import { composeFlags } from "../../state/controls";
-    import Checkbox from "../primitives/Checkbox.svelte";
-    import Icon from "../Icon.svelte";
+    import Checkbox from "../../../../webview-ui/Checkbox.svelte";
+    import Icon from "../../../../webview-ui/Icon.svelte";
 
     interface Item {
         field: FieldRef;

@@ -12,6 +12,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 
 /** Whether this node is itself a parse error, as opposed to merely containing one. */
 function isParseError(node: SyntaxNode): boolean {
+    // oxlint-disable-next-line bgforge-syntax/no-node-type-literal -- grammar-agnostic: every grammar's enum spells ERROR the same way, and this module serves all of them
     return node.type === "ERROR" || node.isError || node.isMissing;
 }
 

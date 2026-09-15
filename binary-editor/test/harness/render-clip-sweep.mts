@@ -3,8 +3,9 @@
  *
  * Opens every binary format in the REAL webview bundle and walks each primary tab (and, where a list section
  * is present, selects its first entry to render the detail form), running the shared clip gate
- * (`clip-gate.ts`) on each view. The gate flags any value control whose box clips its text and any dropdown
- * rendered without a `dd-*` width class. This is the sweeping check for the whole clipping class - the
+ * (`clip-gate.ts`) on each view at each of `WIDTHS`. The gate flags any value control whose box clips its text, any
+ * dropdown rendered without a `dd-*` width class, and a page wider than the viewport. This is the sweeping check
+ * for the whole clipping class - the
  * per-format render-*.mts drivers verify their own format in depth; this one verifies the ONE invariant
  * "no value control clips" across all of them, so a new clip anywhere is caught in one place.
  *
@@ -48,6 +49,10 @@ const FORMATS: { label: string; uri: string; file: string }[] = [
     { label: "PRO-item", uri: "file:///sweep-item.pro", file: "client/testFixture/proto/items/00000031.pro" },
     { label: "MAP", uri: "file:///sweep.map", file: "client/testFixture/maps/arcaves.map" },
 ];
+
+// A wide editor, the narrowest side-by-side list/detail split and the widest stacked one (the `.master-detail`
+// media query in styles.css switches at 900px), and a narrow editor split.
+const WIDTHS = [1400, 920, 880, 480];
 
 /** Drive one format through the webview and collect clip violations across its tabs. */
 async function runFormat(browser: Browser, label: string, uri: string, bytes: Uint8Array): Promise<ClipViolation[]> {
@@ -101,11 +106,22 @@ async function runFormat(browser: Browser, label: string, uri: string, bytes: Ui
     await page.waitForSelector(".layout-root", { timeout: 5000 });
 
     const found: ClipViolation[] = [];
-    // Check whatever a freshly-opened detail/list selection renders too: select the first list row if one is
-    // present, so detail forms get swept and not just the tab's own fields/grids.
+    const collectAtWidths = async (ctx: string): Promise<void> => {
+        for (const width of WIDTHS) {
+            await page.setViewportSize({ width, height: 900 });
+            // Column shedding (fit-kv-columns) re-fits in a requestAnimationFrame after the resize.
+            for (let i = 0; i < 3; i++) {
+                await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+            }
+            found.push(...(await collectClipViolations(page, `${ctx} @${width}`)));
+        }
+        await page.setViewportSize({ width: WIDTHS[0]!, height: 900 });
+    };
+    // Check whatever a freshly-opened detail/list selection renders too: select the first list row or tree effect
+    // if one is present, so detail forms get swept and not just the tab's own fields/grids.
     const sweepCurrentView = async (ctx: string): Promise<void> => {
-        found.push(...(await collectClipViolations(page, ctx)));
-        const firstRow = page.locator(".master .vlist .vrow").first();
+        await collectAtWidths(ctx);
+        const firstRow = page.locator(".master .vlist .vrow, .eff-tree-effect").first();
         if (await firstRow.count()) {
             await firstRow.click().catch(() => undefined);
             await page
@@ -113,7 +129,7 @@ async function runFormat(browser: Browser, label: string, uri: string, bytes: Ui
                     timeout: 5000,
                 })
                 .catch(() => undefined);
-            found.push(...(await collectClipViolations(page, ctx + " (detail)")));
+            await collectAtWidths(ctx + " (detail)");
         }
     };
 

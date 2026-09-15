@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { formatAdapterRegistry } from "../src/format-adapter";
 import { itmParser } from "../src/itm";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "../src/itm/canonical-reader";

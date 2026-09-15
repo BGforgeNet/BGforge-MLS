@@ -10,28 +10,28 @@
  * assignments, and any other constructs.
  */
 
-/** Token types for the lexer */
+/** Token types for the lexer. Each value is the source text it stands for, so a parse error names it. */
 const enum TokenType {
-    Number,
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Percent,
-    LParen,
-    RParen,
-    Lt,
-    LtEq,
-    Gt,
-    GtEq,
-    EqEq,
-    EqEqEq,
-    NotEq,
-    NotEqEq,
-    And,
-    Or,
-    Not,
-    EOF,
+    Number = "number",
+    Plus = "+",
+    Minus = "-",
+    Star = "*",
+    Slash = "/",
+    Percent = "%",
+    LParen = "(",
+    RParen = ")",
+    Lt = "<",
+    LtEq = "<=",
+    Gt = ">",
+    GtEq = ">=",
+    EqEq = "==",
+    EqEqEq = "===",
+    NotEq = "!=",
+    NotEqEq = "!==",
+    And = "&&",
+    Or = "||",
+    Not = "!",
+    EOF = "end of input",
 }
 
 interface Token {
@@ -220,7 +220,7 @@ class Parser {
     private expect(type: TokenType): Token {
         const tok = this.current();
         if (tok.type !== type) {
-            throw new Error(`Expected token type ${type}, got ${tok.type} at position ${this.pos}`);
+            throw new Error(`Expected token '${type}', got '${tok.type}' at position ${this.pos}`);
         }
         return this.advance();
     }
@@ -252,13 +252,13 @@ class Parser {
             const right = this.comparison();
             if (type === TokenType.EqEq) {
                 // Implementing `==` semantics for the sandboxed evaluator.
-                // eslint-disable-next-line eqeqeq
+                // oxlint-disable-next-line eqeqeq
                 left = left == right;
             } else if (type === TokenType.EqEqEq) {
                 left = left === right;
             } else if (type === TokenType.NotEq) {
                 // Implementing `!=` semantics for the sandboxed evaluator.
-                // eslint-disable-next-line eqeqeq
+                // oxlint-disable-next-line eqeqeq
                 left = left != right;
             } else {
                 left = left !== right;

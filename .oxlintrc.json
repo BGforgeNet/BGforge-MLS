@@ -1,5 +1,5 @@
 {
-    "jsPlugins": ["./.oxlint/oxlint-plugin-no-showmessage.mjs"],
+    "jsPlugins": ["./.oxlint/oxlint-plugin-no-showmessage.mjs", "./.oxlint/oxlint-plugin-node-type-literal.mjs"],
 
     // All five categories at `error`. That is what makes the disabled list below long, and the trade has
     // been measured rather than assumed: 331 rules are enforced, 236 of them come from `pedantic` and
@@ -326,6 +326,13 @@
             }
         },
         {
+            // The packages that walk tree-sitter trees through the generated SyntaxType enums.
+            "files": ["server/src/**/*.ts", "format/src/**/*.ts", "compilers/bcs/src/**/*.ts", "shared/**/*.ts"],
+            "rules": {
+                "bgforge-syntax/no-node-type-literal": "error"
+            }
+        },
+        {
             // The wrapper the rule points everyone at: it is the one place the raw
             // `connection.window.show*Message` calls are allowed to live. Scoped to that rule so the
             // file keeps every other check - an `ignorePatterns` entry would have excluded them all.
@@ -431,7 +438,8 @@
                 "client/src/webview-utils.ts",
                 "client/src/binary-editor/**",
                 "client/src/dialog-editor/**",
-                "client/src/image-editor/**"
+                "client/src/image-editor/**",
+                "client/src/gallery/**"
             ],
             "rules": {
                 "unicorn/require-post-message-target-origin": "off"
@@ -488,9 +496,9 @@
         },
         {
             // bits-ui is an accessible headless component primitive library.
-            // All imports must go through webview/components/primitives/ wrappers
-            // so the dependency has one swap point if it is ever replaced.
-            "files": ["client/src/binary-editor/webview/**"],
+            // All imports must go through the primitive wrappers (webview-ui/ for the ones shared
+            // across editors) so the dependency has one swap point if it is ever replaced.
+            "files": ["client/src/binary-editor/webview/**", "client/src/image-editor/webview/**"],
             "rules": {
                 "no-restricted-imports": [
                     "error",
@@ -506,9 +514,9 @@
             }
         },
         {
-            // The primitives wrapper directory is the designated single import
+            // The primitive wrapper directories are the designated single import
             // point for bits-ui; the restriction above does not apply here.
-            "files": ["client/src/binary-editor/webview/components/primitives/**"],
+            "files": ["client/src/binary-editor/webview/components/primitives/**", "client/src/webview-ui/**"],
             "rules": {
                 "no-restricted-imports": "off"
             }

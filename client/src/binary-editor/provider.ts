@@ -5,8 +5,9 @@ import type { ChangeSet, StructureOpRequest } from "@bgforge/binary-editor";
 import { backupHandle } from "../hot-exit-backup";
 import { hasViewerFor } from "../ie-resources/editor-routing";
 import { canThumbnail, thumbnailDataUri } from "../ie-resources/thumbnails";
-import { generateNonce, getCachedHtmlAsset, getCachedJsAsset, inlineWebviewScript } from "../webview-assets";
+import { buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
 import {
+    type ColorGradientResolver,
     type NamingTableResolver,
     type ResourceListResolver,
     type ResourceBytesResolver,
@@ -27,6 +28,7 @@ export interface GameResolvers {
     strref: StrrefResolver;
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
+    colorGradient: ColorGradientResolver;
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
@@ -35,6 +37,20 @@ export interface GameResolvers {
     /** Whether the resolvers can answer anything for this document. Owns the whole policy - the URI's own
      *  game plus the `file:` fallback - so this module never re-derives what counts as game-backed. */
     isGameBacked: (uri: vscode.Uri) => boolean;
+    /**
+     * Fires when the open install changes.
+     *
+     * Every resolver above answers for whichever game is open at the moment it is called, so the editor is
+     * correct for as long as it keeps asking - and it stops asking once a panel is drawn.
+     */
+    onDidChangeGame: (listener: () => void) => vscode.Disposable;
+}
+
+/** One gradient as CSS colours for the webview. The resolver hands back model colours, because the animation
+ *  editor applies the same table to a palette rather than drawing it. */
+function cssGradient(row: readonly { r: number; g: number; b: number }[] | undefined): string[] | undefined {
+    const hex = (n: number): string => n.toString(16).padStart(2, "0");
+    return row?.map((c) => `#${hex(c.r)}${hex(c.g)}${hex(c.b)}`);
 }
 
 const WORKER_SCRIPT = path.join("client", "out", "binary-editor", "worker.js");
@@ -42,7 +58,6 @@ const WEBVIEW_DIR = path.join("client", "src", "binary-editor", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
 const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
 const WEBVIEW_JS = path.join("client", "out", "binary-editor", "webview", "main.js");
-const CODICONS_DIR = path.join("client", "out", "codicons");
 
 /**
  * The `<name>.json` snapshot sidecar URI for a destination.
@@ -131,15 +146,17 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         panel: vscode.WebviewPanel,
         _token: vscode.CancellationToken,
     ): Promise<void> {
-        const codiconsDir = vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR);
-        const webviewDir = vscode.Uri.joinPath(this.extensionUri, WEBVIEW_DIR);
-        // Both roots must be readable for the <link> stylesheets: codicon.css/.ttf live under CODICONS_DIR,
-        // styles.css under WEBVIEW_DIR. asWebviewUri only resolves resources beneath a declared root.
-        panel.webview.options = { enableScripts: true, localResourceRoots: [codiconsDir, webviewDir] };
+        panel.webview.options = {
+            enableScripts: true,
+            localResourceRoots: sharedWebviewRoots(this.extensionUri, WEBVIEW_DIR),
+        };
         panel.webview.html = this.getHtml(panel.webview);
 
         this.active.set(panel, document);
+        // The subscription is per panel because that is what its lifetime matches.
+        const gameChanged = this.gameLookups.onDidChangeGame(() => void this.reproject(document, panel));
         panel.onDidDispose(() => {
+            gameChanged.dispose();
             this.active.delete(panel);
             // Last panel for this document gone -> cancel any pending debounced validate so it never fires
             // against a disposed bridge.
@@ -228,7 +245,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 // bytes are far larger than the row, and the view caches per resource - several rows commonly
                 // name the same icon.
                 const bytes = this.gameLookups.resourceBytes(document.uri, message.resref, message.ext);
-                const dataUri = bytes === undefined ? undefined : thumbnailDataUri(bytes, message.ext, message.resref);
+                // 64, not the box's 22px: the icon is drawn at up to 2x device pixels, and 64 is the first
+                // ladder step that covers 44.
+                const dataUri = bytes === undefined ? undefined : thumbnailDataUri(bytes, message.ext, 64);
                 this.post(panel, { type: "thumbnail", requestId: message.requestId, dataUri });
                 break;
             }
@@ -238,6 +257,15 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 // offers nothing and the field stays the free-text box it is without one.
                 const resrefs = this.gameLookups.resourceList(document.uri, message.ext) ?? [];
                 this.post(panel, { type: "resourceList", requestId: message.requestId, resrefs });
+                break;
+            }
+            case "requestGradientTable": {
+                // Same posture as the resource list: answered from the game session, and an empty table is the
+                // honest answer outside a game - the picker then has nothing to offer and says so.
+                const gradients = (this.gameLookups.colorGradient(document.uri) ?? []).map(
+                    (row) => cssGradient(row) ?? [],
+                );
+                this.post(panel, { type: "gradientTable", requestId: message.requestId, gradients });
                 break;
             }
             case "editField": {
@@ -315,6 +343,11 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                     ext: message.ext,
                 });
                 break;
+            case "openAnimation":
+                // Forwarded for the same reason as `openResource`: the gallery owns the animation browser
+                // and the game session it needs.
+                await vscode.commands.executeCommand("bgforge.gallery.showAnimation", message.id);
+                break;
             case "dumpJson":
                 await this.dumpJson(document);
                 break;
@@ -368,10 +401,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
         primaryDestination: vscode.Uri,
     ): Promise<void> {
         const bytes = await document.getBytes();
-        const snapshotJson = await document.getSnapshotJson();
         const autoDumpJson = vscode.workspace
             .getConfiguration("bgforge.binaryEditor")
             .get<boolean>("autoDumpJson", false);
+        // Only asked for when it will be written, and before any write, so a snapshot failure fails the save
+        // whole rather than leaving the file saved beside an empty or stale sidecar.
+        const snapshotJson = autoDumpJson ? await document.getSnapshotJson() : "";
         for (const write of planSave({ targetPath, bytes, snapshotJson, autoDumpJson })) {
             // The primary artifact reuses the caller's URI (preserving its scheme); the sidecar derives from
             // that same destination, through the one helper that owns the scheme rule.
@@ -400,6 +435,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                       strref: (strref) => this.gameLookups.strref(uri, strref),
                       slotLabel: (tables, index) => this.gameLookups.slotLabel(uri, tables, index),
                       namingTable: (kind, tables) => this.gameLookups.namingTable(uri, kind, tables),
+                      colorGradient: (index) => cssGradient(this.gameLookups.colorGradient(uri)?.[index]),
                       resourceType: (decl, resref) => this.gameLookups.resourceType(uri, decl, resref),
                       flagBitNames: (ref) => this.gameLookups.flagBitNames(uri, ref),
                       // Passed directly, unlike the closures above: what can be done with a TYPE is not a
@@ -441,6 +477,23 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             });
         }, BinaryEditorProvider.DIAGNOSTICS_DEBOUNCE_MS);
         this.diagnosticsTimers.set(document, timer);
+    }
+
+    /**
+     * Re-send every field with whatever the install can now name, after the open game changed.
+     *
+     * A changeSet rather than a re-init: the record itself has not changed, so the reader keeps their
+     * selection and open tab - and the worker projects from the live model, which is the only place an
+     * unsaved edit exists.
+     */
+    private async reproject(document: BinaryEditorDocument, panel: vscode.WebviewPanel): Promise<void> {
+        try {
+            const r = await document.bridge.send({ type: "reproject", sessionId: document.sessionId });
+            if (r.type === "structure") this.post(panel, { type: "changeSet", changeSet: r.result.changeSet });
+        } catch (error) {
+            // The alternative is a panel labelled by the game that is no longer open, with nothing said.
+            this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+        }
     }
 
     private documentIsActive(document: BinaryEditorDocument): boolean {
@@ -500,24 +553,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     }
 
     private getHtml(webview: vscode.Webview): string {
-        const extensionPath = this.extensionUri.fsPath;
-        let html = getCachedHtmlAsset("binary-editor-v2", extensionPath, WEBVIEW_HTML);
-        // Styles load as <link> stylesheets resolved through asWebviewUri and authorised by
-        // `style-src {{cspSource}}` - not inlined as <style nonce>. The VS Code webview layer only honours
-        // style-src sources it attributes to the webview origin (cspSource); a bare `style-src 'nonce-...'`
-        // is honoured by raw Chromium but silently ignored here, leaving the panel unstyled. See
-        // docs/architecture.md (Webview CSP).
-        // codicon.css links directly too: its @font-face `url("./codicon.ttf")` resolves relative to the
-        // stylesheet's webview URI (same dir, both under localResourceRoots), so no font-URL rewrite is needed.
-        const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, WEBVIEW_CSS));
-        const codiconsUri = webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, CODICONS_DIR, "codicon.css"));
-        // Function replacers: the URIs contain `$`-adjacent characters that String.replace would otherwise
-        // interpret as `$&`/`$'` patterns.
-        html = html.replace("{{stylesUri}}", () => stylesUri.toString());
-        html = html.replace("{{codiconsUri}}", () => codiconsUri.toString());
-        const script = getCachedJsAsset("binary-editor-v2", extensionPath, WEBVIEW_JS);
-        const nonce = generateNonce();
-        html = inlineWebviewScript(html, script, nonce);
-        return html.replaceAll("{{cspSource}}", webview.cspSource);
+        return buildSharedWebviewHtml(webview, {
+            cacheKey: "binary-editor-v2",
+            extensionUri: this.extensionUri,
+            html: WEBVIEW_HTML,
+            js: WEBVIEW_JS,
+            css: WEBVIEW_CSS,
+        });
     }
 }

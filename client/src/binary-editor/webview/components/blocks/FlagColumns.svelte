@@ -1,15 +1,17 @@
 <script lang="ts">
     // One flags field rendered as N vertical checkbox columns (the critter Header flags). Reuses the
     // shared decompose/compose helpers (state/controls.ts) so bit semantics match the rest of the editor.
-    import type { FieldRef, Row } from "@bgforge/binary-editor";
-    import { decomposeFlags, composeFlags } from "../../state/controls";
-    import Checkbox from "../primitives/Checkbox.svelte";
+    import type { Diagnostic, FieldRef, Row } from "@bgforge/binary-editor";
+    import { decomposeFlags, composeFlags, readOnlyTitle } from "../../state/controls";
+    import Checkbox from "../../../../webview-ui/Checkbox.svelte";
+    import DocLink from "../DocLink.svelte";
+    import FieldAffordances from "../FieldAffordances.svelte";
 
     // `boxed`: wrap the checkboxes in a titled group box (the field's display name as legend). Set when the
     // flags share a panel with other blocks, so the bitfield reads as one labelled set - matching the
     // detail-form flag boxes. Sole-in-titled-panel flags pass boxed=false and lean on the panel chrome
     // (its border + h3) as the group box, avoiding a redundant inner border.
-    const { field, columns = 2, descriptions, labels, fields, onedit, boxed = false, spread = false }: {
+    const { field, columns = 2, descriptions, labels, fields, onedit, byNode, boxed = false, spread = false }: {
         field: FieldRef;
         columns?: number;
         descriptions?: Record<string, string>;
@@ -18,6 +20,8 @@
         labels?: Record<string, string>;
         fields: Record<FieldRef, Row>;
         onedit: (id: string, v: number | string) => void;
+        // Only a boxed block draws the field's name, so only it needs the diagnostics to mark beside it.
+        byNode?: Map<string, Diagnostic[]>;
         boxed?: boolean;
         // Spread columns edge-to-edge across the panel width (wide full-width flag panels) instead of clumping left.
         spread?: boolean;
@@ -38,9 +42,11 @@
     }
 </script>
 {#if row}
-    <fieldset class="flag-group" class:bare={!boxed} class:spread
-              title={row.editingLocked ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited." : undefined}>
-        {#if boxed}<legend>{row.name}</legend>{/if}
+    <fieldset class="flag-group" class:bare={!boxed} class:spread title={readOnlyTitle(row)}>
+        <!-- Bare, the enclosing title names the field, and the renderer drawing that title draws these too. -->
+        {#if boxed}
+            <legend title={row.description}>{row.name}<DocLink url={row.docUrl} description={row.description} /><FieldAffordances {row} {onedit} diagnostics={byNode?.get(row.id)} compact /></legend>
+        {/if}
         <div class="flag-columns" class:spread>
             {#each cols as col, ci (ci)}
                 <div class="gcol">

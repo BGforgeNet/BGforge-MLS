@@ -1,31 +1,149 @@
 /**
- * The fixed unzoomed footprint (px) each frame is centered within. Shared so every layout sizes its
- * cells uniformly (CompassRose derives its circle radius from it, CycleGrid its cell size) and every
- * frame anchors at the same on-screen point regardless of its own width/height (FrameCanvas centers
- * within it).
+ * The unzoomed footprint every tile has at the fitted size: one square, the same for every animation.
+ *
+ * A FLOOR rather than the art's own size. A box that hugged its own sprite resized whenever the reader
+ * changed action, which moved the background under them and re-fitted the layout for a picture of the
+ * same creature. With one box, the on-screen cell depends only on the stage and how many tiles are in it,
+ * so switching action or facing leaves the grid exactly where it was. A reader who scales the art PAST
+ * the fitted size is asking for something the floor cannot give, and there the box grows with the art
+ * (see tileBoxPx) - the one thing that keeps neighbouring sprites off each other.
+ *
+ * The value is a free parameter, not a limit: the cell is this scaled by the layout fit, and the art
+ * inside it is scaled separately (see spriteFillRatio), so what a reader sees is set by those two and not
+ * by this number. It is a round size above the largest sprites the corpus holds, which keeps a typical
+ * creature a fraction of its box rather than the other way round.
  */
-export const TILE_BASE_PX = 96;
+export const TILE_BOX_PX = 512;
 
 /**
- * Auto-zoom for a freshly opened view. The target is SPRITE legibility: double while the largest frame
- * still renders under half the stage - not the composite, which for a rose/grid is already several
- * tiles wide (doubling a 4-tile composite overflows the stage; the incident that split this out).
- * The composite footprint then only BOUNDS the result: halve back until the whole layout fits.
- * All sizes scale linearly with zoom, so both checks work from zoom-1 measurements.
+ * The zoom ladder, defined here beside the auto-zoom that has to respect it - the control and the
+ * automatic choice must not be able to disagree about the range.
+ *
+ * The floor is 10% rather than 50% because a stance's composite is nine tiles wide and each tile
+ * stretches to the sprite's own anchor: a large creature needs roughly a third of full size before the
+ * whole layout is on screen, and the floor must not be what stops auto-zoom fitting it.
  */
-export function autoZoomLevel(args: {
-    maxFrameW: number;
-    maxFrameH: number;
-    contentW: number; // composite footprint at zoom 1
-    contentH: number;
-    availW: number; // stage size with padding already subtracted
-    availH: number;
-    cap: number;
+export const ZOOM_MIN = 0.1;
+export const ZOOM_MAX = 4;
+export const ZOOM_STEP = 0.05;
+/**
+ * One-click levels, ascending.
+ *
+ * Every rung is a power of two, which is what keeps a sprite crisp: the canvas holds the frame at native
+ * resolution and CSS scales it with `image-rendering: pixelated`, so a whole-number factor maps each
+ * source pixel to an exact block and a halving averages a whole block down. The fractional zooms between
+ * them render some source pixels wider than others, which reads as a ragged sprite - which is the trade a
+ * reader makes when they take Fill (the default) over one of these.
+ */
+export const ZOOM_PRESETS = [0.25, 0.5, 1, 2, 4];
+
+/**
+ * What Auto settles on: the scale that fills the tile, but never past the control's own top.
+ *
+ * A small creature's tile is many times its art - a rat can fill one at nearly 700% - and blown up that
+ * far a sprite is more block than picture. Capping keeps the automatic choice inside the range the presets
+ * and the slider offer, so what a reader is handed is always something they could have asked for.
+ */
+export function autoZoom(fillRatio: number, layoutScale: number): number {
+    return Math.min(fillRatio * layoutScale, ZOOM_MAX);
+}
+
+/**
+ * How large the art is drawn relative to the cell the fit chose - what decides whether the tile has to
+ * grow to hold it (`tileBoxPx`).
+ *
+ * `fitting` pins the answer to the fitted size while a fit is SEARCHING. A tile grown to hold the art
+ * measures the same at every candidate the search tries, so a search that saw one would find nothing that
+ * fits, settle at the floor, and leave the tiles microscopic as soon as the reader zoomed back out.
+ *
+ * A named argument per scale rather than four positions: they are all numbers, so a transposed pair would
+ * compile and answer a plausible ratio.
+ */
+export function spriteScaleRatio(scales: {
+    zoom: number;
+    layoutScale: number;
+    fillRatio: number;
+    fitting: boolean;
 }): number {
-    const { maxFrameW, maxFrameH, contentW, contentH, availW, availH, cap } = args;
-    if (maxFrameW <= 0 || maxFrameH <= 0 || availW <= 0 || availH <= 0) return 1;
-    let z = 1;
-    while (z < cap && maxFrameW * z < availW / 2 && maxFrameH * z < availH / 2) z *= 2;
-    while (z > 1 && (contentW * z > availW || contentH * z > availH)) z /= 2;
-    return z;
+    if (scales.layoutScale <= 0) return 1;
+    const ratio = scales.zoom / scales.layoutScale;
+    return scales.fitting ? Math.min(ratio, scales.fillRatio) : ratio;
+}
+
+/**
+ * Where the stage looks when the layout no longer fits it: the focused tile, centred.
+ *
+ * A creature scaled past the size its whole wheel fits at needs a layout many times the stage, and neither
+ * end of that layout is where the art is - a compass rose leaves the middle of its own box empty (the tiles
+ * sit on the ring) and the corners emptier still. A stage left at the origin therefore shows blank space
+ * beside a sliver of one tile, where every stance looks like every other however different the art is.
+ *
+ * Centring ONE tile rather than the content is what fixes that: the same facing stays on screen across a
+ * change of stance, so switching visibly changes the picture. Clamped to the content, so the caller never
+ * asks for a position past its end - which the element would silently clamp anyway, leaving the number the
+ * code holds and the one the stage took disagreeing.
+ */
+export function focusScroll(box: {
+    focus: { left: number; top: number; width: number; height: number };
+    viewport: { width: number; height: number };
+    content: { width: number; height: number };
+}): { left: number; top: number } {
+    const on = (offset: number, size: number, viewport: number, content: number): number =>
+        Math.max(0, Math.min(offset + size / 2 - viewport / 2, content - viewport));
+    return {
+        left: on(box.focus.left, box.focus.width, box.viewport.width, box.content.width),
+        top: on(box.focus.top, box.focus.height, box.viewport.height, box.content.height),
+    };
+}
+
+/** Halvings of the range the fit search spends; 7 resolves it to within a couple of percent. */
+const FIT_SEARCH_STEPS = 7;
+
+/**
+ * The largest zoom at which the whole layout fits, found by MEASURING each candidate.
+ *
+ * A wrapping grid re-flows as its tiles shrink, so its footprint is not linear in zoom: nine tiles the
+ * width of the stage measure one per row at 100% and three per row at a third of that. Scaling a single
+ * zoom-1 measurement therefore lands at the floor for a layout that would comfortably fit at a third -
+ * which is what this replaced. Measuring costs a layout pass per step and happens once per opened view.
+ *
+ * `apply` puts a zoom on screen and resolves once it is laid out; `fits` reads back whether it fits.
+ * `min` is returned when nothing does, since the control cannot go lower anyway.
+ */
+export async function fitZoomByMeasuring(
+    from: number,
+    min: number,
+    apply: (zoom: number) => Promise<void>,
+    fits: () => boolean,
+): Promise<number> {
+    await apply(from);
+    if (fits()) return from;
+    let lo = min;
+    let hi = from;
+    for (let i = 0; i < FIT_SEARCH_STEPS; i++) {
+        // Floored to a whole percent: the control reads in percent, and rounding up would hand back the
+        // overflow this is removing.
+        const mid = Math.floor(((lo + hi) / 2) * 100) / 100;
+        if (mid <= lo || mid >= hi) break;
+        // A search, not a batch: each candidate is chosen from the previous one's measurement.
+        // oxlint-disable-next-line no-await-in-loop -- sequential by nature; nothing to parallelise
+        await apply(mid);
+        if (fits()) lo = mid;
+        else hi = mid;
+    }
+    await apply(lo);
+    return lo;
+}
+
+/**
+ * Which ANIMATION is on the stage - what the sprite scale is fitted for, once, when it opens.
+ *
+ * The stage is mounted once and a selection arrives as another view, so the fit has to be told when a
+ * different creature has arrived: without that, a small one inheriting a dragon's scale is drawn
+ * microscopic, which is the report this started from. Deliberately blind to everything else - action,
+ * sequence, direction block, layout, armour, and the reader's own controls - because a zoom that changed
+ * under them on every switch is what the fixed tile exists to prevent.
+ */
+export function zoomSubject(view: { basename: string; set?: { id: number } }): string {
+    return view.set === undefined ? `file:${view.basename}` : `set:${view.set.id}`;
 }

@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { makeUniqueKey, parseScalarFieldValue, getScalarFieldLookupKey } from "../src/snapshot-common";
 import { slugify } from "../src/spec/presentation";
 import type { ParsedField } from "../src/types";

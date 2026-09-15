@@ -31,21 +31,25 @@ vim.filetype.add({
     tpa = "weidu-tp2",
     tph = "weidu-tp2",
     tpp = "weidu-tp2",
+    slb = "weidu-slb",
+    msg = "fallout-msg",
+    tra = "weidu-tra",
+    ["2da"] = "infinity-2da",
   },
   filename = {
     ["worldmap.txt"] = "fallout-worldmap-txt",
-  },
-})
-
--- MSG and TRA are highlight-only (no LSP provider), so no filetype needed
--- for the language server. Register them if using tree-sitter highlighting:
-vim.filetype.add({
-  extension = {
-    msg = "fallout-msg",
-    tra = "weidu-tra",
+    ["scripts.lst"] = "fallout-scripts-lst",
+    ["weidu.log"] = "weidu-log",
   },
 })
 ```
+
+The filetype names are the language IDs the server dispatches on, so keep them as written.
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column), `scripts.lst` (formatting) and `weidu.log`
+(go-to-definition from a mod entry to its `.tp2`). SLB is served as WeiDU BAF. So is Sword Coast Stratagems SSL
+(filetype `weidu-ssl`), which shares the `.ssl` extension with Fallout SSL - set it per project rather than globally.
 
 Note: `.h` files default to C in Neovim. The config above overrides this globally. For per-project control, use `.nvimrc` or `exrc` instead.
 
@@ -78,7 +82,10 @@ vim.api.nvim_create_autocmd("FileType", {
 ```lua
 vim.lsp.config["bgforge-mls"] = {
   cmd = { "bgforge-mls-server", "--stdio" },
-  filetypes = { "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "fallout-worldmap-txt" },
+  filetypes = {
+    "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "weidu-slb", "weidu-ssl", "fallout-worldmap-txt",
+    "fallout-msg", "weidu-tra", "infinity-2da", "fallout-scripts-lst", "weidu-log",
+  },
   root_markers = { ".git" },
 }
 
@@ -267,7 +274,35 @@ Glyphs are written as Nerd Font codepoints (FontAwesome `file_code_o` `0xF1C9`, 
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Neovim they load through
+`typescript-language-server`, using the `ts_ls` configuration from
+[nvim-lspconfig](https://github.com/neovim/nvim-lspconfig), which passes plugins from its initialization options to
+tsserver. Install it with `pnpm add -g typescript-language-server,typescript@6`, then add the following, replacing
+`<mls-node-modules>` with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```lua
+-- .td is TableGen by default; this mapping takes precedence
+vim.filetype.add({
+  extension = {
+    tssl = "typescript",
+    td = "typescript",
+  },
+})
+
+vim.lsp.config("ts_ls", {
+  init_options = {
+    plugins = {
+      { name = "@bgforge/mls-server/out/tssl-plugin", location = "<mls-node-modules>" },
+      { name = "@bgforge/mls-server/out/td-plugin", location = "<mls-node-modules>" },
+    },
+  },
+})
+vim.lsp.enable("ts_ls")
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 
@@ -276,7 +311,10 @@ Pass settings under the `bgforge` namespace in the `settings` table:
 ```lua
 vim.lsp.config["bgforge-mls"] = {
   cmd = { "bgforge-mls-server", "--stdio" },
-  filetypes = { "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "fallout-worldmap-txt" },
+  filetypes = {
+    "fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2", "weidu-slb", "weidu-ssl", "fallout-worldmap-txt",
+    "fallout-msg", "weidu-tra", "infinity-2da", "fallout-scripts-lst", "weidu-log",
+  },
   root_markers = { ".git" },
   settings = {
     bgforge = {

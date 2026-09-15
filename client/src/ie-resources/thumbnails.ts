@@ -6,18 +6,34 @@
  * field reserves a thumbnail slot nothing ever fills.
  */
 
-import { encodeIndexedPng, loadImage, transparentIndexOf } from "@bgforge/image";
+import {
+    type PvrzResolver,
+    decodeBamV1Frames,
+    decodeBamV2,
+    encodeIndexedPng,
+    encodeTruecolourPng,
+    isBamV2,
+    parseFrm,
+    pvrzResourceName,
+    readBamV1Tables,
+    readBamV2Structure,
+    interpretIeDirections,
+    readBmpRgba,
+    transparentIndexOf,
+} from "@bgforge/image";
+import { chooseActivePalette } from "../image-editor/sidecar";
 
 /**
- * How each drawable type reaches an `<img>`. A format a browser decodes itself needs only its media type;
- * anything else needs a decoder, so the value carries which.
+ * How each drawable type is decoded on the way to an `<img>`.
  *
- * BMP is the whole reason this is not just "formats we decode": IE portraits are BMP, Chromium reads BMP, and
- * re-encoding them would be work to arrive back where we started.
+ * BMP is decoded and re-encoded rather than passed through, even though a browser reads BMP unaided: a
+ * passed-through file is the FULL-SIZE image, so a game's screenshots and portraits reached the webview at
+ * megabytes apiece for a tile a few dozen pixels wide. Every type here now answers at the requested size.
  */
-const DRAWABLE = new Map<string, "passthrough:image/bmp" | "bam">([
-    ["bmp", "passthrough:image/bmp"],
+const DRAWABLE = new Map<string, "bmp" | "bam" | "frm">([
+    ["bmp", "bmp"],
     ["bam", "bam"],
+    ["frm", "frm"],
 ]);
 
 /**
@@ -32,34 +48,62 @@ export function canThumbnail(ext: string): boolean {
 /**
  * A cap on what will be turned into a thumbnail, applied to the SOURCE bytes.
  *
- * Every drawable resource crosses a `postMessage` boundary base64-encoded, so its bytes cost ~4/3 their size in
- * a string the webview then holds. Real icons and portraits are tens of KB; the bound is loose enough that no
- * real asset trips it and tight enough that a mod's full-screen BMP does not put a megabyte on the wire for an
- * 18px box.
+ * A bound on DECODE work, not on what crosses the wire - the downscale is what keeps the payload small, at
+ * whatever size the caller asked for. This is the ceiling on reading and decoding a file at all, loose enough
+ * that no shipped asset trips it and tight enough to refuse a crafted header before allocating for it.
  */
-const MAX_SOURCE_BYTES = 2 * 1024 * 1024;
-
-/** Longest edge of a decoded BAM frame worth re-encoding; see `bamFramePng`. */
-const MAX_FRAME_EDGE = 1024;
+const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 
 /**
- * A `data:` URI for the resource's bytes, or undefined when it cannot be drawn.
+ * A `data:` URI for the resource's bytes drawn at `size`, or undefined when it cannot be drawn.
  *
  * Undefined rather than a throw for every failure - a corrupt or unparseable icon is a missing picture, not a
  * reason to fail the field it sits beside, and a mod archive is exactly where a malformed BAM turns up.
  */
-export function thumbnailDataUri(bytes: Uint8Array, ext: string, resref: string): string | undefined {
+export interface Thumbnail {
+    dataUri: string;
+    /**
+     * The source is a creature animation - cycles laid out as direction blocks.
+     *
+     * Carried out of the decode rather than re-derived by a caller, because the same answer also decides
+     * how many frames the picture shows: a viewer badging one file and a picture drawn as the other would
+     * be two answers to one question.
+     */
+    directional: boolean;
+}
+
+/** The picture plus what the decode learned about the source. */
+export function thumbnailOf(bytes: Uint8Array, ext: string, size: number, pvrz?: PvrzResolver): Thumbnail | undefined {
     if (bytes.length > MAX_SOURCE_BYTES) return;
     const how = DRAWABLE.get(ext.toLowerCase());
     if (how === undefined) return;
     try {
-        if (how === "bam") return dataUri("image/png", bamFramePng(bytes, resref));
-        return dataUri(how.slice("passthrough:".length), bytes);
+        if (how === "frm") return { dataUri: dataUri("image/png", frmFramePng(bytes, size)), directional: false };
+        if (how === "bam") {
+            // v1 and v2 share the "BAM " tag and are entirely different formats behind it; dispatch on the
+            // signature rather than the caller's extension, which cannot tell them apart.
+            if (isBamV2(bytes)) {
+                return { dataUri: dataUri("image/png", bamV2FramePng(bytes, size, pvrz)), directional: false };
+            }
+            const drawn = bamFramePng(bytes, size);
+            return { dataUri: dataUri("image/png", drawn.png), directional: drawn.directional };
+        }
+        return { dataUri: dataUri("image/png", bmpFramePng(bytes, size)), directional: false };
     } catch {
         // Deliberately swallowed, per the contract above: a malformed icon leaves the field with no picture,
         // which is the same state as a field whose type has none.
         return undefined;
     }
+}
+
+/** Just the picture, for the callers that show one without saying anything about the source. */
+export function thumbnailDataUri(
+    bytes: Uint8Array,
+    ext: string,
+    size: number,
+    pvrz?: PvrzResolver,
+): string | undefined {
+    return thumbnailOf(bytes, ext, size, pvrz)?.dataUri;
 }
 
 /**
@@ -69,21 +113,210 @@ export function thumbnailDataUri(bytes: Uint8Array, ext: string, resref: string)
  * pressed, disabled) over the same artwork, so frame 0 is the representative image either way - and a BAM whose
  * sequence table is empty still has frames to show.
  */
-function bamFramePng(bytes: Uint8Array, resref: string): Uint8Array {
-    const animation = loadImage(bytes, `${resref}.bam`);
+function bamFramePng(bytes: Uint8Array, size: number): { png: Uint8Array; directional: boolean } {
+    // Only the sampled frames are decoded, not the whole animation: a creature BAM has hundreds of frames and
+    // a tile shows one or two. `decodeBamV1Frames` handles BAMC, which is what most shipped BAMs are.
+    const tables = readBamV1Tables(bytes);
+    // A creature animation's cycles are the same pose in every direction, so more than one of them is the
+    // same picture turned round - it shows the reader nothing the marker does not say. Everything else gets
+    // two, which distinguishes an animation from a still without cutting the art down to quarters.
+    //
+    // Either signal, not the strong one alone: `detected` needs every cycle of a block to carry frames, which
+    // a stand animation's placeholder cycles break - so the 99-cycle files, the ones this matters most for,
+    // interpret as eleven direction blocks while failing the fingerprint. An icon has one block and fails
+    // both (measured across the shipped icon families, which carry one or two cycles each).
+    const directions = interpretIeDirections(tables.sequences, tables.frameCount);
+    const directional = directions !== undefined && (directions.detected || directions.groups.length > 1);
+    const candidates = [...new Set(firstFrameOfEachCycle(tables))].slice(0, CANDIDATE_FRAMES);
+    const frames = decodeBamV1Frames(bytes, candidates);
+    const cells = composeCells(drawable(candidates, frames), directional ? 1 : 2);
+
+    const drawn = cells.flatMap((cell) => {
+        const frame = frames.get(cell.index);
+        if (frame === undefined) return [];
+        // One cell is the whole tile; two share it on the diagonal, half of it each.
+        const box = cells.length === 1 ? size : Math.max(1, Math.floor(size / 2));
+        return [{ cell: cell.cell, ...downscaleIndexed(frame.pixels, frame.width, frame.height, box) }];
+    });
+    const first = drawn[0];
+    if (first === undefined) throw new Error("BAM has no frames");
+    if (drawn.length === 1) {
+        const png = encodeIndexedPng(first.width, first.height, first.pixels, tables.palette, tables.transparentIndex);
+        return { png, directional };
+    }
+
+    // The cell edge comes from the largest picture actually drawn, not from `size`: small art must not be
+    // stranded in the corner of a mostly-empty canvas just because the tile box is large.
+    const edge = Math.max(...drawn.map((d) => Math.max(d.width, d.height)));
+    const canvas = new Uint8Array(edge * 2 * edge * 2).fill(tables.transparentIndex);
+    for (const d of drawn) {
+        // Centred in its cell, so cells of unequal art still read as a 2x2 grid.
+        const originX = (d.cell % 2) * edge + Math.floor((edge - d.width) / 2);
+        const originY = Math.floor(d.cell / 2) * edge + Math.floor((edge - d.height) / 2);
+        for (let y = 0; y < d.height; y++) {
+            canvas.set(d.pixels.subarray(y * d.width, (y + 1) * d.width), (originY + y) * edge * 2 + originX);
+        }
+    }
+    return { png: encodeIndexedPng(edge * 2, edge * 2, canvas, tables.palette, tables.transparentIndex), directional };
+}
+
+/**
+ * How many cycle-opening frames are decoded before choosing which to draw.
+ *
+ * Far more than the one or two a tile shows, because a shipped character STAND animation opens most of its
+ * cycles on a 1x1 placeholder: `CHFW2G1` and its siblings each carry 99 cycles with 81 distinct opening
+ * frames, of which just 9 hold art - and WHERE those nine sit differs per file, from candidate 9 in one to
+ * past candidate 16 in the next. A window that stopped early drew a blank tile for the later ones.
+ *
+ * One decode call rather than chunks: the reader decompresses the file per call, so scanning in batches would
+ * pay that repeatedly. The placeholders it decodes on the way are a pixel each.
+ */
+const CANDIDATE_FRAMES = 128;
+
+/**
+ * The candidates worth drawing, in cycle order, falling back to all of them when none has real art.
+ *
+ * A 1x1 frame is the placeholder above, not a picture. The fallback keeps a file whose every sampled cycle is
+ * a placeholder drawing SOMETHING - it is a real frame, and a blank tile is what this rule exists to avoid.
+ */
+function drawable(candidates: readonly number[], frames: Map<number, { width: number; height: number }>): number[] {
+    const real = candidates.filter((index) => {
+        const frame = frames.get(index);
+        return frame !== undefined && frame.width > 1 && frame.height > 1;
+    });
+    return real.length > 0 ? real : [...candidates];
+}
+
+/**
+ * The frame each cycle opens on, in cycle order. A cycle with no frames contributes nothing, and a BAM with no
+ * usable cycle table falls back to frame 0 - such a file still has frames to show, and refusing to draw it
+ * would be a blank tile for a picture that exists.
+ */
+function firstFrameOfEachCycle(tables: { sequences: readonly { frameRefs: readonly number[] }[] }): number[] {
+    const opens = tables.sequences.flatMap((s) => (s.frameRefs[0] === undefined ? [] : [s.frameRefs[0]]));
+    return opens.length > 0 ? opens : [0];
+}
+
+/**
+ * Which frames a tile shows and where, from the frame each cycle opens on.
+ *
+ * Counted by DISTINCT frame: an icon BAM's cycles are its states (enabled, pressed, disabled) over the same
+ * artwork, so four cycles of one frame is one picture, not a grid of four identical ones. Two go on the
+ * diagonal, which reads as two things rather than as a half-empty grid.
+ */
+export function composeCells(firstFrames: readonly number[], most: 1 | 2 = 2): { index: number; cell: 0 | 3 }[] {
+    const distinct = [...new Set(firstFrames)].slice(0, most);
+    const layout = distinct.length > 1 ? ([0, 3] as const) : ([0] as const);
+    return distinct.map((index, at) => ({ index, cell: layout[at]! }));
+}
+
+/**
+ * Every PVRZ page a BAM v2 needs, by RESOURCE name, so a caller can resolve them before any decode.
+ *
+ * Empty for anything that is not a v2, so a caller need not sniff the format first. The names come from
+ * `pvrzResourceName` rather than being rebuilt here - one derivation of what a page is called.
+ */
+export function requiredPvrzPages(bytes: Uint8Array): string[] {
+    if (!isBamV2(bytes)) return [];
+    try {
+        return readBamV2Structure(bytes).requiredPages.map((page) => pvrzResourceName(page));
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * The first frame of a BAM v2, whose pixels live in sibling PVRZ pages rather than in the file.
+ *
+ * True colour, so this is the one path that cannot produce an indexed PNG.
+ */
+function bamV2FramePng(bytes: Uint8Array, size: number, pvrz: PvrzResolver | undefined): Uint8Array {
+    // No resolver means the caller cannot supply pages, so there is no picture to draw - not an error.
+    if (pvrz === undefined) throw new Error("BAM v2 needs a PVRZ resolver");
+    const animation = decodeBamV2(readBamV2Structure(bytes), pvrz, bytes);
     const frame = animation.frames[0];
     if (frame === undefined) throw new Error("BAM has no frames");
-    // The source cap above bounds the file, not the picture: BAM frames are RLE-compressed, and a resref field
-    // is free text, so an icon field pointed at a creature animation would re-encode a huge frame for an 18px
-    // box. No icon or portrait approaches this.
-    if (frame.width > MAX_FRAME_EDGE || frame.height > MAX_FRAME_EDGE) throw new Error("frame too large to preview");
-    return encodeIndexedPng(
-        frame.width,
-        frame.height,
-        frame.pixels,
-        animation.palette,
-        transparentIndexOf(animation.meta),
-    );
+    const small = downscaleRgba(frame.pixels, frame.width, frame.height, size);
+    return encodeTruecolourPng(small.width, small.height, small.pixels);
+}
+
+/**
+ * The first frame of an FRM.
+ *
+ * An FRM carries no palette: `parseFrm` returns 256 opaque blacks, so drawing it as-is renders every tile
+ * solid black. `chooseActivePalette` is the repo's one resolution of which palette an FRM renders with, and
+ * with no sidecar available here it yields the shared Fallout default.
+ */
+function frmFramePng(bytes: Uint8Array, size: number): Uint8Array {
+    const animation = parseFrm(bytes);
+    const frame = animation.frames[0];
+    if (frame === undefined) throw new Error("FRM has no frames");
+    const palette = chooseActivePalette({
+        sourceFormat: animation.meta.sourceFormat,
+        embedded: animation.palette,
+        externalEnabled: false,
+    });
+    const small = downscaleIndexed(frame.pixels, frame.width, frame.height, size);
+    return encodeIndexedPng(small.width, small.height, small.pixels, palette, transparentIndexOf(animation.meta));
+}
+
+/**
+ * A BMP at `size`, as a truecolour PNG.
+ *
+ * Truecolour whatever the source depth: a 4- or 8-bit BMP's palette is per file and means nothing outside it,
+ * so carrying it through would oblige the encoder to rebuild one for a picture this small.
+ */
+function bmpFramePng(bytes: Uint8Array, size: number): Uint8Array {
+    const image = readBmpRgba(bytes);
+    const small = downscaleRgba(image.rgba, image.width, image.height, size);
+    return encodeTruecolourPng(small.width, small.height, small.pixels);
+}
+
+/** The RGBA twin of `downscaleIndexed` - same nearest-neighbour rule over 4 bytes per pixel. */
+function downscaleRgba(
+    src: Uint8Array,
+    w: number,
+    h: number,
+    max: number,
+): { pixels: Uint8Array; width: number; height: number } {
+    const scale = Math.min(1, max / Math.max(w, h));
+    if (scale >= 1) return { pixels: src, width: w, height: h };
+    const width = Math.max(1, Math.round(w * scale));
+    const height = Math.max(1, Math.round(h * scale));
+    const out = new Uint8Array(width * height * 4);
+    for (let y = 0; y < height; y++) {
+        const sy = Math.min(h - 1, Math.floor((y * h) / height));
+        for (let x = 0; x < width; x++) {
+            const sx = Math.min(w - 1, Math.floor((x * w) / width));
+            out.set(src.subarray((sy * w + sx) * 4, (sy * w + sx) * 4 + 4), (y * width + x) * 4);
+        }
+    }
+    return { pixels: out, width, height };
+}
+
+/**
+ * Nearest-neighbour, not averaging: the result stays palette-indexed (averaging blends across palette entries
+ * and would force a truecolour re-encode) and it is the right filter for pixel art. Downscale only - a small
+ * icon in a large tile draws at its own size rather than being smeared up to fill it.
+ */
+function downscaleIndexed(
+    src: Uint8Array,
+    w: number,
+    h: number,
+    max: number,
+): { pixels: Uint8Array; width: number; height: number } {
+    const scale = Math.min(1, max / Math.max(w, h));
+    if (scale >= 1) return { pixels: src, width: w, height: h };
+    const width = Math.max(1, Math.round(w * scale));
+    const height = Math.max(1, Math.round(h * scale));
+    const out = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+        const sy = Math.min(h - 1, Math.floor((y * h) / height));
+        for (let x = 0; x < width; x++) {
+            out[y * width + x] = src[sy * w + Math.min(w - 1, Math.floor((x * w) / width))]!;
+        }
+    }
+    return { pixels: out, width, height };
 }
 
 /** base64 without `Buffer`: the extension host is a web worker under some hosts, where only `btoa` exists. */

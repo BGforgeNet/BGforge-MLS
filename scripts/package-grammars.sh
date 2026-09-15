@@ -30,7 +30,7 @@ rm -rf "$stage" "$zip_path"
 # generated parser rather than restated here.
 abi=$(sed -n 's/^#define LANGUAGE_VERSION \([0-9]*\)$/\1/p' grammars/fallout-ssl/src/parser.c)
 # `tree-sitter --version` prints "tree-sitter X.Y.Z"; keep only the number so the README does not
-# read "tree-sitter CLI tree-sitter 0.26.13".
+# read "tree-sitter CLI tree-sitter 0.27.0".
 cli_version=$(pnpm exec tree-sitter --version | awk '{print $NF}')
 
 if [ -z "$abi" ]; then
@@ -55,7 +55,7 @@ for dir in grammars/*/; do
     cp "${dir}grammar.js" "${dir}tree-sitter.json" "${dir}package.json" "$out/"
     cp -r "${dir}src/tree_sitter" "$out/src/"
     cp "${dir}src/parser.c" "${dir}src/grammar.json" "${dir}src/node-types.json" "$out/src/"
-    # Hand-written external scanner, present for three of the six grammars.
+    # Hand-written external scanner, present only for the grammars that need one.
     [ -f "${dir}src/scanner.c" ] && cp "${dir}src/scanner.c" "$out/src/"
     cp -r "${dir}queries" "$out/"
     # The WASM build serves web-tree-sitter consumers; native editors ignore it.

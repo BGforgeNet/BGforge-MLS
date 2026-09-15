@@ -8,6 +8,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { mapParser } from "../src/map";
 import { createBinaryJsonSnapshot } from "../src/json-snapshot";
 import type { ParseResult } from "../src/types";

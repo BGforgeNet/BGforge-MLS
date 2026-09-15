@@ -158,6 +158,25 @@ export class ScriptViewFileSystemProvider implements vscode.FileSystemProvider {
         return text;
     }
 
+    /**
+     * Re-render every open view.
+     *
+     * What a compiled script READS AS depends on the install as much as on its bytes - a `.bcs` with no game
+     * behind it shows a notice asking for one - and the render cache is keyed by the source's mtime, which
+     * opening a game does not move. So the cache goes, and each open view is announced as changed so the host
+     * asks for it again.
+     *
+     * A view holding unsaved edits is left alone: its buffer is the reader's own source rather than a render
+     * of the file, and reloading it would discard their work.
+     */
+    refreshViews(): void {
+        this.rendered.clear();
+        const changes = vscode.workspace.textDocuments
+            .filter((document) => document.uri.scheme === SCRIPT_VIEW_SCHEME && !document.isDirty)
+            .map((document) => ({ type: vscode.FileChangeType.Changed, uri: document.uri }));
+        if (changes.length > 0) this.changed.fire(changes);
+    }
+
     /** The compiled file is watched by the workspace already; nothing here needs a second watcher. */
     watch(): vscode.Disposable {
         return new vscode.Disposable(() => {

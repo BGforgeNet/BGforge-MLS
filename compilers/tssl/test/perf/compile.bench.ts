@@ -1,8 +1,8 @@
 /**
  * Where a TSSL compile spends its time.
  *
- * A CPU profile of the cold path puts ~60% of it inside TypeScript's own scanner, parser and binder,
- * and under 2% in this package - so a bench of the whole compile measures ts-morph, and a regression in
+ * A CPU profile of the cold path puts most of it inside ts-morph and the TypeScript it bundles, and only a
+ * few percent in this package - so a bench of the whole compile measures ts-morph, and a regression in
  * the lowering walk would hide inside its noise. The cases below separate the two: the cold ones track
  * the cost a user actually waits for, and `back end alone` tracks the code this package owns.
  *

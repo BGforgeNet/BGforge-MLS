@@ -2,24 +2,6 @@
  * Animation-editor webview theme. Theme-token based (--vscode-* vars) like the binary-editor webview.
  */
 
-html,
-body {
-    height: 100%;
-    margin: 0;
-}
-body {
-    font-family: var(--vscode-font-family, sans-serif);
-    font-size: var(--vscode-font-size, 13px);
-    color: var(--vscode-foreground);
-    background: var(--vscode-editor-background);
-}
-#app {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
-
 /* Decoded filename meaning (critter/avatar naming schemes - see render/naming.ts): a slim
    informational strip above the stage, rendered only when a scheme matched. */
 .name-banner {
@@ -42,6 +24,23 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+/* Pushed to the trailing edge, so the two variable-length texts above never move the facts around: the
+   filename and its meaning change per stance, and a fact list that slid with them would be unreadable. */
+.name-banner-facts {
+    margin-left: auto;
+    flex: 0 0 auto;
+    display: flex;
+    gap: 0.35rem;
+}
+/* Chips rather than a comma-separated run: each is a separate property with its own tooltip, and a
+   badge border is what says which words belong to which fact without punctuation doing the work. */
+.name-banner-fact {
+    color: var(--vscode-descriptionForeground);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    padding: 0 0.35rem;
+    font-size: 0.9em;
+}
 
 /* ---- editor layout: the stage fills the left, all controls stack in a column on the right ---- */
 .editor-layout {
@@ -58,11 +57,15 @@ body {
     flex-direction: column;
 }
 
-.placeholder {
+/* What the stage says before anything is chosen. Centred by the stage's own flex + auto margins, the
+   same way the rose and the grid are, so the surface has one centring rule rather than a second for its
+   empty state. */
+.stage-empty {
+    margin: auto;
     color: var(--vscode-descriptionForeground);
-    padding: 0.75rem;
     font-style: italic;
 }
+
 /* Frame-fetch progress, overlaid on the stage rather than placed in the flow: it appears and
    disappears as frames arrive, and a element in the flow would reflow the tiles each time. */
 .frame-progress {
@@ -74,43 +77,11 @@ body {
     font-style: italic;
     pointer-events: none;
 }
-.error-state {
-    padding: 1rem 1.25rem;
-    color: var(--vscode-errorForeground);
-}
-.error-state h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.15em;
-    font-weight: 600;
-    color: var(--vscode-errorForeground);
-}
-.error-state p {
-    margin: 0;
-    color: var(--vscode-foreground);
-}
 
 /* ---- generic form controls (buttons/select/inputs/checkbox) - themed, matches the binary-editor
    webview's convention of one shared control theme rather than per-instance styling ---- */
-button {
-    appearance: none;
-    font: inherit;
-    cursor: pointer;
-    border: 1px solid transparent;
-    border-radius: 2px;
-    padding: 0.25rem 0.7rem;
-    background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    line-height: 1.3;
-    white-space: nowrap;
-}
-button:hover {
-    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
-}
-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
 select,
+input[type="text"],
 input[type="number"] {
     font: inherit;
     color: var(--vscode-input-foreground, var(--vscode-foreground));
@@ -123,13 +94,6 @@ input[type="number"] {
    that, not the browser default (~20 chars wide), so the value column reads as deliberate. */
 input[type="number"] {
     width: 4rem;
-}
-input[type="checkbox"] {
-    accent-color: var(--vscode-button-background);
-}
-:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
 }
 
 /* ---- control groups: each stacks vertically as a section in the right-hand column ---- */
@@ -177,12 +141,11 @@ input[type="checkbox"] {
     font-size: 0.9em;
     white-space: nowrap;
 }
-/* Checkbox rows keep the box next to its text (not split to opposite edges). */
-.view-checkbox,
-.meta-checkbox {
-    cursor: pointer;
-    justify-content: flex-start;
-    gap: 0.4rem;
+/* Toggles are the shared Checkbox primitive (webview-ui), which brings its own row and box; only its label
+   text needs this panel's treatment, so a toggle row reads like the label/value rows above it. */
+.controls-column .bb-checkbox-text {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
 }
 select {
     max-width: 100%;
@@ -196,6 +159,33 @@ select {
 /* Zoom preset buttons pack left under the slider (reusing the .bg-option secondary/active styling). */
 .zoom-presets {
     justify-content: flex-start;
+}
+/* The zoom levels are a block of equal columns, three to a row. Equal because they are one set of
+   alternatives; three because six of them on one row are wider than this panel, and a grid track does not
+   shrink below its label - the row then pushed the whole column sideways and clipped every label in it. A
+   count that divides the levels evenly is what keeps the last one from sitting alone on a line of its own,
+   which reads as a stray control rather than as part of the set. */
+.zoom-presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+}
+.zoom-presets .bg-option {
+    padding-inline: 0.25rem;
+}
+/* Creature colours: the picker takes the row's full width under its label rather than sharing it, so
+   "<name> (<resref>)" fits - an 8-character resref alone identifies nothing, and a truncated one defeats
+   the list's purpose. The combobox box itself is inline-block, so it needs the fill spelled out. */
+.creature-picker {
+    flex: 1 1 100%;
+    min-width: 0;
+}
+.creature-picker .bb-combobox {
+    display: block;
+}
+.creature-note {
+    margin: 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
 }
 
 /* Three-way background selector and the loop toggle: both render as a secondary/outline button that
@@ -232,14 +222,20 @@ select {
     line-height: 1;
 }
 
-/* Action-menu dropdown (Save as / Import - see ActionMenu.svelte): a button that opens an upward menu
-   (the toolbar sits at the bottom). A native <select> always highlights its current option on open, so
-   the trigger label reads as pre-selected; a hand-rolled menu opens with nothing highlighted. */
-.dropdown {
-    position: relative;
-    display: inline-flex;
+/* Save as / Import open the shared Menu primitive (webview-ui/Menu.svelte), whose trigger is themed as a
+   low-emphasis secondary button. In this toolbar it sits beside the primary "Save", so it takes the same
+   filled button look, plus the caret that says it opens a menu. The upward drop is the primitive's
+   side="top", not a position here. */
+.toolbar .bb-menu-trigger {
+    padding: 0.25rem 0.7rem;
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    line-height: 1.3;
 }
-.dropdown-trigger::after {
+.toolbar .bb-menu-trigger:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
+}
+.toolbar .bb-menu-trigger::after {
     content: "";
     display: inline-block;
     margin-left: 0.4rem;
@@ -247,36 +243,6 @@ select {
     border-right: 0.3em solid transparent;
     border-top: 0.3em solid currentColor;
     vertical-align: middle;
-}
-.dropdown-menu {
-    position: absolute;
-    bottom: 100%;
-    left: 0;
-    margin-bottom: 0.25rem;
-    min-width: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 0.15rem;
-    background: var(--vscode-menu-background, var(--vscode-input-background));
-    color: var(--vscode-menu-foreground, var(--vscode-foreground));
-    border: 1px solid var(--vscode-menu-border, var(--vscode-panel-border));
-    border-radius: 3px;
-    box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.36));
-    white-space: nowrap;
-    z-index: 10;
-}
-/* Menu items read as menu rows, not filled buttons: override the generic button fill. */
-.dropdown-item {
-    background: transparent;
-    color: inherit;
-    border: none;
-    border-radius: 2px;
-    text-align: left;
-    padding: 0.25rem 0.6rem;
-}
-.dropdown-item:hover {
-    background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
-    color: var(--vscode-menu-selectionForeground, inherit);
 }
 
 /* ---- stage (the compass rose / cycle grid player) ---- */
@@ -292,36 +258,10 @@ select {
        the compass rose AND the cycle grid (non-creature animations). */
     display: flex;
 }
-.compass-rose,
-.cycle-grid {
-    margin: auto;
-}
-.compass-rose {
-    /* Radial layout: cells are absolutely positioned on a circle by CompassRose (width/height set per
-       zoom there). */
-    position: relative;
-}
-.compass-cell {
-    position: absolute;
-    /* left/top already centre the cell on its circle point (CompassRose subtracts half a tile). No
-       transform here: a transformed cell becomes its own stacking context, which would defeat the
-       global backdrop-under-sprite layering of .frame-tile-bg / canvas. */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.cycle-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 0.75rem;
-}
-/* Multi-sequence layout: pin to a fixed column count (set inline) so each row is one sequence and each
-   column a direction, instead of width-driven wrapping. grid-template-columns comes from the control. */
-.cycle-grid.fixed-columns {
-    display: grid;
-    justify-content: center;
-}
+/* The rose, grid, tile and marker rules live in `client/src/webview-ui/animation-tiles.css`, which this
+   panel links alongside this sheet: they are the components' own layout contract. Only this panel's own
+   chrome stays here. */
+
 /* The cycle-layout hint reads as secondary guidance, not a control label. */
 .cycle-hint {
     margin: 0;
@@ -329,68 +269,153 @@ select {
     font-size: 0.85em;
     line-height: 1.35;
 }
-.cycle-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.25rem;
+
+/* The open set's name, as the button that opens the host's set picker. Full width under its label like
+   the creature picker, and for the same reason: a set's name is prose ("CLERIC_MALE_GNOME") that a
+   shared row would clip, and this one is also the row's only statement of what is open. Left-aligned so
+   it reads as a value rather than as a centred command. */
+.set-pick {
+    flex: 1 1 100%;
+    min-width: 0;
+    text-align: left;
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border-color: var(--vscode-button-border, var(--vscode-panel-border));
+    overflow-wrap: anywhere;
 }
-.cycle-cell-label {
-    font-size: 0.85em;
-    color: var(--vscode-descriptionForeground);
+.set-pick:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+/* The action picker keeps this width with no set open. A select sizes to its widest option, so an empty one
+   collapses to a stub at the row's right edge and jumps the row when a set fills it in. */
+.set-action {
+    flex: 1 1 8rem;
+    min-width: 0;
 }
 
-/* ---- frame tile (one rendered frame within the rose/grid) ---- */
-.frame-tile {
-    position: relative;
-    box-sizing: border-box;
+/* --- Save As dialog -------------------------------------------------------- */
+
+/* The modal's own chrome is .bb-dialog-* in primitives.css, which every panel mounting the primitive
+   links; what follows is only what this dialog puts inside it.
+
+   One bordered box per decision, so a mutually-exclusive set reads as a set. The labels wrap BETWEEN
+   themselves and never within one: a fieldset laying its labels out as running text breaks "Two-letter
+   action codes" across two lines, which reads as two options. */
+.dialog-group {
+    border: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, transparent));
+    border-radius: 2px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 1rem;
+    margin: 0;
+    padding: 0.3rem 0.6rem 0.5rem;
 }
-/* Backdrop/sprite layering: every tile backdrop at z-index 0, every canvas at 1, in ONE shared stacking
-   context (no cell or tile creates its own), so a neighbouring tile's backdrop can never paint over an
-   anchor-shifted canvas overhanging its 96px box. The backdrop value is the stage's --tile-bg. */
-.frame-tile-bg {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    background: var(--tile-bg, transparent);
+.dialog-group > legend {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    padding: 0 0.3rem;
 }
-.frame-tile canvas {
-    position: absolute;
-    z-index: 1;
-    image-rendering: pixelated;
+.dialog-group label {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.3rem;
+    white-space: nowrap;
 }
-/* Offset/center-anchor marker: a diagnostic crosshair, not editor chrome - a fixed accent color with
-   difference blending keeps it visible over any of the three preview backgrounds (transparent/
-   checkered/green), which a single theme color could not guarantee against all three. */
-/* left/top come from FrameCanvas (referenceMarkerPercent) so the marker sits on the frame's real anchor
-   per format - feet line for FRM, centre for BAM - not a fixed tile centre. translate centres it on that
-   point. */
-.frame-offset-marker {
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    transform: translate(-50%, -50%);
-    z-index: 2; /* above the z-index 1 canvases it diagnoses */
-    pointer-events: none;
+/* The control is disabled, so the label beside it says so too - a live-looking label over a dead radio is
+   the one state a reader reads as a bug in the dialog rather than a limit of the source. */
+.dialog-disabled {
+    color: var(--vscode-disabledForeground, var(--vscode-descriptionForeground));
 }
-.frame-offset-marker::before,
-.frame-offset-marker::after {
-    content: "";
-    position: absolute;
-    background: #ff0055;
-    mix-blend-mode: difference;
+/* Label-then-control rows, like the side column's own fields, so a reader moving between the two meets
+   one shape. */
+.dialog-field {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
 }
-.frame-offset-marker::before {
-    left: 0;
-    right: 0;
-    top: 50%;
-    height: 1px;
-    transform: translateY(-50%);
+.dialog-label {
+    color: var(--vscode-descriptionForeground);
+    flex: 0 0 7rem;
 }
-.frame-offset-marker::after {
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 1px;
-    transform: translateX(-50%);
+.dialog-field select,
+.dialog-field input[type="text"],
+.dialog-field input[type="number"] {
+    flex: 1 1 10rem;
+    min-width: 0;
+    /* Named rather than left to `--vscode-input-border`, which several themes leave unset: the dialog's own
+       surface is the widget background, which resolves to the SAME colour as the input background, and a
+       field bordered by `transparent` then disappears into the panel and reads as plain text. */
+    border-color: var(--vscode-widget-border, var(--vscode-descriptionForeground));
+}
+.dialog-check {
+    align-items: center;
+    display: flex;
+    gap: 0.4rem;
+}
+/* Takes the whole row under the id box, so the number and its hex reading sit together rather than the
+   hex being read as the next field's label. */
+.dialog-hex {
+    color: var(--vscode-descriptionForeground);
+    flex: 1 1 100%;
+    font-size: 0.85em;
+    padding-left: 7.4rem;
+}
+.dialog-note {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    margin: 0;
+}
+/* What the settings above would actually write, kept together and ruled off from them: loose under the
+   last fieldset it read as leftover text rather than as the answer the controls are being moved for. */
+.dialog-plan {
+    border-top: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border, transparent));
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding-top: 0.5rem;
+}
+/* Takes the row between its label and the Choose button, and breaks anywhere: a path is long, has no
+   spaces to break at, and truncating the one thing the reader picked it to check would defeat the point. */
+.dialog-path {
+    flex: 1 1 8rem;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.85em;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+/* The names are the point of the preview, so they get the editor's own font - and they break anywhere,
+   because a resref list has no spaces to break at once the panel is narrow. */
+.dialog-files {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.85em;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+/* The refusal is the whole answer when it fires, so it is the one thing here that reads as a warning. */
+.dialog-refused {
+    color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+    font-size: 0.9em;
+    margin: 0;
+}
+.dialog-losses,
+.dialog-notes {
+    font-size: 0.9em;
+    margin: 0;
+    padding-left: 1.1rem;
+}
+/* Losses read as the warning; the notes beside them are representation changes that cost nothing, so they
+   stay in the secondary colour rather than competing with the losses for attention. */
+.dialog-losses {
+    color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+}
+.dialog-notes {
+    color: var(--vscode-descriptionForeground);
+}
+.view-check {
+    align-items: center;
+    color: var(--vscode-descriptionForeground);
+    display: flex;
+    font-size: 0.9em;
+    gap: 0.4rem;
 }

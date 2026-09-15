@@ -1,14 +1,15 @@
 <script lang="ts">
-    import type { NodeId, Row } from "@bgforge/binary-editor";
+    import type { Diagnostic, NodeId, Row } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import { visibleRange } from "../../../virtual-window";
     import { rowActions, type SectionCaps } from "../state/structure-actions";
     import Field from "./Field.svelte";
     import RowActions from "./RowActions.svelte";
 
-    const { parentId, caps, bridge, version, selection, onedit }:
+    const { parentId, caps, bridge, version, selection, onedit, byNode }:
         { parentId: NodeId; caps: SectionCaps; bridge: Bridge; version: number;
           selection: NodeId | undefined; onedit: (id: string, v: number | string) => void;
+          byNode: Map<string, Diagnostic[]>;
         } = $props();
 
     // Tall enough to contain the active row's inline Field control plus the action bar without overflowing into the
@@ -91,7 +92,7 @@
                     <!-- Every inline row renders its editable control (a variable is a single scalar - there is
                          no "detail" to open, so requiring a click to reveal an input just hides the value behind
                          an interaction). Selecting a row (click) reveals its structure-op actions. -->
-                    <Field {row} {onedit} />
+                    <Field {row} {onedit} diagnostics={byNode.get(row.id)} />
                     {#if idx === activeIndex}
                         <RowActions {acts} entryId={row.id} {bridge} compact={true} />
                     {/if}

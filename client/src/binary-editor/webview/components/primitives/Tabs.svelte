@@ -11,7 +11,7 @@
     // NO component <style> block - theming lives entirely in styles.css (.bb-tabs.*) to stay CSP-safe under
     // the webview's strict nonce policy (non-nonced injected <style> tags are refused).
 
-    import Icon from "../Icon.svelte";
+    import Icon from "../../../../webview-ui/Icon.svelte";
 
     export interface TabItem {
         id: string;

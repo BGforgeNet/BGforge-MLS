@@ -1,4 +1,5 @@
 import { framePixels, type AnimationView } from "../messages";
+import { cycleFrameIndex } from "./playback";
 
 /**
  * The webview's side of lazy frame delivery.
@@ -21,12 +22,14 @@ export function seedLoadedPixels(view: Pick<AnimationView, "frames" | "pixels">)
 /**
  * The frame indices a sequence needs at this playback position: the one on screen plus the next, so
  * advancing a frame does not wait on a round-trip. Playback holds ONE shared index across cycles of
- * differing length, so a short cycle clamps to its own last frame rather than running off the end.
+ * differing length and each cycle wraps at its own (cycleFrameIndex) - so must this, or a wrapped cycle
+ * draws a frame nobody asked the host for. `reversed` resolves both positions the same way the tile does,
+ * so a stance drawn back to front prefetches the frame it is about to reach rather than the one it left.
  */
-export function framesNeededFor(frameRefs: readonly number[], frame: number): number[] {
+export function framesNeededFor(frameRefs: readonly number[], frame: number, reversed = false): number[] {
     if (frameRefs.length === 0) return [];
-    const at = Math.min(frame, frameRefs.length - 1);
-    const next = Math.min(at + 1, frameRefs.length - 1);
+    const at = cycleFrameIndex(frameRefs.length, frame, reversed);
+    const next = cycleFrameIndex(frameRefs.length, frame + 1, reversed);
     const wanted = [frameRefs[at], frameRefs[next]].filter((ref): ref is number => ref !== undefined);
     return [...new Set(wanted)];
 }
@@ -43,10 +46,11 @@ export function framesToRequest(
     sequences: readonly { readonly frameRefs: readonly number[] }[],
     frame: number,
     requested: Set<number>,
+    reversed = false,
 ): number[] {
     const wanted: number[] = [];
     for (const sequence of sequences) {
-        for (const ref of framesNeededFor(sequence.frameRefs, frame)) {
+        for (const ref of framesNeededFor(sequence.frameRefs, frame, reversed)) {
             if (requested.has(ref)) continue;
             requested.add(ref);
             wanted.push(ref);

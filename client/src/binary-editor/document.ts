@@ -2,6 +2,7 @@ import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
 import type { ChangeSet, OpenResult } from "@bgforge/binary-editor";
 import { warnBackupUnreadable } from "../hot-exit-backup";
+import { snapshotJsonFrom } from "./save";
 import { WorkerBridge, workerPort } from "./worker-bridge";
 
 /**
@@ -141,10 +142,9 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
         return response.bytes;
     }
 
-    /** JSON snapshot for the autoDumpJson sidecar, or "" if the format has no snapshot. */
+    /** The canonical JSON snapshot for the sidecar; throws when the worker cannot produce one. */
     async getSnapshotJson(): Promise<string> {
-        const response = await this.bridge.send({ type: "snapshot", sessionId: this.sessionId });
-        return response.type === "snapshot" ? response.json : "";
+        return snapshotJsonFrom(await this.bridge.send({ type: "snapshot", sessionId: this.sessionId }));
     }
 
     dispose(): void {

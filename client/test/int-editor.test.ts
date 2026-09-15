@@ -412,7 +412,11 @@ describe("compiling from the editor command", () => {
 describe("opening a compiled script", () => {
     const open = async (file: string): Promise<void> => {
         const context = { extensionPath: REPO_ROOT } as never;
-        registerScriptViews(context, () => undefined);
+        registerScriptViews(
+            context,
+            () => undefined,
+            () => ({ dispose: () => {} }),
+        );
         const provider = h.editor.provider!;
         const document = provider.openCustomDocument(new h.FakeUri("file", file));
         await provider.resolveCustomEditor(document, { viewColumn: 2, dispose: () => disposed.push(true) });

@@ -18,7 +18,6 @@ function makeStub(transpileCore: (filePath: string, text: string) => Promise<str
     return createTranspiler<string>({
         sourceExtension: ".stub",
         targetExtension: ".out",
-        name: "Stub",
         transpileCore: (filePath, text) => transpileCore(filePath, text),
         getOutput: (result) => result,
     });

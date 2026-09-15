@@ -110,6 +110,24 @@ describe.skipIf(!haveFixtures)("strref fields reach the display tree", () => {
 // RACE.IDS carries 82 and mods extend it further, so the field declares which table names it and a consumer
 // holding the game merges that in. Declaring it here is what makes the whole set reachable without the client
 // keeping its own field-to-table map.
+describe.skipIf(!haveFixtures)("creature colour fields declare their gradient table", () => {
+    it("marks exactly the seven recolourable ranges, in palette order", () => {
+        const marked = parseFields(creParser, CRE_FIXTURE)
+            .filter((f) => f.ref?.kind === "colorGradient")
+            .map((f) => f.name);
+
+        expect(marked).toEqual([
+            "Metal Color",
+            "Minor Color",
+            "Major Color",
+            "Skin Color",
+            "Leather Color",
+            "Armor Color",
+            "Hair Color",
+        ]);
+    });
+});
+
 describe.skipIf(!haveFixtures)("IDS-backed CRE fields declare their table", () => {
     it("declares the naming table for every game-defined header field", () => {
         const declared = parseFields(creParser, CRE_FIXTURE)

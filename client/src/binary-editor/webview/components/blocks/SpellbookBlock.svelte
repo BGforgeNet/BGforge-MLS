@@ -9,8 +9,8 @@
     import type { SpellbookView } from "@bgforge/binary-editor";
     import type { Bridge } from "../../state/bridge";
     import Tabs, { type TabItem } from "../primitives/Tabs.svelte";
-    import Checkbox from "../primitives/Checkbox.svelte";
-    import Icon from "../Icon.svelte";
+    import Checkbox from "../../../../webview-ui/Checkbox.svelte";
+    import Icon from "../../../../webview-ui/Icon.svelte";
 
     const { bridge, version, onedit }: {
         bridge: Bridge;
@@ -18,7 +18,8 @@
         onedit: (id: string, v: number | string) => void;
     } = $props();
 
-    let view = $state<SpellbookView | undefined>();
+    // Raw: a whole joined view fetched per version and replaced wholesale.
+    let view = $state.raw<SpellbookView | undefined>();
     // eslint-disable-next-line prefer-const -- reassigned via the type-subtab onselect
     let activeType = $state<number | undefined>();
 

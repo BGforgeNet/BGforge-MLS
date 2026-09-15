@@ -21,11 +21,13 @@ import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
 import { registerDlgDialogEditor } from "./dialog-editor/dlg-panel";
 import { registerImageEditor } from "./image-editor/register";
+import { createAnimationSetSource } from "./image-editor/set-document";
 import { routeCompile } from "./script-view/compile-command";
 import { registerScriptViews } from "./script-view/register";
 import { LSP_DOCUMENT_SELECTOR } from "./document-selector";
 import { conlog, initOutputChannel, setDebugLogging } from "./logging";
 import { registerIeResources } from "./ie-resources/register";
+import { registerGallery } from "./gallery/register";
 
 // Initialized in activate(), undefined until then
 let client: LanguageClient | undefined;
@@ -67,13 +69,33 @@ export async function activate(context: ExtensionContext) {
     // disposables. First, because it owns the game session the binary editor resolves strrefs through.
     const gameLookups = registerIeResources(context);
 
-    // Register binary file and animation editors. Kept as its own push: merging with the
-    // push above would reorder the intervening setup.
+    // Register binary file and animation editors. Both take the lookups above, so they are registered after
+    // the game session rather than beside the earlier subscriptions.
+    const imageEditor = registerImageEditor(
+        context,
+        gameLookups.resourceBytes,
+        { creatures: gameLookups.creatures, gradients: gameLookups.colorGradient },
+        createAnimationSetSource({
+            animations: gameLookups.animations,
+            gameAt: gameLookups.gameAt,
+        }),
+        gameLookups.confirmGroupWrite,
+    );
     context.subscriptions.push(
         registerBinaryEditor(context, gameLookups),
-        registerImageEditor(context, gameLookups.resourceBytes),
-        registerScriptViews(context, gameLookups.bcsSymbols),
+        imageEditor.registration,
+        registerScriptViews(context, gameLookups.bcsSymbols, gameLookups.onDidChangeGame),
     );
+
+    // The image gallery. After the resource viewer, whose game session and reveal it borrows, and after the
+    // animation editor, which it draws inside itself rather than handing animations over to.
+    registerGallery(context, {
+        gameSession: gameLookups.gameSession,
+        animations: gameLookups.animations,
+        revealResource: gameLookups.revealResource,
+        onDidChangeGame: gameLookups.onDidChangeGame,
+        animation: imageEditor.provider,
+    });
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used
@@ -128,6 +150,7 @@ export async function activate(context: ExtensionContext) {
             inbound: gameLookups.inbound,
             inboundToDialog: gameLookups.inboundToDialog,
             resourceBytes: gameLookups.resourceBytes,
+            onDidChangeGame: gameLookups.onDidChangeGame,
         }),
     );
 }

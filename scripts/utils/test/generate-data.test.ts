@@ -558,7 +558,7 @@ describe("loadData validation errors", () => {
         const yaml = `"just a string"\n`;
         const f = path.join(tmpDir, "bad.yml");
         fs.writeFileSync(f, yaml, "utf8");
-        expect(() => loadData([f])).toThrow();
+        expect(() => loadData([f])).toThrow(`Expected object in ${f}, got string`);
     });
 });
 describe("generateSignatures getCategoryPrefix", () => {

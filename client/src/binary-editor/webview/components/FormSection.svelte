@@ -3,6 +3,7 @@
     import type { Bridge } from "../state/bridge";
     import { splitForm } from "../state/form-groups";
     import { fetchAllRows } from "../state/list-window";
+    import { fitKvColumns } from "../state/fit-kv-columns";
     import Field from "./Field.svelte";
     import FlagColumns from "./blocks/FlagColumns.svelte";
     import Self from "./FormSection.svelte";
@@ -19,7 +20,8 @@
           // rendered by a sibling ChildEntryList mini-list instead, so showing them here would duplicate.
           hideGroupPrefix?: string } = $props();
 
-    let rows = $state<Row[]>([]);
+    // Raw: fetched wholesale and replaced wholesale; an edit goes to the host, not into a row.
+    let rows = $state.raw<Row[]>([]);
     $effect(() => {
         void version; // dependency: a bump re-fetches after the cache is cleared
         let cancelled = false;
@@ -38,6 +40,9 @@
     // columns (the last left-column field ends up far below its neighbour). Keep scalars in the 2-col grid
     // and render flag fields full-width below, where their checkbox grid uses the whole width anyway.
     const scalarFields = $derived(fields.filter((f) => f.valueType !== "flags"));
+    // Columns actually shown: `columns` is a maximum, lowered by fitKvColumns while the pane is too narrow.
+    let fitted = $state(Number.MAX_SAFE_INTEGER);
+    const shown = $derived(Math.max(1, Math.min(fitted, columns)));
     const flagFields = $derived(fields.filter((f) => f.valueType === "flags"));
     // FlagColumns looks a field up by id in a record; the detail form's flag rows are keyed by node id.
     const flagFieldMap: Record<string, Row> = $derived(Object.fromEntries(flagFields.map((r) => [r.id, r])));
@@ -60,7 +65,8 @@
     {#if scalarFields.length > 0}
         <!-- style: directive (not a static style attribute) compiles to el.style.setProperty, which the
              webview CSP allows; a literal style="..." attribute would be blocked by style-src. -->
-        <div class="kv kv-multi form-fields" style:grid-template-columns="repeat({columns}, max-content auto)">
+        <div class="kv kv-multi form-fields" style:grid-template-columns="repeat({shown}, max-content auto)"
+             use:fitKvColumns={{ max: columns, set: (n) => (fitted = n), key: scalarFields }}>
             {#each scalarFields as row (row.id)}
                 <Field {row} {onedit} diagnostics={byNode.get(row.id)} />
             {/each}
@@ -69,7 +75,7 @@
     {#if flagFields.length > 0}
         <div class="form-flags">
             {#each flagFields as row (row.id)}
-                <FlagColumns field={row.id} columns={flagColumns(row)} boxed fields={flagFieldMap} {onedit} />
+                <FlagColumns field={row.id} columns={flagColumns(row)} boxed fields={flagFieldMap} {onedit} {byNode} />
             {/each}
         </div>
     {/if}

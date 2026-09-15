@@ -14,6 +14,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 - [**Other formats**](#other-formats): TRA, MSG, 2DA; Fallout worldmap.txt, scripts.lst; weidu.log.
 - [**Binary formats**](#binary-formats): Fallout PRO, MAP; Infinity ITM, SPL, EFF, CRE.
 - [**Animations**](#animation-viewer): Fallout FRM; Infinity BAM.
+- [**Image gallery**](#image-gallery): browse the images of an open game or workspace folder.
 - [**GitHub actions**](#github-actions): format, transpile, compile, convert binaries to JSON and back.
 - [**Installation**](#installation)
 - [**Hotkeys**](#hotkeys)
@@ -37,6 +38,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 | Rename            |               ✓                |                        |    ✓    |           Same file            |
 | Inlay hints       |             `.msg`             |         `.tra`         | `.tra`  |             `.tra`             |
 | Diagnostics       |               ✓                |           ✓            |    ✓    |               ✓                |
+| Quick fixes       |               ✓                |           ✓            |    ✓    |               ✓                |
 | JSDoc             |               ✓                |                        |    ✓    |               ✓                |
 | Folding           |               ✓                |           ✓            |    ✓    |               ✓                |
 | Dialog editor     |               ✓                |                        |    ✓    |                                |
@@ -77,7 +79,7 @@ They bring the TypeScript type system, many TypeScript features, and better tool
 
 ## Binary formats
 
-Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, have a built-in [binary editor](#binary-editor) with JSON dump/load support.
+Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, have a built-in [binary editor](#binary-editor) with JSON dump/load support. Infinity Engine `.dlg` files are read and written by the same library, but open in the [dialog editor](#dialog-editor) rather than the binary one.
 
 ## GitHub Actions
 
@@ -85,12 +87,14 @@ Fallout PRO and MAP files, and Infinity Engine ITM, SPL, EFF, and CRE files, hav
 
 ## Installation
 
+BGforge MLS runs in desktop VS Code and in code-server. It is not supported on vscode.dev or github.dev: the bundled SSL compiler and the workspace scanner both need a real filesystem.
+
 1. Install BGforge MLS from the VS Code Marketplace.
    Alternatively, download the package from [GitHub Releases](https://github.com/BGforgeNet/BGforge-MLS/releases) and install it manually.
 1. Check [general settings](docs/settings.md).
 1. Check [file associations](docs/file_associations.md).
 1. Check [hotkeys](#hotkeys).
-1. Enable [custom theme](docs/theme.md) and [icon theme](docs/icon-theme.md).
+1. Enable [custom theme](docs/themes.md#color-theme) and [icon theme](docs/themes.md#icon-theme).
 1. (Infinity Engine) Install [IElib](https://ielib.bgforge.net).
 
 ## Hotkeys
@@ -132,3 +136,9 @@ Compiled Infinity Engine `.dlg` files open in the same editor: the states, trans
 Supported animation formats are BAM and FRM. PNG import/export is available, as well as cross-format save (conversion).
 
 ![animation viewer example](docs/animation-viewer.png)
+
+### Image gallery
+
+`BGforge: Game Image Gallery` (`bgforge.gallery.showGame`) browses the images of the game at `bgforge.weidu.gamePath`; `BGforge: Workspace Image Gallery` (`bgforge.gallery.showWorkspace`) browses the open folder. Both draw a thumbnail grid filtered by name, resource type and format, and draw a picked file on the panel's own animation surface. There is one gallery panel at a time: the second command points the open one at the other source rather than opening a second tab.
+
+A game gallery carries a second tab for the animation sets the install declares. Picking one draws the whole set, whose members can be edited and saved back, or converted into another engine's animation files.

@@ -1,4 +1,6 @@
 <script lang="ts">
+    import BetaNotice from "../../webview-ui/BetaNotice.svelte";
+    import Checkbox from "../../webview-ui/Checkbox.svelte";
     import {
         SvelteFlow,
         Background,
@@ -102,7 +104,7 @@
     let highlightedBranchKey = $state<string | null>(null);
     // The editor's selection is ONE state plus at most one mutually-exclusive UI sub-mode. `select` is the
     // single setter that writes the whole tuple (`selected` + the five flags above) coherently, so no entry
-    // point hand-resets a subset - the co-varying-state-one-setter rule (architecture.md). Modelled as a
+    // point hand-resets a subset and leaves the fields disagreeing. Modelled as a
     // discriminated union so an impossible combination (editing an option AND renaming the node) can't be
     // expressed. Adding a sub-mode is a one-line change here, not an edit spread across every selection site.
     type Selection =
@@ -1423,13 +1425,9 @@
         <!-- Left column: (1) beta/feedback, (2) the button row. The keyboard reference is a full-height panel
              docked on the RIGHT (tree view only), so it no longer consumes a third stacked row. -->
         <div class="tbleft">
-            <!-- Row 1: beta / feedback notice, matching the binary editor's toolbar-beta. -->
+            <!-- Row 1: beta / feedback notice, the same component every panel carries. -->
             <div class="tbrow tbbeta">
-                <span class="dlgbeta">
-                    Beta. Send feedback to
-                    <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
-                       >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
-                </span>
+                <BetaNotice />
             </div>
             <!-- Row 2: buttons - the view switch + actions (tree adds Expand/Collapse all), then the
                  "Auto node names" toggle at the END of the list. -->
@@ -1443,10 +1441,14 @@
                 <!-- Same blanket-editable caveat as the "+ State" gate above: ssl/td/tssl are per-node
                      editable though `editable` is false, so this toggle shows for every editable family. -->
                 {#if editModel.editable || editModel.sourceLang === "ssl" || editModel.sourceLang === "tssl" || editModel.sourceLang === "td"}
-                    <label class="tbtoggle" title="On: new nodes get an auto-assigned name (SSL NodeXXX / D StateXXX). Off: you're prompted for the name each time.">
-                        <input type="checkbox" bind:checked={autoNodeNames} />
-                        Auto node names
-                    </label>
+                    <span class="tbtoggle">
+                        <Checkbox
+                            label="Auto node names"
+                            checked={autoNodeNames}
+                            onchange={(next) => (autoNodeNames = next)}
+                            title="On: new nodes get an auto-assigned name (SSL NodeXXX / D StateXXX). Off: you're prompted for the name each time."
+                        />
+                    </span>
                 {/if}
             </div>
             {#if viewMode === "tree"}
@@ -1493,10 +1495,17 @@
                          see tree-search.ts). Reruns the search and jumps to the first match on toggle, same as
                          find-as-you-type (onQueryChanged's reset-and-jump applies equally to a match-set change
                          from this toggle). -->
-                    <label class="tbtoggle" title="On: also search node triggers, choice conditions/actions, and branch conditions. Off: dialogue text only.">
-                        <input type="checkbox" bind:checked={searchIncludeCode} onchange={onQueryChanged} />
-                        Code
-                    </label>
+                    <span class="tbtoggle">
+                        <Checkbox
+                            label="Code"
+                            checked={searchIncludeCode}
+                            onchange={(next) => {
+                                searchIncludeCode = next;
+                                onQueryChanged();
+                            }}
+                            title="On: also search node triggers, choice conditions/actions, and branch conditions. Off: dialogue text only."
+                        />
+                    </span>
                 </div>
             {/if}
         </div>
@@ -1904,17 +1913,6 @@
         border-left: 1px solid var(--vscode-panel-border);
         padding-left: 12px;
     }
-    /* Beta notice - low-emphasis muted text on its own row. */
-    .dlgbeta {
-        font-size: 11px;
-        color: var(--vscode-descriptionForeground);
-    }
-    .dlgbeta a {
-        color: var(--vscode-textLink-foreground);
-    }
-    .dlgbeta a:hover {
-        color: var(--vscode-textLink-activeForeground);
-    }
     /* Tree keyboard reference: muted key -> action pairs laid out in a grid that fills 4 rows then flows into a
        new column (>=2 columns), so the panel stays short instead of one tall single-column stack. Each pair is
        a nowrap unit so a key and its label never split. Themed <kbd> chips matching the toolbar palette. */
@@ -1994,8 +1992,10 @@
         margin-right: 4px;
         white-space: nowrap;
     }
-    .tbtoggle input {
-        cursor: pointer;
+    /* The toggle itself is the shared Checkbox primitive, whose text is a global class - reach it through
+       :global so this toolbar's compact size still applies. */
+    .tbtoggle :global(.bb-checkbox-text) {
+        font-size: 12px;
     }
     .treescroll {
         flex: 1;

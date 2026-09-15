@@ -1,4 +1,5 @@
 packages:
+  - animation
   - binary
   - binary-editor
   - client
@@ -21,24 +22,38 @@ packages:
 # instead of a literal range, so an out-of-lockstep bump in one package.json fails
 # `pnpm install` rather than silently drifting until noticed by convention.
 catalog:
-  vscode-languageclient: 10.1.0
-  vscode-languageserver: 10.1.0
-  vscode-languageserver-protocol: 3.18.2
+  vscode-languageclient: 10.1.1
+  vscode-languageserver: 10.1.1
+  vscode-languageserver-protocol: 3.18.3
   ts-morph: ^28.0.0
   typescript: ^6.0.3
   vitest: ^4.1.11
+  # Peer-depends on the exact vitest version, so it cannot float independently of it.
+  "@vitest/coverage-v8": ^4.1.11
   "@types/node": ^24.13.3
+  # Generates the SyntaxType enums the server imports as one set, from four grammar packages.
+  "@asgerf/dts-tree-sitter": ^0.21.0
   cac: ^7.0.0
   diff: ^9.0.0
+  # One esbuild release cut in two forms: the native build bundles the client, the WASM build
+  # backs the transpilers.
+  esbuild: ^0.28.2
   esbuild-wasm: ^0.28.2
   fast-check: ^4.9.0
+  # Declared by both client and server.
+  fast-glob: ^3.3.3
   quick-lru: ^7.3.0
-  tsdown: ^0.22.14
-  web-tree-sitter: ^0.26.13
+  tsdown: ^0.23.0
+  # The CLI generates the parsers web-tree-sitter loads, so both must agree on the parser ABI.
+  tree-sitter-cli: 0.27.0
+  web-tree-sitter: ^0.27.0
+  # Declared by both the root workspace and server.
+  yaml: ^2.9.0
 
 # Grammars compile to WASM via tree-sitter-cli and load through web-tree-sitter at
 # runtime, so the native `tree-sitter` binding is denied. `keytar` is a transitive
-# `@vscode/vsce` dep no longer used since vsce 3. `@vscode/vsce-sign` only matters
+# `@vscode/vsce` optionalDependency - still declared by vsce 3.9.2 and still resolved in the
+# lockfile, so what is denied is its native build, not its presence. `@vscode/vsce-sign` only matters
 # when signing the VSIX, which is not done in this build. `lefthook`'s postinstall
 # downloads the platform binary used by `pnpm exec lefthook install` (wired via the
 # root `prepare` script).
@@ -52,7 +67,7 @@ allowBuilds:
 
 # Transitive pins addressing security advisories. Each is still load-bearing: with
 # it removed, `pnpm install` resolves the dependency back to a vulnerable version
-# and `pnpm audit` re-flags the advisory. All three re-verified that way on
+# and `pnpm audit` re-flags the advisory. The first three re-verified that way on
 # 2026-09-01: without them the resolution falls back to diff 7.0.0,
 # serialize-javascript 6.0.2 and qs 6.15.1, and `pnpm audit` reports all four
 # advisories again. mocha 11.8.0 still bundles both vulnerable versions, so its
@@ -68,6 +83,15 @@ allowBuilds:
 #     comma parsing, 6.14.2 to 6.15.3). Both fixed in 6.16.0, which was five days old
 #     when pinned - inside the usual maturity preference, taken because the
 #     alternative was leaving two open advisories on a dev-only path.
+#   - js-yaml via @vscode/vsce -> @secretlint/node, reached through both
+#     rc-config-loader and @textlint/linter-formatter (GHSA-2883-xcg3-v3hh:
+#     maxTotalMergeKeys does not bound CPU use for empty merge sources; fixed in
+#     4.3.2). Added 2026-09-10. Same shape as the qs pin - the path is packaging-only
+#     and never reaches shipped runtime code, and @vscode/vsce is already at its
+#     latest stable with no fix released, so the pin is the only route to a clean audit.
+#     Capped below 5 deliberately: a bare ">=4.3.2" resolves to js-yaml 5.x, which is a
+#     major its consumers here never declared - the same trap the brace-expansion note
+#     below records. 4.3.2 is the patched release on the line they do declare.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. Overrides are dropped once their
 # upstreams resolve to a patched version on their own (verified by removing the pin,
@@ -94,12 +118,22 @@ overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
   qs: ">=6.16.0"
+  js-yaml: ">=4.3.2 <5"
 
-# pnpm 11 enables minimumReleaseAge (24h maturity window) by default. The built-in
-# SSL compiler ships as a GitHub-release tarball (server/package.json
+# A version must have been published for 7 days (in minutes) before it resolves into the lockfile, and
+# `pnpm install` re-checks every lockfile entry against it. Raised from pnpm's 24h default.
+minimumReleaseAge: 10080
+
+# The built-in SSL compiler ships as a GitHub-release tarball (server/package.json
 # sslc-emscripten-noderawfs), not an npm package, so it has no registry publish
 # timestamp to check the window against - resolution fails with a 404 on lockfile
 # re-verification. The tarball is already integrity-pinned by its lockfile hash, so
 # the age window adds nothing here; exclude it so `pnpm install`/`update` resolve.
 minimumReleaseAgeExclude:
   - sslc-emscripten-noderawfs
+
+# `pnpm outdated` then reports the SHA-pinned GitHub Actions in .github/workflows beside the npm deps,
+# and `pnpm update` re-pins them to the new commit SHA, so the CI pins share the npm sweep instead of a
+# separate by-hand check.
+update:
+  githubActions: true

@@ -71,7 +71,7 @@ describe("errors", () => {
     });
 
     it("rejects an unclosed parenthesis", () => {
-        expect(() => safeEvaluate("(1 + 2")).toThrow(/Expected token type/);
+        expect(() => safeEvaluate("(1 + 2")).toThrow("Expected token ')', got 'end of input' at position 4");
     });
 });
 

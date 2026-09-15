@@ -181,7 +181,7 @@ describe("dnfToCnf", () => {
             expect(() => dnfToCnf(terms, 4)).not.toThrow();
 
             // 2*2 = 4 clauses, exceeds limit of 3
-            expect(() => dnfToCnf(terms, 3)).toThrow();
+            expect(() => dnfToCnf(terms, 3)).toThrow("Condition inversion would produce 4+ clauses (limit: 3)");
         });
     });
 

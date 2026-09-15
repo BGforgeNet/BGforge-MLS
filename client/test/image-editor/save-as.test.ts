@@ -2,6 +2,7 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { type IndexedAnimation, LossReport } from "@bgforge/image";
 import {
+    exportPaletteMode,
     ieGroupCount,
     needsCyclePick,
     reshapeImportToFrm,
@@ -76,7 +77,15 @@ describe("ieGroupCount", () => {
         expect(ieGroupCount(anim)).toBe(2);
     });
 
-    it("is undefined for non-ie8 layouts (needsCyclePick decides instead)", () => {
+    // A fine-scheme file is just as directional; counting its blocks at eight would offer the wrong
+    // number of them, and refusing it entirely sends the user to a cycle picker instead of a direction.
+    it("returns the 9-cycle block count for an ie9-resolved animation", () => {
+        const base = multiCycleBam(27);
+        const anim: IndexedAnimation = { ...base, meta: { ...base.meta, directionLayout: "ie9" } };
+        expect(ieGroupCount(anim)).toBe(3);
+    });
+
+    it("is undefined for non-directional layouts (needsCyclePick decides instead)", () => {
         expect(ieGroupCount(multiCycleBam(16))).toBeUndefined();
         expect(ieGroupCount(makeMiniFrm())).toBeUndefined();
     });
@@ -144,5 +153,25 @@ describe("reshapeImportToFrm", () => {
         expect(reshaped.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
         // Directional, not single-orientation: the west-arc rotations carry distinct cycles.
         expect(new Set(reshaped.sequences.map((s) => s.frameRefs.join(","))).size).toBeGreaterThan(1);
+    });
+});
+
+describe("exportPaletteMode", () => {
+    it("keeps a creature's colours exactly by sidecar when saving an FRM", () => {
+        expect(exportPaletteMode(undefined, { target: "frm", creatureActive: true })).toBe("sidecar");
+    });
+
+    it("leaves FRM's default alone when no creature was chosen", () => {
+        expect(exportPaletteMode(undefined, { target: "frm", creatureActive: false })).toBeUndefined();
+    });
+
+    // Every other target keeps a palette of its own, so there is nothing to protect the colours from.
+    it("does not force a mode on a target that has no palette choice", () => {
+        expect(exportPaletteMode(undefined, { target: "bam", creatureActive: true })).toBeUndefined();
+        expect(exportPaletteMode(undefined, { target: "png-directory", creatureActive: true })).toBeUndefined();
+    });
+
+    it("lets an explicit choice win over the creature default", () => {
+        expect(exportPaletteMode("nearest", { target: "frm", creatureActive: true })).toBe("nearest");
     });
 });

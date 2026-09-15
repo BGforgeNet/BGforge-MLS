@@ -111,8 +111,10 @@ const lookups = {
         type: decl.type,
         present: decl.type === "BAM" && (resref === PRESENT_BAM || resref === PRESENT_BAM_2),
     }),
-    // This driver plays a host with a game for the RESREF picker only; no kit-usability bit is in frame.
+    // This driver plays a host with a game for the RESREF picker only; no kit-usability bit and no
+    // creature-colour field is in frame.
     flagBitNames: () => undefined,
+    colorGradient: () => undefined,
     canOpen: (ext: string) => !unviewable.has(ext.toUpperCase()),
     canThumbnail: (ext: string) => ext.toUpperCase() === "BAM",
 };

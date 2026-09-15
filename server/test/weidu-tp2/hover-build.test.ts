@@ -1,5 +1,5 @@
 /**
- * Unit tests for hover.ts buildVariableHover and buildFunctionHover.
+ * Unit tests for hover-content.ts buildVariableHover and buildFunctionHover.
  *
  * Covers:
  *  - extractFilename: URI with slashes vs. no slashes after stripping file://
@@ -21,7 +21,7 @@ vi.mock("../../src/logger", () => ({
     conlog: vi.fn(),
 }));
 
-import { buildVariableHover, buildFunctionHover } from "../../src/weidu-tp2/hover";
+import { buildVariableHover, buildFunctionHover } from "../../src/weidu-tp2/hover-content";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
 import type { VariableInfo, FunctionInfo } from "../../src/weidu-tp2/header-parser";
 

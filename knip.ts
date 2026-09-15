@@ -24,14 +24,35 @@ const config: KnipConfig = {
     // `@public` JSDoc tag and knip treats them as used.
     tags: ["+public"],
     workspaces: {
+        ".": {
+            // Maintenance scripts started by path - from a shell script under scripts/ or by hand
+            // through `pnpm exec tsx` - so nothing imports them and knip cannot derive them from
+            // package.json. Listing them individually rather than ignoring scripts/** keeps
+            // unused-export detection on everything they reach, scripts/utils/src included.
+            entry: [
+                "scripts/build-webviews.mjs",
+                "scripts/verify-vsix-runtime-deps.mjs",
+                "scripts/fallout-update/src/fallout-update.ts",
+                "scripts/ie-binary-update/src/main.ts",
+                "scripts/ie-update/src/iesdp-update.ts",
+                "scripts/utils/src/check-editor-captures.ts",
+                "scripts/utils/src/extract-engine-proc-docs.ts",
+                "scripts/utils/src/generate-editor-queries.ts",
+                "scripts/utils/src/update-ssl-engine-arity.ts",
+            ],
+            // Run only as `pnpm vsce package` inside scripts/package.sh, and knip does not read shell scripts.
+            ignoreDependencies: ["@vscode/vsce"],
+        },
         client: {
             entry: [
                 // esbuild entry points (moved from package.json to scripts/*.sh)
                 "src/extension.ts",
                 "src/binary-editor/worker.ts",
+                "src/gallery/worker.ts",
                 "src/binary-editor/webview/main.ts",
                 "src/dialog-editor/webview/main.ts",
                 "src/image-editor/webview/main.ts",
+                "src/gallery/webview/main.ts",
                 // test entry points for @vscode/test-electron
                 "src/test/runTest.ts",
                 "src/test/index.ts",
@@ -45,9 +66,10 @@ const config: KnipConfig = {
             ignore: ["src/dialog-editor/test/harness/**"],
         },
         server: {
-            // vitest.mutation.config.mts is referenced from stryker.conf.json
-            // (vitest.configFile); knip's Stryker plugin resolves runner/checker
-            // package names but not vitest configFile paths, so list it explicitly.
+            // vitest.mutation.config.mts is no longer what Stryker drives - the mutation scope moved to
+            // binary/ (see stryker.conf.json and the mutation workflow's header for why). It is kept, and
+            // kept listed here, so re-pointing the scope back is a one-line config swap rather than a
+            // rewrite; without the entry knip reports it as an unused file.
             // src/server.ts has to be listed: knip derives the default entry from the tsconfig, and the
             // explicit `rootDir` there (added so tsgolint can build a program - see that comment) stops
             // the derivation, which drops server.ts and every handler it reaches.
@@ -93,7 +115,9 @@ const config: KnipConfig = {
             // to resolve `require("esbuild-wasm")` from server's node_modules at
             // runtime. Knip's per-workspace static analysis can't see the import
             // chain through the bundled-in non-workspace source.
-            ignoreDependencies: ["esbuild-wasm"],
+            // sslc-emscripten-noderawfs is imported by path, never by name: build-base-server.sh copies it into
+            // out/ and ssl_compiler.ts hands the forked wrapper its entry.
+            ignoreDependencies: ["esbuild-wasm", "sslc-emscripten-noderawfs"],
         },
         "plugins/tssl-plugin": {
             entry: ["src/index.ts", "test/*.test.ts"],
@@ -147,13 +171,22 @@ const config: KnipConfig = {
             ignoreDependencies: ["quick-lru", "cac", "diff"],
         },
         binary: {
-            entry: ["test/**/*.test.ts"],
+            // vitest.mutation.config.ts is referenced from stryker.conf.json (vitest.configFile);
+            // knip's Stryker plugin resolves runner/checker package names but not vitest configFile
+            // paths, so list it explicitly - same treatment the server's copy had while the mutation
+            // scope lived there.
+            entry: ["vitest.mutation.config.ts", "test/**/*.test.ts"],
             // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
             // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
             ignoreDependencies: ["cac", "diff"],
         },
         image: {
             entry: ["test/**/*.test.ts"],
+        },
+        animation: {
+            // The table generator is run by hand via `pnpm exec tsx` against a real install; nothing
+            // imports it, and it regenerates checked-in data rather than taking part in the build.
+            entry: ["test/**/*.test.ts", "test/tools/*.ts"],
         },
         "compilers/bcs": {
             entry: ["test/**/*.test.ts"],
@@ -186,16 +219,18 @@ const config: KnipConfig = {
         "grammars/**",
         // external repositories cloned for testing
         "external/**",
-        // standalone update scripts run via pnpm exec tsx, not imported by main code
-        "scripts/**",
+        // ambient declarations for the sibling esbuild plugin .mjs files, read by tsc only
+        "scripts/*.d.mts",
         // spawned as a child process by the --jobs fan-out tests, never imported
         "shared/cli/test/fixtures/**",
     ],
+    // Host binaries the scripts and their tests spawn: xmllint validates the generated Geany and
+    // Notepad++ editor definitions, strings reads capture names out of a Zed binary. Both are
+    // environment prerequisites of a hand-run tool, not declarable dependencies.
+    ignoreBinaries: ["xmllint", "strings"],
     ignoreDependencies: [
         // icon font used via CSS classes in the dialog-editor webview (e.g. "codicon codicon-references")
         "@vscode/codicons",
-        // invoked via pnpm vsce in scripts/package.sh
-        "@vscode/vsce",
         // loaded by remark CLI via --use in package.json scripts, not statically imported
         "remark-validate-links",
     ],

@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { glob } from "glob";
+import * as fg from "fast-glob";
 import Mocha from "mocha";
 import * as path from "path";
 
@@ -16,7 +16,7 @@ export async function run(): Promise<void> {
 
     const testsRoot = __dirname;
 
-    const files = await glob("**.test.js", { cwd: testsRoot });
+    const files = await fg.async("**.test.js", { cwd: testsRoot });
 
     // Add files to the test suite
     files.forEach((f) => mocha.addFile(path.resolve(testsRoot, f)));

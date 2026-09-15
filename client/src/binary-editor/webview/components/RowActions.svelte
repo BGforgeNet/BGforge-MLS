@@ -1,8 +1,8 @@
 <script lang="ts">
     import type { Bridge } from "../state/bridge";
     import type { RowActions } from "../state/structure-actions";
-    import Icon from "./Icon.svelte";
-    import Menu, { type MenuItem } from "./primitives/Menu.svelte";
+    import Icon from "../../../webview-ui/Icon.svelte";
+    import Menu, { type MenuItem } from "../../../webview-ui/Menu.svelte";
 
     const { acts, entryId, bridge, compact = false }:
         { acts: RowActions; entryId: string; bridge: Bridge; compact?: boolean } = $props();

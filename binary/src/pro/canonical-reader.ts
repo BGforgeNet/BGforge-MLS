@@ -7,11 +7,28 @@ import { clampNumericValue } from "../binary-format-contract";
 import { resolveRawValueFromDisplay } from "../display-lookups";
 import { createFieldKey, toSemanticFieldKey } from "../presentation-schema";
 import { parseWithSchemaValidation } from "../schema-validation";
-import { intToFlagArray, type FlagArray } from "../spec/coded-projection";
+import { displayNavigator } from "../spec/navigate-display";
 import { structFromDisplay } from "../spec/walk-display";
-import { ActionFlags, ContainerFlags, HeaderFlags, ItemFlagsExt, WallLightFlags } from "./types";
+import { ammoSpec, ammoPresentation } from "./specs/ammo";
+import { containerSpec, containerPresentation } from "./specs/container";
 import { critterSpec, critterPresentation } from "./specs/critter";
-import type { ParsedField, ParsedGroup, ParseResult } from "../types";
+import { doorSpec, doorPresentation } from "./specs/door";
+import { elevatorSpec, elevatorPresentation } from "./specs/elevator";
+import { genericScenerySpec, genericSceneryPresentation } from "./specs/generic-scenery";
+import { headerSpec, headerPresentation } from "./specs/header";
+import { itemCommonSpec, itemCommonPresentation } from "./specs/item-common";
+import { keySpec, keyPresentation } from "./specs/key";
+import { ladderSpec, ladderPresentation } from "./specs/ladder";
+import { miscSpec, miscPresentation } from "./specs/misc";
+import { miscItemSpec, miscItemPresentation } from "./specs/misc-item";
+import { sceneryCommonSpec, sceneryCommonPresentation } from "./specs/scenery-common";
+import { stairsSpec, stairsPresentation } from "./specs/stairs";
+import { tileSpec, tilePresentation } from "./specs/tile";
+import { wallSpec, wallPresentation } from "./specs/wall";
+import { weaponSpec, weaponPresentation } from "./specs/weapon";
+import type { StructPresentation } from "../spec/presentation";
+import type { FieldSpec, SpecData } from "../spec/types";
+import type { ParsedGroup, ParseResult } from "../types";
 import {
     proCanonicalSnapshotSchemaPermissive,
     proCanonicalDocumentSchemaPermissive,
@@ -19,26 +36,13 @@ import {
     type ProCanonicalDocument,
 } from "./canonical-schemas";
 
-function getGroup(root: ParsedGroup, groupName: string): ParsedGroup {
-    const group = root.fields.find((entry): entry is ParsedGroup => "fields" in entry && entry.name === groupName);
-    if (!group) {
-        throw new Error(`Missing PRO group: ${groupName}`);
-    }
-    return group;
-}
+const { getGroup, getOptionalGroup, getField } = displayNavigator("PRO");
 
-function getOptionalGroup(root: ParsedGroup, groupName: string): ParsedGroup | undefined {
-    return root.fields.find((entry): entry is ParsedGroup => "fields" in entry && entry.name === groupName);
-}
-
-function getField(group: ParsedGroup, fieldName: string): ParsedField {
-    const field = group.fields.find((entry): entry is ParsedField => !("fields" in entry) && entry.name === fieldName);
-    if (!field) {
-        throw new Error(`Missing PRO field: ${group.name}.${fieldName}`);
-    }
-    return field;
-}
-
+/**
+ * Read one field back by display label, accepting the rendering as well as the number: a tree built by
+ * hand or loaded from a display-tree JSON snapshot can carry an enum name, a hex or a percent string with
+ * no `rawValue` at all.
+ */
 function readFieldNumber(group: ParsedGroup, fieldName: string, fieldPath: string): number {
     const field = getField(group, fieldName);
     const fullFieldPath = `${fieldPath}.${fieldName}`;
@@ -65,71 +69,59 @@ function readFieldNumber(group: ParsedGroup, fieldName: string, fieldPath: strin
     throw new Error(`Field is not numeric: ${fullFieldPath}`);
 }
 
-function readClampedFieldNumber(
-    group: ParsedGroup,
-    fieldName: string,
-    sectionName: string,
-    fieldKey: string,
-    type: string,
-): number {
-    return clampNumericValue(readFieldNumber(group, fieldName, sectionName), type, { format: "pro", fieldKey });
+/**
+ * Clamp a field to the domain its spec declares. The display tree can hold an edited out-of-range value
+ * and the canonical document feeds the writer directly, so the clamp belongs on the way in.
+ */
+function clampToDomain(value: number, fieldKey: string): number {
+    return clampNumericValue(value, "uint32", { format: "pro", fieldKey });
 }
 
 /**
- * Read a flag-word field from the display tree and project it to the flat
- * sorted `string[]` shape canonical-doc expects. Width is hard-coded per
- * call site to match the underlying spec codec - every PRO flag word is
- * u8 / u24 / u32 in the spec, mapped to the matching `codecBitWidth` here.
+ * Walk one section back to typed data, first giving every string-valued field the numeric `rawValue`
+ * `structFromDisplay` requires - resolution `readFieldNumber` owns, since the generic walker has no format
+ * to resolve a display string against.
  */
-function readFlagArray(
+function sectionFromDisplay<S extends Record<string, FieldSpec>>(
     group: ParsedGroup,
-    fieldName: string,
-    table: Readonly<Record<number, string>>,
-    codecBitWidth: number,
-): FlagArray {
-    const numeric = readFieldNumber(group, fieldName, group.name);
-    return intToFlagArray(table, numeric, codecBitWidth);
+    spec: S,
+    presentation: StructPresentation<SpecData<S>>,
+): SpecData<S> {
+    let resolved = false;
+    const fields = group.fields.map((entry) => {
+        if ("fields" in entry || typeof entry.rawValue === "number" || typeof entry.value !== "string") {
+            return entry;
+        }
+        resolved = true;
+        return { ...entry, rawValue: readFieldNumber(group, entry.name, group.name) };
+    });
+    return structFromDisplay(resolved ? { ...group, fields } : group, spec, presentation);
 }
 
+/**
+ * Rebuild the typed sections with the inverse of the `walkStruct` call that emitted each display group:
+ * the walker reads every spec field back by its display label (presentation label or humanized key) and
+ * re-projects enums/flags, byte-identical to what `walkStruct` wrote. Each section's canonical shape is
+ * `SpecData<spec>` === `toZodSchema(spec)` (see canonical-schemas), so the shapes match exactly.
+ */
 function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnapshot {
     const header = getGroup(parseResult.root, "Header");
     const sections: Record<string, unknown> = {};
 
+    const headerFields = sectionFromDisplay(header, headerSpec, headerPresentation);
     const headerData = {
-        objectType: readFieldNumber(header, "Object Type", "Header"),
-        objectId: readFieldNumber(header, "Object ID", "Header"),
-        textId: readFieldNumber(header, "Text ID", "Header"),
-        frmType: readFieldNumber(header, "FRM Type", "Header"),
-        frmId: readFieldNumber(header, "FRM ID", "Header"),
-        lightRadius: readClampedFieldNumber(header, "Light Radius", "Header", "pro.header.lightRadius", "uint32"),
-        lightIntensity: readClampedFieldNumber(
-            header,
-            "Light Intensity",
-            "Header",
-            "pro.header.lightIntensity",
-            "uint32",
-        ),
-        flags: readFlagArray(header, "Flags", HeaderFlags, 32),
+        ...headerFields,
+        lightRadius: clampToDomain(headerFields.lightRadius, "pro.header.lightRadius"),
+        lightIntensity: clampToDomain(headerFields.lightIntensity, "pro.header.lightIntensity"),
     };
 
     const itemProperties = getOptionalGroup(parseResult.root, "Item Properties");
     if (itemProperties) {
-        sections.itemProperties = {
-            flagsExt: readFlagArray(itemProperties, "Flags Ext", ItemFlagsExt, 24),
-            attackModePrimary: readFieldNumber(itemProperties, "Attack Mode (Primary)", "Item Properties"),
-            attackModeSecondary: readFieldNumber(itemProperties, "Attack Mode (Secondary)", "Item Properties"),
-            scriptType: readFieldNumber(itemProperties, "Script Type", "Item Properties"),
-            scriptId: readFieldNumber(itemProperties, "Script ID", "Item Properties"),
-            subType: readFieldNumber(itemProperties, "Sub Type", "Item Properties"),
-            materialId: readFieldNumber(itemProperties, "Material", "Item Properties"),
-            size: readFieldNumber(itemProperties, "Size", "Item Properties"),
-            weight: readFieldNumber(itemProperties, "Weight", "Item Properties"),
-            cost: readFieldNumber(itemProperties, "Cost", "Item Properties"),
-            inventoryFrmId: readFieldNumber(itemProperties, "Inventory FRM ID", "Item Properties"),
-            soundId: readFieldNumber(itemProperties, "Sound ID", "Item Properties"),
-        };
+        sections.itemProperties = sectionFromDisplay(itemProperties, itemCommonSpec, itemCommonPresentation);
     }
 
+    // Armor stays explicit: its display group nests the resistances and thresholds in two sub-groups that
+    // reuse one set of labels ("Normal", "Laser", ...), which the label-keyed walker cannot tell apart.
     const armorStats = getOptionalGroup(parseResult.root, "Armor Stats");
     if (armorStats) {
         const dr = getGroup(armorStats, "Damage Resistance");
@@ -158,47 +150,21 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const weaponStats = getOptionalGroup(parseResult.root, "Weapon Stats");
     if (weaponStats) {
-        sections.weaponStats = {
-            animCode: readFieldNumber(weaponStats, "Animation Code", "Weapon Stats"),
-            minDamage: readFieldNumber(weaponStats, "Min Damage", "Weapon Stats"),
-            maxDamage: readFieldNumber(weaponStats, "Max Damage", "Weapon Stats"),
-            damageType: readFieldNumber(weaponStats, "Damage Type", "Weapon Stats"),
-            maxRange1: readFieldNumber(weaponStats, "Max Range 1", "Weapon Stats"),
-            maxRange2: readFieldNumber(weaponStats, "Max Range 2", "Weapon Stats"),
-            projectilePid: readFieldNumber(weaponStats, "Projectile PID", "Weapon Stats"),
-            minStrength: readFieldNumber(weaponStats, "Min Strength", "Weapon Stats"),
-            apCost1: readFieldNumber(weaponStats, "AP Cost 1", "Weapon Stats"),
-            apCost2: readFieldNumber(weaponStats, "AP Cost 2", "Weapon Stats"),
-            criticalFail: readFieldNumber(weaponStats, "Critical Fail", "Weapon Stats"),
-            perk: readFieldNumber(weaponStats, "Perk", "Weapon Stats"),
-            rounds: readFieldNumber(weaponStats, "Rounds", "Weapon Stats"),
-            caliber: readFieldNumber(weaponStats, "Caliber", "Weapon Stats"),
-            ammoPid: readFieldNumber(weaponStats, "Ammo PID", "Weapon Stats"),
-            maxAmmo: readFieldNumber(weaponStats, "Max Ammo", "Weapon Stats"),
-            soundId: readFieldNumber(weaponStats, "Sound ID", "Weapon Stats"),
-        };
+        sections.weaponStats = sectionFromDisplay(weaponStats, weaponSpec, weaponPresentation);
     }
 
     const ammoStats = getOptionalGroup(parseResult.root, "Ammo Stats");
     if (ammoStats) {
-        sections.ammoStats = {
-            caliber: readFieldNumber(ammoStats, "Caliber", "Ammo Stats"),
-            quantity: readFieldNumber(ammoStats, "Quantity", "Ammo Stats"),
-            acModifier: readFieldNumber(ammoStats, "AC Modifier", "Ammo Stats"),
-            drModifier: readFieldNumber(ammoStats, "DR Modifier", "Ammo Stats"),
-            damageMultiplier: readFieldNumber(ammoStats, "Damage Multiplier", "Ammo Stats"),
-            damageDivisor: readFieldNumber(ammoStats, "Damage Divisor", "Ammo Stats"),
-        };
+        sections.ammoStats = sectionFromDisplay(ammoStats, ammoSpec, ammoPresentation);
     }
 
     const containerStats = getOptionalGroup(parseResult.root, "Container Stats");
     if (containerStats) {
-        sections.containerStats = {
-            maxSize: readFieldNumber(containerStats, "Max Size", "Container Stats"),
-            openFlags: readFlagArray(containerStats, "Open Flags", ContainerFlags, 32),
-        };
+        sections.containerStats = sectionFromDisplay(containerStats, containerSpec, containerPresentation);
     }
 
+    // Drug stays explicit for the same reason as armor: the effect sub-groups repeat the labels
+    // "Amount 0/1/2" and "Duration", so the label alone does not identify the spec field.
     const drugStats = getOptionalGroup(parseResult.root, "Drug Stats");
     if (drugStats) {
         const affected = getGroup(drugStats, "Affected Stats");
@@ -229,112 +195,74 @@ function rebuildProCanonicalSnapshot(parseResult: ParseResult): ProCanonicalSnap
 
     const miscItemStats = getOptionalGroup(parseResult.root, "Misc Item Stats");
     if (miscItemStats) {
-        sections.miscItemStats = {
-            powerPid: readFieldNumber(miscItemStats, "Power PID", "Misc Item Stats"),
-            powerType: readFieldNumber(miscItemStats, "Power Type", "Misc Item Stats"),
-            charges: readFieldNumber(miscItemStats, "Charges", "Misc Item Stats"),
-        };
+        sections.miscItemStats = sectionFromDisplay(miscItemStats, miscItemSpec, miscItemPresentation);
     }
 
     const keyStats = getOptionalGroup(parseResult.root, "Key Stats");
     if (keyStats) {
-        sections.keyStats = {
-            keyCode: readFieldNumber(keyStats, "Key Code", "Key Stats"),
-        };
+        sections.keyStats = sectionFromDisplay(keyStats, keySpec, keyPresentation);
     }
 
-    // The critter section is one flat "Critter" group emitted by walkStruct(critterSpec, ...). Rebuild
-    // the typed critterStats with the inverse walker, which reads each spec field back by its display
-    // label (critterPresentation label or humanized key) and re-projects enums/flags - byte-identical to
-    // what walkStruct wrote. critterStats === SpecData<critterSpec> === toZodSchema(critterSpec) (see
-    // canonical-schemas), so the shape matches the canonical doc exactly.
     const critterGroup = getOptionalGroup(parseResult.root, "Critter");
     if (critterGroup) {
-        sections.critterStats = structFromDisplay(critterGroup, critterSpec, critterPresentation);
+        sections.critterStats = sectionFromDisplay(critterGroup, critterSpec, critterPresentation);
     }
 
     const sceneryProperties = getOptionalGroup(parseResult.root, "Scenery Properties");
     if (sceneryProperties) {
-        sections.sceneryProperties = {
-            wallLightFlags: readFlagArray(sceneryProperties, "Wall Light Flags", WallLightFlags, 16),
-            actionFlags: readFlagArray(sceneryProperties, "Action Flags", ActionFlags, 16),
-            scriptType: readFieldNumber(sceneryProperties, "Script Type", "Scenery Properties"),
-            scriptId: readFieldNumber(sceneryProperties, "Script ID", "Scenery Properties"),
-            subType: readFieldNumber(sceneryProperties, "Sub Type", "Scenery Properties"),
-            materialId: readFieldNumber(sceneryProperties, "Material", "Scenery Properties"),
-            soundId: readFieldNumber(sceneryProperties, "Sound ID", "Scenery Properties"),
-        };
+        sections.sceneryProperties = sectionFromDisplay(
+            sceneryProperties,
+            sceneryCommonSpec,
+            sceneryCommonPresentation,
+        );
     }
 
     const doorProperties = getOptionalGroup(parseResult.root, "Door Properties");
     if (doorProperties) {
+        const doorFields = sectionFromDisplay(doorProperties, doorSpec, doorPresentation);
         sections.doorProperties = {
-            walkThruFlag: readClampedFieldNumber(
-                doorProperties,
-                "Walk Through",
-                "Door Properties",
-                "pro.doorProperties.walkThruFlag",
-                "uint32",
-            ),
-            unknown: readFieldNumber(doorProperties, "Unknown", "Door Properties"),
+            ...doorFields,
+            walkThruFlag: clampToDomain(doorFields.walkThruFlag, "pro.doorProperties.walkThruFlag"),
         };
     }
 
     const stairsProperties = getOptionalGroup(parseResult.root, "Stairs Properties");
     if (stairsProperties) {
-        sections.stairsProperties = {
-            destTile: readFieldNumber(stairsProperties, "Dest Tile", "Stairs Properties"),
-            destElevation: readFieldNumber(stairsProperties, "Dest Elevation", "Stairs Properties"),
-            destMap: readFieldNumber(stairsProperties, "Dest Map", "Stairs Properties"),
-        };
+        sections.stairsProperties = sectionFromDisplay(stairsProperties, stairsSpec, stairsPresentation);
     }
 
     const elevatorProperties = getOptionalGroup(parseResult.root, "Elevator Properties");
     if (elevatorProperties) {
-        sections.elevatorProperties = {
-            elevatorType: readFieldNumber(elevatorProperties, "Elevator Type", "Elevator Properties"),
-            elevatorLevel: readFieldNumber(elevatorProperties, "Elevator Level", "Elevator Properties"),
-        };
+        sections.elevatorProperties = sectionFromDisplay(elevatorProperties, elevatorSpec, elevatorPresentation);
     }
 
     const ladderProperties = getOptionalGroup(parseResult.root, "Ladder Properties");
     if (ladderProperties) {
-        sections.ladderProperties = {
-            destTile: readFieldNumber(ladderProperties, "Dest Tile", "Ladder Properties"),
-            destElevation: readFieldNumber(ladderProperties, "Dest Elevation", "Ladder Properties"),
-        };
+        sections.ladderProperties = sectionFromDisplay(ladderProperties, ladderSpec, ladderPresentation);
     }
 
     const genericProperties = getOptionalGroup(parseResult.root, "Generic Properties");
     if (genericProperties) {
-        sections.genericProperties = {
-            unknown: readFieldNumber(genericProperties, "Unknown", "Generic Properties"),
-        };
+        sections.genericProperties = sectionFromDisplay(
+            genericProperties,
+            genericScenerySpec,
+            genericSceneryPresentation,
+        );
     }
 
     const wallProperties = getOptionalGroup(parseResult.root, "Wall Properties");
     if (wallProperties) {
-        sections.wallProperties = {
-            wallLightFlags: readFlagArray(wallProperties, "Wall Light Flags", WallLightFlags, 16),
-            actionFlags: readFlagArray(wallProperties, "Action Flags", ActionFlags, 16),
-            scriptType: readFieldNumber(wallProperties, "Script Type", "Wall Properties"),
-            scriptId: readFieldNumber(wallProperties, "Script ID", "Wall Properties"),
-            materialId: readFieldNumber(wallProperties, "Material", "Wall Properties"),
-        };
+        sections.wallProperties = sectionFromDisplay(wallProperties, wallSpec, wallPresentation);
     }
 
     const tileProperties = getOptionalGroup(parseResult.root, "Tile Properties");
     if (tileProperties) {
-        sections.tileProperties = {
-            materialId: readFieldNumber(tileProperties, "Material", "Tile Properties"),
-        };
+        sections.tileProperties = sectionFromDisplay(tileProperties, tileSpec, tilePresentation);
     }
 
     const miscProperties = getOptionalGroup(parseResult.root, "Misc Properties");
     if (miscProperties) {
-        sections.miscProperties = {
-            unknown: readFieldNumber(miscProperties, "Unknown", "Misc Properties"),
-        };
+        sections.miscProperties = sectionFromDisplay(miscProperties, miscSpec, miscPresentation);
     }
 
     return parseWithSchemaValidation(

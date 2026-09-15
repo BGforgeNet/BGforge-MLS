@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { parseScalarFieldValue } from "../src/snapshot-common";
 import type { ParsedField } from "../src/types";
 

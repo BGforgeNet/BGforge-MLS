@@ -75,17 +75,9 @@ export function composeFlags(current: number, mask: number, set: boolean): numbe
     return next >>> 0;
 }
 
-// Every enum renders through the searchable Combobox primitive, which relies on these two helpers: all
-// dropdowns get substring search and a chevron. An OPEN enum (`enumOpen`, the mod-extensible / advisory
-// tables) additionally accepts a custom numeric value via `parseCustomValue`; a closed enum is pick-only.
-
-/** Case-insensitive substring filter over option labels, for the searchable combobox. Empty or
- * whitespace-only query returns all options unchanged. */
-export function filterOptions<T extends { label: string }>(options: T[], query: string): T[] {
-    const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((o) => o.label.toLowerCase().includes(q));
-}
+// Every enum renders through the searchable Combobox primitive, which supplies the substring search itself
+// (webview-ui/filter-options.ts). An OPEN enum (`enumOpen`, the mod-extensible / advisory tables)
+// additionally accepts a custom numeric value via `parseCustomValue`; a closed enum is pick-only.
 
 /** Parses a query string as a decimal integer, returning the number or undefined.
  * Accepts only plain decimal integers (optional leading sign): "42", "-5", "+5", "0". Rejects hex
@@ -207,7 +199,7 @@ function resourceWidth(row: Row): DropdownWidth {
 
 // ---- the single width-class classifier every renderer applies ----
 /**
- * The display-width CSS class for a field's value control: dropdowns use the `dd-{1..5}` scale (sized to
+ * The display-width CSS class for a field's value control: dropdowns use the `dd-{1..6}` scale (sized to
  * their own longest option), text inputs the `tier-{s,m,ml,l}` scale, and flag grids (full-width) get none.
  *
  * This is the ONE place that maps a row to its width class, applied by BOTH the field layout (Field.svelte)
@@ -231,6 +223,15 @@ export function controlWidthClass(row: Row): string {
 export function rangeTooltip(row: Row): string | undefined {
     if (row.min === undefined || row.max === undefined) return undefined;
     return `${row.min} to ${row.max}`;
+}
+
+// ---- why a control is disabled ----
+/** Tooltip for a row inside an editing-locked (partially undecoded) subtree, so a disabled control is not just
+ *  mysteriously greyed. Undefined otherwise: a plain read-only row (padding, note) needs no explanation. */
+export function readOnlyTitle(row: Row): string | undefined {
+    return row.editingLocked === true
+        ? "Read-only: this field is in a region that could not be fully decoded and cannot be edited."
+        : undefined;
 }
 
 // ---- which "open this resource" affordance a row gets ----

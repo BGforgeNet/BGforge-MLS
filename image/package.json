@@ -42,6 +42,10 @@
         "./ie-direction": {
             "types": "./out/model/ie-direction.d.ts",
             "import": "./out/model/ie-direction.js"
+        },
+        "./compose-parts": {
+            "types": "./out/model/compose-parts.d.ts",
+            "import": "./out/model/compose-parts.js"
         }
     },
     "scripts": {

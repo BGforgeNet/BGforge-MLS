@@ -20,23 +20,22 @@ export default defineConfig({
         // every test in the file passes.
         hookTimeout: 60000,
         // See binary-editor/vitest.config.ts for the rationale and the constraint it puts on new tests:
-        // reusing the worker's module registry across files, measured 11.5s -> 9.9s here.
+        // reusing the worker's module registry across files, which takes about a seventh off this suite.
         isolate: false,
         // Floor reflects the unit-test slice only. The transpilers' larger
         // execution surface is exercised by api.test.ts, transpile-cli.test.ts,
-        // and the test/td + test/tbaf fixture-driven integration suites in
-        // scripts/test.sh - not by this vitest project. Threshold values are
-        // ratcheted to just under the unit-suite actuals (74.3/79.4/59.0/72.8
-        // at last ratchet); keep raising them as standalone unit tests are
-        // added. See docs/architecture.md "Coverage thresholds" for the full
-        // layering.
+        // and the server/test/td + server/test/tbaf fixture-driven integration
+        // suites in scripts/test.sh - not by this vitest project. The values are
+        // round floors a point or two under the unit-suite actuals, and ratchet
+        // only on deliberate coverage work. See docs/development.md "Coverage
+        // thresholds" for how floors are set.
         coverage: coverageConfig({
             reportsDirectory: "coverage/transpile",
             // Scoped to this package's own sources. Without it v8 measures whatever the tests happened to
             // LOAD, so a cross-workspace import drags another package in at whatever coverage it gets
             // here - `compilers/ssl/src` arrived that way once the TSSL front end started targeting the
             // IR, ~6000 lines at 1-2%, and those files already answer to their own far stricter gate.
-            include: ["common/**/*.ts", "src/**/*.ts", "tbaf/src/**/*.ts", "td/src/**/*.ts", "tssl/src/**/*.ts"],
+            include: ["common/**/*.ts", "src/**/*.ts", "tbaf/src/**/*.ts", "td/src/**/*.ts"],
             // The include above scopes what is INSIDE this package; it cannot reach a file outside it,
             // whose path relativises to `../..` and slips past every pattern. Cross-workspace imports
             // therefore need excluding by name - both these packages gate their own coverage, and far

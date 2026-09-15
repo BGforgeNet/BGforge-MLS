@@ -436,7 +436,7 @@ export function formatFunctionCall(node: SyntaxNode, ctx: FormatContext, depth: 
     }
 
     // Report structural issues (launch macros don't have END, only launch functions do)
-    const isMacro = node.type === "action_launch_macro" || node.type === "patch_launch_macro";
+    const isMacro = node.type === SyntaxType.ActionLaunchMacro || node.type === SyntaxType.PatchLaunchMacro;
     if (!hasEnd && !isMacro) {
         throwFormatError(
             `Function call '${callKeyword}' missing END`,

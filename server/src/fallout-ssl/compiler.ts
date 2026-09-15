@@ -330,7 +330,8 @@ export async function compile(
     conlog(`compiling ${baseName}...`);
 
     // Errors from the compiler (e.g. WASM crash) propagate to callers.
-    // Fire-and-forget call sites (server.ts onDidSave/onDidChangeContent) use
+    // Fire-and-forget call sites (handlers/document-lifecycle.ts on save and change,
+    // handlers/execute-command.ts) use
     // `void compile(...).catch(...)` to log and swallow rejections. Awaited
     // call sites (e.g. TSSL transpile chain) catch and report them explicitly.
     // The lifecycle guarantees cleanup in both cases.

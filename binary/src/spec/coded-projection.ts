@@ -161,15 +161,6 @@ export function compileFlagTable(table: Readonly<Record<number, string>>): Compi
 export type FlagArray = string[];
 
 /**
- * Build a default flag-array projection (empty array). Used by
- * structural-edit transitions and as a default in test fixtures or
- * construction APIs.
- */
-export function emptyFlagArray(_table: Readonly<Record<number, string>>): FlagArray {
-    return [];
-}
-
-/**
  * Project an integer flag word to a sorted FlagArray. Named set bits
  * contribute their canonical key (alphabetical); unnamed set bits within
  * the codec's bit width contribute `bit<N>` entries (numeric).

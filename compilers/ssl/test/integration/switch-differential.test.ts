@@ -191,7 +191,7 @@ describe.skipIf(!ready)("command-line switches against the reference", () => {
         const referenceDefault = fs.readFileSync(path.join(workDir, "in.int"));
 
         fs.rmSync(path.join(workDir, "in.int"), { force: true });
-        expect(() => run(cli, ["-l", "in.ssl", "-O0"])).toThrow();
+        expect(() => run(cli, ["-l", "in.ssl", "-O0"])).toThrow("Error: -O0 not found");
         expect(fs.readFileSync(path.join(workDir, "in.int")).equals(referenceDefault)).toBe(true);
         expect(referenceDefault.equals(compileBoth(LEVELS_SSL, ["-O0"]).ours)).toBe(false);
     });

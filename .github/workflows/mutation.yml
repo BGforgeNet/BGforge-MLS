@@ -2,6 +2,42 @@ name: "Mutation Testing"
 
 # Runs weekly so the stryker.conf.json thresholds are exercised on a schedule
 # without slowing down the PR/push build path. Also available on demand.
+#
+# What it mutates, and why those files: the write path that turns an edited record back into bytes over a
+# user's own game files. A surviving mutant there means a test that would not notice a corrupted save, which
+# is this project's worst failure - the inputs are irreplaceable and the editor writes in place. So the scope
+# is the shared derived-field engine every writer syncs counts and offsets through (`spec/types.ts`), the
+# ability/effects writer ITM, SPL and EFF share, and the two records with their own writers and the most
+# structure to get wrong (CRE, MAP).
+#
+# Line and branch coverage floors already cover these files; mutation score is what distinguishes a test that
+# executes the write path from one that would fail if the bytes came out wrong. The parsers and the SSL
+# compiler are deliberately NOT here: the compiler is checked by a corpus differential against the reference
+# compiler, which is a stronger oracle than mutation testing, and adding it would multiply the weekly runtime
+# for a weaker signal.
+#
+# This scope's first full run scored 57.10 overall, with the two record writers as the gap: cre/canonical-writer
+# 37.33 (21 mutants no test reached) and map/canonical-writer 57.86. Both were closed rather than pinned at the
+# floor - the CRE suite had driven the writer with one record per section, so every stride multiplied by zero.
+# The scope now sits at 85.54: CRE 100.00, MAP 92.59, ability-effects-writer 80.00, spec/types 64.37. The
+# thresholds are set just under that, and ratchet up as the write-path tests improve.
+#
+# Three settings here are measured choices, not defaults:
+#
+# `ignoreStatic` roughly halves the run for +0.25 on the score. Despite the name it drops almost nothing here:
+# 133 of the 501 mutants are static, but only 2 end up ignored and the killed count is identical either way.
+# Without it Stryker warns that those 133 account for about half the time spent running tests.
+#
+# `incremental` costs nothing on a cold run and makes an unchanged re-run roughly an order of magnitude
+# faster, which is what makes the local iteration loop usable. Its state file lives under the gitignored tmp/,
+# so a CI checkout has none and this job always measures cold.
+#
+# `checkers: ["typescript"]` is load-bearing twice over. It keeps the 167 mutants that fail to compile
+# classified as CompileError rather than counted as survivors, and it stops them from ever executing - these
+# files are buffer-size arithmetic, so a mutated size calculation allocates whatever the mutation says, and
+# with the checker off the run exhausts memory before finishing. `concurrency` stays at 2 for the same reason:
+# Stryker spends it on one checker plus one test runner, and raising it adds whole test-runner processes.
+# A higher value may suit a runner with more headroom, but that is untested.
 on:
   schedule:
     - cron: "0 6 * * 1" # Every Monday at 06:00 UTC
@@ -28,7 +64,7 @@ jobs:
           persist-credentials: false
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           run_install: false
 

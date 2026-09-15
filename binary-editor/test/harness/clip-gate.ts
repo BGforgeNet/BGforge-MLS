@@ -6,11 +6,17 @@
  * the format-agnostic net for that whole class: it does not care WHY a control is too narrow (a missing width
  * class, a too-small dd cap, a CSS regression), only that the rendered result clips.
  *
- * It runs two checks against the CURRENTLY rendered view (call it once per tab / view):
+ * It runs these checks against the CURRENTLY rendered view (call it once per tab / view):
  *
  *  - clip: a visible value `<input>` (text/number input or the combobox's value input) whose `scrollWidth`
  *    exceeds its `clientWidth` is showing horizontally-clipped text. Catches a control that clips its CURRENT
  *    value, whatever the cause.
+ *  - shrunk: a sized control (`.field-control` carrying a `dd-*` or `tier-*` class) rendered narrower than that
+ *    class's width. The width comes from the field's longest possible value, so a squeezed control clips some
+ *    value even while the one currently shown happens to fit - the clip check alone misses it.
+ *  - overflow: the page is wider than the viewport, so the editor scrolls sideways - a block holding a minimum
+ *    width the narrow editor cannot give it (a non-wrapping row, a side-by-side split). Named by the panel that
+ *    sticks out, since the offending block is somewhere inside it.
  *  - unsized: a rendered dropdown (`.bb-combobox`) with no `dd-{1..6}` width class on an ancestor box. Every
  *    dropdown is sized to its OWN longest option via that class (state/controls.ts `dropdownWidth`, applied in
  *    Field.svelte); a dropdown rendered through a path that never applies it (a grid/matrix cell via
@@ -28,13 +34,15 @@ import type { Page } from "playwright";
 export interface ClipViolation {
     /** Which view this was found in, e.g. "CRE > Inventory". */
     context: string;
-    /** "clip" = current value overflows its box; "unsized" = dropdown with no dd-* width class. */
-    kind: "clip" | "unsized";
+    /** "clip" = current value overflows its box; "shrunk" = narrower than its width class; "overflow" = page wider
+     *  than the viewport; "unsized" = dropdown with no dd-* width class. */
+    kind: "clip" | "shrunk" | "overflow" | "unsized";
     /** Best-effort field label (the nearest `.nm` / `.field-label` text), for locating the control. */
     label: string;
     /** The text the control is displaying (the clipped value). */
     value: string;
-    /** Rendered content width vs box width in px (clip only); 0/0 for unsized. */
+    /** Rendered content width vs box width in px (clip; declared vs rendered for shrunk; page scroll vs viewport
+     *  width for overflow); 0/0 for unsized. */
     scrollWidth: number;
     clientWidth: number;
 }
@@ -52,7 +60,7 @@ export async function collectClipViolations(page: Page, context: string): Promis
     // anonymous inline arrows (array callbacks and IIFEs), never `const fn = () => ...` / `function`.
     const raw = await page.evaluate(() => {
         const out: {
-            kind: "clip" | "unsized";
+            kind: "clip" | "shrunk" | "overflow" | "unsized";
             label: string;
             value: string;
             scrollWidth: number;
@@ -89,6 +97,46 @@ export async function collectClipViolations(page: Page, context: string): Promis
                     clientWidth: inp.clientWidth,
                 });
             }
+        }
+
+        // --- shrunk: a sized control rendered narrower than its width class ---
+        for (const fc of Array.from(document.querySelectorAll<HTMLElement>(".layout-root .field-control"))) {
+            if (!/\b(dd-[1-6]|tier-(s|m|ml|l))\b/.test(fc.className)) continue;
+            const ctrl = fc.querySelector<HTMLElement>(":scope > input, .bb-combobox, select");
+            if (!ctrl || ctrl.offsetParent === null) continue;
+            const rendered = ctrl.getBoundingClientRect().width;
+            if (rendered <= 0) continue;
+            // The class sets --val-ch in ch; resolve it to px with a throwaway box in the same font context.
+            const probe = document.createElement("span");
+            probe.style.cssText = "position:absolute;visibility:hidden;display:block;width:var(--val-ch)";
+            fc.append(probe);
+            const declared = probe.getBoundingClientRect().width;
+            probe.remove();
+            if (declared > 0 && rendered + 1 < declared) {
+                out.push({
+                    kind: "shrunk",
+                    label: fc.parentElement?.querySelector(".label, .nm")?.textContent?.trim() ?? "",
+                    value: (ctrl as HTMLInputElement).value ?? ctrl.querySelector("input")?.value ?? "",
+                    scrollWidth: Math.round(declared),
+                    clientWidth: Math.round(rendered),
+                });
+            }
+        }
+
+        // --- overflow: the page scrolls sideways ---
+        const doc = document.documentElement;
+        if (doc.scrollWidth > doc.clientWidth + 1) {
+            const vw = doc.clientWidth;
+            const panel = Array.from(document.querySelectorAll<HTMLElement>(".layout-root .panel")).find(
+                (p) => p.getBoundingClientRect().right > vw + 1,
+            );
+            out.push({
+                kind: "overflow",
+                label: panel?.querySelector("h3")?.textContent?.trim() ?? panel?.className ?? "(outside any panel)",
+                value: "",
+                scrollWidth: doc.scrollWidth,
+                clientWidth: vw,
+            });
         }
 
         // --- unsized: a rendered dropdown with no dd-* width class on any ancestor ---
@@ -131,19 +179,26 @@ export function reportClipViolations(violations: ClipViolation[], label: string)
     const unique = violations.filter((v) => {
         // Collapse the " (detail)" re-pass: a control that persists when a list row is selected (e.g. an
         // item-slots grid sharing the tab with a list) is the SAME defect in both passes, not two.
-        const ctx = v.context.replace(/ \(detail\)$/, "");
+        const ctx = v.context.replace(" (detail)", "");
         const key = `${ctx} ${v.kind} ${v.label} ${v.value}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
     });
     if (unique.length === 0) {
-        console.log("CLIP: no clipped or unsized value controls");
+        console.log("CLIP: no clipped or unsized value controls, no horizontal page overflow");
         return;
     }
     console.log(`\n${unique.length} clipped / unsized value control(s) detected:`);
     for (const v of unique) {
-        const size = v.kind === "clip" ? ` (scroll ${v.scrollWidth} > client ${v.clientWidth})` : "";
+        const size =
+            v.kind === "clip"
+                ? ` (scroll ${v.scrollWidth} > client ${v.clientWidth})`
+                : v.kind === "shrunk"
+                  ? ` (declared ${v.scrollWidth}px, rendered ${v.clientWidth}px)`
+                  : v.kind === "overflow"
+                    ? ` (page ${v.scrollWidth}px in a ${v.clientWidth}px viewport)`
+                    : "";
         console.log(`  [${v.kind}] ${v.context}  "${v.label}" = "${v.value}"${size}`);
     }
     console.log(`\n${label} FAILED`);

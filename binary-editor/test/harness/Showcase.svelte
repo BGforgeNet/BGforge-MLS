@@ -2,9 +2,9 @@
     // Showcase for primitives spike: renders Combobox, Checkbox, Menu, and Tabs wrappers so the Playwright
     // driver can exercise them under the real strict CSP and assert no CSP violation occurs. (Every enum is a
     // Combobox now - the plain Select primitive was retired, so it is no longer showcased.)
-    import Combobox from "../../../client/src/binary-editor/webview/components/primitives/Combobox.svelte";
-    import Checkbox from "../../../client/src/binary-editor/webview/components/primitives/Checkbox.svelte";
-    import Menu from "../../../client/src/binary-editor/webview/components/primitives/Menu.svelte";
+    import Combobox from "../../../client/src/webview-ui/Combobox.svelte";
+    import Checkbox from "../../../client/src/webview-ui/Checkbox.svelte";
+    import Menu from "../../../client/src/webview-ui/Menu.svelte";
     import Tabs from "../../../client/src/binary-editor/webview/components/primitives/Tabs.svelte";
     import RowActions from "../../../client/src/binary-editor/webview/components/RowActions.svelte";
     import { Bridge } from "../../../client/src/binary-editor/webview/state/bridge";

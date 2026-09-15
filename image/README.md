@@ -13,8 +13,8 @@ Internal workspace package - not currently published to npm.
 
 - `loadImage(bytes, name)` - sniffs BAM/BAMC by signature, FRM by filename. Refuses BAM V2, whose
   frames it cannot fetch; use the two-phase read below.
-- `parseFrm` / `serializeFrm`, `combineFrmDirections` - Fallout FRM, including `.fr0`-`.fr5`
-  split critter sets.
+- `parseFrm` / `serializeFrm`, `combineFrmDirections` / `splitFrmDirections` - Fallout FRM, including
+  reading and rewriting `.fr0`-`.fr5` split critter sets.
 - `parseBamV1` / `serializeBamV1`, `isBamc` / `decodeBamc` / `encodeBamc` - Infinity Engine
   BAM v1 and BAMC.
 - `isBamV2`, `readBamV2Structure` -> resolve pages -> `decodeBamV2(structure, resolver)` /
@@ -34,6 +34,8 @@ Internal workspace package - not currently published to npm.
   browser bundles (used by the editor webview).
 - `@bgforge/image/ie-direction` - Buffer/zlib-free subpath with the IE direction-block
   analysis (used by the editor webview's compass layout).
+- `@bgforge/image/compose-parts` - Buffer/zlib-free subpath with multi-part composition and
+  the placeholder-frame test (used by the editor webview and the animation package).
 
 ## Development
 

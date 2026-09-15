@@ -25,7 +25,6 @@ const SPL_ABILITIES_PREFIX = "spl.abilities[]";
 export const splLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "spl",
-    maxContentWidthPx: 1180,
     labels: {
         ...featureBlockBodyLabels(SPL_EFFECTS_PREFIX),
         ...splAbilityBodyLabels(SPL_ABILITIES_PREFIX),

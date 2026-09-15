@@ -23,7 +23,9 @@ Download `bgforge-mls-geany-<version>.zip` from the [latest GitHub release](http
 - **Linux/macOS**: `~/.config/geany/filedefs/`
 - **Windows**: `%APPDATA%\geany\filedefs\`
 
-Restart Geany after installing. The definitions provide keyword, function, and constant highlighting plus comment and string coloring via the C lexer. The zip also includes a highlight-only definition (no LSP provider) for WeiDU TRA (`.tra`, C lexer for comments).
+Restart Geany after installing. The definitions provide keyword, function, and constant highlighting plus comment
+and string coloring via the C lexer. The zip also includes definitions for WeiDU TRA (`.tra`, C lexer for comments)
+and Fallout Worldmap (`worldmap.txt`).
 
 Note: `.h` files default to C++ in Geany. For Fallout header files, select the filetype manually via `Document > Set Filetype`.
 
@@ -55,17 +57,45 @@ lang_id_mappings=weidu-tp2;*.tp2;weidu-tp2;*.tpa;weidu-tp2;*.tph;weidu-tp2;*.tpp
 [fallout-worldmap-txt]
 cmd=bgforge-mls-server --stdio
 lang_id_mappings=fallout-worldmap-txt;worldmap.txt
+
+[weidu-tra]
+cmd=bgforge-mls-server --stdio
+lang_id_mappings=weidu-tra;*.tra
 ```
+
+For TRA the server provides formatting, outline, folding and parse-error diagnostics. It also serves MSG, 2DA,
+`scripts.lst`, `weidu.log`, SLB and Sword Coast Stratagems SSL, but the zip defines no Geany filetypes for them, and
+the LSP Client plugin configures servers per filetype.
 
 Note: If `bgforge-mls-server` is not on your system PATH, use the full path to the executable.
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Geany they load through
+`typescript-language-server`, which the LSP Client plugin's default configuration uses for TypeScript and which
+passes plugins from its initialization options to tsserver.
+
+1. Install it: `pnpm add -g typescript-language-server,typescript@6`
+2. In `Tools > Configuration Files > filetype_extensions.conf`, add the extensions to the TypeScript line:
+   `TypeScript=*.ts;*.cts;*.mts;*.tsx;*.tssl;*.td;`
+3. In `Tools > LSP Client > User Configuration`, add to the `[TypeScript]` section, replacing `<mls-node-modules>`
+   with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```ini
+[TypeScript]
+cmd=typescript-language-server --stdio
+initialization_options={"plugins": [{"name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>"}, {"name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>"}]}
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 
-The LSP Client plugin supports `initialization_options` for passing settings to the server. Add to each language section:
+The server does not read LSP initialization options; it requests its settings with `workspace/configuration`. The
+LSP Client plugin answers that request from the JSON in `initialization_options`, looking up the requested `bgforge`
+section in it, so settings placed there under a `bgforge` key reach the server. Add to each language section:
 
 ```ini
 [fallout-ssl]
@@ -87,6 +117,11 @@ initialization_options={"bgforge": {"validate": "saveAndType", "weidu": {"path":
 cmd=bgforge-mls-server --stdio
 lang_id_mappings=weidu-tp2;*.tp2;weidu-tp2;*.tpa;weidu-tp2;*.tph;weidu-tp2;*.tpp
 initialization_options={"bgforge": {"validate": "saveAndType", "weidu": {"path": "weidu", "gamePath": ""}}}
+
+[weidu-tra]
+cmd=bgforge-mls-server --stdio
+lang_id_mappings=weidu-tra;*.tra
+initialization_options={"bgforge": {"diagnostics": true}}
 ```
 
 Alternatively, put the JSON in a file and reference it:

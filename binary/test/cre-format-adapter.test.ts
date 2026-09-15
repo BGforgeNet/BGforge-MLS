@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { formatAdapterRegistry } from "../src/format-adapter";
 import { creParser } from "../src/cre";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "../src/cre/canonical-reader";

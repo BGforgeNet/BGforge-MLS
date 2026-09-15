@@ -68,7 +68,9 @@ describe.skipIf(!existsSync(BGT_ROOT))("translation integration: consumer index 
 describe.skipIf(!existsSync(CP1252_FIXTURE))("translation integration: real windows-1252 fixture", () => {
     it("resolves the accented glyphs from a real windows-1252 .tra file", async () => {
         const raw = readFileSync(CP1252_FIXTURE);
-        expect(() => new TextDecoder("utf-8", { fatal: true }).decode(raw)).toThrow();
+        expect(() => new TextDecoder("utf-8", { fatal: true }).decode(raw)).toThrow(
+            "The encoded data was not valid for encoding utf-8",
+        );
 
         const dir = mkdtempSync(join(tmpdir(), "mls-encoding-it-"));
         try {
@@ -117,7 +119,9 @@ describe.skipIf(!existsSync(CP1252_FIXTURE))("translation integration: real wind
 
             const updatedBytes = readFileSync(traPath);
             // File is still not valid UTF-8: it round-tripped as windows-1252, not transcoded.
-            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(updatedBytes)).toThrow();
+            expect(() => new TextDecoder("utf-8", { fatal: true }).decode(updatedBytes)).toThrow(
+                "The encoded data was not valid for encoding utf-8",
+            );
 
             // Entry @1's line (untouched) carries the original accented bytes unchanged. Pure
             // byte-level search (an ASCII anchor + the next newline byte) - no re-decoding, so the

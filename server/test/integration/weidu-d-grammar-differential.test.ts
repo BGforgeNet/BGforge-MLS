@@ -20,7 +20,12 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import os from "os";
 import path from "path";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import { exitStatus, resolveWeidu, WEIDU_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
+import {
+    exitStatus,
+    resolveWeidu,
+    WEIDU_HOOK_TIMEOUT_MS,
+    WEIDU_TIMEOUT_MS,
+} from "../../../scripts/utils/src/weidu-binary.ts";
 import { initParser, parseWithCache } from "../../../shared/parsers/weidu-d";
 
 /**
@@ -209,7 +214,7 @@ beforeAll(async () => {
     weidu = resolveWeidu();
     tmpDir = mkdtempSync(path.join(os.tmpdir(), "weidu-d-differential-"));
     await initParser();
-});
+}, WEIDU_HOOK_TIMEOUT_MS);
 
 afterAll(() => {
     if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });

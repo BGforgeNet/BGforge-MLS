@@ -11,7 +11,7 @@
 
 import type { Node } from "web-tree-sitter";
 import type { Position } from "vscode-languageserver/node";
-import type { NameCase } from "../../../shared/name-case";
+import type { NameCase } from "../core/name-case";
 import { findIdentifierNodeAtPosition } from "./utils";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
 import {

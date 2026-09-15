@@ -368,7 +368,7 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
                 const i = nextChunk++;
                 const listFile = path.join(tmpDir, `chunk-${i}.txt`);
                 fs.writeFileSync(listFile, chunks[i]!.join("\n") + "\n");
-                // eslint-disable-next-line no-await-in-loop
+                // oxlint-disable-next-line no-await-in-loop
                 results[i] = await runChild([...baseArgs, "--files-from", listFile], path.join(tmpDir, `stdout-${i}`));
             }
         };
@@ -384,7 +384,7 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
             // Manual pump instead of stream pipeline({ end: false }): pipeline
             // leaves its listeners on the shared process.stdout, and one call
             // per chunk trips the MaxListenersExceeded warning.
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             for await (const data of fs.createReadStream(spool)) {
                 if (!process.stdout.write(data)) {
                     await new Promise<void>((resolve) => {
@@ -401,12 +401,31 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
             }
         }
 
-        if (failed) process.exit(1);
-        if (args.mode === "check" && changed > 0) process.exit(1);
+        // Set the code and return rather than process.exit(): exit() runs no pending `finally`, so exiting
+        // from inside this try left the run's temp dir (chunk lists plus spooled stdout) behind on every
+        // failure, and on every check-mode run that found changes - the normal outcome for the published
+        // Actions' `check` input. The caller returns straight after this, so the status is unchanged.
+        if (failed || (args.mode === "check" && changed > 0)) {
+            process.exitCode = 1;
+            return;
+        }
         if (!args.quiet) console.log(`\nSummary: ${changed} changed, ${unchanged} unchanged`);
     } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
     }
+}
+
+/**
+ * Report a fatal error from a CLI's top-level `.catch` and mark the run failed.
+ *
+ * The caught value is `unknown`, so `.message` is not there to read: a non-Error throw - a string, a
+ * rejected value from a dependency - printed `Error: undefined`, which is what every one of these
+ * handlers did before they shared this. Sets `exitCode` instead of calling `process.exit` so buffered
+ * stderr still flushes; nothing follows the catch in any of the callers.
+ */
+export function reportFatal(error: unknown): void {
+    console.error("Error:", error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
 }
 
 export async function runCli(options: RunOptions): Promise<void> {
@@ -426,7 +445,7 @@ export async function runCli(options: RunOptions): Promise<void> {
         let changed = 0,
             unchanged = 0;
         for (const file of files) {
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             const result = await processFile(file, args.mode);
             if (result === "error") process.exit(1);
             if (result === "changed") {
@@ -481,7 +500,7 @@ export async function runCli(options: RunOptions): Promise<void> {
         for (const file of files) {
             // Sequential processing - CLI mode needs deterministic output and
             // early exit on first mismatch in check mode.
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             const result = await processFile(file, args.mode);
             if (result === "error") process.exit(1);
             if (result === "changed") {

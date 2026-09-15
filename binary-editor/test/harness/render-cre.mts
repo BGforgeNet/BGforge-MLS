@@ -128,7 +128,7 @@ await page.waitForSelector(".layout-root .panel h3", { timeout: 5000 });
 await page.screenshot({ path: shotPath("shot-cre.png"), fullPage: true });
 
 // ---- Dropdown width guard (binary-editor UI guidelines: dropdowns are sized to their OWN longest option on a
-// dedicated dd-{1..5} ch scale, decoupled from the text-input tiers - so a dropdown sharing a column with a
+// dedicated dd-{1..6} ch scale, decoupled from the text-input tiers - so a dropdown sharing a column with a
 // hex/resref input is no longer dragged to that input's width). Asserted as the RELATIONSHIP between two
 // dropdowns in the same Identity box rather than a tier constant: Race's identifiers are short and Alignment's
 // are long, so a per-option width puts Race strictly narrower. Pinning a specific tier instead tied the guard
@@ -477,14 +477,12 @@ check(
 // Revert the live edit so the byte-round-trip regression later in this file sees the original fixture bytes.
 await doUndo();
 
-// Constrained-width pass: the CRE layout caps at 1180px (maxContentWidthPx) regardless of a WIDER viewport,
-// so the comfortable pass above never falls below that cap. A live code-server session at a 1920px BROWSER
+// Constrained-width pass: the CRE layout caps its content width (the renderer's shared default) regardless of a
+// WIDER viewport, so the comfortable pass above never squeezes it. A live code-server session at a 1920px BROWSER
 // window still measured real clipping, because the webview's actual content area (behind VS Code's own
-// sidebar/tabs chrome) was narrower than this harness's bare full-viewport render - narrow the viewport below
-// the cap to reproduce that squeeze directly. 1000px (panel ~996px) was measured (via a throwaway probe
-// against the pre-fix build) as reliably past the threshold where the pre-fix code clipped; 1150px (panel
-// ~1146px) was NOT - the panel's own maxContentWidthPx cap (1180px) leaves only a little slack before real
-// content genuinely exceeds it, so the constrained width must clear that margin, not just dip below the cap.
+// sidebar/tabs chrome) was narrower than this harness's bare full-viewport render - narrow the viewport well below
+// the cap to reproduce that squeeze directly. 1000px (panel ~996px) was measured (via a throwaway probe against
+// the pre-fix build) as reliably past the threshold where the pre-fix code clipped, with the cap then at 1180px.
 await page.setViewportSize({ width: 1000, height: 900 });
 const clipConstrained = await measureItemSlotClipping();
 check(

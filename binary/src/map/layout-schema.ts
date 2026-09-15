@@ -54,7 +54,6 @@ const listRow = (
 export const mapLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "map",
-    maxContentWidthPx: 1180,
     variants: {
         map: {
             tabs: [

@@ -63,7 +63,8 @@ export function getWordBoundaryRegex(name: string): RegExp {
 export function substituteVars(text: string, vars: VarsContext): string {
     let result = text;
     vars.forEach((value, key) => {
-        result = result.replace(getWordBoundaryRegex(key), value);
+        // Function replacer: a value carrying `$&` or `$1` is inserted literally, not read as a template.
+        result = result.replace(getWordBoundaryRegex(key), () => value);
     });
     return result;
 }

@@ -6,7 +6,7 @@
  * branching in the snapshot, presentation, editor, and validation layers.
  */
 
-import { type NumericRange, setDomainRangeLookup } from "./binary-format-contract";
+import type { NumericRange } from "./binary-format-contract";
 import type { CompiledPatternFieldPresentation, FormatPresentationSchema } from "./presentation-schema-types";
 import type { FormatLayout } from "./layout-schema-types";
 import type { CrossRefRelationship } from "./cross-ref-relationship";
@@ -60,18 +60,18 @@ export interface BinaryFormatAdapter {
      * than silently inherit a reflection heuristic:
      *  - "clear": the format caches a canonical document (own property or lazy getter/setter) that is
      *    rebuildable from the display tree; the editor sets `parseResult.document = undefined` so the
-     *    next serialize/snapshot rebuilds from the edited tree. All current formats use this.
+     *    next serialize/snapshot rebuilds from the edited tree. Every format except DLG uses this.
      *  - "none": the format keeps no editor-invalidatable cached document, or its document is
      *    authoritative and must NOT be cleared. The editor leaves `document` untouched.
      */
     readonly documentCacheStrategy: "clear" | "none";
 
     /**
-     * Optional declarative layout. When present, the editor renders this format via the generic
-     * layout renderer (panels/matrix/grid/flag-columns on a single dense page, variant chosen by the
-     * parse result's `variantId`) instead of the legacy depth-0-groups-as-tabs path. Absent => the
-     * format keeps the tabs path. This is presentation-only data (sibling of `presentationSchema`);
-     * keep parser/codec free of it.
+     * Declarative layout: the editor renders the format through the generic layout renderer
+     * (panels/matrix/grid/flag-columns on a single dense page, variant chosen by the parse result's
+     * `variantId`). Absent, the binary editor has no renderer for the format and the webview shows its
+     * error banner - which is why DLG, rendered by the dialog editor, omits it. This is
+     * presentation-only data (sibling of `presentationSchema`); keep parser/codec free of it.
      */
     readonly layout?: FormatLayout;
 
@@ -102,14 +102,6 @@ export interface BinaryFormatAdapter {
             sourceSegments: readonly string[],
         ) => ProjectedEntry | undefined,
     ): ProjectedEntry[];
-
-    // -- Structural edits (optional) -------------------------------------------
-    isStructuralFieldId?(fieldId: string): boolean;
-    buildStructuralTransitionBytes?(
-        parseResult: ParseResult,
-        fieldId: string,
-        rawValue: number,
-    ): Uint8Array | undefined;
 
     // -- Add/remove entries in variable-length arrays (optional) ---------------
     /**
@@ -230,27 +222,7 @@ class FormatAdapterRegistry {
     }
 }
 
+// Holds no reference to any concrete format: `register-formats.ts` registers the built-in adapters.
+// Registering them here would put this module above `pro/` while `presentation-schema.ts` keeps it
+// below, closing a package-root <-> `pro/` import cycle.
 export const formatAdapterRegistry = new FormatAdapterRegistry();
-
-// Eagerly register every built-in format adapter, then install the
-// registry-driven domain-range lookup into `binary-format-contract`. The
-// setter pattern keeps `binary-format-contract` cycle-free: derive-zod
-// and per-format canonical schemas import codec primitives from there
-// without dragging in the format-adapter graph.
-import { proFormatAdapter } from "./pro/format-adapter";
-import { mapFormatAdapter } from "./map/format-adapter";
-import { itmFormatAdapter } from "./itm/format-adapter";
-import { splFormatAdapter } from "./spl/format-adapter";
-import { effFormatAdapter } from "./eff/format-adapter";
-import { dlgFormatAdapter } from "./dlg/format-adapter";
-import { creFormatAdapter } from "./cre/format-adapter";
-
-formatAdapterRegistry.register(proFormatAdapter);
-formatAdapterRegistry.register(mapFormatAdapter);
-formatAdapterRegistry.register(itmFormatAdapter);
-formatAdapterRegistry.register(splFormatAdapter);
-formatAdapterRegistry.register(effFormatAdapter);
-formatAdapterRegistry.register(dlgFormatAdapter);
-formatAdapterRegistry.register(creFormatAdapter);
-
-setDomainRangeLookup((format, fieldKey) => formatAdapterRegistry.get(format)?.domainRanges?.[fieldKey]);

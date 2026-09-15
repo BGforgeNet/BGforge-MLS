@@ -3,7 +3,7 @@
  *
  * The thread, the id matching, the timeout and the teardown are `../worker/worker-client.ts`, shared
  * with the transpiler. What is here is adding the `kind` that selects the compiler half of that shared
- * bundle, rebuilding a refusal as the positioned error a caller reports from, and the startup prewarm.
+ * bundle, rebuilding a refusal as the positioned error a caller reports from, and the prewarm.
  *
  * One worker is started by the first open of a .tssl document (`prewarmWorkerFor` in
  * handlers/document-lifecycle.ts) and kept: it holds the ts-morph project, which costs more to build
@@ -19,8 +19,8 @@ import { createWorkerClient } from "../worker/worker-client";
 import type { CompileRequest, CompileResponse } from "./compile-worker-protocol";
 
 /**
- * Bounds one compile. A first compile stands the TypeScript program up and runs ~690 ms; every one
- * after it is well under 100 ms. A hang detector, not a budget - generous enough that a cold compile on
+ * Bounds one compile. A first compile stands the TypeScript program up; every one after it is a small
+ * fraction of that. A hang detector, not a budget - generous enough that a cold compile on
  * a loaded machine never trips it, short enough that a wedged worker reports instead of leaving the
  * document's diagnostics pinned forever.
  */
@@ -73,8 +73,8 @@ export async function compileOnWorker(
  * Builds the worker's project before the first compile asks for it.
  *
  * Started lazily, the first compile stands the TypeScript program up inside the author's request:
- * ts-morph module eval and binding `lib.es2022.d.ts` measured at 254 ms and 119 ms of a 688 ms first
- * compile. Compiling a throwaway entry here moves both onto a thread nobody is waiting on. Nothing is
+ * ts-morph module eval and binding `lib.es2022.d.ts` are over half of a first compile between them.
+ * Compiling a throwaway entry here moves both onto a thread nobody is waiting on. Nothing is
  * awaited, and both output paths are null, so the compile runs in full and writes nothing.
  *
  * A real compile arriving meanwhile queues behind this one in the worker, which costs it only the

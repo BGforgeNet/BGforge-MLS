@@ -44,18 +44,16 @@
         "@bgforge/format": "workspace:*",
         "@types/node": "catalog:",
         "fast-check": "catalog:",
-        "fast-glob": "^3.3.3",
-        "p-limit": "^7.3.1",
+        "fast-glob": "catalog:",
+        "p-limit": "^7.3.2",
+        "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz",
         "ts-morph": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:",
         "vscode-languageserver": "catalog:",
-        "vscode-languageserver-textdocument": "^1.0.13",
+        "vscode-languageserver-textdocument": "^1.0.14",
         "web-tree-sitter": "catalog:",
-        "yaml": "^2.9.0"
-    },
-    "optionalDependencies": {
-        "sslc-emscripten-noderawfs": "https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz"
+        "yaml": "catalog:"
     },
     "engines": {
         "node": ">=20"

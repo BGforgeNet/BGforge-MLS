@@ -7,10 +7,11 @@ import {
 import { rebuildProCanonicalDocument } from "./canonical";
 import { proLayout } from "./layout-schema";
 import { proCompiledPatternFields, proDomainRanges, proPresentationSchema } from "./presentation-schema";
-import { isProStructuralFieldId, buildProStructuralTransitionBytes } from "./transition";
 import { slugify } from "../spec/presentation";
 import type { ParseOptions, ParseResult } from "../types";
 
+// No retype support: a PRO object-type or subtype change rewrites the whole record, so it is a destructive
+// edit the editor does not offer - objectType and subType are readOnlyFields (see layout-schema.ts).
 export const proFormatAdapter: BinaryFormatAdapter = {
     formatId: "pro",
     presentationSchema: proPresentationSchema,
@@ -43,20 +44,6 @@ export const proFormatAdapter: BinaryFormatAdapter = {
             return "pro";
         }
         return `pro.${segments.map((segment) => slugify(segment)).join(".")}`;
-    },
-
-    // Structural-transition capability: implemented but intentionally dormant. A PRO object-type/subtype
-    // change rewrites the entire record (each type has its own subtype specs), so it is a destructive
-    // whole-record retype the editor deliberately does not offer - objectType/subType are readOnlyFields
-    // (see layout-schema.ts), and editField never consults isStructuralFieldId. These methods are the
-    // scaffolding for a future explicit "retype" affordance; until one is wired, they never fire. Kept
-    // rather than removed so that affordance would not have to re-derive the transition logic.
-    isStructuralFieldId(fieldId: string): boolean {
-        return isProStructuralFieldId(fieldId);
-    },
-
-    buildStructuralTransitionBytes(parseResult: ParseResult, fieldId: string, rawValue: number) {
-        return buildProStructuralTransitionBytes(parseResult, fieldId, rawValue);
     },
 };
 

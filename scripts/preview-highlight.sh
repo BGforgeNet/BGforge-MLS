@@ -20,6 +20,8 @@ case "$GRAMMAR_NAME" in
     weidu-baf) LINK_NAME="tree-sitter-baf" ;;
     weidu-d) LINK_NAME="tree-sitter-weidu_d" ;;
     weidu-tp2) LINK_NAME="tree-sitter-weidu_tp2" ;;
+    weidu-tra) LINK_NAME="tree-sitter-weidu_tra" ;;
+    fallout-msg) LINK_NAME="tree-sitter-fallout_msg" ;;
     *)
         echo "Unknown grammar: $GRAMMAR_NAME"
         exit 1

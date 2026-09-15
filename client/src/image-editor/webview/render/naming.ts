@@ -1,4 +1,6 @@
+import { decodeActionCode } from "@bgforge/animation/group-labels";
 import type { SourceFormat } from "@bgforge/image";
+import type { IeScheme } from "@bgforge/image/ie-direction";
 import type { SequenceView } from "../messages";
 
 /**
@@ -8,19 +10,26 @@ import type { SequenceView } from "../messages";
  *
  * Sources:
  * - FRM: rotators/fallout2-docs (frm.md "Where FRMs Live" + "Critter Filename Construction",
- *   anim_names.md), cross-checked against the engine's suffix builder (fallout2-ce art.cc
- *   _art_get_code) and the Animation enum (sfall FalloutEngine/Enums.h).
- * - BAM: IESDP "Avatar Naming Schemes" appendix (appendices/avatarnaming.htm).
+ *   anim_names.md), cross-checked against how the Fallout engine builds a critter art suffix from an
+ *   animation id and weapon type, and against its animation id ordering.
+ * - BAM: IESDP "Avatar Naming Schemes" appendix (appendices/avatarnaming.htm), and the per-animation
+ *   naming schemes in IESDP's creature-animation INI reference. What an action code depicts comes from
+ *   the shared naming table instead, which reaches past where that appendix stops.
  */
 export function describeAnimationName(view: {
     basename: string;
     dirName?: string;
     sourceFormat: SourceFormat;
     sequences: ReadonlyArray<Pick<SequenceView, "frameRefs">>;
+    /** The block scheme the cycle structure resolved to, where one did - it decides which naming
+     *  families a name can belong to. */
+    scheme?: IeScheme;
+    /** How many direction blocks the file holds, where that was resolved - see `describeBam`. */
+    blocks?: number;
 }): string | undefined {
     const stem = view.basename.replace(/\.[^.]+$/, "").toLowerCase();
     if (view.sourceFormat === "frm") return describeFrm(stem, view.dirName, view.sequences);
-    return describeBam(stem);
+    return describeBam(stem, view.scheme, view.blocks);
 }
 
 // ---- FRM (Fallout) ----
@@ -110,7 +119,7 @@ const FRM_DEATH = [
 ];
 
 // Armed actions: second letter is 'c' + (animation - ANIM_take_out); 'a'/'b' are armed
-// stand/walk and 'm' the knife/spear throw (_art_get_code's special cases).
+// stand/walk and 'm' the knife/spear throw (the engine's special cases when it builds the code).
 const FRM_ARMED: Record<string, string> = {
     a: "stand",
     b: "walk",
@@ -188,6 +197,7 @@ const BAM_RACES: Record<string, string> = {
     o: "half-orc",
 };
 const BAM_CLASSES: Record<string, string> = {
+    b: "common base",
     c: "cleric",
     f: "fighter",
     m: "monk",
@@ -197,18 +207,28 @@ const BAM_CLASSES: Record<string, string> = {
 const BAM_ARMOR: Record<string, string> = { 1: "no armor", 2: "leather", 3: "robe", 4: "plate mail" };
 const BAM_CHAR_ACTIONS: Record<string, string> = {
     a: "attack",
-    c: "cast",
+    ca: "cast",
     g: "misc",
     s: "shoot",
     w: "walk",
 };
-const BAM_ATTACK_DETAIL: Record<string, string> = {
-    1: "1-handed overhead",
-    2: "2-handed overhead",
-    3: "1-handed backslash",
-    4: "2-handed backslash",
-    5: "1-handed thrust",
-    6: "2-handed thrust",
+/** Shoot detail: which ranged weapon the animation is for. */
+const BAM_SHOOT_DETAIL: Record<string, string> = { a: "bow", s: "sling", x: "crossbow" };
+/**
+ * The split stance files. A character animation either packs these into one G1 or spreads them over
+ * G1 and G11-G19, one block set per file; the digits are positional, not a sequence code.
+ */
+const BAM_CHAR_G_DETAIL: Record<string, string> = {
+    "": "combat stance (1-handed)",
+    "1": "walk",
+    "2": "stand",
+    "3": "combat stance (2-handed)",
+    "4": "get hit",
+    "5": "get hit and die",
+    "6": "twitch",
+    "7": "stand 2",
+    "8": "stand 3",
+    "9": "sleep",
 };
 
 // IWD/BG2-style two-letter sequence codes (plus BG2's SA/SS/SX shot variants).
@@ -256,27 +276,53 @@ const BAM_G_CODES: Record<string, string> = {
 
 const EAST_NOTE = ", east-facing half";
 
-// The detail slot is defined only for attack (1-6) and shoot (x = crossbow, absent = bow); any other
-// combination is not this scheme. null = valid with nothing to add; undefined = reject the match.
+// Which details each action defines: attack takes a digit, shoot a weapon letter, misc the split-file
+// digit (bare G1 included), and cast/walk take none. Anything else is not this scheme.
+// null = valid with nothing to add; undefined = reject the match.
 function charSchemeDetail(action: string, detail: string): string | null | undefined {
-    if (action === "a") return detail === "" ? undefined : BAM_ATTACK_DETAIL[detail];
-    if (action === "s") return detail === "" ? "bow" : detail === "x" ? "crossbow" : undefined;
+    // The strike from the naming table rather than a copy of it, so this banner and the stance picker
+    // name an attack alike; a digit it does not name is not this scheme, same as any other bad detail.
+    if (action === "a") return decodeActionCode("character", `A${detail}`).detail;
+    if (action === "s") return BAM_SHOOT_DETAIL[detail];
+    if (action === "g") return BAM_CHAR_G_DETAIL[detail];
     return detail === "" ? null : undefined;
 }
 
-function describeBam(stem: string): string | undefined {
-    const charMatch = /^c([dheio])([fm])([cfmtw])([1-4])([acgsw])([1-6x]?)(e?)$/.exec(stem);
+function describeBam(stem: string, scheme?: IeScheme, blocks?: number): string | undefined {
+    // `ca` is matched ahead of the single letters so a cast file does not read as action C; the misc
+    // action carries `1` plus an optional second digit (G1, G11-G19), so the digits bind greedily.
+    const charMatch = /^c([dheio])([fm])([bcfmtw])([1-9])(ca|a|s|w|g1)([1-9asx]?)(e?)$/.exec(stem);
     if (charMatch) {
-        const [, race = "", gender = "", cls = "", armor = "", action = "", detail = "", east = ""] = charMatch;
+        const [, race = "", gender = "", cls = "", armor = "", rawAction = "", detail = "", east = ""] = charMatch;
+        // The misc action's own "1" belongs to the file name (G1), not to the detail.
+        const action = rawAction === "g1" ? "g" : rawAction;
         const detailText = charSchemeDetail(action, detail);
         if (detailText !== undefined) {
             const who = `${BAM_RACES[race]} ${gender === "f" ? "female" : "male"} ${BAM_CLASSES[cls]}`;
-            const act = `${BAM_CHAR_ACTIONS[action]}${detailText === null ? "" : ` (${detailText})`}`;
+            // A misc file is named entirely by its detail; the word "misc" adds nothing to "walk".
+            const act =
+                action === "g"
+                    ? detailText
+                    : `${BAM_CHAR_ACTIONS[action]}${detailText === null ? "" : ` (${detailText})`}`;
             return `${who}, ${BAM_ARMOR[armor]} - ${act}${east === "e" ? EAST_NOTE : ""}`;
         }
     }
 
-    const gMatch = /^.{3,}g(2[1-6]?|1[1-5]?)(e?)$/.exec(stem);
+    // Paperdoll graphics share the character prefix but name no action: [prefix][armor]INV.
+    const paperdoll = /^c([dheio])([fm])([bcfmtw])([1-9])inv$/.exec(stem);
+    if (paperdoll) {
+        const [, race = "", gender = "", cls = "", armor = ""] = paperdoll;
+        const who = `${BAM_RACES[race]} ${gender === "f" ? "female" : "male"} ${BAM_CLASSES[cls]}`;
+        return `${who}, ${BAM_ARMOR[armor]} - inventory paperdoll`;
+    }
+
+    // The G-code table belongs to the coarse scheme, and to a file holding ONE direction block. The later
+    // monster families reuse the same tokens for different block sets, and the packed families put a
+    // creature's whole first half of moves in `G1` - so a file that resolved as fine, or that packs more
+    // than one block, is left undecoded rather than described as something it is not. Its blocks are named
+    // by the rose's own group labels instead, which is where a packed file's meaning actually lives.
+    const packed = blocks !== undefined && blocks > 1;
+    const gMatch = scheme === "ie9" || packed ? null : /^.{3,}g(2[1-6]?|1[1-5]?)(e?)$/.exec(stem);
     if (gMatch) {
         const [, code = "", east = ""] = gMatch;
         const label = BAM_G_CODES[code];

@@ -4,7 +4,7 @@ import { buildModel, setExpanded } from "./model";
 import { buildLayout } from "./layout";
 import { DEFAULT_WINDOW, getChildren, getWindow } from "./window";
 import { editField } from "./edit";
-import { structureOp, undo as doUndo, redo as doRedo, type StructureOpRequest } from "./structure-ops";
+import { buildChangeSet, structureOp, undo as doUndo, redo as doRedo, type StructureOpRequest } from "./structure-ops";
 import { spellbookEdit, type SpellbookEditOp } from "./spellbook-ops";
 import { serializeSession } from "./serialize";
 import { validate } from "./validate";
@@ -31,6 +31,14 @@ export type Request =
     | { type: "serialize"; sessionId: SessionId }
     | { type: "validate"; sessionId: SessionId }
     | { type: "snapshot"; sessionId: SessionId }
+    /**
+     * Re-project the session's fields with no edit behind it.
+     *
+     * For a change OUTSIDE the model that alters what its numbers mean: a game opening gives every strref,
+     * IDS slot and gradient a name it did not have. Answers with the same changeSet a structure op does, so
+     * the host has one refresh path rather than a second one that can drift.
+     */
+    | { type: "reproject"; sessionId: SessionId }
     | { type: "getChildren"; sessionId: SessionId; nodeId: NodeId | null; start: number; end: number }
     | { type: "getSpellbook"; sessionId: SessionId }
     | { type: "getEffectTree"; sessionId: SessionId }
@@ -119,6 +127,12 @@ export function dispatch(req: Request): Response {
             }
             case "editField":
                 return { type: "edited", result: editField(need(req.sessionId), req.nodeId, req.value) };
+            case "reproject": {
+                const s = need(req.sessionId);
+                // The session's own dirtiness travels with it: re-projecting reads the model, it does not
+                // touch it, so a clean document must not come back looking edited.
+                return { type: "structure", result: { changeSet: buildChangeSet(s, s.dirty) } };
+            }
             case "structureOp":
                 return { type: "structure", result: structureOp(need(req.sessionId), req.op) };
             case "spellbookEdit":

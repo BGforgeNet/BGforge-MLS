@@ -52,6 +52,8 @@ export const itmHeaderSpecAnnotated = {
     // ItmType is backed by `itemtype.2da` which mods can extend with custom
     // item categories; the engine accepts any 16-bit value. Display lookup
     // only - strict canonical mode does not reject unrecognised types.
+    // No 2DA `ref`: itemtype.2da's rows are numbered 0,1,2... and its columns are TAKESOUND / DROPSOUND / SLOT,
+    // so it names no type.
     type: { ...itmHeaderSpec.type, enum: ItmType, enumOpen: true },
     // Usability flags is a 4-byte block where each byte carries a distinct
     // flag table per IESDP. Slots view with per-slot element overrides

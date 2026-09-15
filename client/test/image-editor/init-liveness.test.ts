@@ -17,6 +17,13 @@ import { REPO_ROOT } from "../repo-root";
 const { readFileMock } = vi.hoisted(() => ({ readFileMock: vi.fn() }));
 
 vi.mock("vscode", () => {
+    // The provider hands one back from `attach`, so the surfaces showing a document can be detached.
+    class Disposable {
+        readonly dispose: () => void;
+        constructor(onDispose: () => void) {
+            this.dispose = onDispose;
+        }
+    }
     class EventEmitter {
         readonly event = (): { dispose: () => void } => ({ dispose: () => {} });
         fire(): void {}
@@ -32,6 +39,7 @@ vi.mock("vscode", () => {
     });
     return {
         EventEmitter,
+        Disposable,
         Uri: {
             file: (fsPath: string) => make(fsPath),
             parse: (value: string) => make(value),

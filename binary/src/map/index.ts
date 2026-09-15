@@ -112,16 +112,16 @@ class MapParser implements BinaryParser {
             opaqueRanges.push(skippedRange);
         }
 
-        // Script-list count: Fallout 2 CE's engine source (scripts.cc / scripts.h) defines
-        // SCRIPT_TYPE_COUNT == 5, but shipped maps serialize only 4 script lists before the objects
+        // Script-list count: the Fallout 2 engine has 5 script types, but shipped maps serialize only
+        // 4 script lists before the objects
         // section. A scan of the full Fallout 2 Restoration Project map set (174 maps) confirms it: 172
         // decode cleanly at a count of 4, and the 2 that do not (sfsheng, reddown) fall back to an opaque
         // objects tail at every count 0..5 - so none serialize 5 clean lists. Strict parsing fixes the
-        // count at 4 (STRICT_MAP_SCRIPT_TYPE_COUNT); graceful mode below still probes 0..5 and
-        // score-selects for robustness against odd tails. NMA format notes differ in places from the CE
-        // code: https://nma-fallout.com/resources/fallout-2-memory-maps-and-file-formats.181/
+        // count at 4 (STRICT_MAP_SCRIPT_TYPE_COUNT); graceful mode below tries 4 first and, when that does not
+        // decode cleanly, probes 0..5 and score-selects for robustness against odd tails. NMA format notes differ in
+        // places from the engine's behaviour: https://nma-fallout.com/resources/fallout-2-memory-maps-and-file-formats.181/
         if (options?.gracefulMapBoundaries) {
-            const scriptTailCandidates = [0, 1, 2, 3, 4, 5].map((scriptTypeCount) => {
+            const parseCandidate = (scriptTypeCount: number) => {
                 const candidateErrors: string[] = [];
                 const {
                     scripts,
@@ -145,7 +145,19 @@ class MapParser implements BinaryParser {
                     candidateErrors,
                     score: scoreParsedTail(scriptTypeCount, candidateErrors, objectsGroup),
                 };
-            });
+            };
+
+            // The shipped count first: a map that decodes there with no errors and a confident objects section is
+            // taken as is, since each candidate decodes the whole objects section. Only a map that does not falls
+            // through to scoring every count.
+            const strictTail = parseCandidate(STRICT_MAP_SCRIPT_TYPE_COUNT);
+            const strictIsClean =
+                strictTail.candidateErrors.length === 0 && isConfidentObjectsGroup(strictTail.objectsGroup);
+            const scriptTailCandidates = strictIsClean
+                ? [strictTail]
+                : [0, 1, 2, 3, 4, 5].map((count) =>
+                      count === STRICT_MAP_SCRIPT_TYPE_COUNT ? strictTail : parseCandidate(count),
+                  );
 
             scriptTailCandidates.sort((a, b) => b.score - a.score);
             const chosenTail =
@@ -229,8 +241,7 @@ class MapParser implements BinaryParser {
         };
 
         // Lazy canonical document: rebuildMapCanonicalDocument is expensive (Zod validation,
-        // O(n) field lookups per object) and the 6x gracefulMapBoundaries parse candidates
-        // multiply the cost. Deferring to first access keeps parse() fast for display-only
+        // O(n) field lookups per object). Deferring to first access keeps parse() fast for display-only
         // consumers (editor tree, symbol outline). The document is materialized when the
         // binary editor opens a MAP for editing, or when serializing to JSON/bytes.
         //

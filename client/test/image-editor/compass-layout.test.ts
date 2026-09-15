@@ -1,7 +1,16 @@
 import { expect, test } from "vitest";
 import { FRM_FACINGS, type Facing } from "@bgforge/image";
-import { interpretIeDirections } from "@bgforge/image/ie-direction";
-import { compassPosition, ieRoseTiles, layoutSequences } from "../../src/image-editor/webview/render/compass-layout";
+import { type IeDirectionAnalysis, interpretIeDirections } from "@bgforge/image/ie-direction";
+import {
+    compassPosition,
+    defaultLayoutMode,
+    directionBlocks,
+    drawnSequences,
+    firstDrawnBlock,
+    ieRoseTiles,
+    layoutSequences,
+    roseGeometry,
+} from "../../src/image-editor/webview/render/compass-layout";
 import type { AnimationView, SequenceView } from "../../src/image-editor/webview/messages";
 
 /** A minimal AnimationView carrying only the fields layoutSequences reads (sequences). */
@@ -21,6 +30,7 @@ function makeView(facings: Facing[]): AnimationView {
         meta: { sourceFormat: "frm" },
         basename: "test",
         sourceFormat: "frm",
+        composedFiles: 1,
         hasSidecarPal: false,
         externalPaletteActive: false,
     };
@@ -32,6 +42,70 @@ test("compassPosition places the cardinals on the unit circle (y down: N is up, 
     expect(p("W")).toEqual({ dx: expect.closeTo(-1), dy: expect.closeTo(0) });
     expect(p("N")).toEqual({ dx: expect.closeTo(0), dy: expect.closeTo(-1) }); // up
     expect(p("S")).toEqual({ dx: expect.closeTo(0), dy: expect.closeTo(1) }); // down
+});
+
+test("compassPosition places the half-step facings at their own 22.5-degree angles", () => {
+    // SSW is one step counter-clockwise from S on the 16-point wheel: below centre, slightly left.
+    const ssw = compassPosition("SSW");
+    expect(ssw?.dx).toBeCloseTo(-Math.cos((67.5 * Math.PI) / 180));
+    expect(ssw?.dy).toBeCloseTo(Math.sin((67.5 * Math.PI) / 180));
+    // The eight half-steps sit strictly between their neighbouring 45-degree points, and no two coincide.
+    const wheel: Facing[] = [
+        "S",
+        "SSW",
+        "SW",
+        "WSW",
+        "W",
+        "WNW",
+        "NW",
+        "NNW",
+        "N",
+        "NNE",
+        "NE",
+        "ENE",
+        "E",
+        "ESE",
+        "SE",
+        "SSE",
+    ];
+    const angles = wheel.map((f) => {
+        const p = compassPosition(f);
+        return p ? Math.round(Math.atan2(-p.dy, p.dx) * (180 / Math.PI) * 10) / 10 : undefined;
+    });
+    expect(new Set(angles).size).toBe(16);
+    expect(angles).not.toContain(undefined);
+});
+
+test("roseGeometry widens the circle when the facings are closer together", () => {
+    const at = (facings: Facing[]) =>
+        facings.flatMap((f) => (compassPosition(f) ? [{ pos: compassPosition(f)! }] : []));
+    const octagon = roseGeometry(at(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]));
+    const westArc = roseGeometry(at(["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"]));
+    // Each takes exactly the radius its own tightest gap needs: neighbours a tile apart and no further,
+    // since the wheel is 2r+1 tiles tall and every extra tenth of a radius comes off the sprites.
+    expect(octagon.radiusTiles).toBeCloseTo(1 / (2 * Math.sin(Math.PI / 8)));
+    expect(westArc.radiusTiles).toBeGreaterThan(2.5);
+    for (const [rose, gap] of [
+        [octagon, Math.PI / 4],
+        [westArc, Math.PI / 8],
+    ] as const) {
+        expect(2 * rose.radiusTiles * Math.sin(gap / 2)).toBeCloseTo(1);
+    }
+});
+
+test("roseGeometry fits the box to the tiles present, so a half-populated rose is not half dead space", () => {
+    const at = (facings: Facing[]) =>
+        facings.flatMap((f) => (compassPosition(f) ? [{ pos: compassPosition(f)! }] : []));
+    const westArc = roseGeometry(at(["S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW", "N"]));
+    // The arc spans the full height of its circle but only one side of it, so the box is taller than wide.
+    expect(westArc.heightTiles).toBeGreaterThan(westArc.widthTiles * 1.5);
+    // Every tile lands inside the box it reports.
+    for (const c of westArc.centers) {
+        expect(c.x).toBeGreaterThanOrEqual(0.5 - 1e-9);
+        expect(c.x).toBeLessThanOrEqual(westArc.widthTiles - 0.5 + 1e-9);
+        expect(c.y).toBeGreaterThanOrEqual(0.5 - 1e-9);
+        expect(c.y).toBeLessThanOrEqual(westArc.heightTiles - 0.5 + 1e-9);
+    }
 });
 
 test("compassPosition pulls the diagonals in to +/-0.707 so E/W bulge out past them - a rose, not columns", () => {
@@ -108,6 +182,42 @@ test("compass tiles carry the display facing (identical to the sequence's own ta
     expect(result.tiles.map((tile) => tile.facing)).toEqual(result.tiles.map((tile) => tile.seq.facing));
 });
 
+/**
+ * The reading a declared band width settles and inference cannot: a sixteen-cycle band divides evenly into
+ * two eight-slot blocks and each half is uniform, so a file of one wide band reads as two narrow ones -
+ * twice the stances, half the facings, and each facing drawn twice.
+ */
+test("directionBlocks reads a wide band at its declared width rather than inferring two narrow ones", () => {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    view.frames = Array.from({ length: 17 }, () => ({ width: 30, height: 40, offsetX: 0, offsetY: 0 }));
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: [1 + i] }));
+
+    const inferred = directionBlocks(view);
+    expect(inferred?.groups).toHaveLength(2);
+    expect(inferred?.scheme).toBe("ie8");
+
+    const declared = directionBlocks(view, { stride: 16 });
+    expect(declared?.groups).toHaveLength(1);
+    expect(declared?.groups[0]).toHaveLength(16);
+    // A sixteen-wide band matches no block scheme, so the block-name table has nothing to key on.
+    expect(declared?.scheme).toBeUndefined();
+});
+
+// A wide-band animation packs its whole walk into ONE band, so the block-count proxy for "these cycles
+// are facings" says grid where the declaration says rose.
+test("defaultLayoutMode opens a single DECLARED band on the rose, and a single inferred one on the grid", () => {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    view.frames = Array.from({ length: 17 }, () => ({ width: 30, height: 40, offsetX: 0, offsetY: 0 }));
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: [1 + i] }));
+
+    expect(defaultLayoutMode(null, directionBlocks(view, { stride: 16 }))).toBe("rose");
+    expect(defaultLayoutMode(null, { groups: [[{ seqIndex: 0, facing: "S" }]] })).toBe("grid");
+});
+
+test("directionBlocks refuses a declared width no IE scheme stores, rather than falling back to a guess", () => {
+    expect(directionBlocks(makeView(Array.from({ length: 16 }, () => "none" as const)), { stride: 7 })).toBeUndefined();
+});
+
 test("ieRoseTiles builds one direction block's rose from untagged cycles, at the IE slot facings", () => {
     // Two stride-8 blocks: west slots real, east slots one shared filler (frame 0).
     const view = makeView(Array.from({ length: 16 }, () => "none" as const));
@@ -130,4 +240,79 @@ test("ieRoseTiles builds one direction block's rose from untagged cycles, at the
     const block1 = ieRoseTiles(view, interpretation, 1);
     expect(block1.map((tile) => tile.seq.frameRefs[0])).toEqual([9, 10, 11, 12, 13]);
     expect(ieRoseTiles(view, interpretation, 99)).toEqual([]);
+});
+
+test("drawnSequences is the rose's own block, never the whole file the grid would show", () => {
+    // What the transport is sized against. A creature file packs several actions at very different
+    // lengths, so a rose sized to the file plays its block out and then holds a still image.
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    const interpretation = interpretIeDirections(view.sequences, 17);
+    if (!interpretation) throw new Error("expected an IE interpretation");
+    const rose = ieRoseTiles(view, interpretation, 1);
+    const grid = view.sequences.map((seq, index) => ({ seq, index }));
+
+    expect(drawnSequences("rose", rose, grid)).toEqual(rose.map((tile) => tile.seq));
+    expect(drawnSequences("grid", rose, grid)).toEqual(view.sequences);
+});
+
+/**
+ * A coarse-path band stores each picture in a pair of neighbouring slots, so its sixteen slots carry eight
+ * facings. A rose is one tile per compass point: a second tile of the same facing lands at the same angle,
+ * hidden under the first, and the keyed list the rose renders from cannot hold two of one key at all.
+ */
+test("ieRoseTiles gives a coarse-path band one tile per facing, not one per slot", () => {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    // Real frames: the declared band cut drops any slot whose refs fall outside the frame table.
+    view.frames = Array.from({ length: 17 }, () => ({ width: 30, height: 40, offsetX: 0, offsetY: 0 }));
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: [1 + i] }));
+    const blocks = directionBlocks(view, { stride: 16, coarse: true });
+    if (!blocks) throw new Error("expected declared blocks");
+
+    const tiles = ieRoseTiles(view, blocks, 0);
+
+    expect(tiles.map((tile) => tile.facing)).toEqual(["S", "SW", "W", "NW", "N", "NE", "E", "SE"]);
+    expect(new Set(tiles.map((tile) => tile.facing)).size).toBe(tiles.length);
+    // The tile kept is the first slot of each pair, so the rose draws the same art the grid opens on.
+    expect(tiles.map((tile) => tile.seq.frameRefs[0])).toEqual([1, 3, 5, 7, 9, 11, 13, 15]);
+});
+
+/**
+ * A packed file's skeleton: sixteen cycles in two stride-8 blocks, where the first block references only
+ * the 1x1 placeholder every undrawn band of a character file is padded with, and the second holds sprites.
+ */
+function skeletonView(): { view: AnimationView; interpretation: IeDirectionAnalysis } {
+    const view = makeView(Array.from({ length: 16 }, () => "none" as const));
+    view.frames = [
+        { width: 1, height: 1, offsetX: 0, offsetY: 0 },
+        { width: 30, height: 40, offsetX: 0, offsetY: 0 },
+    ];
+    view.sequences = view.sequences.map((sequence, i) => ({ ...sequence, frameRefs: i < 8 ? [0] : [1] }));
+    const interpretation = interpretIeDirections(view.sequences, view.frames.length);
+    if (!interpretation) throw new Error("expected an IE interpretation");
+    return { view, interpretation };
+}
+
+test("firstDrawnBlock skips the placeholder blocks a packed file pads its skeleton with", () => {
+    const { view, interpretation } = skeletonView();
+    expect(firstDrawnBlock(view, interpretation)).toBe(1);
+});
+
+// The burrowing scheme's `G1` opens on a block it addresses no sequence to. That block's padding is a
+// frame per facing at the sprite's own size rather than a single pixel, so it passes the does-this-draw
+// test and would otherwise be what a reader lands on: a full-size stage of transparent tiles.
+test("firstDrawnBlock skips a block the scheme addresses no sequence to", () => {
+    const { view, interpretation } = skeletonView();
+    // Both blocks hold real sprites, so only the declaration can rule the first one out.
+    view.sequences = view.sequences.map((sequence) => ({ ...sequence, frameRefs: [1] }));
+
+    expect(firstDrawnBlock(view, interpretation)).toBe(0);
+    const blocks = [{ unused: true as const }, { codes: ["WK"] as const }];
+    expect(firstDrawnBlock(view, interpretation, blocks)).toBe(1);
+});
+
+test("firstDrawnBlock opens on the first block where nothing in the file draws", () => {
+    const { view, interpretation } = skeletonView();
+    // Every cycle on the placeholder: there is no better block to offer than the first.
+    view.sequences = view.sequences.map((sequence) => ({ ...sequence, frameRefs: [0] }));
+    expect(firstDrawnBlock(view, interpretation)).toBe(0);
 });

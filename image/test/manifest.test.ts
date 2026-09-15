@@ -99,6 +99,17 @@ describe("readManifest", () => {
         expect(() => readManifest({ ...written, manifestVersion: 2 })).toThrow(/version/i);
     });
 
+    // The allowlist is what an exported directory is read back through, so a facing the model can hold
+    // but the allowlist has not heard of makes its own export unimportable.
+    it("accepts every facing the model defines, and the fine-scheme layout", () => {
+        const written = writeManifest(makeAnimation());
+        const arc = ["SSW", "WSW", "WNW", "NNW", "NNE", "ENE", "ESE", "SSE"];
+        const sequences = arc.map((facing) => ({ id: facing, facing, offsets: [] }));
+        const round = readManifest({ ...written, sequences, meta: { ...written.meta, directionLayout: "ie9" } });
+        expect(round.sequences.map((s) => s.facing)).toEqual(arc);
+        expect(round.meta.directionLayout).toBe("ie9");
+    });
+
     it("throws on a wrong kind", () => {
         const written = writeManifest(makeAnimation());
         expect(() => readManifest({ ...written, kind: "bgforge-something-else" })).toThrow(/kind/i);
@@ -106,12 +117,14 @@ describe("readManifest", () => {
 
     it("throws on malformed sequences", () => {
         const written = writeManifest(makeAnimation());
-        expect(() => readManifest({ ...written, sequences: [{ id: "NE", facing: "NE", offsets: "nope" }] })).toThrow();
+        expect(() => readManifest({ ...written, sequences: [{ id: "NE", facing: "NE", offsets: "nope" }] })).toThrow(
+            "manifest sequences are malformed",
+        );
     });
 
     it("throws when sequences is not an array", () => {
         const written = writeManifest(makeAnimation());
-        expect(() => readManifest({ ...written, sequences: {} })).toThrow();
+        expect(() => readManifest({ ...written, sequences: {} })).toThrow("manifest sequences are malformed");
     });
 
     it("throws when the manifest itself is not an object", () => {

@@ -1,0 +1,19 @@
+{
+    "extends": "../tsconfig.base.json",
+    "compilerOptions": {
+        "lib": ["es2023"],
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "tsBuildInfoFile": "../tmp/animation-lib.tsbuildinfo",
+        "paths": {
+            "@bgforge/animation": ["./src/index.ts"],
+            // Test-only: the corpus suites open a real install. `src/` reads a game through the
+            // structural `GameHandle` and never imports this.
+            "@bgforge/binary": ["../binary/src/index.ts"],
+            "@bgforge/image": ["../image/src/index.ts"],
+            "@bgforge/image/frame-anchor": ["../image/src/model/frame-anchor.ts"],
+            "@bgforge/image/ie-direction": ["../image/src/model/ie-direction.ts"]
+        }
+    },
+    "include": ["src", "test"]
+}

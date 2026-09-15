@@ -25,7 +25,6 @@ export interface TBAFResult {
 const tbaf = createTranspiler<TBAFResult>({
     sourceExtension: EXT_TBAF,
     targetExtension: ".baf",
-    name: "TBAF",
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)

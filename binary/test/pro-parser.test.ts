@@ -5,6 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -75,7 +76,7 @@ describe("PRO parser - good fixtures", () => {
 });
 
 describe("PRO weapon/armor perk decodes as a named enum", () => {
-    // The proto weapon/armor `perk` field is a fallout2-ce Perk value (-1 = none), not a scalar; it must carry
+    // The proto weapon/armor `perk` field is a Fallout 2 engine perk (-1 = none), not a scalar; it must carry
     // that enum so the editor renders a dropdown. 00000079 is a weapon (subType 3) with perk 59 = Weapon Accurate.
     function findField(
         node: { name?: string; type?: string; fields?: unknown[] },
@@ -179,9 +180,9 @@ describe("PRO parser - error cases", () => {
     });
 });
 
-// Regression for the proto-default sentinel pattern: the engine's
-// proto_scenery_subdata_init seeds elevator type/level to -1 (proto.cc:976)
-// and proto_scenery_init seeds material to -1 (proto.cc:956). Vanilla protos
+// Regression for the proto-default sentinel pattern: the engine seeds a new
+// elevator proto's type/level to -1 and a new scenery proto's material to -1.
+// Vanilla protos
 // that never override those defaults reach disk with `0xffffffff` on the
 // wire; the parser must surface them as `-1` rather than rejecting the file.
 describe("PRO parser - proto-default sentinels", () => {

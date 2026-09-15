@@ -15,8 +15,8 @@ const TS6133_CODE = 6133;
 
 /**
  * Matches the quoted identifier in a TS6133 message: 'name' or "name".
- * The pattern depends on TypeScript's diagnostic message wording, which is
- * stable across the 5.x line but unversioned in the public API. The unit
+ * The pattern depends on TypeScript's diagnostic message wording, unchanged
+ * from 5.x through the pinned 6.x but unversioned in the public API. The unit
  * tests exercise this regex against representative TS6133 message strings,
  * but those expected strings are hand-authored - a future TypeScript major
  * that rephrases TS6133 would slip past them and silently disable the

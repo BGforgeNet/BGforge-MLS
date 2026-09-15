@@ -6,7 +6,7 @@
  * - Filters TD-specific completions out of non-.td files (e.g. .tbaf).
  *
  * Loaded by tsserver via contributes.typescriptServerPlugins in package.json
- * (VSCode) or via tsconfig.json plugins array (other editors).
+ * (VSCode) or via the TypeScript language server's plugin settings (other editors).
  */
 
 import type ts from "typescript";

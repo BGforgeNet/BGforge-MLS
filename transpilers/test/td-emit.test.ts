@@ -11,7 +11,10 @@ import {
     TDPatchOp,
     TDTextType,
     TDTransitionType,
+    type TDChain,
     type TDConstruct,
+    type TDInterject,
+    type TDPatchOperation,
     type TDState,
 } from "../td/src/types";
 
@@ -380,4 +383,152 @@ describe("patch operations", () => {
             "APPEND D\n    IF ~~ a\n        SAY ~A~\n    END\n    IF ~~ b\n        SAY ~B~\n    END\nEND",
         );
     });
+});
+
+describe("a tilde in an emitted value is refused", () => {
+    // WeiDU's ~...~ string has no escape, so a tilde inside one ends it early and the rest of the
+    // line parses as syntax. One case per site that wraps an author-supplied value.
+    const BAD = 'Dead("a~b")';
+    const throws = (constructs: TDConstruct[]) => expect(() => emit(constructs)).toThrow(/tilde/);
+
+    const begin = (over: Partial<TDState>): TDConstruct[] => [
+        { type: TDConstructType.Begin, filename: "D", states: [{ label: "s", say: [], transitions: [], ...over }] },
+    ];
+    const chain = (over: Partial<TDChain>): TDConstruct[] => [
+        {
+            type: TDConstructType.Chain,
+            filename: "D",
+            label: "c",
+            entries: [{ texts: [literal("x")] }],
+            epilogue: { type: TDEpilogueType.Exit },
+            ...over,
+        },
+    ];
+    const interject = (entry: TDInterject["entries"][number]): TDConstruct[] => [
+        {
+            type: TDConstructType.Interject,
+            filename: "D",
+            stateLabel: "s",
+            globalVariable: "g",
+            entries: [entry],
+        },
+    ];
+    const patch = (operation: TDPatchOperation): TDConstruct[] => [{ type: TDConstructType.Patch, operation }];
+
+    it("refuses a state trigger", () => throws(begin({ trigger: BAD })));
+
+    it("refuses a literal SAY text", () => throws(begin({ say: [{ text: literal("a~b") }] })));
+
+    it("refuses a shorthand transition trigger", () =>
+        throws(begin({ transitions: [{ trigger: BAD, reply: literal("r"), next: { type: TDTransitionType.Exit } }] })));
+
+    it("refuses a shorthand transition action", () =>
+        throws(
+            begin({
+                transitions: [{ reply: literal("r"), action: 'Foo("a~b")', next: { type: TDTransitionType.Exit } }],
+            }),
+        ));
+
+    it("refuses a long-form transition trigger", () =>
+        throws(begin({ transitions: [{ trigger: BAD, next: { type: TDTransitionType.Exit } }] })));
+
+    it("refuses a long-form transition action", () =>
+        throws(begin({ transitions: [{ action: 'Foo("a~b")', next: { type: TDTransitionType.Exit } }] })));
+
+    it("carries the state's source line where the IR knows one", () => {
+        expect(() => emit(begin({ trigger: BAD, line: 41 }))).toThrow(
+            expect.objectContaining({ name: "TranspileError", location: { line: 42 } }),
+        );
+    });
+
+    it("refuses a chain trigger", () => throws(chain({ trigger: BAD })));
+
+    it("refuses a chain entry trigger on a speaker switch", () =>
+        throws(
+            chain({
+                entries: [
+                    { speaker: "D", texts: [literal("x")] },
+                    { speaker: "NPC", trigger: BAD, texts: [literal("y")] },
+                ],
+            }),
+        ));
+
+    it("refuses a chain entry trigger on a same-speaker continuation", () =>
+        throws(
+            chain({
+                entries: [
+                    { speaker: "D", texts: [literal("x")] },
+                    { trigger: BAD, texts: [literal("y")] },
+                ],
+            }),
+        ));
+
+    it("refuses a chain entry action", () =>
+        throws(chain({ entries: [{ texts: [literal("x")], action: 'Foo("a~b")' }] })));
+
+    it("refuses an interject entry trigger", () =>
+        throws(interject({ speaker: "NPC", trigger: BAD, texts: [literal("x")] })));
+
+    it("refuses an interject entry action", () =>
+        throws(interject({ speaker: "NPC", texts: [literal("x")], action: 'Foo("a~b")' })));
+
+    it("refuses ADD_STATE_TRIGGER's trigger", () =>
+        throws(patch({ op: TDPatchOp.AddStateTrigger, filename: "D", states: ["s"], trigger: BAD })));
+
+    it("refuses an UNLESS condition", () =>
+        throws(patch({ op: TDPatchOp.AddStateTrigger, filename: "D", states: ["s"], trigger: "Foo()", unless: BAD })));
+
+    it("refuses ADD_TRANS_TRIGGER's trigger", () =>
+        throws(patch({ op: TDPatchOp.AddTransTrigger, filename: "D", states: ["s"], trigger: BAD })));
+
+    it("refuses ADD_TRANS_ACTION's action", () =>
+        throws(
+            patch({
+                op: TDPatchOp.AddTransAction,
+                filename: "D",
+                states: ["s"],
+                transitions: [0],
+                action: 'Foo("a~b")',
+            }),
+        ));
+
+    it("refuses REPLACE_TRANS_TRIGGER's replacement text", () =>
+        throws(
+            patch({
+                op: TDPatchOp.ReplaceTransTrigger,
+                filename: "D",
+                states: ["s"],
+                transitions: [0],
+                oldText: "Foo()",
+                newText: 'Bar("a~b")',
+            }),
+        ));
+
+    it("refuses REPLACE_TRIGGER_TEXT's search text", () =>
+        throws(patch({ op: TDPatchOp.ReplaceTriggerText, filenames: ["D"], oldText: 'Foo("a~b")', newText: "Bar()" })));
+
+    it("refuses REPLACE_STATE_TRIGGER's trigger", () =>
+        throws(patch({ op: TDPatchOp.ReplaceStateTrigger, filename: "D", states: ["s"], trigger: BAD })));
+
+    it("refuses ALTER_TRANS's trigger", () =>
+        throws(
+            patch({
+                op: TDPatchOp.AlterTrans,
+                filename: "D",
+                states: ["s"],
+                transitions: [0],
+                changes: { trigger: BAD },
+            }),
+        ));
+
+    it("refuses ALTER_TRANS's action", () =>
+        throws(
+            patch({
+                op: TDPatchOp.AlterTrans,
+                filename: "D",
+                states: ["s"],
+                transitions: [0],
+                changes: { action: 'Foo("a~b")' },
+            }),
+        ));
 });

@@ -19,6 +19,9 @@ import { pathToUri } from "../uri-utils";
 
 const ZERO_RANGE = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 
+/** Cap on directory entries one path walk may inspect, so a huge tree cannot stall a request. */
+export const FILENAME_SEARCH_BUDGET = 20000;
+
 /**
  * No-op sentinel pointing at the start of the path-string node itself. Returning this claims the path
  * authoritatively (so the handler's symbol fallback cannot wrong-jump off the filename) while leaving
@@ -37,7 +40,8 @@ export function fileLocation(absPath: string): Location {
 /**
  * Absolute path if it exists, matched case-insensitively per segment: Fallout and Infinity Engine
  * filesystems are case-insensitive, so a case-sensitive checkout can differ from the casing a source
- * file writes. Returns null when no case-insensitive match exists.
+ * file writes. Returns null when no case-insensitive match exists, and also once the walk has read
+ * {@link FILENAME_SEARCH_BUDGET} entries, so a wide directory cannot stall a request.
  */
 export function resolveExisting(absPath: string): string | null {
     if (fs.existsSync(absPath)) {
@@ -46,6 +50,7 @@ export function resolveExisting(absPath: string): string | null {
     const parts = absPath.split(path.sep);
     const first = parts[0] ?? "";
     let current = first === "" ? path.sep : first;
+    let budget = 0;
     for (const want of parts.slice(1)) {
         if (want === "") {
             continue;
@@ -54,6 +59,10 @@ export function resolveExisting(absPath: string): string | null {
         try {
             entries = fs.readdirSync(current);
         } catch {
+            return null;
+        }
+        budget += entries.length;
+        if (budget > FILENAME_SEARCH_BUDGET) {
             return null;
         }
         const match = entries.find((e) => e.toLowerCase() === want.toLowerCase());

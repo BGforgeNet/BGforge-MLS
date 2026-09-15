@@ -15,7 +15,7 @@
     import { visibleRange } from "../../../../virtual-window";
     import ListEntryDetail from "../ListEntryDetail.svelte";
     import RowActions from "../RowActions.svelte";
-    import Icon from "../Icon.svelte";
+    import Icon from "../../../../webview-ui/Icon.svelte";
 
     const { bridge, version, selection, onedit, byNode, abilityDetail, effectDetail, canModify, childSection, labels }: {
         bridge: Bridge;
@@ -32,7 +32,8 @@
         labels?: Record<string, string>;
     } = $props();
 
-    let view = $state<EffectTreeView | undefined>();
+    // Raw: a whole joined view fetched per version and replaced wholesale.
+    let view = $state.raw<EffectTreeView | undefined>();
     // eslint-disable-next-line prefer-const -- reassigned by row clicks / host selection
     let selected = $state<{ nodeId: NodeId; kind: "ability" | "effect" } | undefined>();
     // eslint-disable-next-line prefer-const -- reassigned by chevron clicks
@@ -158,27 +159,31 @@
 </script>
 
 <div class="master-detail eff-tree">
+    <!-- The same side column as ListSection's master-detail: its width, a toolbar row, then the filter on its own
+         row, so the tree and a flat list present alike and the filter keeps the column's full width. -->
     <div class="master eff-tree-master">
-        <div class="eff-tree-toolbar">
+        <div class="toolbar eff-tree-toolbar">
             {#if canModify && view?.abilitiesNodeId}
-                <button class="eff-tree-toolbtn" onclick={addAbility}>+ ability</button>
+                <button onclick={addAbility}>+ ability</button>
             {/if}
-            <span class="list-filter eff-tree-filter">
-                <Icon name="search" />
-                <input type="text" class="list-filter-input" placeholder="Filter effects..."
-                       aria-label="Filter effects" bind:value={filterQuery} />
-                {#if filterQuery}
-                    <button class="list-filter-clear" aria-label="Clear filter" onclick={() => { filterQuery = ""; }}>
-                        <Icon name="close" />
-                    </button>
-                {/if}
+            <span class="eff-tree-toolbar-end">
+                <button class="eff-tree-iconbtn" aria-label="Collapse all" title="Collapse all" onclick={collapseAll}>
+                    <Icon name="collapse-all" />
+                </button>
+                <button class="eff-tree-iconbtn" aria-label="Expand all" title="Expand all" onclick={expandAll}>
+                    <Icon name="expand-all" />
+                </button>
             </span>
-            <button class="eff-tree-iconbtn" aria-label="Collapse all" title="Collapse all" onclick={collapseAll}>
-                <Icon name="collapse-all" />
-            </button>
-            <button class="eff-tree-iconbtn" aria-label="Expand all" title="Expand all" onclick={expandAll}>
-                <Icon name="expand-all" />
-            </button>
+        </div>
+        <div class="list-filter">
+            <Icon name="search" />
+            <input type="text" class="list-filter-input" placeholder="Filter effects..."
+                   aria-label="Filter effects" bind:value={filterQuery} />
+            {#if filterQuery}
+                <button class="list-filter-clear" aria-label="Clear filter" onclick={() => { filterQuery = ""; }}>
+                    <Icon name="close" />
+                </button>
+            {/if}
         </div>
         {#if !view || view.empty}
             <p class="placeholder">No abilities or effects in this record.</p>

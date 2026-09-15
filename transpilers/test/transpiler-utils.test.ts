@@ -53,6 +53,15 @@ describe("substituteVars", () => {
         const vars: VarsContext = new Map([["unused", "0"]]);
         expect(substituteVars("plain text", vars)).toBe("plain text");
     });
+
+    // The fold this pins: a value carrying `$&` or `$1` must substitute the same as one that does not,
+    // rather than being read as a replacement template.
+    test("treats replacement patterns in a value as literal text", () => {
+        const plain: VarsContext = new Map([["v", "AB"]]);
+        const dollar: VarsContext = new Map([["v", "$& $1 $$"]]);
+        expect(substituteVars("x v y", plain)).toBe("x AB y");
+        expect(substituteVars("x v y", dollar)).toBe("x $& $1 $$ y");
+    });
 });
 
 describe("parseIncrement", () => {

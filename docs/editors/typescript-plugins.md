@@ -1,47 +1,38 @@
 # TypeScript Plugins (TSSL/TD)
 
-The server package includes TypeScript Language Service Plugins for `.tssl` and `.td` transpiler files. These run inside tsserver (not the LSP server) and provide diagnostic filtering, runtime type injection, and completion filtering.
+The server package includes TypeScript Language Service Plugins for `.tssl` and `.td` transpiler files, at
+`out/tssl-plugin.js` and `out/td-plugin.js`. They run inside tsserver (not the LSP server) and provide diagnostic
+filtering, runtime type injection, and completion filtering.
 
-- [Setup](#setup)
 - [What they do](#what-they-do)
-- [Editor integration](#editor-integration)
-
-## Setup
-
-The plugins are bundled inside the server package at `out/tssl-plugin.js` and `out/td-plugin.js`. Find the install location:
-
-```bash
-MLS_DIR="$(pnpm root -g)/@bgforge/mls-server"
-# or if installed locally:
-MLS_DIR="$(pnpm root)/@bgforge/mls-server"
-```
-
-Add to your project's `tsconfig.json`:
-
-```json
-{
-  "compilerOptions": {
-    "plugins": [
-      { "name": "/path/to/@bgforge/mls-server/out/tssl-plugin" },
-      { "name": "/path/to/@bgforge/mls-server/out/td-plugin" }
-    ]
-  }
-}
-```
-
-Replace `/path/to/@bgforge/mls-server` with the actual path from the shell command above. TypeScript's `plugins` array does not support shell variables - you must paste the resolved path.
+- [Loading them](#loading-them)
 
 ## What they do
 
-- **tssl-plugin**: Suppresses false TS6133 ("declared but never read") warnings for Fallout engine procedure names. Adds engine procedure hover documentation.
-- **td-plugin**: Injects TD runtime types (`begin`, `say`, `reply`, etc.) so `.td` files get type checking without manual declarations. Filters completions: hides ES2020 lib names in `.td` files, hides TD-specific names in non-`.td` files.
+- **tssl-plugin**: Suppresses false TS6133 ("declared but never read") warnings for Fallout engine procedure names.
+  Adds engine procedure hover documentation.
+- **td-plugin**: Injects TD runtime types (`begin`, `say`, `reply`, etc.) so `.td` files get type checking without
+  manual declarations. Filters completions: hides ES2020 lib names in `.td` files, hides TD-specific names in non-`.td`
+  files.
 
-## Editor integration
+## Loading them
 
-These plugins are loaded by tsserver, which runs independently of the LSP server. Any editor that uses tsserver for TypeScript support will pick them up from `tsconfig.json`:
+VS Code loads them automatically.
 
-- **VSCode**: Automatic (configured via the extension's `package.json`)
-- **Neovim**: Works if using `typescript-language-server` or `ts_ls` for TypeScript
-- **Emacs**: Works with `tide` or `lsp-mode` TypeScript support
-- **Sublime Text**: Works with the `LSP-typescript` package
-- **Helix**: Works with `typescript-language-server`
+In other editors, the TypeScript language server starts tsserver with the plugins. This is set once in the editor
+configuration, with nothing to add to your projects; the "TypeScript plugins (TSSL/TD)" section of each editor guide
+has the configuration. It also makes `.tssl` and `.td` files open as TypeScript, which is what attaches the TypeScript
+server to them. Every configuration uses the same two values:
+
+- **name**: `@bgforge/mls-server/out/tssl-plugin` and `@bgforge/mls-server/out/td-plugin`. tsserver refuses a plugin
+  named by an absolute or relative path, so the name is always this package path.
+- **location**: the `node_modules` directory that contains `@bgforge/mls-server`. For a global install,
+  `pnpm ls -g --parseable` lists the package as `<that directory>/@bgforge/mls-server`; `pnpm root -g` does not print
+  it, because pnpm 11 and later install each global package in its own directory below that root.
+
+Where a guide installs `typescript` beside the language server, it pins version 6: TypeScript 7 ships no tsserver.
+
+A `tsconfig.json` `compilerOptions.plugins` entry does not reach these files: tsserver applies it to the files of that
+configured project, and `.tssl` and `.td` files are not among them, since `.tssl` and `.td` are not TypeScript
+extensions. tsserver opens them in a separate inferred project, which takes only the plugins the language server
+passes.

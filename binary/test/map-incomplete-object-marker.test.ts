@@ -9,8 +9,8 @@
  * is marked `editingLocked` - field edits are unsafe when the trailing-byte
  * width is unknown (changing `inventoryLength` or the upper byte of `pid`
  * would re-interpret the opaque trailer on reparse). Wall / Tile records
- * have no subtype trailer (fallout2-ce's `objectDataRead` switch doesn't
- * branch on them) and therefore parse cleanly.
+ * have no subtype trailer (the engine reads no per-subtype data for them)
+ * and therefore parse cleanly.
  */
 
 import { describe, expect, it } from "vitest";

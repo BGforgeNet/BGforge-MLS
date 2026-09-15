@@ -1,11 +1,11 @@
 import { expect, test } from "vitest";
 import type { Rgba } from "@bgforge/image";
-import { frameToRgba, rgbaFrameToRgba } from "../../src/image-editor/webview/render/indexed-to-rgba";
+import { frameToRgba, paletteLut, rgbaFrameToRgba } from "../../src/image-editor/webview/render/indexed-to-rgba";
 
 test("frameToRgba maps indices to palette RGBA and makes the transparent index alpha 0", () => {
     const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({ r: i, g: 0, b: 0, a: 255 }));
     const pixels = Uint8Array.from([0, 5]);
-    const rgba = frameToRgba(pixels, 2, 1, palette, 0);
+    const rgba = frameToRgba(pixels, 2, 1, paletteLut(palette, 0));
     expect([rgba[0], rgba[1], rgba[2], rgba[3]]).toEqual([0, 0, 0, 0]); // index 0 = transparent -> a0
     expect([rgba[4], rgba[5], rgba[6], rgba[7]]).toEqual([5, 0, 0, 255]); // index 5 opaque
 });
@@ -14,23 +14,51 @@ test("frameToRgba keeps the transparent pixel's palette rgb, only forcing alpha 
     const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 0, g: 0, b: 0, a: 255 }));
     palette[0] = { r: 12, g: 34, b: 56, a: 255 };
     const pixels = Uint8Array.from([0]);
-    const rgba = frameToRgba(pixels, 1, 1, palette, 0);
+    const rgba = frameToRgba(pixels, 1, 1, paletteLut(palette, 0));
     // rgb comes from palette[0], alpha is forced to 0 - a black-baked bug would give [0,0,0,0].
     expect([rgba[0], rgba[1], rgba[2], rgba[3]]).toEqual([12, 34, 56, 0]);
+});
+
+test("frameToRgba draws a palette entry's own transparency rather than forcing it opaque", () => {
+    // Enhanced Edition interface art stores per-entry transparency; drawing it opaque hides it.
+    const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 9, g: 9, b: 9, a: 255 }));
+    palette[5] = { r: 10, g: 20, b: 30, a: 0x77 };
+    const rgba = frameToRgba(Uint8Array.from([5]), 1, 1, paletteLut(palette, 0));
+    expect([rgba[0], rgba[1], rgba[2], rgba[3]]).toEqual([10, 20, 30, 0x77]);
+});
+
+test("the transparent index still wins over a palette entry's own alpha", () => {
+    const palette: Rgba[] = Array.from({ length: 256 }, () => ({ r: 9, g: 9, b: 9, a: 0x77 }));
+    const rgba = frameToRgba(Uint8Array.from([0]), 1, 1, paletteLut(palette, 0));
+    expect(rgba[3]).toBe(0);
 });
 
 test("frameToRgba returns a buffer of length width*height*4", () => {
     const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({ r: i, g: i, b: i, a: 255 }));
     const pixels = Uint8Array.from([1, 2, 3, 4, 5, 6]);
-    const rgba = frameToRgba(pixels, 3, 2, palette, 0);
+    const rgba = frameToRgba(pixels, 3, 2, paletteLut(palette, 0));
     expect(rgba).toHaveLength(3 * 2 * 4);
 });
 
 test("frameToRgba resolves the last pixel of a multi-pixel frame against its own palette entry", () => {
     const palette: Rgba[] = Array.from({ length: 256 }, (_, i) => ({ r: 0, g: 0, b: i, a: 255 }));
     const pixels = Uint8Array.from([10, 20, 30, 255]);
-    const rgba = frameToRgba(pixels, 2, 2, palette, 0);
+    const rgba = frameToRgba(pixels, 2, 2, paletteLut(palette, 0));
     expect([rgba[12], rgba[13], rgba[14], rgba[15]]).toEqual([0, 0, 255, 255]); // last pixel, index 255
+});
+
+test("a palette shorter than 256 entries resolves its missing indices to opaque black", () => {
+    // The lookup is indexed by a BYTE, so every index has to resolve to something whatever the palette
+    // holds; a short palette is what a truncated or hand-built one looks like from the loop's side.
+    const rgba = frameToRgba(Uint8Array.from([200]), 1, 1, paletteLut([{ r: 1, g: 2, b: 3, a: 255 }], 0));
+    expect([rgba[0], rgba[1], rgba[2], rgba[3]]).toEqual([0, 0, 0, 255]);
+});
+
+test("the packed lookup writes r,g,b,a in that byte order whatever the platform's word order is", () => {
+    // The words are built through a byte view precisely so this holds; reading the lookup back as bytes
+    // is what putImageData does with the converted frame.
+    const lut = paletteLut([{ r: 0x11, g: 0x22, b: 0x33, a: 255 }], 255);
+    expect([...new Uint8Array(lut.buffer, 0, 4)]).toEqual([0x11, 0x22, 0x33, 255]);
 });
 
 test("a true-colour frame's pixels pass through unchanged, alpha included", () => {

@@ -1,0 +1,303 @@
+/*
+ * Theming for the controls in webview-ui/ - the searchable combobox, the dropdown menu, the checkbox - so a
+ * second panel mounting one gets its look without a copy. The combobox in the binary editor and the one in
+ * the animation editor are the same control, and were the same CSS twice before this file existed.
+ *
+ * Only what a control needs to look like itself lives here; the page baseline is base.css, and panel-specific
+ * sizing, overrides and read-only treatment stay with the panel, whose sheet loads after this one.
+ */
+
+/* The combobox is the single searchable-dropdown control: a bordered box holding a borderless text input
+ * (the search field) that FILLS the box, with the chevron overlaid absolutely on the right. The input must
+ * span the full box width because bits-ui anchors the open dropdown-list popup to the input element - if the
+ * input were narrower than the box (e.g. a flex sibling shrunk by the chevron), the list would be offset from
+ * the value field by the chevron width. Right-padding on the input keeps the value text clear of the overlaid
+ * chevron. Width is applied to .bb-combobox (the box) by the consuming panel. */
+.bb-combobox {
+    position: relative;
+    display: inline-block;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+}
+.bb-combobox:focus-within {
+    border-color: var(--vscode-focusBorder);
+}
+.bb-combobox-input {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.2rem 1.5rem 0.2rem 0.4rem; /* right pad clears the overlaid chevron */
+}
+.bb-combobox-input:focus {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+.bb-combobox-trigger {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.4rem;
+    color: var(--vscode-descriptionForeground);
+    pointer-events: none; /* decorative chevron: clicks fall through to the input, which owns opening */
+}
+.bb-combobox-trigger::after {
+    content: "\25BE"; /* down-pointing triangle indicating a dropdown */
+    font-size: 0.8em;
+}
+/* The dropdown list spans at least the value field's width (the anchor is the full-width input), so the list is
+ * never narrower than the closed control. It can still grow wider for a long option. */
+.bb-combobox-content {
+    min-width: var(--bits-combobox-anchor-width);
+    padding: 0; /* the viewport carries the inner padding - it is the rect bits-ui's highlight check measures */
+}
+.bb-combobox-viewport {
+    /* Inset items from the viewport edges so the top item clears bits-ui's strict "fully inside the viewport"
+     * highlight check (nodeRect.top > viewportRect.top etc.), which otherwise never highlights the first match. */
+    padding: 0.2rem;
+}
+/* How many options the rendered cap left out. Styled apart from the items so it does not read as one - it is a
+ * notice, not something to pick. */
+.bb-combobox-more {
+    padding: 0.2rem 0.5rem;
+    color: var(--vscode-descriptionForeground);
+    font-style: italic;
+    white-space: nowrap;
+}
+
+/* ---- bb-popup-* (shared popup surface rules for the Select, Combobox, and Menu primitives) ----
+ * Content/item rules that were near-identical across bb-select, bb-combobox, and bb-menu are
+ * consolidated here. Each primitive's Content element carries both the primitive-specific class
+ * (for anchor-width vars and any other primitive-specific overrides) AND .bb-popup-content; each
+ * Item carries .bb-popup-item. Floating positioning is applied via CSSOM, CSP-safe under the strict
+ * nonce policy. bits-ui sets data-highlighted, data-selected, and data-disabled on items. */
+.bb-popup-content {
+    z-index: 50;
+    max-height: 18rem;
+    box-sizing: border-box;
+    color: var(--vscode-input-foreground, var(--vscode-foreground));
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+    padding: 0.2rem;
+}
+.bb-popup-item {
+    box-sizing: border-box;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    color: var(--vscode-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.bb-popup-item[data-highlighted] {
+    background: var(--vscode-list-hoverBackground);
+}
+.bb-popup-item[data-selected] {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
+}
+.bb-popup-item[data-disabled] {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* ---- bb-menu (themed contextual action menu via the Menu primitive wrapper) ----
+ * Generic, format-agnostic theming for the headless DropdownMenu primitive. bits-ui sets
+ * data-highlighted and data-disabled on items; there is no data-selected (menus are not selection
+ * controls). The menu surface uses .bb-popup-content for the shared floating panel rules.
+ * Content/item rules are shared via .bb-popup-content and .bb-popup-item above - this section comes AFTER
+ * them deliberately: the overrides here match their specificity, so only load order makes them win.
+ * Floating positioning is applied via CSSOM, CSP-safe under the strict nonce policy. */
+.bb-menu-trigger {
+    /* Secondary button. Sized for the icon-only "more actions" affordance; a panel giving the trigger a
+     * text label restyles this class in its own sheet. */
+    appearance: none;
+    font: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.1rem 0.3rem;
+    background: var(--vscode-button-secondaryBackground, transparent);
+    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+    border: 1px solid var(--vscode-button-border, transparent);
+    border-radius: 2px;
+    line-height: 1;
+}
+.bb-menu-trigger:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+.bb-menu-trigger[data-state="open"] {
+    outline: none;
+    border-color: var(--vscode-focusBorder);
+}
+.bb-menu-content {
+    /* Menu panels do not need an anchor-width constraint; they size to their widest item. */
+    min-width: 10rem;
+    /* A menu surface takes the theme's MENU colours where it defines them, unlike the combobox popup, which
+     * is a listbox hanging off an input and keeps the input's. The fallback is that input colour, so a theme
+     * setting no menu tokens renders exactly as before. */
+    background: var(--vscode-menu-background, var(--vscode-input-background));
+    color: var(--vscode-menu-foreground, var(--vscode-foreground));
+    border-color: var(--vscode-menu-border, var(--vscode-panel-border));
+}
+.bb-menu-item[data-highlighted] {
+    background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+    color: var(--vscode-menu-selectionForeground, inherit);
+}
+.bb-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.bb-menu-item-danger {
+    color: var(--vscode-errorForeground);
+}
+.bb-menu-item-danger[data-highlighted] {
+    /* Keep the highlighted background but keep the danger color. */
+    background: var(--vscode-list-hoverBackground);
+    color: var(--vscode-errorForeground);
+}
+
+/* ---- bb-checkbox (themed boolean control via the Checkbox primitive wrapper) ----
+ * Generic, format-agnostic theming for the headless Checkbox primitive. bits-ui sets data-state="checked"
+ * | "unchecked" | "indeterminate" on the Root button, and data-disabled when the control is disabled.
+ * The checkmark is drawn with a CSS ::after pseudo-element so no icon font is required - the control
+ * renders correctly in both the real webview and the standalone harness. Falls back from the optional
+ * --vscode-checkbox-* vars (not always defined by all VS Code themes) to --vscode-input-* equivalents. */
+.bb-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+}
+.bb-checkbox-label:has([data-disabled]) {
+    opacity: 0.5;
+    cursor: default;
+}
+.bb-checkbox-root {
+    appearance: none;
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--vscode-checkbox-background, var(--vscode-input-background));
+    border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border, #3c3c3c));
+    border-radius: 2px;
+    padding: 0;
+    cursor: pointer;
+    /* Reset the global button styles that override the checkbox look. */
+    color: var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    line-height: 1;
+    white-space: normal;
+}
+.bb-checkbox-root:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 1px;
+}
+.bb-checkbox-root[data-state="checked"] {
+    background: var(--vscode-checkbox-background, var(--vscode-input-background));
+    border-color: var(--vscode-focusBorder, var(--vscode-checkbox-border, #007fd4));
+}
+.bb-checkbox-root[data-disabled] {
+    cursor: default;
+}
+/* CSS-drawn checkmark inside .bb-checkbox-indicator: a rotated L-shape using ::after. Visible only when the
+ * sibling data-checked attribute is true (set by the Checkbox.svelte children snippet prop). */
+.bb-checkbox-indicator {
+    display: block;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    pointer-events: none;
+}
+.bb-checkbox-indicator[data-checked="true"]::after {
+    content: "";
+    position: absolute;
+    left: 20%;
+    top: 5%;
+    width: 35%;
+    height: 65%;
+    border-right: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    border-bottom: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
+    transform: rotate(45deg);
+}
+.bb-checkbox-text {
+    font: inherit;
+    color: var(--vscode-foreground);
+}
+
+/* ---- bb-dialog (themed modal via the Dialog primitive wrapper) ----
+ * Centred over a dimmed page rather than floated against a trigger: a dialog has no anchor, and its
+ * decisions are the ones the surface behind it should stop competing for. The panel reuses
+ * .bb-popup-content for the shared surface rules and overrides the popup max-height, which is sized for a
+ * dropdown list rather than for a panel of controls. */
+.bb-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.5);
+}
+.bb-dialog {
+    position: fixed;
+    z-index: 61;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* Wide enough for the longest layout label, and bounded so a small editor pane still shows the whole
+       panel; the body scrolls rather than the panel growing past the viewport. */
+    width: min(30rem, calc(100vw - 2rem));
+    max-height: min(40rem, calc(100vh - 2rem));
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    gap: 0.6rem;
+}
+.bb-dialog-title {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+.bb-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    overflow-y: auto;
+    min-height: 0;
+}
+.bb-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* ---- bb-beta-notice (BetaNotice.svelte: low-emphasis text with themed links) ----
+ * .bb-notice-bar is the row a panel without a toolbar of its own at the top puts the notice in. */
+.bb-beta-notice {
+    font-size: 0.9em;
+    color: var(--vscode-descriptionForeground);
+}
+.bb-beta-notice a {
+    color: var(--vscode-textLink-foreground);
+}
+.bb-beta-notice a:hover {
+    color: var(--vscode-textLink-activeForeground);
+}
+.bb-notice-bar {
+    flex: 0 0 auto;
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}

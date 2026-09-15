@@ -3,7 +3,7 @@ import { Perk, StatType } from "../types";
 import type { FieldSpec, SpecData } from "../../spec/types";
 import type { StructPresentation } from "../../spec/presentation";
 
-// Every field of the fallout2-ce Drug struct is a signed `long`: stat deltas can be negative and the -1
+// The Fallout 2 engine reads every drug field as a signed 32-bit value: stat deltas can be negative and the -1
 // sentinel (no instant effect / no addiction perk) must read as -1, not 4294967295. Use i32 throughout
 // (the durations / addiction rate / onset are non-negative in practice but stay i32 to match the engine).
 export const drugSpec = {
@@ -22,8 +22,8 @@ export const drugSpec = {
     amount1Delayed2: { codec: i32 },
     amount2Delayed2: { codec: i32 },
     addictionRate: { codec: i32 },
-    // The addiction perk inflicted on the critter, passed as the `perk` arg to fallout2-ce
-    // `_insert_withdrawal` (item.cc); -1 = none. Open enum - sfall extends the perk list past the named set.
+    // The addiction perk the engine inflicts on the critter; -1 = none. Open enum - sfall extends the perk list
+    // past the named set.
     addictionEffect: { codec: i32, enum: Perk, enumOpen: true },
     addictionOnset: { codec: i32 },
 } satisfies Record<string, FieldSpec>;

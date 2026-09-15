@@ -5,7 +5,7 @@
  * the code keeps round-tripping while the display reads as a name. Editing it makes no sense - the trailer was
  * already decoded from this code - so it is never editable.
  *
- * Subtype codes per fallout2-ce src/proto_types.h (ITEM_TYPE_* / SCENERY_TYPE_*). Verified against denbus1,
+ * Subtype codes per the Fallout 2 engine's item and scenery types. Verified against denbus1,
  * which decodes its item objects with the file-derived PRO resolver.
  */
 

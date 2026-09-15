@@ -16,32 +16,39 @@ Project documentation is not here. Index: `docs/README.md`. Contributor workflow
 Pick the cheapest tool that answers the actual question.
 
 - **"What does the server return here?"** ->
-  `pnpm lsp-probe <hover|completion|definition|references|symbols|signature|inlay|rename> <file> <line> <col>`
-  (1-based). Needs `pnpm build:dev`. Add `--game <dir>` (plus `--tlk-encoding` where the install needs it) for
-  anything resolving TLK strrefs - without it strref hovers and hints come back empty. Waits for the workspace scan,
-  so cross-file answers are complete (`--scan-timeout`, default 20s, warns on stderr rather than answering silently).
+  `pnpm lsp-probe <request> <file> <line> <col>` (1-based), request being one of `hover`, `completion`,
+  `definition`, `references`, `symbols`, `signature`, `inlay`, `rename`, `codeaction`. Needs `pnpm build:dev`. Add
+  `--game <dir>` (plus `--tlk-encoding` where the install needs it) for anything resolving TLK strrefs - without it
+  strref hovers and hints come back empty. Waits for the workspace scan, so cross-file answers are complete
+  (`--scan-timeout`, default 20s, warns on stderr rather than answering silently).
+  `codeaction` sends the diagnostics the server published at that position, so it also reports what was published.
   Not a substitute for a UI/webview drive.
 - **"Does this one SSL construct match the reference compiler?"** -> `pnpm ssl-diff <file.ssl>` or `-e '<source>'`
   (`-O1`/`-O2`, `--keep`), about a second. Not the corpus sweep - that answers "did anything regress" and belongs at
   close-out. Full loop: `compilers/ssl/AGENTS.md`.
+- **"What does this install say about animation X?"** ->
+  `pnpm anim-probe <gameDir> <set|members|cycles|ini|exists|files> <arg>...` (an id is hex with or without `0x`; a
+  name matches `ANIMATE.IDS`/`ANISND.IDS`). `cycles` reports each stance's own frame counts per facing, which is what
+  answers "how long is this animation" without a drive. Answers through the same index and resolvers the gallery
+  uses, so its answer and the panel's cannot disagree - which a throwaway script re-deriving the naming rules can.
+  Not a substitute for a gallery drive.
+- **"Run one package's tests"** -> `pnpm test:project <name> [file filter]` from the repo root. Never
+  `--config <pkg>/vitest.config...`: the extension varies per package (`.mts` under `client/` and `server/`, `.ts`
+  everywhere else) and a wrong guess fails as an unresolved-entry error that reads like a broken config. The root
+  `vitest.config.ts` names every project, so `--project` cannot be spelled wrong without saying so. Project names are
+  in each package's own config (`rg -n 'name:' */vitest.config.*`), and they carry a suffix the directory does not -
+  `animation-lib`, not `animation`. **Pass the file filter while iterating**: a package's whole suite over a real
+  install runs for minutes, and one file answers in seconds - keep the unfiltered run for close-out.
 - **Any visual/CSS/layout change to the binary editor** -> render it, do not reason about the cascade blind. Run
   order: `pnpm -C binary build` (only if `binary/src` changed) -> `pnpm exec tsx binary-editor/test/harness/build.mts`
-  (after any webview/Svelte/`styles.css` edit) -> a driver (`render-pro-eff.mts`, `render-itm.mts`, `render-spl.mts`,
-  `render-cre.mts`, `render-map.mts`, `render-primitives.mts`). Prereq: `pnpm exec playwright install chromium`.
+  (after any webview/Svelte/`styles.css` edit) -> one of the `render-*.mts` drivers in that same directory
+  (`ls binary-editor/test/harness`). Prereq: `pnpm exec playwright install chromium`.
   Harness: `binary-editor/test/harness/README.md`. UI conventions and the screenshot review brief:
   `binary-editor/AGENTS.md`.
 - **The whole extension in a real VS Code** -> `pnpm dev:web` (code-server; the harness above only draws the webview
   in isolation). Long-lived foreground server, default `0.0.0.0:8080` (`CODE_SERVER_PORT`/`CODE_SERVER_HOST`);
   confirm it is up before reporting a URL. The binary editor is a webview and needs a secure context
   (`http://localhost` or a trusted cert) or it renders blank. Details: `scripts/dev-web.md`.
-
-## Verification tiers
-
-Cheapest first: `scripts/test-scoped.sh [paths...]` while iterating (`--dry-run` prints the plan) -> `pnpm test`
--> `pnpm build:all` + `pnpm test:all` at close-out.
-
-**`pnpm test` is not a close-out gate, however green** - the coverage thresholds live only in `test:all` and CI.
-Full tier guidance, and the rule that every vitest config runs from any cwd: `docs/development.md`.
 
 ## Testing against real external files
 
@@ -53,7 +60,8 @@ gate and the sibling to copy: `docs/development.md`.
 
 - **Tree-sitter node types:** `SyntaxType.ActionCopy`, never the string `"action_copy"`. Import from `./syntax-type` in
   `server/`, from `../../../shared/syntax-types/<grammar>` in `@bgforge/format` (the canonical home). Generated - see
-  `grammars/README.md` (Type Generation).
+  `grammars/README.md` (Type Generation). Enforced by the `bgforge-syntax/no-node-type-literal` oxlint rule, which is
+  silent on a string no generated enum spells (an anonymous keyword token).
 - **A package's `src/` never imports its own name.** Inside `format/src/`, reach `format-utils` by relative path, not
   as `@bgforge/format`. `test/` is exempt. Guard: `scripts/utils/test/no-package-self-import.test.ts`.
 - **Libraries imported by transpiler sources** (iets, folib) use named re-exports (`export { X } from './module'`),
@@ -65,13 +73,13 @@ gate and the sibling to copy: `docs/development.md`.
   `showWarning()`, `showError()`, `showErrorWithActions()` from `user-messages.ts`. Enforced by an oxlint rule.
 - **Webview CSP:** `style-src` must include `{{cspSource}}`, not a bare nonce - the real panel silently drops a
   nonce-only stylesheet while headless renders still pass. Load CSS as `webview.asWebviewUri()` `<link>`, keep the
-  nonce for `script-src`, add each CSS dir to `localResourceRoots`. Why: `docs/architecture.md` (Webview CSP).
+  nonce for `script-src`, add each CSS dir to `localResourceRoots`. Why: the header of `client/src/webview-html.ts`.
   Guard: `client/test/webview-csp.test.ts`.
 
 ## Generated files - never hand-edit
 
-- **`syntaxes/*.tmLanguage.json`** are fully generated. After editing any `syntaxes/*.tmLanguage.yml`, run
-  `scripts/syntaxes-to-json.sh` before testing or committing.
+- **`syntaxes/*.tmLanguage.json`** are fully generated from `syntaxes/*.tmLanguage.yml` by
+  `scripts/syntaxes-to-json.sh`.
 - **Stanzas marked `# Auto-generated`** inside `syntaxes/*.tmLanguage.yml` come from `server/data/*.yml` via
   `generate-data.sh`. Edit the data source and regenerate. Full list: `docs/data-pipeline.md`.
 - **Generated artifacts are excluded from `oxfmt` but stay linted by `oxlint`.** The asymmetry is deliberate - do not
@@ -79,6 +87,9 @@ gate and the sibling to copy: `docs/development.md`.
   guards that keep it honest: `docs/ignore-files.md`.
 - **Sort `server/data/*.yml`** with `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts <file>`. Never
   hand-roll sorting.
+- Both of the above are enforced by `scripts/utils/test/syntaxes-generated.test.ts`, which regenerates the JSON into
+  a temp dir and re-runs the sorter in memory. It exempts the generator-owned data files, and
+  `server/data/fallout-worldmap-txt.yml`, which is committed in a different order.
 
 ## Traps
 

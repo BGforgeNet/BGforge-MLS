@@ -100,3 +100,18 @@ and emitting the readable `.ssl` is one option of it (`tssl --ssl`). See
 
 - [TBAF](./tbaf/docs/) - TypeScript to Infinity Engine BAF
 - [TD](./td/docs/) - TypeScript to Infinity Engine D
+
+## For contributors: package layout
+
+This section describes the repository source, not the published package.
+
+- **Shared pipeline** (`transpilers/common/transpiler-pipeline.ts`): `createTranspiler()` handles extension
+  validation, `@tra` tag extraction, file I/O and structured compile events, and never writes to stdout. TBAF, TD
+  and the TSSL compiler all build on it.
+- **Shared bundler** (`transpilers/common/bundle.ts`): used by TBAF and TD. TSSL resolves imports through the
+  TypeScript checker instead (`compilers/tssl/src/program-model.ts`).
+- **Per-language IR**: TBAF has a structured IR with condition algebra (boolean conditions to CNF for BAF `OR`
+  groups); TD has state and transition resolution, method-chain parsing and orphan detection.
+
+`transpilers/common/` plays the role the rest of the repo names "shared". The name stays: renaming it would churn
+every importer plus the `@bgforge/transpiler-common` package name for no functional gain.

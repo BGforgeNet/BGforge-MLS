@@ -64,6 +64,8 @@ check(
 const dom = await page.evaluate(() => ({
     panelTitles: Array.from(document.querySelectorAll(".layout-root .panel > h3"), (e) => e.textContent),
     matrixGroups: document.querySelectorAll(".matrix .mcol").length,
+    matrixRows: new Set(Array.from(document.querySelectorAll(".matrix .mcol"), (e) => e.getBoundingClientRect().top))
+        .size,
     skills: document.querySelectorAll(".grid .skill").length,
     flagCols:
         Array.from(document.querySelectorAll(".layout-root .panel"))
@@ -82,6 +84,8 @@ check(
     JSON.stringify(dom.panelTitles),
 );
 check("Stats matrix has 4 column groups", dom.matrixGroups === 4, `count=${dom.matrixGroups}`);
+// The matrix wraps its groups in a narrow editor; the PRO content cap must still hold all four in one row.
+check("Stats matrix groups share one row at the content cap", dom.matrixRows === 1, `rows=${dom.matrixRows}`);
 check("Skills grid has 18 entries", dom.skills === 18, `count=${dom.skills}`);
 // Scripts & AI holds two flag boxes: behavior `critterFlags` (2 columns) + `flagsExt` action flags (1 column).
 check(

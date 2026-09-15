@@ -16,6 +16,20 @@ export interface PlaybackState {
 // animations may carry none. Matches the BAM engine rate the parser resolves.
 export const DEFAULT_PLAYBACK_FPS = 15;
 
+/**
+ * The transport's resting state, for a surface that is drawn before anything is loaded.
+ *
+ * No frames, so every control resolves to its own disabled case by the rules already here rather than by a
+ * second "nothing loaded" branch through each of them.
+ */
+export const IDLE_PLAYBACK: PlaybackState = {
+    playing: false,
+    loop: false,
+    frame: 0,
+    fps: DEFAULT_PLAYBACK_FPS,
+    frameCount: 0,
+};
+
 export function createPlayback(opts: { frameCount: number; fps: number }): PlaybackState {
     // Resolved once here so the transport controls and tick never see a sub-1 fps; the source's
     // stored fps metadata is untouched (a 0-fps FRM still shows and saves 0).
@@ -53,6 +67,34 @@ function clampFrame(frame: number, frameCount: number): number {
 
 export function setFrame(state: PlaybackState, frame: number): PlaybackState {
     return { ...state, frame: clampFrame(frame, state.frameCount) };
+}
+
+/**
+ * How long a timeline the cycles on screen need: the longest of them.
+ *
+ * Given what is DRAWN, never the file's whole cycle list. One creature file packs several actions at very
+ * different lengths - a death knight walks in 11 frames and casts in 81 - so a rose showing the walk block
+ * against the file's own longest cycle played eleven frames and then held one picture for seventy.
+ */
+export function timelineFrameCount(sequences: readonly { readonly frameRefs: readonly number[] }[]): number {
+    return Math.max(0, ...sequences.map((sequence) => sequence.frameRefs.length));
+}
+
+/**
+ * Which frame of one cycle is showing at a shared timeline position.
+ *
+ * Every tile steps on ONE index, and the cycles beneath them still differ in length: a direction block's
+ * facings need not agree, and the grid lays out a whole file at once. Wrapping is what the engine does with
+ * a cycle - each loops at its own length - and it is the only reading under which a short cycle keeps
+ * animating instead of freezing for the rest of the playthrough.
+ *
+ * `reversed` reads the cycle from its far end, for a stance the engine draws by running its band backwards
+ * - getting up has no clip of its own. The timeline still advances forwards, so wrapping is unchanged.
+ */
+export function cycleFrameIndex(length: number, frame: number, reversed = false): number {
+    if (length <= 0) return 0;
+    const at = frame % length;
+    return reversed ? length - 1 - at : at;
 }
 
 /**

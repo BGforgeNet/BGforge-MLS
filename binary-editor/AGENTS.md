@@ -10,10 +10,12 @@ Screenshot harness: `binary-editor/test/harness/README.md`.
 Render first - never reason about the cascade blind, and never fall back to a sketch without checking that a
 driver exists.
 
-**Do not flag the intentional patterns**: a roomy dropdown, a control narrower than its track, a
-bare-vs-boxed flag difference, a folded Dice / Probability cell, mojibake in a raw-byte field, a lone-field
-PRO panel, an effect with no semantic panel titles. Each is listed with its reason in the two rule files.
+What to check: [docs/binary-editor-ui.md](../docs/binary-editor-ui.md) (Reviewing a rendered screenshot).
 
-Harness artifacts that are also NOT defects: the large empty area at the bottom of some screenshots (the tall
-capture viewport), `shot-primitives.png` being a raw-controls gallery rather than the dense field layout, and
-minor softness from the reduced device scale.
+**Do not flag the intentional patterns**: a roomy dropdown, a control narrower than its track, a grid showing
+fewer columns than its schema declares, labels above their controls or a list above its detail in a narrow
+editor, a bare-vs-boxed flag difference, a folded Dice / Probability cell,
+mojibake in a raw-byte field, a lone-field PRO panel, an effect with no semantic panel titles. Each is explained
+in that doc.
+
+Harness artifacts that are also not defects: `binary-editor/test/harness/README.md` (Reading the screenshots).

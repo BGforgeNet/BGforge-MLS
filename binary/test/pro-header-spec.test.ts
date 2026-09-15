@@ -29,7 +29,7 @@ describe("proCanonicalDocumentSchema header", () => {
                 ...validBase,
                 header: { ...validBase.header, objectType: 99 },
             }),
-        ).toThrow();
+        ).toThrow("expected one of 0, 1, 2, 3, 4, 5");
     });
 
     it("rejects header with frmType not in FRMType enum", () => {
@@ -38,7 +38,7 @@ describe("proCanonicalDocumentSchema header", () => {
                 ...validBase,
                 header: { ...validBase.header, frmType: 99 },
             }),
-        ).toThrow();
+        ).toThrow("expected one of 0, 1, 2, 3, 4, 5, 6, 7");
     });
 
     it("enforces lightRadius domain max", () => {
@@ -47,6 +47,6 @@ describe("proCanonicalDocumentSchema header", () => {
                 ...validBase,
                 header: { ...validBase.header, lightRadius: 9 },
             }),
-        ).toThrow();
+        ).toThrow("Too big: expected number to be <=8");
     });
 });

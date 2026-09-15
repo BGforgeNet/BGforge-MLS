@@ -2,6 +2,7 @@
     // Key/value list of fields (label + control), optionally in N columns. Reuses Field.svelte so
     // diagnostics, offsets, and every control type come for free. Unresolved refs are skipped.
     import type { Diagnostic, FieldRef, Row } from "@bgforge/binary-editor";
+    import { fitKvColumns } from "../../state/fit-kv-columns";
     import Field from "../Field.svelte";
     import JoinedField from "../JoinedField.svelte";
 
@@ -23,6 +24,10 @@
     // its text (shared per column, so values still align vertically), `auto` for the control. Each Field is
     // a subgrid spanning its pair, so short labels no longer sit in a fixed-width box far from their value.
     const multi = $derived(columns !== undefined && columns > 1);
+    // Columns actually shown: the schema's count is a maximum, lowered by fitKvColumns while the pane cannot hold
+    // every control at its sized width. The layout below reads this, never `columns` directly.
+    let fitted = $state(Number.MAX_SAFE_INTEGER);
+    const shown = $derived(Math.max(1, Math.min(fitted, columns ?? 1)));
     // A join folds a run of fields into one inline row at the FIRST member's position; the rest are folded in
     // (skipped in the normal flow). Iterate refs (not resolved rows) so the join anchors line up with `fields`.
     const joinByAnchor = $derived(new Map((joins ?? []).map((j) => [j.fields[0], j])));
@@ -32,14 +37,14 @@
     // count drives the placement; the row count is the rendered item count (refs minus folded join members)
     // divided across the columns. The default row flow would instead snake left-to-right across rows.
     const renderedRefs = $derived(fieldRefs.filter((ref) => !folded.has(ref)));
-    const rows = $derived(multi ? Math.ceil(renderedRefs.length / (columns ?? 1)) : 0);
+    const rows = $derived(multi ? Math.ceil(renderedRefs.length / shown) : 0);
     // Per-column label track: `max-content` (hugs the column's widest static label), EXCEPT a column holding a
     // reserved (runtime-rewritten) field gets `minmax(<ch>ch,max-content)` - floored so that column's value
     // does not jump as its label changes, while every other column stays tight to its own short labels. Items
     // fill column-major (`grid-auto-flow:column`, `rows` per column), so column c holds renderedRefs[c*rows..].
     const reserveByRef = $derived(new Map((labelReserve?.fields ?? []).map((f) => [f.ref, f.ch])));
     const labelTracks = $derived(
-        Array.from({ length: columns ?? 1 }, (_unused, c) => {
+        Array.from({ length: shown }, (_unused, c) => {
             let maxCh = 0;
             for (const ref of renderedRefs.slice(c * rows, c * rows + rows)) maxCh = Math.max(maxCh, reserveByRef.get(ref) ?? 0);
             return maxCh > 0 ? `minmax(${maxCh}ch,max-content)` : "max-content";
@@ -51,11 +56,21 @@
             : "",
     );
 </script>
-<div class="kv" class:kv-multi={multi} {style}>
+{#if multi}
+<div class="kv kv-multi" {style} use:fitKvColumns={{ max: columns ?? 1, set: (n) => (fitted = n), key: fields }}>
+    {@render entries()}
+</div>
+{:else}
+<div class="kv">
+    {@render entries()}
+</div>
+{/if}
+
+{#snippet entries()}
     {#each fieldRefs as ref (ref)}
         {@const join = joinByAnchor.get(ref)}
         {#if join}
-            <JoinedField label={join.label} fieldRefs={join.fields} separator={join.separator} {fields} {onedit} />
+            <JoinedField label={join.label} fieldRefs={join.fields} separator={join.separator} {fields} {onedit} {byNode} />
         {:else if !folded.has(ref)}
             {@const row = fields[ref]}
             {#if row}
@@ -63,4 +78,4 @@
             {/if}
         {/if}
     {/each}
-</div>
+{/snippet}

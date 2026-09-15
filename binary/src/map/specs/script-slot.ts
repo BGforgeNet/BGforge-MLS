@@ -40,9 +40,9 @@ const COMMON_FIELDS = {
     fixedParam: { codec: i32 },
     actionBeingUsed: { codec: i32, enum: Skill },
     scriptOverrides: { codec: i32 },
-    // Reserved / unknown int32s preserved for round-trip; user shouldn't edit. field_48 and field_50 are
-    // engine-internal (field_48 is referenced nowhere in fallout2-ce; field_50 is runtime string-lookup
-    // scratch) - not authored data, so they are hidden from the detail (still round-tripped via the doc).
+    // Reserved / unknown int32s preserved for round-trip; user shouldn't edit. The 0x48 and 0x50 slots are
+    // engine-internal (the engine never consumes 0x48; 0x50 is runtime string-lookup scratch) - not authored
+    // data, so they are hidden from the detail (still round-tripped via the doc).
     unknownField0x48: { codec: i32, role: "reserved" as const, hidden: true },
     checkMarginHowMuch: { codec: i32 },
     legacyField0x50: { codec: i32, role: "reserved" as const, hidden: true },
@@ -50,7 +50,7 @@ const COMMON_FIELDS = {
 
 export const otherSlotSpec = {
     sid: { codec: u32 },
-    // field_4 (scr_next): a legacy linked-list pointer fallout2-ce reads and writes but consumes nowhere.
+    // Slot offset 0x04: a legacy linked-list pointer the engine reads and writes but consumes nowhere.
     // Engine-internal, not authored map data - locked and hidden (round-trips via the canonical document).
     nextScriptLinkLegacy: { codec: i32, role: "reserved" as const, hidden: true },
     ...COMMON_FIELDS,
@@ -58,7 +58,7 @@ export const otherSlotSpec = {
 
 export const spatialSlotSpec = {
     sid: { codec: u32 },
-    // field_4 (scr_next): a legacy linked-list pointer fallout2-ce reads and writes but consumes nowhere.
+    // Slot offset 0x04: a legacy linked-list pointer the engine reads and writes but consumes nowhere.
     // Engine-internal, not authored map data - locked and hidden (round-trips via the canonical document).
     nextScriptLinkLegacy: { codec: i32, role: "reserved" as const, hidden: true },
     builtTile: { codec: i32 },
@@ -68,7 +68,7 @@ export const spatialSlotSpec = {
 
 export const timerSlotSpec = {
     sid: { codec: u32 },
-    // field_4 (scr_next): a legacy linked-list pointer fallout2-ce reads and writes but consumes nowhere.
+    // Slot offset 0x04: a legacy linked-list pointer the engine reads and writes but consumes nowhere.
     // Engine-internal, not authored map data - locked and hidden (round-trips via the canonical document).
     nextScriptLinkLegacy: { codec: i32, role: "reserved" as const, hidden: true },
     timerTime: { codec: i32 },

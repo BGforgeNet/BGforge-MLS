@@ -4,7 +4,7 @@
  * - Injects hover documentation for engine procedures from YAML-generated data.
  *
  * Loaded by tsserver via contributes.typescriptServerPlugins in package.json
- * (VSCode) or via tsconfig.json plugins array (other editors).
+ * (VSCode) or via the TypeScript language server's plugin settings (other editors).
  *
  * Build dependency: engine-proc-docs.json must be generated before bundling.
  * This is done by generate-data.sh, which must run before build:tssl-plugin.

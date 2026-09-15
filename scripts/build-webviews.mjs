@@ -12,6 +12,7 @@ await build({
         "./client/src/binary-editor/webview/main.ts",
         "./client/src/dialog-editor/webview/main.ts",
         "./client/src/image-editor/webview/main.ts",
+        "./client/src/gallery/webview/main.ts",
     ],
     outdir: "client/out",
     bundle: true,

@@ -28,7 +28,23 @@ const lookups = {
     // Default NOT drawable - the opposite default from `canOpen`, deliberately: most resource types are not
     // pictures, so this keeps the unrelated cases below asserting on rows with no thumbnail to explain.
     canThumbnail: (): boolean => false,
+    colorGradient: (): readonly string[] | undefined => undefined,
 };
+
+/** Twelve colours, the width of one creature-colour range, distinguishable per index. */
+const gradientFor = (index: number): readonly string[] =>
+    Array.from({ length: 12 }, (_, i) => `#${index.toString(16).padStart(2, "0")}00${i.toString(16)}0`);
+
+const withGradients = {
+    ...lookups,
+    colorGradient: (index: number): readonly string[] | undefined => (index < 120 ? gradientFor(index) : undefined),
+};
+
+const gradientsOf = (row: unknown): readonly string[] | undefined =>
+    (row as { gradientColors?: readonly string[] }).gradientColors;
+
+const animationOf = (row: unknown): { id: number } | undefined =>
+    (row as { animationTarget?: { id: number } }).animationTarget;
 
 /** A game whose RACE.IDS names 1 and 6; 2 is left to the vendored table so the gap-fill direction is visible. */
 const withRaceIds = {
@@ -668,5 +684,112 @@ describe("withGameContext", () => {
         const out = withGameContext({ rows: [soundSlot] }, named);
 
         expect(out.rows[0]).toMatchObject({ name: "22 AREA_FOREST", strrefText: LINE });
+    });
+
+    // A bitfield's bit names come from the install's own tables, the same way a value's name does.
+    describe("flag bit names", () => {
+        const flagsRow = { id: "b1", kind: "field", name: "Flags", flagsRef: { kind: "ids", byte: 0 }, rawValue: 3 };
+        const BITS = { "0": ["ITEM_UNSELLABLE"], "1": ["ITEM_TWO_HANDED"] };
+        const withBits = { ...lookups, flagBitNames: () => BITS };
+
+        it("fills the bit names the game supplies", () => {
+            const out = withGameContext({ rows: [flagsRow] }, withBits);
+
+            expect(out.rows[0]).toMatchObject({ flagBitNames: BITS });
+        });
+
+        it("leaves the row bare when the game names no bits, so the raw bits still show", () => {
+            const out = withGameContext({ rows: [flagsRow] }, lookups);
+
+            expect(out.rows[0]).not.toHaveProperty("flagBitNames");
+        });
+    });
+
+    // A creature's seven colour bytes each select a gradient from the install's own table, so the number
+    // alone tells the user nothing - the colours are the value.
+    describe("creature colour gradients", () => {
+        const colourRow = { id: "c1", kind: "field", name: "Hair", ref: { kind: "colorGradient" }, rawValue: 4 };
+
+        it("fills the gradient's colours on a colour row", () => {
+            const out = withGameContext({ rows: [colourRow] }, withGradients);
+
+            expect(gradientsOf(out.rows[0])).toEqual(gradientFor(4));
+        });
+
+        it("keeps the row bare outside a game, so the number still shows", () => {
+            const out = withGameContext({ rows: [colourRow] }, lookups);
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+            expect(out.rows[0]).toMatchObject({ rawValue: 4 });
+        });
+
+        it("leaves an index the table cannot supply unresolved rather than showing a wrong swatch", () => {
+            const out = withGameContext({ rows: [{ ...colourRow, rawValue: 200 }] }, withGradients);
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+        });
+
+        it("does not swatch another ref kind whose value happens to land inside the table", () => {
+            const idsRow = {
+                id: "c3",
+                kind: "field",
+                name: "Race",
+                ref: { kind: "ids", tables: ["RACE"] },
+                rawValue: 4,
+            };
+
+            const out = withGameContext({ rows: [idsRow] }, withGradients);
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+        });
+
+        it("does not touch a plain numeric row that happens to hold the same value", () => {
+            const out = withGameContext(
+                { rows: [{ id: "c2", kind: "field", name: "Weight", rawValue: 4 }] },
+                withGradients,
+            );
+
+            expect(gradientsOf(out.rows[0])).toBeUndefined();
+        });
+    });
+
+    describe("a field whose value names a creature animation", () => {
+        const animationRow = {
+            id: "a1",
+            kind: "field",
+            name: "Animation",
+            ref: { kind: "ids", tables: ["ANIMATE"], animationIds: true },
+            rawValue: 0x6211,
+        };
+        const named = {
+            ...lookups,
+            namingTable: (): Named => one("ANIMATE", [[0x6211, "MAGE_FEMALE_ELF"]]),
+        };
+
+        it("carries the animation as a link target", () => {
+            const out = withGameContext({ rows: [animationRow] }, named);
+
+            expect(animationOf(out.rows[0])).toEqual({ id: 0x6211 });
+        });
+
+        it("links an id no table names, which is the one most worth going to look at", () => {
+            const out = withGameContext({ rows: [{ ...animationRow, rawValue: 0x6543 }] }, named);
+
+            expect(animationOf(out.rows[0])).toEqual({ id: 0x6543 });
+        });
+
+        it("leaves the row bare outside a game, where there is nothing to browse", () => {
+            const out = withGameContext({ rows: [animationRow] }, lookups);
+
+            expect(animationOf(out.rows[0])).toBeUndefined();
+        });
+
+        it("does not link an IDS row whose table does not hold animation ids", () => {
+            const raceRow = { ...animationRow, ref: { kind: "ids", tables: ["RACE"] } };
+
+            const out = withGameContext({ rows: [raceRow] }, named);
+
+            expect(animationOf(out.rows[0])).toBeUndefined();
+        });
     });
 });

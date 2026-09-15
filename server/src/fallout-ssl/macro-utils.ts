@@ -15,7 +15,7 @@ import { formatSignature } from "../../../shared/signature-format";
 import type * as signature from "../shared/signature";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
 import { buildSignatureBlock } from "../../../shared/tooltip-format";
-import { buildTooltipBase } from "./utils";
+import { buildTooltipBase } from "./jsdoc-format";
 
 /**
  * Check if macro name looks like a constant (all uppercase).

@@ -8,7 +8,7 @@
     import type { Bridge } from "../state/bridge";
     import { fetchAllRows } from "../state/list-window";
     import FormSection from "./FormSection.svelte";
-    import Icon from "./Icon.svelte";
+    import Icon from "../../../webview-ui/Icon.svelte";
 
     const { ownerId, childList, bridge, version, onedit, byNode }: {
         ownerId: NodeId;
@@ -19,7 +19,8 @@
         byNode: Map<string, Diagnostic[]>;
     } = $props();
 
-    let entries = $state<Row[]>([]);
+    // Raw: derived from a fetched row set and replaced wholesale.
+    let entries = $state.raw<Row[]>([]);
     // eslint-disable-next-line prefer-const -- reassigned by the row toggle and the validity guard
     let selectedId = $state<NodeId | undefined>();
 

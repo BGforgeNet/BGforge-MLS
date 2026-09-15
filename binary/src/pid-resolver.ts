@@ -2,8 +2,8 @@
  * Default `pid -> subType` resolver backed by a packaged Fallout 2 lookup table.
  *
  * MAP records of `pidType` ITEM (0) or SCENERY (2) carry a per-subtype trailer
- * whose layout fallout2-ce determines by reading the referenced `.pro` file
- * (see `proto.cc:objectDataRead`). PROs are not packaged alongside MAPs in
+ * whose layout the engine determines by reading the referenced `.pro` file
+ * at map load. PROs are not packaged alongside MAPs in
  * user mod trees, so `parseObjectAt` cannot resolve the subtype on its own.
  * This module substitutes a precomputed table extracted from vanilla
  * Fallout 2 master.dat protos. Modded pids that are not in the table return

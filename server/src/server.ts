@@ -20,6 +20,7 @@ import * as definitionHandler from "./handlers/definition";
 import * as foldingHandler from "./handlers/folding";
 import * as selectionRangeHandler from "./handlers/selection-range";
 import * as callHierarchyHandler from "./handlers/call-hierarchy";
+import * as codeActionHandler from "./handlers/code-action";
 import * as formattingHandler from "./handlers/formatting";
 import * as hoverHandler from "./handlers/hover";
 import * as inlayHintsHandler from "./handlers/inlay-hints";
@@ -105,6 +106,7 @@ referencesHandler.register(handlerCtx);
 renameHandler.register(handlerCtx);
 selectionRangeHandler.register(handlerCtx);
 callHierarchyHandler.register(handlerCtx);
+codeActionHandler.register(handlerCtx);
 semanticTokensHandler.register(handlerCtx);
 signatureHandler.register(handlerCtx);
 symbolsHandler.register(handlerCtx);
@@ -127,8 +129,8 @@ connection.onShutdown(() => {
 });
 
 // The two ts-morph workers are stood up by the first open of a document that needs one, not here - see
-// prewarmWorkerFor in handlers/document-lifecycle.ts. Starting both unconditionally cost every session
-// ~214 MB resident and ~940 ms of setup for a feature only .tssl/.tbaf/.td authors reach.
+// prewarmWorkerFor in handlers/document-lifecycle.ts. Starting both here would charge every session the
+// resident memory and setup time of both, for a feature only .tssl/.tbaf/.td authors reach.
 
 // Attach the document manager and start the LSP transport.
 documents.listen(connection);

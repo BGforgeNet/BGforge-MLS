@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Row } from "@bgforge/binary-editor";
     import { rangeTooltip } from "../../state/controls";
+    import { useGradientTable } from "../../state/gradient-table-context";
     const { row, onedit, compact = false }: {
         row: Row;
         onedit: (value: number) => void;
@@ -68,6 +69,35 @@
         editing = false;
         (e.target as HTMLInputElement).value = strrefLine ?? "";
     }
+
+    // The gradient picker. The table is the install's, not the record's, so it is fetched once per panel and
+    // only when a picker is first opened - a record with no colour field never asks for it.
+    const fetchGradients = useGradientTable();
+    // Raw: the gradient table, fetched once and replaced wholesale.
+    let gradients = $state.raw<readonly (readonly string[])[]>([]);
+    let pickerOpen = $state(false);
+    function togglePicker(): void {
+        if (pickerOpen) {
+            pickerOpen = false;
+            return;
+        }
+        pickerOpen = true;
+        if (gradients.length > 0 || !fetchGradients) return;
+        fetchGradients().then(
+            (table) => {
+                gradients = table;
+            },
+            () => {
+                // The field keeps its number and the picker shows its empty state; the failure itself reaches
+                // the user through the bridge's own error channel.
+                pickerOpen = false;
+            },
+        );
+    }
+    function choose(index: number): void {
+        pickerOpen = false;
+        if (index !== raw) onedit(index);
+    }
 </script>
 
 {#if row.numericFormat === "hex32"}
@@ -107,6 +137,61 @@
             onblur={blurStrref}
             onchange={commitPlain}
         />
+    </span>
+{:else if row.gradientColors !== undefined}
+    <!-- The number IS a gradient index, so the colours are the value and the digits alone say nothing. The
+         strip is a fixed-width slot beside the input rather than a growable block, so a field that resolves
+         and one that cannot (outside a game) occupy the same width and the column never reflows. -->
+    <span class="gradient-input" class:disabled={!row.editable}>
+        <input
+            type="number"
+            value={row.rawValue ?? ""}
+            min={row.min}
+            max={row.max}
+            disabled={!row.editable}
+            title={rangeTitle}
+            aria-invalid={outOfRange || undefined}
+            onchange={commitPlain}
+        />
+        <button
+            type="button"
+            class="gradient-swatch"
+            disabled={!row.editable}
+            title="Choose a colour"
+            aria-label={`Choose a colour, currently gradient ${raw}`}
+            aria-expanded={pickerOpen}
+            onclick={togglePicker}
+        >
+            {#each row.gradientColors as color, i (i)}
+                <span class="gradient-band" style:background-color={color}></span>
+            {/each}
+        </button>
+        {#if pickerOpen}
+            <!-- Absolutely positioned so opening it never reflows the form under it. -->
+            <div class="gradient-picker" role="listbox" aria-label="Colour gradients" tabindex="-1">
+                {#if gradients.length === 0}
+                    <p class="gradient-empty">This game ships no colour table.</p>
+                {:else}
+                    {#each gradients as gradient, index (index)}
+                        <button
+                            type="button"
+                            class="gradient-option"
+                            class:selected={index === raw}
+                            role="option"
+                            aria-selected={index === raw}
+                            onclick={() => choose(index)}
+                        >
+                            <span class="gradient-index">{index}</span>
+                            <span class="gradient-strip">
+                                {#each gradient as color, i (i)}
+                                    <span class="gradient-band" style:background-color={color}></span>
+                                {/each}
+                            </span>
+                        </button>
+                    {/each}
+                {/if}
+            </div>
+        {/if}
     </span>
 {:else}
     <input

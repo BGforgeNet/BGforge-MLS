@@ -16,17 +16,13 @@ interface RuntimeResolution {
 }
 
 /**
- * Resolve the td-runtime.d.ts file path.
- * Checks both VSIX and npm package locations.
+ * Resolve the td-runtime.d.ts file path from the plugin's own directory.
+ * VSIX: the plugin is node_modules/bgforge-td-plugin/index.js and the runtime server/out/td-runtime.d.ts.
+ * npm (@bgforge/mls-server): the plugin is bundled to out/td-plugin.js, beside out/td-runtime.d.ts.
  */
-export function resolveRuntimePath(): RuntimeResolution {
-    // When installed as npm package: node_modules/@bgforge/td-plugin/out/index.js
-    // td-runtime.d.ts is in node_modules/@bgforge/mls-server/out/td-runtime.d.ts
-    // When bundled in VSIX: node_modules/bgforge-td-plugin/index.js
-    // td-runtime.d.ts is at ../../server/out/td-runtime.d.ts
-    // Try both locations.
-    const vsixPath = path.resolve(__dirname, "../../server/out/td-runtime.d.ts");
-    const npmPath = path.resolve(__dirname, "../../@bgforge/mls-server/out/td-runtime.d.ts");
+export function resolveRuntimePath(pluginDir: string = __dirname): RuntimeResolution {
+    const vsixPath = path.resolve(pluginDir, "../../server/out/td-runtime.d.ts");
+    const npmPath = path.resolve(pluginDir, "td-runtime.d.ts");
     if (fs.existsSync(vsixPath)) {
         return { path: vsixPath, exists: true };
     }

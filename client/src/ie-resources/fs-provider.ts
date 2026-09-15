@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { resourceTypeCode, type Game } from "@bgforge/binary";
 import { conlog } from "../logging";
 import { type CurrentGame } from "./current-game";
-import { parseResourceUri } from "./uri";
+import { parseAnimationSetUri, parseResourceUri } from "./uri";
 
 /**
  * How many resources' bytes stay cached. `stat` reads a resource whole just to report its size, so browsing a
@@ -45,6 +45,13 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
      * being replaced from then on is our own.
      */
     private readonly written = new Set<string>();
+    /**
+     * URIs a group confirmation has already covered, consumed by the write that follows it.
+     *
+     * Separate from `written`, and cleared as each write takes it: an approval answers for ONE save, so a
+     * later independent save of the same resource asks again.
+     */
+    private readonly approved = new Set<string>();
     private readonly currentGame: CurrentGame;
 
     constructor(currentGame: CurrentGame) {
@@ -104,7 +111,21 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
         return { game, resref, ext, type: resourceTypeCode(ext) };
     }
 
+    /**
+     * A set address has no bytes of its own: it stands for the several files the set draws, each of which
+     * has its own resource URI. Refused rather than answered with an empty buffer, which would open as an
+     * empty document and look like a corrupt animation instead of a caller asking the wrong question.
+     */
+    private refuseSetBytes(uri: vscode.Uri): void {
+        if (parseAnimationSetUri(uri) === undefined) return;
+        throw new Error(
+            `${uri.path} names an animation set, which has no single file - its members are read and written ` +
+                `by their own resource URIs.`,
+        );
+    }
+
     readFile(uri: vscode.Uri): Uint8Array {
+        this.refuseSetBytes(uri);
         const cached = this.cacheGet(uri.toString());
         if (cached) return cached;
         const { game, resref, ext, type } = this.resolve(uri);
@@ -139,17 +160,20 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
      * already in `override` is different: those bytes are the only copy, they usually belong to an installed
      * mod, and nothing in the editor can bring them back.
      */
-    private async confirmReplacement(replaced: string): Promise<void> {
-        const name = path.basename(replaced);
+    private async confirmReplacement(replaced: string | readonly string[]): Promise<void> {
+        const files = typeof replaced === "string" ? [replaced] : replaced;
+        const [first] = files;
+        if (first === undefined) return;
+        const name = files.length === 1 ? path.basename(first) : `${files.length} files`;
         const overwrite = "Overwrite";
         const choice = await vscode.window.showWarningMessage(
             `Overwrite ${name} in the game's override folder?`,
             {
                 modal: true,
                 detail:
-                    `${replaced}\n\nThis file was not written by this editing session - an installed mod, ` +
-                    `another tool or an earlier session put it there. Saving replaces it, and its current ` +
-                    `contents cannot be recovered from here.`,
+                    `${files.join("\n")}\n\nThese files were not written by this editing session - an installed ` +
+                    `mod, another tool or an earlier session put them there. Saving replaces them, and their ` +
+                    `current contents cannot be recovered from here.`,
             },
             overwrite,
         );
@@ -161,10 +185,36 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
         }
     }
 
+    /**
+     * Answer the override-replacement question once for a group of writes that belong to one save.
+     *
+     * An animation set saves one file per changed member, and asking per member would put the modal in
+     * front of the reader several times for a single save. The answer is recorded against exactly these
+     * URIs, so `writeFile` does not ask again for them and asks as usual for everything else.
+     *
+     * Silent when the group replaces nothing, which is the ordinary case: writing into `override` for the
+     * first time shadows an archived resource rather than destroying a file.
+     */
+    async confirmGroupWrite(uris: readonly vscode.Uri[]): Promise<void> {
+        const replaced: string[] = [];
+        for (const uri of uris) {
+            const key = uri.toString();
+            if (this.written.has(key)) continue;
+            const { game, resref, ext, type } = this.resolve(uri);
+            const file = this.replacedFile(game, resref, ext, type);
+            if (file !== undefined) replaced.push(file);
+        }
+        if (replaced.length === 0) return;
+        await this.confirmReplacement(replaced);
+        for (const uri of uris) this.approved.add(uri.toString());
+    }
+
     async writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void> {
+        this.refuseSetBytes(uri);
         const { game, resref, ext, type } = this.resolve(uri);
         const key = uri.toString();
-        const replaced = this.written.has(key) ? undefined : this.replacedFile(game, resref, ext, type);
+        const asked = this.written.has(key) || this.approved.delete(key);
+        const replaced = asked ? undefined : this.replacedFile(game, resref, ext, type);
         if (replaced !== undefined) await this.confirmReplacement(replaced);
 
         // Both land in override/, atomically; game.write also updates the resolution tree in place. A sidecar
@@ -177,12 +227,19 @@ export class GameResourceFileSystemProvider implements vscode.FileSystemProvider
     }
 
     stat(uri: vscode.Uri): vscode.FileStat {
+        // VS Code stats a resource before opening its custom editor, so a set has to answer here even
+        // though it has no bytes - reporting size 0 rather than reading the members, which is work the
+        // document does lazily and would otherwise happen twice for every set opened.
+        if (parseAnimationSetUri(uri) !== undefined) {
+            return { type: vscode.FileType.File, ctime: 0, mtime: 0, size: 0 };
+        }
         const bytes = this.readFile(uri);
         // Constant timestamps: the viewer is the writer, so VS Code never needs to detect an external change.
         return { type: vscode.FileType.File, ctime: 0, mtime: 0, size: bytes.byteLength };
     }
 
     delete(uri: vscode.Uri): void {
+        this.refuseSetBytes(uri);
         const { game, resref, type } = this.resolve(uri);
         if (type === undefined) throw vscode.FileSystemError.NoPermissions(uri); // aux sidecars aren't deletable here
         game.remove(resref, type); // uninstall the override copy; winner falls back to the BIF

@@ -1,0 +1,313 @@
+/**
+ * The gallery's webview panel: the editor-area window, its worker, and the pump between them.
+ *
+ * The repo's first plain webview panel rather than a custom editor. A custom editor restores itself from the
+ * document it was opened on; a panel has no document, so surviving a window reload takes a serializer plus
+ * the matching `onWebviewPanel` activation event - both wired in `register.ts`.
+ */
+import * as path from "path";
+import { Worker } from "node:worker_threads";
+import * as vscode from "vscode";
+import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
+import { surfaceWebviewRuntimeError } from "../webview-error";
+import { ThumbnailPump } from "./panel-core";
+import { type GallerySource } from "./source";
+import { galleryWorkerPort, type GalleryPort } from "./worker-port";
+import { type AnimationStageHost, createAnimationStage } from "./stage";
+import { type HostToWebview, type SetTile, isWebviewToHost } from "./webview/messages";
+
+const WEBVIEW_DIR = path.join("client", "src", "gallery", "webview");
+const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
+const WEBVIEW_CSS = path.join(WEBVIEW_DIR, "styles.css");
+const WEBVIEW_JS = path.join("client", "out", "gallery", "webview", "main.js");
+const WORKER_JS = path.join("client", "out", "gallery", "worker.js");
+/**
+ * The animation surface's own stylesheets, loaded into this panel too.
+ *
+ * The panel draws that surface with its own components, so it needs the rules they were written against;
+ * anything else would be a second stylesheet for one set of components, drifting on the first change.
+ */
+const ANIMATION_WEBVIEW_DIR = path.join("client", "src", "image-editor", "webview");
+const ANIMATION_CSS = path.join(ANIMATION_WEBVIEW_DIR, "styles.css");
+
+export const GALLERY_VIEW_TYPE = "bgforge.gallery";
+
+/** The tab's title for a source. One definition, because a retargeted panel has to restate it. */
+export function galleryTitle(source: "game" | "workspace"): string {
+    return source === "game" ? "Game Image Gallery" : "Workspace Image Gallery";
+}
+
+/** What a restored panel needs to rebuild itself. Structured-clone safe - VS Code persists it as JSON. */
+export interface GalleryPanelState {
+    source: "game" | "workspace";
+    /**
+     * The animation to open on, when the panel was opened by a link rather than by the command.
+     *
+     * Deliberately not restored: the serializer rebuilds a panel from its source alone, so a reloaded
+     * window shows the gallery rather than re-answering a click made an hour ago.
+     */
+    focusSet?: number;
+}
+
+export interface GalleryDeps {
+    /** The source for a kind, or undefined when it is not available (no game open, no workspace folders). */
+    sourceFor(kind: "game" | "workspace"): GallerySource | undefined;
+    /**
+     * Open an item this panel has no stage for, in whichever editor owns it.
+     *
+     * Only for those: an animation is drawn on the panel's own stage, which is what makes the gallery one
+     * surface rather than a launcher.
+     */
+    open(source: GallerySource, id: string): Promise<void>;
+    /**
+     * Where an item of this source lives, as a URI the animation surface can open, or undefined for one
+     * it cannot draw. The source knows the format, so the branch stays on the side that does.
+     */
+    animationUri(source: GallerySource, id: string): vscode.Uri | undefined;
+    /** The animation editor, which this panel draws inside itself. Absent when it is not registered. */
+    animation?: AnimationStageHost;
+    /**
+     * The open game's animations, or an empty list with no game.
+     *
+     * Its own dep rather than a `GallerySource` method: a source lists drawable FILES, and the workspace
+     * source has no game behind it to answer for. Empty is what hides the tab strip.
+     */
+    sets(): readonly SetTile[];
+    /** An animation set's address, by id. Undefined with no game open. */
+    setUri(id: number): vscode.Uri | undefined;
+    /**
+     * Fires when the open game changes - opened, replaced, or closed.
+     *
+     * A panel is wired once and would otherwise keep whatever was open at that moment. That is not a corner
+     * case: a restored panel is deserialized during activation, while the resource view opens the game only
+     * once it becomes visible, so on a window reload the panel is always wired with no game.
+     */
+    onDidChangeGame(listener: () => void): vscode.Disposable;
+    /** Injected so a test can drive the panel without spawning a thread. */
+    makePort?(extensionUri: vscode.Uri): GalleryPort;
+}
+
+/** What the caller keeps hold of, so one live panel can answer a later command instead of a second tab. */
+export interface GalleryPanelHandle {
+    /**
+     * Point this panel at another source, or at an animation, in place.
+     *
+     * A no-op when neither changes: re-running the command that opened a panel is a request to LOOK at it,
+     * and rebuilding the webview's world would throw away the filter, scroll and tab the reader had set.
+     */
+    retarget(state: GalleryPanelState): void;
+}
+
+function defaultPort(extensionUri: vscode.Uri): GalleryPort {
+    // An absolute path under the installed extension, not a bare specifier: `new Worker` resolves a relative
+    // one against the extension host's cwd, which is not the extension directory.
+    return galleryWorkerPort(new Worker(vscode.Uri.joinPath(extensionUri, WORKER_JS).fsPath));
+}
+
+/** The `type` of a message the panel refused, for the error text; the message itself may be any shape. */
+function describeMessageType(message: unknown): string {
+    if (typeof message !== "object" || message === null || !("type" in message)) return typeof message;
+    return String((message as { type: unknown }).type);
+}
+
+/**
+ * Wire one panel: mount the webview, start a worker, and pump thumbnails between them until it closes.
+ *
+ * Each panel gets its own worker. They are cheap next to what they hold - an archive-handle cache and a
+ * decoded-page cache, both of which are per-corpus - and a shared one would keep those alive after the last
+ * gallery closed.
+ */
+export function wireGalleryPanel(
+    panel: vscode.WebviewPanel,
+    initial: GalleryPanelState,
+    context: vscode.ExtensionContext,
+    deps: GalleryDeps,
+): GalleryPanelHandle {
+    /** What this panel is browsing NOW - `initial` is where it started, which `retarget` moves it off. */
+    let state: GalleryPanelState = initial;
+    panel.webview.options = {
+        // Two of its own on top of the shared roots, because the animation surface drawn here brings its own
+        // stylesheet. The script is inlined and the worker is spawned by the host, so nothing else under
+        // `client/out` is fetched by this webview.
+        enableScripts: true,
+        localResourceRoots: sharedWebviewRoots(context.extensionUri, WEBVIEW_DIR, ANIMATION_WEBVIEW_DIR),
+    };
+    panel.webview.html = buildGalleryHtml(panel.webview, context.extensionUri);
+
+    const port = (deps.makePort ?? defaultPort)(context.extensionUri);
+
+    // Nothing to browse is a legitimate state, not a failure - and the panel must say WHICH state, because
+    // "no pictures here" and "you have not opened a game" send the reader in opposite directions.
+    const emptyNote = (): string =>
+        state.source === "game"
+            ? 'No game is open. Run "BGforge: Open IE Game..." to browse an install.'
+            : "No folder is open. Open a folder to browse the images in it.";
+
+    let source: GallerySource | undefined;
+    let pump: ThumbnailPump | undefined;
+    /** What the stage is drawing, echoed to the webview so the browse list can mark the row it came from. */
+    let showing: { set?: number; item?: string } = {};
+
+    const stage =
+        deps.animation &&
+        createAnimationStage({
+            host: deps.animation,
+            post: (message) => void panel.webview.postMessage({ type: "viewer", message } satisfies HostToWebview),
+            showSet: (_gameDir, id) => showSet(id),
+        });
+
+    /**
+     * Draw something on the stage, and say what.
+     *
+     * Attached before `showing` goes out, and the picture only after: `showing` is what mounts the surface
+     * in the webview, and a mounted surface asks for its own contents. Announcing it before the document
+     * is attached would put that request to a stage holding nothing.
+     */
+    const showOnStage = async (uri: vscode.Uri, at: { set?: number; item?: string }): Promise<void> => {
+        if (stage === undefined) return;
+        // Only what actually landed is announced: a show overtaken by a later pick would otherwise mark a
+        // row the stage is not drawing.
+        if (!(await stage.show(uri))) return;
+        showing = at;
+        void panel.webview.postMessage({ type: "showing", ...at } satisfies HostToWebview);
+    };
+
+    const showSet = async (id: number): Promise<void> => {
+        const uri = deps.setUri(id);
+        if (uri !== undefined) await showOnStage(uri, { set: id });
+    };
+
+    /**
+     * Take a reading of the corpus this panel browses.
+     *
+     * Re-run whenever the game changes, so everything downstream is rebuilt against the new install rather
+     * than left pointing at the old one: the pump's thumbnail cache is keyed per item, not per game.
+     */
+    const mount = (): void => {
+        source = deps.sourceFor(state.source);
+        pump =
+            source &&
+            new ThumbnailPump({
+                source,
+                post: (message: HostToWebview) => void panel.webview.postMessage(message),
+                send: (request) => port.postMessage(request),
+            });
+    };
+
+    /** The whole reading in one message: which corpus, what is in it, and the note shown when it is empty. */
+    const postInit = (): void => {
+        void panel.webview.postMessage({
+            type: "init",
+            source: state.source,
+            title: state.source === "game" ? "resources" : "files",
+            items: source?.list() ?? [],
+            sets: [...deps.sets()],
+            ...(state.focusSet === undefined ? {} : { focusSet: state.focusSet }),
+            ...(source === undefined ? { note: emptyNote() } : {}),
+        } satisfies HostToWebview);
+        // Stated on every reading, not only when it changes: `init` replaces the webview's whole world, so
+        // a stage left drawn without this would be a picture the browse list no longer marks a row for.
+        void panel.webview.postMessage({ type: "showing", ...showing } satisfies HostToWebview);
+    };
+
+    mount();
+
+    port.onMessage((response) => pump?.handle(response));
+    port.onError((err) => {
+        // A dead worker cannot answer anything still in flight, so say so once rather than leaving every
+        // pending tile spinning with no explanation.
+        void vscode.window.showErrorMessage(`Image gallery worker stopped: ${err.message}`);
+    });
+
+    panel.webview.onDidReceiveMessage((message: unknown) => {
+        if (!isWebviewToHost(message)) {
+            // A shape this panel does not recognise means the webview and the host disagree about the
+            // contract, which is a bug rather than input: report it on the channels a webview throw uses
+            // rather than acting on partial data or dropping it silently.
+            surfaceWebviewRuntimeError({
+                editor: "Image gallery",
+                file: state.source,
+                message: `unrecognized message of type ${describeMessageType(message)}`,
+            });
+            return;
+        }
+        switch (message.type) {
+            case "ready":
+                postInit();
+                // A panel opened ON an animation draws it straight away: the link was a request to look at
+                // that set, and landing on its row with an empty stage would answer only half of it.
+                if (state.focusSet !== undefined) void showSet(state.focusSet);
+                break;
+            case "requestThumbnails":
+                pump?.request(message.ids, message.size);
+                break;
+            case "open": {
+                if (source === undefined) break;
+                // Drawn here when this panel has a stage for it, handed to its own editor when it does not:
+                // the gallery lists more formats than the animation surface can draw. The handed-over path
+                // still reveals the item in the resource tree and this one does not, deliberately: a reveal
+                // answers "where did the thing I am now looking at come from" when the view has moved, and
+                // moving focus out of the panel to answer it here would take the reader off the picture.
+                const uri = deps.animationUri(source, message.id);
+                if (uri === undefined) void deps.open(source, message.id);
+                else void showOnStage(uri, { item: message.id });
+                break;
+            }
+            case "showSet":
+                void showSet(message.id);
+                break;
+            case "viewer":
+                stage?.receive(message.message);
+                break;
+            // Parity with the other panels: a fatal error in the webview reaches the output channel and a
+            // toast instead of leaving a silently blank panel.
+            case "runtimeError":
+                surfaceWebviewRuntimeError({
+                    editor: "Image gallery",
+                    file: state.source,
+                    message: message.message,
+                    stack: message.stack,
+                });
+                break;
+        }
+    });
+
+    const gameChanged = deps.onDidChangeGame(() => {
+        // The stage is cleared, not redrawn: what it holds was opened out of the install that just went
+        // away, and a picture of an archive nobody has open any more is worse than an empty stage.
+        stage?.dispose();
+        showing = {};
+        mount();
+        postInit();
+    });
+
+    panel.onDidDispose(() => {
+        gameChanged.dispose();
+        port.dispose();
+        stage?.dispose();
+    });
+
+    return {
+        retarget: (next: GalleryPanelState): void => {
+            if (next.source === state.source && next.focusSet === undefined) return;
+            state = next;
+            panel.title = galleryTitle(next.source);
+            // The stage keeps whatever it is drawing, unlike the game-change path above: nothing went away
+            // here, so the picture is still a resource the reader asked to see.
+            mount();
+            postInit();
+            if (next.focusSet !== undefined) void showSet(next.focusSet);
+        },
+    };
+}
+
+function buildGalleryHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+    return buildSharedWebviewHtml(webview, {
+        cacheKey: "gallery",
+        extensionUri,
+        html: WEBVIEW_HTML,
+        js: WEBVIEW_JS,
+        css: WEBVIEW_CSS,
+        extraStyles: { "{{sharedTilesUri}}": SHARED_TILES_CSS, "{{animationStylesUri}}": ANIMATION_CSS },
+    });
+}

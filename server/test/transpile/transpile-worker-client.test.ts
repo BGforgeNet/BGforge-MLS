@@ -124,7 +124,7 @@ describe("transpile worker client", () => {
         const first = transpileOnWorker({ ...REQUEST });
         const died = current();
         died.emit("error", new Error("worker exploded"));
-        await expect(first).rejects.toThrow();
+        await expect(first).rejects.toThrow("The transpiler failed to run: worker exploded");
 
         const second = transpileOnWorker({ ...REQUEST });
         expect(current()).not.toBe(died);

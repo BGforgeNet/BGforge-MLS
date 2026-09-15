@@ -30,6 +30,10 @@ export default defineConfig({
             "@bgforge/format": path.resolve(import.meta.dirname, "../format/src/index.ts"),
         },
     },
+    // The coverage provider counts only files under the root, so without this a run started from the
+    // repo root (scripts/test-coverage.sh) also counts the aliased sibling packages and reads far lower
+    // than the gate's `cd server` run.
+    root: import.meta.dirname,
     test: {
         name: "server",
         // Absolute so discovery works both from server/ (pnpm test:unit) and from the

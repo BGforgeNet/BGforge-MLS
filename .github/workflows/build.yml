@@ -55,7 +55,7 @@ jobs:
           sudo apt-get install -y "${pkgs[@]}"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           run_install: false
 
@@ -103,11 +103,19 @@ jobs:
       - name: Build tree-sitter grammar
         run: pnpm build:grammar
 
-      # The grammar differential suite skips without a WeiDU binary, so without a binary it would pass
-      # by never running. The test scripts call this too, so CI and a local run resolve the same pinned
-      # WeiDU; here it also lands on PATH for the steps below. See scripts/ensure-weidu.sh.
+      # No WeiDU suite skips without a binary: each provisions the pinned one itself. The test
+      # scripts call this too, so CI and a local run resolve the same pinned WeiDU; here it also lands on
+      # PATH for the steps below. See scripts/ensure-weidu.sh.
       - name: Install WeiDU
         run: ./scripts/ensure-weidu.sh
+
+      # zizmor's online audit rules need GitHub API access, so the workflow lint runs here with a
+      # token of its own. The Test step below runs the same lint offline, and a token on that step
+      # would reach every suite in the gate.
+      - name: Workflow lint (online audits)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pnpm lint:workflows
 
       - name: Test
         run: pnpm test:all
@@ -138,7 +146,7 @@ jobs:
         run: |
           set -euo pipefail
           # --allow-build=libxmljs2: cyclonedx pulls libxmljs2 (native; ships a prebuilt binary
-          # via prebuild-install) as a transitive dep. pnpm 11 fails closed on an unclassified
+          # via prebuild-install) as a transitive dep. pnpm fails closed on an unclassified
           # install script (ERR_PNPM_IGNORED_BUILDS), and `pnpm dlx` resolves in a throwaway dir
           # outside the workspace, so the pnpm-workspace.yaml allowBuilds list does not apply -
           # allow it inline.
@@ -165,7 +173,7 @@ jobs:
         run: ./scripts/verify-grammar-bundle.sh
 
       # Two separate uploads so the VSIX can be fetched on its own, apart from the
-      # editor bundles and SBOM. Default 90-day retention is excessive for branch
+      # editor and grammar bundles. Default 90-day retention is excessive for branch
       # builds; 14 days is enough to inspect a CI artifact from a recent push or PR.
       - name: Upload VSIX
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -177,14 +185,13 @@ jobs:
 
       # The `dist/*.zip` glob carries the editor bundles AND the tree-sitter grammar bundle, so an
       # unreleased grammar fix is consumable from this artifact rather than from a channel of its own.
-      - name: Upload editor and grammar bundles and SBOM
+      - name: Upload editor and grammar bundles
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: "!startsWith(github.ref, 'refs/tags/')"
         with:
           name: bgforge-mls-bundles
-          path: |
-            dist/*.zip
-            dist/sbom.cdx.json
+          # The SBOM is generated on tag builds only, and this step skips those.
+          path: dist/*.zip
           retention-days: 14
 
       # The GitHub Release (carrying the SLSA-provenance subjects and the SBOM) is
@@ -208,7 +215,7 @@ jobs:
 
       - name: GitHub Release
         if: "startsWith(github.ref, 'refs/tags/')"
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           name: ${{ github.ref_name }}
           fail_on_unmatched_files: true
@@ -219,10 +226,10 @@ jobs:
 
       # Use pre-built VSIX for publishing: pnpm package (scripts/package.sh)
       # dereferences pnpm symlinks that vsce can't follow.
-      # skipDuplicate makes a release-tag re-run idempotent: a registry that
-      # already carries this version is skipped instead of failing the job, so
-      # a partial release (e.g. one registry's token expired) can be completed
-      # by re-running the tag without tripping over the registries that succeeded.
+      # skipDuplicate skips a registry that already carries this version. Releases are
+      # immutable, so a re-run fails at the GitHub Release step once that release exists;
+      # a publish failing after it is completed by hand from the release's VSIX (see
+      # docs/releasing.md, "Recovering from a partial release").
       - name: Publish to Open VSX Registry
         if: "startsWith(github.ref, 'refs/tags/')"
         uses: HaaLeo/publish-vscode-extension@ca5561daa085dee804bf9f37fe0165785a9b14db # v2

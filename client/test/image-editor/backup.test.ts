@@ -40,7 +40,7 @@ describe("animation editor backup container", () => {
     });
 
     it("rejects a header whose palette flag is not a boolean", () => {
-        const raw = new TextEncoder().encode('{"version":2,"externalPalette":"yes","main":0}\n');
+        const raw = new TextEncoder().encode('{"version":3,"externalPalette":"yes","main":0}\n');
 
         expect(() => decodeBackup(raw)).toThrow(/externalPalette flag/);
     });
@@ -74,16 +74,53 @@ describe("animation editor backup container", () => {
     });
 
     it("rejects a header whose page table is not a list of page/length pairs", () => {
-        const raw = new TextEncoder().encode('{"version":2,"externalPalette":true,"main":0,"pages":[{"page":1}]}\n');
+        const raw = new TextEncoder().encode('{"version":3,"externalPalette":true,"main":0,"pages":[{"page":1}]}\n');
 
         expect(() => decodeBackup(raw)).toThrow(/malformed page table/);
+    });
+
+    it("round-trips a set's changed members, each with its own palette flag", () => {
+        // A set holds a model per member with its own unsaved edits, so a backup carrying only the open
+        // one would restore a document that had silently dropped the rest.
+        const members = [
+            { resref: "CDMB1G1", bytes: Uint8Array.from([1, 0x0a, 2]), externalPalette: false },
+            { resref: "CDMB1A1", bytes: Uint8Array.from([3, 4]), externalPalette: true },
+        ];
+
+        const decoded = decodeBackup(encodeBackup({ bytes: new Uint8Array(), externalPalette: false, members }));
+
+        expect(decoded.members?.map((m) => m.resref)).toEqual(["CDMB1G1", "CDMB1A1"]);
+        expect(decoded.members?.map((m) => [...m.bytes])).toEqual([
+            [1, 0x0a, 2],
+            [3, 4],
+        ]);
+        expect(decoded.members?.map((m) => m.externalPalette)).toEqual([false, true]);
+    });
+
+    it("round-trips members alongside pages, without either run eating the other's bytes", () => {
+        const pages = [{ page: 7, bytes: Uint8Array.from([9, 9]) }];
+        const members = [{ resref: "CDMB1G1", bytes: Uint8Array.from([1, 2, 3]), externalPalette: false }];
+
+        const decoded = decodeBackup(encodeBackup({ bytes: PAYLOAD, externalPalette: false, pages, members }));
+
+        expect([...decoded.bytes]).toEqual([...PAYLOAD]);
+        expect([...(decoded.pages?.[0]?.bytes ?? [])]).toEqual([9, 9]);
+        expect([...(decoded.members?.[0]?.bytes ?? [])]).toEqual([1, 2, 3]);
+    });
+
+    it("rejects a header whose member table is missing a field", () => {
+        const raw = new TextEncoder().encode(
+            '{"version":3,"externalPalette":true,"main":0,"members":[{"resref":"A","length":1}]}\n',
+        );
+
+        expect(() => decodeBackup(raw)).toThrow(/malformed member table/);
     });
 
     it("rejects a file too short for the lengths its header declares", () => {
         // Truncation must fail here rather than hand back a short final page that decodes as a
         // corrupt texture somewhere far from the cause.
         const raw = new TextEncoder().encode(
-            '{"version":2,"externalPalette":true,"main":2,"pages":[{"page":1,"length":8}]}\nAB',
+            '{"version":3,"externalPalette":true,"main":2,"pages":[{"page":1,"length":8}]}\nAB',
         );
 
         expect(() => decodeBackup(raw)).toThrow(/truncated/);

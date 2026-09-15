@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { formatAdapterRegistry } from "../src/format-adapter";
 import { splParser } from "../src/spl";
 import { getSplCanonicalDocument, rebuildSplCanonicalDocument } from "../src/spl/canonical-reader";

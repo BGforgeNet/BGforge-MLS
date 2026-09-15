@@ -26,6 +26,7 @@ import {
     type SignatureHelp,
 } from "vscode-languageserver/node";
 import type { LanguageProvider, ProviderContext, FormatResult } from "../src/language-provider";
+import { scanWorkspaceFiles } from "../src/core/workspace-scanner";
 import {
     LANG_FALLOUT_SSL,
     LANG_WEIDU_BAF,
@@ -868,18 +869,17 @@ describe("ProviderRegistry", () => {
         it("should call reloadFileData for each matching file in workspace", async () => {
             const registry = await createRegistry();
             const mockReload = vi.fn();
-            registry.register(
-                createMockProvider("test", {
-                    indexExtensions: [".tph"],
-                    reloadFileData: mockReload,
-                }),
-            );
+            const provider = createMockProvider("test", {
+                indexExtensions: [".tph"],
+                reloadFileData: mockReload,
+            });
+            registry.register(provider);
 
             // Mock the single-walk discovery to return test files.
             const { findFilesByExtensions } = await import("../src/path-utils");
             vi.mocked(findFilesByExtensions).mockResolvedValue(["lib/utils.tph", "lib/other.tph"]);
 
-            await registry.scanWorkspaceFiles("/test/workspace");
+            await scanWorkspaceFiles([provider], registry, "/test/workspace");
 
             expect(findFilesByExtensions).toHaveBeenCalledWith("/test/workspace", ["tph"]);
             expect(mockReload).toHaveBeenCalledTimes(2);
@@ -888,14 +888,13 @@ describe("ProviderRegistry", () => {
         it("should do nothing if no workspace root provided", async () => {
             const registry = await createRegistry();
             const mockReload = vi.fn();
-            registry.register(
-                createMockProvider("test", {
-                    indexExtensions: [".tph"],
-                    reloadFileData: mockReload,
-                }),
-            );
+            const provider = createMockProvider("test", {
+                indexExtensions: [".tph"],
+                reloadFileData: mockReload,
+            });
+            registry.register(provider);
 
-            await registry.scanWorkspaceFiles(undefined);
+            await scanWorkspaceFiles([provider], registry, undefined);
 
             expect(mockReload).not.toHaveBeenCalled();
         });
@@ -903,18 +902,17 @@ describe("ProviderRegistry", () => {
         it("should skip providers without indexExtensions", async () => {
             const registry = await createRegistry();
             const mockReload = vi.fn();
-            registry.register(
-                createMockProvider("test", {
-                    reloadFileData: mockReload,
-                    // No indexExtensions
-                }),
-            );
+            const provider = createMockProvider("test", {
+                reloadFileData: mockReload,
+                // No indexExtensions
+            });
+            registry.register(provider);
 
             const { findFilesByExtensions } = await import("../src/path-utils");
             vi.mocked(findFilesByExtensions).mockClear(); // Clear any previous calls
             vi.mocked(findFilesByExtensions).mockResolvedValue([]);
 
-            await registry.scanWorkspaceFiles("/test/workspace");
+            await scanWorkspaceFiles([provider], registry, "/test/workspace");
 
             // No indexable extensions -> the tree is never walked.
             expect(findFilesByExtensions).not.toHaveBeenCalled();
@@ -923,43 +921,40 @@ describe("ProviderRegistry", () => {
 
         it("should skip providers without reloadFileData", async () => {
             const registry = await createRegistry();
-            registry.register(
-                createMockProvider("test", {
-                    indexExtensions: [".tph"],
-                    // No reloadFileData
-                }),
-            );
+            const provider = createMockProvider("test", {
+                indexExtensions: [".tph"],
+                // No reloadFileData
+            });
+            registry.register(provider);
 
             const { findFilesByExtensions } = await import("../src/path-utils");
             vi.mocked(findFilesByExtensions).mockResolvedValue(["file.tph"]);
 
             // Should not throw
-            await registry.scanWorkspaceFiles("/test/workspace");
+            await scanWorkspaceFiles([provider], registry, "/test/workspace");
         });
 
         it("walks once for the union of extensions and dispatches each file to its provider", async () => {
             const registry = await createRegistry();
             const mockReload1 = vi.fn();
             const mockReload2 = vi.fn();
-            registry.register(
-                createMockProvider("weidu-tp2", {
-                    indexExtensions: [".tph"],
-                    reloadFileData: mockReload1,
-                }),
-            );
-            registry.register(
-                createMockProvider("fallout-ssl", {
-                    indexExtensions: [".h"],
-                    reloadFileData: mockReload2,
-                }),
-            );
+            const tp2 = createMockProvider("weidu-tp2", {
+                indexExtensions: [".tph"],
+                reloadFileData: mockReload1,
+            });
+            const ssl = createMockProvider("fallout-ssl", {
+                indexExtensions: [".h"],
+                reloadFileData: mockReload2,
+            });
+            registry.register(tp2);
+            registry.register(ssl);
 
             const { findFilesByExtensions } = await import("../src/path-utils");
             // ONE walk over the union of extensions; the scanner dispatches each
             // hit to the right provider by its file extension.
             vi.mocked(findFilesByExtensions).mockResolvedValue(["lib/a.tph", "lib/b.h"]);
 
-            await registry.scanWorkspaceFiles("/test/workspace");
+            await scanWorkspaceFiles([tp2, ssl], registry, "/test/workspace");
 
             expect(findFilesByExtensions).toHaveBeenCalledTimes(1);
             expect(findFilesByExtensions).toHaveBeenCalledWith("/test/workspace", ["tph", "h"]);

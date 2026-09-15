@@ -16,7 +16,7 @@ export type { Tlk, TlkOptions } from "./tlk";
 export { bufferSource, fileSource } from "./byte-source";
 export type { ByteSource } from "./byte-source";
 export { openGame, engineOverrideFolders } from "./game";
-export type { Game, GameResourceRef, OpenGameOptions } from "./game";
+export type { Game, GameResourceRef, OpenGameOptions, ResourceLocation } from "./game";
 export { detectGameIdentity } from "./game-type";
 export type { GameIdentity, IeVariant, IeScriptStyle, IeFlavour } from "./game-type";
 export { resourceTypeExt, resourceTypeCode } from "./resource-type";

@@ -20,6 +20,13 @@ const EAST_PATH = "/w/usar1cae.bam";
 const { readFileMock, showWarningMock } = vi.hoisted(() => ({ readFileMock: vi.fn(), showWarningMock: vi.fn() }));
 
 vi.mock("vscode", () => {
+    // The provider hands one back from `attach`, so the surfaces showing a document can be detached.
+    class Disposable {
+        readonly dispose: () => void;
+        constructor(onDispose: () => void) {
+            this.dispose = onDispose;
+        }
+    }
     class EventEmitter {
         readonly event = (): { dispose: () => void } => ({ dispose: () => {} });
         fire(): void {}
@@ -35,6 +42,7 @@ vi.mock("vscode", () => {
     });
     return {
         EventEmitter,
+        Disposable,
         Uri: { file: uri, parse: uri },
         window: { showWarningMessage: showWarningMock },
         workspace: { fs: { readFile: readFileMock } },

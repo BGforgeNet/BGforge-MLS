@@ -5,6 +5,7 @@ Setup guide for using BGforge MLS with Emacs 29+.
 - [Prerequisites](#prerequisites)
 - [File type detection](#file-type-detection)
 - [Tree-sitter highlighting (Emacs 29+)](#tree-sitter-highlighting-emacs-29)
+  - [Download the grammar bundle](#download-the-grammar-bundle)
   - [Compile grammars](#compile-grammars)
   - [Font-lock rules](#font-lock-rules)
 - [Language server](#language-server)
@@ -62,7 +63,12 @@ Define major modes first. The mode names match the server's language IDs (`fallo
 (add-to-list 'auto-mode-alist '("\\.tp[ahp]\\'" . weidu-tp2-mode))
 (add-to-list 'auto-mode-alist '("worldmap\\.txt\\'" . fallout-worldmap-txt-mode))
 
-;; Highlight-only languages (no LSP provider)
+(define-derived-mode weidu-slb-mode prog-mode "WeiDU-SLB"
+  "Major mode for Sword Coast Stratagems script libraries."
+  (setq-local comment-start "// ")
+  (setq-local comment-start-skip "//+\\s-*")
+  (setq-local comment-end ""))
+
 (define-derived-mode fallout-msg-mode prog-mode "Fallout-MSG"
   "Major mode for Fallout message files.")
 
@@ -72,9 +78,28 @@ Define major modes first. The mode names match the server's language IDs (`fallo
   (setq-local comment-start-skip "//+\\s-*")
   (setq-local comment-end ""))
 
+(define-derived-mode infinity-2da-mode prog-mode "Infinity-2DA"
+  "Major mode for Infinity Engine 2DA tables.")
+
+(define-derived-mode fallout-scripts-lst-mode prog-mode "Fallout-Scripts-LST"
+  "Major mode for Fallout scripts.lst files.")
+
+(define-derived-mode weidu-log-mode prog-mode "WeiDU-Log"
+  "Major mode for weidu.log files.")
+
+(add-to-list 'auto-mode-alist '("\\.slb\\'" . weidu-slb-mode))
 (add-to-list 'auto-mode-alist '("\\.msg\\'" . fallout-msg-mode))
 (add-to-list 'auto-mode-alist '("\\.tra\\'" . weidu-tra-mode))
+(add-to-list 'auto-mode-alist '("\\.2da\\'" . infinity-2da-mode))
+(add-to-list 'auto-mode-alist '("scripts\\.lst\\'" . fallout-scripts-lst-mode))
+(add-to-list 'auto-mode-alist '("weidu\\.log\\'" . weidu-log-mode))
 ```
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column), `scripts.lst` (formatting) and `weidu.log`
+(go-to-definition from a mod entry to its `.tp2`). SLB is served as WeiDU BAF. So is Sword Coast Stratagems SSL
+(language ID `weidu-ssl`), which shares the `.ssl` extension with Fallout SSL: define a `weidu-ssl-mode` the same
+way, add it to the server registration below, and select it per project rather than in `auto-mode-alist`.
 
 Note: `.h` files default to C in Emacs. The config above overrides this globally. For per-project control, use directory-local variables (`.dir-locals.el`) instead.
 
@@ -182,10 +207,12 @@ The tree-sitter modes and basic modes are independent. If using tree-sitter mode
 ### eglot (built-in, Emacs 29+)
 
 ```elisp
-(add-to-list 'eglot-server-programs
-             '((fallout-ssl-mode weidu-baf-mode weidu-tp2-mode weidu-d-mode
-                fallout-worldmap-txt-mode)
-               "bgforge-mls-server" "--stdio"))
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               '((fallout-ssl-mode weidu-baf-mode weidu-tp2-mode weidu-d-mode
+                  weidu-slb-mode fallout-worldmap-txt-mode fallout-msg-mode weidu-tra-mode
+                  infinity-2da-mode fallout-scripts-lst-mode weidu-log-mode)
+                 "bgforge-mls-server" "--stdio")))
 ```
 
 ### [lsp-mode](https://emacs-lsp.github.io/lsp-mode/)
@@ -197,7 +224,8 @@ The tree-sitter modes and basic modes are independent. If using tree-sitter mode
  (make-lsp-client
   :new-connection (lsp-stdio-connection '("bgforge-mls-server" "--stdio"))
   :major-modes '(fallout-ssl-mode weidu-baf-mode weidu-tp2-mode weidu-d-mode
-                 fallout-worldmap-txt-mode)
+                 weidu-slb-mode fallout-worldmap-txt-mode fallout-msg-mode weidu-tra-mode
+                 infinity-2da-mode fallout-scripts-lst-mode weidu-log-mode)
   :server-id 'bgforge-mls))
 ```
 
@@ -232,7 +260,39 @@ Requires a [Nerd Font](https://www.nerdfonts.com/). Glyph names follow the Nerd 
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Emacs they load through
+`typescript-language-server`, which passes plugins from its initialization options to tsserver. Install it with
+`pnpm add -g typescript-language-server,typescript@6`, open the files in `typescript-ts-mode`, and replace
+`<mls-node-modules>` below with the `node_modules` directory holding `@bgforge/mls-server`:
+
+```elisp
+(add-to-list 'auto-mode-alist '("\\.tssl\\'" . typescript-ts-mode))
+(add-to-list 'auto-mode-alist '("\\.td\\'" . typescript-ts-mode))
+```
+
+With eglot, add a server entry ahead of the built-in one:
+
+```elisp
+(with-eval-after-load 'eglot
+  (add-to-list 'eglot-server-programs
+               '((typescript-ts-mode :language-id "typescript")
+                 . ("typescript-language-server" "--stdio"
+                    :initializationOptions
+                    (:plugins [(:name "@bgforge/mls-server/out/tssl-plugin" :location "<mls-node-modules>")
+                               (:name "@bgforge/mls-server/out/td-plugin" :location "<mls-node-modules>")])))))
+```
+
+With lsp-mode, set its plugin list:
+
+```elisp
+(setq lsp-clients-typescript-plugins
+      (vector (list :name "@bgforge/mls-server/out/tssl-plugin" :location "<mls-node-modules>")
+              (list :name "@bgforge/mls-server/out/td-plugin" :location "<mls-node-modules>")))
+```
+
+`:name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 
@@ -258,7 +318,7 @@ The server reads settings via `workspace/configuration`. Use `lsp-register-custo
 (defcustom lsp-bgforge-validate "saveAndType"
   "Validation mode: manual, save, type, or saveAndType." :type 'string :group 'lsp-bgforge)
 (defcustom lsp-bgforge-ssl-compile-path ""
-  "SSL compile path. Empty = built-in compiler." :type 'string :group 'lsp-bgforge)
+  "External sslc to run. Empty = the compiler bgforge.falloutSSL.compiler selects." :type 'string :group 'lsp-bgforge)
 (defcustom lsp-bgforge-ssl-compile-options "-q -p -l -O2 -d -s -n"
   "SSL compile options." :type 'string :group 'lsp-bgforge)
 (defcustom lsp-bgforge-ssl-output-directory ""

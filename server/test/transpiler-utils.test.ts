@@ -63,36 +63,46 @@ describe("evaluateCondition", () => {
 
     describe("rejects dangerous expressions from user files", () => {
         it("rejects process.exit() in loop condition", () => {
-            expect(() => evaluateCondition("process.exit(0)", "i", 0, emptyVars)).toThrow();
+            expect(() => evaluateCondition("process.exit(0)", "i", 0, emptyVars)).toThrow(
+                "Unsupported character 'p' at position 0",
+            );
         });
 
         it("rejects require() in loop condition", () => {
-            expect(() => evaluateCondition("require('fs')", "i", 0, emptyVars)).toThrow();
+            expect(() => evaluateCondition("require('fs')", "i", 0, emptyVars)).toThrow(
+                "Unsupported character 'r' at position 0",
+            );
         });
 
         it("rejects property access", () => {
-            expect(() => evaluateCondition("global.process", "i", 0, emptyVars)).toThrow();
+            expect(() => evaluateCondition("global.process", "i", 0, emptyVars)).toThrow(
+                "Unsupported character 'g' at position 0",
+            );
         });
 
         it("rejects constructor access", () => {
-            expect(() => evaluateCondition("constructor.constructor('return this')()", "i", 0, emptyVars)).toThrow();
+            expect(() => evaluateCondition("constructor.constructor('return this')()", "i", 0, emptyVars)).toThrow(
+                "Unsupported character 'c' at position 0",
+            );
         });
 
         it("rejects string literals", () => {
-            expect(() => evaluateCondition("i < 'a'.length", "i", 0, emptyVars)).toThrow();
+            expect(() => evaluateCondition("i < 'a'.length", "i", 0, emptyVars)).toThrow(
+                "Unsupported character ''' at position 4",
+            );
         });
 
         it("rejects array access", () => {
-            expect(() => evaluateCondition("i < [1,2,3][0]", "i", 0, emptyVars)).toThrow();
+            expect(() => evaluateCondition("i < [1,2,3][0]", "i", 0, emptyVars)).toThrow(
+                "Unsupported character '[' at position 4",
+            );
         });
 
         it("rejects statement injection via semicolons", () => {
-            expect(() => evaluateCondition("i < 10; process.exit(0)", "i", 0, emptyVars)).toThrow();
+            expect(() => evaluateCondition("i < 10; process.exit(0)", "i", 0, emptyVars)).toThrow(
+                "Unsupported character ';' at position 6",
+            );
         });
-    });
-
-    it("throws on unresolved identifiers", () => {
-        expect(() => evaluateCondition("i < unknown", "i", 5, emptyVars)).toThrow();
     });
 });
 
@@ -151,7 +161,9 @@ describe("evaluateCondition - edge cases", () => {
     const emptyVars: VarsContext = new Map();
 
     it("throws when variable is not in vars map and not the loop var", () => {
-        expect(() => evaluateCondition("i < unknown", "i", 5, emptyVars)).toThrow();
+        expect(() => evaluateCondition("i < unknown", "i", 5, emptyVars)).toThrow(
+            "Unsupported character 'u' at position 4",
+        );
     });
 
     it("handles condition where loop var equals boundary value", () => {
@@ -166,7 +178,9 @@ describe("evaluateCondition - edge cases", () => {
     it("handles non-numeric variable value in vars map", () => {
         // If a var maps to something non-numeric, safeEvaluate will reject it
         const vars: VarsContext = new Map([["max", "ten"]]);
-        expect(() => evaluateCondition("i < max", "i", 5, vars)).toThrow();
+        expect(() => evaluateCondition("i < max", "i", 5, vars)).toThrow(
+            "Substituted: \"5 < ten\". Error: Unsupported character 't' at position 4",
+        );
     });
 
     it("includes substituted expression in error message", () => {
@@ -325,7 +339,9 @@ describe("applyHelperFixups", () => {
             // identifiers/numbers; reject anything orders of magnitude beyond
             // that to bound the regex cost.
             const adversarial = 'obj("[a'.repeat(10000); // 70k chars
-            expect(() => applyHelperFixups(adversarial)).toThrow();
+            expect(() => applyHelperFixups(adversarial)).toThrow(
+                `applyHelperFixups input length ${adversarial.length} exceeds`,
+            );
         });
     });
 });

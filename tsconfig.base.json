@@ -18,6 +18,9 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "resolveJsonModule": true,
+        // The type-aware lint runs on the TS 7 engine while tsc is still 6.x; pinning the
+        // ordering keeps the two from disagreeing on inferred union member order.
+        "stableTypeOrdering": true,
         // Stated rather than inferred: TS 6.0 narrows which @types packages are included
         // automatically, and without this the Node globals stop resolving across most of the
         // workspace configs.

@@ -1,12 +1,12 @@
 /**
  * PRO declarative layout. Attached to the PRO adapter so the editor renders PRO on a single dense page
- * via the generic layout renderer instead of the legacy depth-0-groups-as-tabs path. The active variant
- * is chosen by the parse result's `variantId` (see `proVariantId` in `index.ts`).
+ * via the generic layout renderer. The active variant is chosen by the parse result's `variantId` (see
+ * `proVariantId` in `index.ts`).
  *
  * Every PRO object/sub type has a variant: critter (the worked mockup), the seven item subtypes
  * (weapon/armor/ammo/drug/misc/key/container), the six scenery subtypes (door/stairs/elevator/ladderTop/
- * ladderBottom/generic), and wall/tile/misc. With all variants present the parser never falls back to the
- * legacy depth-0-groups-as-tabs path (since retired).
+ * ladderBottom/generic), and wall/tile/misc. Only the bare `item`/`scenery` ids `proVariantId` emits for
+ * an unknown subtype have none.
  *
  * Field refs are the semantic keys `toSemanticFieldKey("pro", sourceSegments)` produces. The critter parser
  * flattens to one "Critter" group, so its keys are `pro.critter.<field>`; every other type keys its fields
@@ -308,7 +308,8 @@ const proLabels: Record<string, string> = {
 export const proLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "pro",
-    maxContentWidthPx: 1000,
+    // The critter Stats panel's four 260px matrix groups, their gaps and the panel chrome; narrower wraps a group.
+    maxContentWidthPx: 1136,
     labels: proLabels,
     // Variant discriminators: shown for context but read-only (editing them desyncs the stamped variant).
     readOnlyFields: [p("header.objectType"), p("itemProperties.subType"), p("sceneryProperties.subType")],
@@ -381,8 +382,8 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                 },
                 // A weapon has two attack modes; each is (mode, AP cost, range). The mode lives in the common
                 // item byte and the AP/range in the weapon struct - fuse each across that parse boundary into
-                // one boxed group so the two modes read as coherent units (fallout2-ce Weapon.maxRange[2] /
-                // movePointCost[2] are indexed by mode: index 0 primary, index 1 secondary).
+                // one boxed group so the two modes read as coherent units (the engine indexes the weapon's range and AP
+                // cost pairs by mode: index 0 primary, index 1 secondary).
                 {
                     title: "Attack",
                     blocks: [
@@ -423,7 +424,7 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                             p("ammoStats.damageMultiplier"),
                             p("ammoStats.damageDivisor"),
                         ],
-                        // Ammo scales target damage by multiplier/divisor (fallout2-ce Ammo damageMult/damageDiv);
+                        // Ammo scales target damage by multiplier/divisor (as the engine applies it);
                         // fold the pair into one "N / M" cell so it reads as the single fraction it is.
                         joins: [
                             {
@@ -445,8 +446,8 @@ export const proLayout: FormatLayout = formatLayoutSchema.parse({
                 ],
             },
         ]),
-        // A drug's effect data is three parallel arrays (fallout2-ce Drug: stats[3], immediateEffect[3],
-        // delayed[2].effect[3]): each affected stat gets an instant amount plus two delayed amounts. Render it
+        // A drug's effect data is three parallel arrays (three stats, three instant amounts, and two delayed
+        // phases of three amounts): each affected stat gets an instant amount plus two delayed amounts. Render it
         // stat-major as one matrix (a row per affected stat) instead of the old phase-major panels that forced
         // the reader to mentally zip stat0 with amount0. The two onset durations are per-phase, not per-stat, so
         // they sit in a small Delays panel beside the matrix's Delayed 1 / Delayed 2 columns.

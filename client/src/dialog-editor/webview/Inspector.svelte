@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Checkbox from "../../webview-ui/Checkbox.svelte";
     import { writable } from "svelte/store";
     import {
         resolveText,
@@ -547,10 +548,15 @@
                         <option value="neutral">Neutral</option>
                         <option value="bad">Bad</option>
                     </select>
-                    <label class="lowlbl">
-                        <input type="checkbox" checked={Boolean(c.lowIq)} disabled={!structuralEditable} title={!structuralEditable ? structReason : ""} onchange={(e) => actions.setLowIq(c.id, e.currentTarget.checked)} />
-                        Low INT
-                    </label>
+                    <span class="lowlbl">
+                        <Checkbox
+                            label="Low INT"
+                            checked={Boolean(c.lowIq)}
+                            disabled={!structuralEditable}
+                            title={!structuralEditable ? structReason : ""}
+                            onchange={(next) => actions.setLowIq(c.id, next)}
+                        />
+                    </span>
                 </div>
             {/if}
         </div>
@@ -1022,8 +1028,10 @@
         cursor: pointer;
         margin-left: auto;
     }
-    .lowlbl input {
-        margin: 0;
+    /* Same as the graph toolbar's toggles: the primitive's text is a global class, sized here for this
+       dense inspector row. */
+    .lowlbl :global(.bb-checkbox-text) {
+        font-size: 10px;
     }
     /* SSL side-effects: matches the header accent, distinct from the amber/purple/blue code fields around it.
        Read-only, so a plain box. */

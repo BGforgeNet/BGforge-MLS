@@ -35,6 +35,18 @@ describe("convertToRgba", () => {
         expect([...frame.pixels.subarray(8, 12)]).toEqual([0, 0, 0, 0]);
     });
 
+    it("carries a palette entry's own transparency into the pixel", () => {
+        // Enhanced Edition interface art stores per-entry transparency; painting it opaque loses it.
+        const animation = indexedAnimation();
+        animation.palette[1] = { r: 255, g: 0, b: 0, a: 0x77 };
+
+        const { frames } = convertToRgba(animation);
+
+        const frame = frames[0];
+        if (frame === undefined) throw new Error("expected one frame");
+        expect([...frame.pixels.subarray(0, 4)]).toEqual([255, 0, 0, 0x77]);
+    });
+
     it("keeps geometry, offsets, cycles and timing, and marks the result true-colour", () => {
         const converted = convertToRgba(indexedAnimation());
 

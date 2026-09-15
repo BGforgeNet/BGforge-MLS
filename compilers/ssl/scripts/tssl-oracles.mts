@@ -165,7 +165,7 @@ async function digestRepo(repo: string, switches: SwitchSet[]): Promise<Map<stri
             // Sequential by necessity: the batch state is one ts-morph project, and each file is
             // registered into it under an overwriting shadow name, so concurrent transpiles clobber
             // each other's entry source.
-            // eslint-disable-next-line no-await-in-loop -- see above
+            // oxlint-disable-next-line no-await-in-loop -- see above
             ssl = await transpile(filePath, fs.readFileSync(filePath, "utf-8"), batch);
         } catch (error) {
             entries.set(

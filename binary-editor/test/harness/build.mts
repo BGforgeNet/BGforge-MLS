@@ -25,12 +25,16 @@ const codiconCss = fs
         `src: url("data:font/ttf;base64,${codiconTtf}") format("truetype")`,
     );
 
+const SHARED_CSS = ["client/src/webview-ui/base.css", "client/src/webview-ui/primitives.css"];
+/** The rose/grid/tile rules, linked by the panels that mount the animation components and no others. */
+const TILES_CSS = "client/src/webview-ui/animation-tiles.css";
+
 /**
  * Bundles one harness entry (UI only: the App component + Bridge + components. No @bgforge value imports
  * reach the browser bundle - those are type-only and erased - so no Node builtins leak in; each editor's
  * core runs in Node, in the driver files) and writes the CSP-wrapped standalone HTML the drivers `page.goto()`.
  */
-async function buildHarnessHtml(entryFile: string, cssFile: string, outFile: string): Promise<void> {
+async function buildHarnessHtml(entryFile: string, panelCss: readonly string[], outFile: string): Promise<void> {
     // esbuild-svelte default css: "external" emits component <style> blocks (e.g. bits-ui's Viewport) to a
     // separate .css file that we deliberately do not load - mirroring the production webview, which also never
     // loads that file. External-css mode requires an on-disk output path, so we write to a temp dir.
@@ -48,7 +52,11 @@ async function buildHarnessHtml(entryFile: string, cssFile: string, outFile: str
     const js = fs.readFileSync(path.join(outdir, `${entryName}.js`), "utf8");
     fs.rmSync(outdir, { recursive: true, force: true });
 
-    const css = fs.readFileSync(path.join(repo, cssFile), "utf8");
+    // Every sheet, in the order the real panel links them: the shared primitives first, the panel's own
+    // sheet last, so its sizing rules win over the primitive defaults exactly as they do in production. A
+    // sheet the panel links and this list omits renders the harness UNSTYLED for whatever it covers, which
+    // no assertion about content can see - a layout check then reads the specified value, not the used one.
+    const css = [...SHARED_CSS, ...panelCss].map((file) => fs.readFileSync(path.join(repo, file), "utf8")).join("\n");
 
     // Strict nonce CSP mirrors the real webview (provider.ts). font-src allows data: so the inlined codicon
     // @font-face (data: URI above) loads; the same nonce is applied to both the inlined <style> and the
@@ -72,5 +80,11 @@ ${THEME_VARS}${codiconCss}${css}
     console.log(`wrote ${outFile} (${(html.length / 1024).toFixed(0)} kb)`);
 }
 
-await buildHarnessHtml("harness-main.ts", "client/src/binary-editor/webview/styles.css", "app.html");
-await buildHarnessHtml("image-harness-main.ts", "client/src/image-editor/webview/styles.css", "image-app.html");
+await buildHarnessHtml("harness-main.ts", ["client/src/binary-editor/webview/styles.css"], "app.html");
+// The animation editor links the tile sheet too, between the primitives and its own; the binary editor
+// does not mount those components and does not link it.
+await buildHarnessHtml(
+    "image-harness-main.ts",
+    [TILES_CSS, "client/src/image-editor/webview/styles.css"],
+    "image-app.html",
+);

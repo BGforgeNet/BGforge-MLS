@@ -1308,7 +1308,7 @@ begin("DLG", [start]);
 
             // First call: invalid begin() with no arguments - should throw
             const badSource = project.createSourceFile("bad.td", `begin();`);
-            expect(() => parse(badSource)).toThrow();
+            expect(() => parse(badSource)).toThrow("begin() requires at least 2 arguments");
 
             // Second call: valid source - must succeed without contamination
             const goodSource = project.createSourceFile(

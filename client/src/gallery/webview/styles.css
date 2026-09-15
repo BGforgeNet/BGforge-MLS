@@ -1,0 +1,251 @@
+/* The gallery grid. Colours come from VS Code's theme variables throughout, so the panel follows whatever
+   theme is active rather than pinning one palette. */
+
+.gallery {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* The controls sit across the top at their own height and never move: a reader picking through a list is
+   still using them once something is drawn, and a bar that re-columned on the first pick moved every
+   control out from under the pointer that had just chosen with it. */
+.controls {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-width: 0;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+/* The grid takes what is left until there is a picture, then yields most of it and keeps a band. Sized in
+   viewport height rather than rows so the split does not depend on the tile size the reader chose. */
+.browse-grid {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+}
+
+/* Content-sized up to the cap, not fixed at it: a search narrowed to one row of tiles would otherwise hold
+   a third of the panel empty above the picture. The cap is what a full corpus gets, and it scrolls there. */
+.gallery.showing .browse-grid {
+    flex: 0 0 auto;
+    max-height: 30vh;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+/* The animation surface's own root expects a flex column to lay its banner, stage and toolbar down. */
+.stage-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* `browse-` prefixed, not `.toolbar`: this panel loads the animation editor's stylesheet too, and that
+   one owns `.toolbar` for the save/import bar inside the surface this panel now draws. */
+.browse-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    flex: 0 0 auto;
+    /* Wraps, because unwrapped the two fixed-width selects take the whole row in a narrow panel and
+       squeeze the search field to nothing. */
+    flex-wrap: wrap;
+}
+
+.browse-toolbar input {
+    flex: 1 1 12ch;
+    min-width: 12ch;
+    padding: 4px 6px;
+    color: var(--vscode-input-foreground);
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+}
+
+.browse-toolbar input:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.count {
+    flex: 0 0 auto;
+    color: var(--vscode-descriptionForeground);
+    font-variant-numeric: tabular-nums;
+}
+
+.scroller {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* The spacer carries the full scroll height; mounted rows are absolutely positioned inside it, so the
+   scrollbar reflects the whole grid rather than only what is drawn. */
+.spacer {
+    position: relative;
+    width: 100%;
+}
+
+.row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+}
+
+.tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 2px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.tile:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.tile:focus-visible {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+/* Fixed box, reserved before any picture arrives: a tile that resized when its thumbnail loaded would
+   reflow every row below it on every scroll. */
+.thumb {
+    display: flex;
+    /* Anchors the creature-animation marker over the picture. */
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: var(--vscode-editorWidget-background);
+    border-radius: 2px;
+}
+
+.thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    /* Pixel art: the browser must not smooth it back into the blur the nearest-neighbour downscale avoided. */
+    image-rendering: pixelated;
+}
+
+.label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9em;
+}
+
+.empty {
+    padding: 24px;
+    color: var(--vscode-descriptionForeground);
+    text-align: center;
+}
+
+/* Tab strip. Styled here rather than in a component <style> block: this panel runs under a strict nonce
+   CSP that drops the non-nonced <style> tag Svelte would inject, so the real panel would show it unstyled
+   while every headless render looked right. */
+.tabs {
+    display: flex;
+    gap: 2px;
+    padding: 4px 8px 0;
+}
+.tab {
+    background: transparent;
+    border: none;
+    /* The rule marking the selected tab has its space reserved on every tab, so switching tabs does not
+       shift the grid below. */
+    border-bottom: 2px solid transparent;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 4px 10px;
+}
+.tab:hover {
+    background: var(--vscode-toolbar-hoverBackground);
+}
+.tab[aria-selected="true"] {
+    border-bottom-color: var(--vscode-focusBorder);
+}
+
+/* Every native select in the panel takes VS Code's dropdown tokens - left unthemed one renders as OS
+   chrome, a light box punched into a dark panel. */
+.filterselect {
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border, transparent);
+    border-radius: 2px;
+    color: var(--vscode-dropdown-foreground);
+    font-family: inherit;
+    font-size: var(--vscode-font-size);
+    padding: 3px 4px;
+}
+.filterselect:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+/* Fixed width, not content-sized: a select that resizes with its own selection moves the control beside it
+   and the count on every change. Each track is sized past its table's longest label. */
+.filterselect {
+    flex: 0 0 auto;
+}
+.typefilter {
+    width: 24ch;
+}
+.formatfilter {
+    width: 13ch;
+}
+
+/* A fixed track sized past the longest option, never the bar's width and never the current selection's:
+   an option is a 30ch name (the bound the set-name column already records for either shipped install)
+   plus ` 0xNNNN (RESREF)`. The bar is wider than that and stays empty to the right, which is what an
+   ungrown control looks like. */
+.setpicker {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    gap: 2px;
+    padding: 8px;
+    width: 48ch;
+    max-width: 100%;
+}
+.facetlabel {
+    color: var(--vscode-descriptionForeground);
+    font-size: 11px;
+}
+/* A creature animation's picture is ONE frame on purpose - its other cycles are the same pose turned round.
+   Three dots read as a row of facings and say the file is directional, which a bare still cannot. Text would
+   not fit a 64px tile, and a colour alone would carry meaning nothing else states. */
+.rose {
+    /* Dots over their own backdrop, because the art beneath is arbitrary: bare dots vanished into a dark
+       figure exactly where a creature's feet are drawn. */
+    background:
+        radial-gradient(circle at 50% 50%, var(--vscode-foreground) 40%, transparent 46%) 2px 2px / 5px 5px repeat-x,
+        var(--vscode-editorWidget-background);
+    border-radius: 4px;
+    bottom: 1px;
+    box-shadow: 0 0 0 1px var(--vscode-panel-border);
+    height: 8px;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    width: 19px;
+}
+.facetnone {
+    color: var(--vscode-descriptionForeground);
+}

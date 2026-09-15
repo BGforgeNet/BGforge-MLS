@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { buildDlg, dlgParser, readDlg } from "../src/dlg";
 import type { DlgCanonicalDocument } from "../src/dlg/canonical-schemas";
 import { createCanonicalDlgJsonSnapshot, loadCanonicalDlgJsonSnapshot } from "../src/dlg/json-snapshot";
+import { resolveWeidu, WEIDU_HOOK_TIMEOUT_MS } from "../../scripts/utils/src/weidu-binary.ts";
 import { REPO_ROOT } from "./repo-root";
 
 /**
@@ -16,9 +17,10 @@ import { REPO_ROOT } from "./repo-root";
  * of WeiDU's D) rests on. Fixtures are compiled by the pinned WeiDU, same as `dlg-weidu-differential`.
  */
 const FIXTURE_DIR = path.join(REPO_ROOT, "binary/test/fixtures/dlg");
+/** One spawn compiles every fixture, so this is far wider than a parse-check's bound. */
 const WEIDU_TIMEOUT_MS = 60_000;
-/** `scripts/ensure-weidu.sh` exports WEIDU_BIN - the host's own WeiDU, or the pinned one it downloads. */
-const WEIDU = process.env.WEIDU_BIN ?? "weidu";
+/** Resolved in beforeAll, not at module load: an absent binary is provisioned, never a reason to skip. */
+let weidu = "";
 const COMPILED = ["MINIMAL", "EXTERND", "JOURNALD"] as const;
 
 const BG1_HEADER_SIZE = 0x30;
@@ -200,95 +202,82 @@ describe("dlgParser.parse - a header addressing bytes the file does not have", (
     });
 });
 
-function weiduAvailable(): boolean {
-    try {
-        execFileSync(WEIDU, ["--version"], { timeout: WEIDU_TIMEOUT_MS, stdio: "ignore" });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-const available = weiduAvailable();
 let workDir = "";
 
-describe.skipIf(!available)(
-    `dlgParser (WeiDU ${available ? "present" : "absent"}, ${COMPILED.length} fixtures)`,
-    () => {
-        beforeAll(() => {
-            workDir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-dlg-parser-"));
-            const sources = fs
-                .readdirSync(FIXTURE_DIR)
-                .filter((f) => f.endsWith(".d"))
-                .sort();
-            for (const src of sources) fs.copyFileSync(path.join(FIXTURE_DIR, src), path.join(workDir, src));
-            execFileSync(WEIDU, ["--nogame", "--out", ".", ...sources], {
-                cwd: workDir,
-                timeout: WEIDU_TIMEOUT_MS,
-                stdio: "ignore",
-            });
+describe(`dlgParser (${COMPILED.length} fixtures)`, () => {
+    beforeAll(() => {
+        weidu = resolveWeidu();
+        workDir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-dlg-parser-"));
+        const sources = fs
+            .readdirSync(FIXTURE_DIR)
+            .filter((f) => f.endsWith(".d"))
+            .sort();
+        for (const src of sources) fs.copyFileSync(path.join(FIXTURE_DIR, src), path.join(workDir, src));
+        execFileSync(weidu, ["--nogame", "--out", ".", ...sources], {
+            cwd: workDir,
+            timeout: WEIDU_TIMEOUT_MS,
+            stdio: "ignore",
         });
+    }, WEIDU_HOOK_TIMEOUT_MS);
 
-        afterAll(() => {
-            if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
-        });
+    afterAll(() => {
+        if (workDir) fs.rmSync(workDir, { recursive: true, force: true });
+    });
 
-        const bytesOf = (name: string): Uint8Array =>
-            new Uint8Array(fs.readFileSync(path.join(workDir, `${name}.dlg`)));
+    const bytesOf = (name: string): Uint8Array => new Uint8Array(fs.readFileSync(path.join(workDir, `${name}.dlg`)));
 
-        test("declares the identity the registry and resource browser route on", () => {
-            expect(dlgParser.id).toBe("dlg");
-            expect(dlgParser.extensions).toEqual(["dlg"]);
-            // `family` is load-bearing: the two game families collide on some extensions, and the IE resource
-            // browser derives which formats open in an editor from it.
-            expect(dlgParser.family).toBe("infinity-engine");
-        });
+    test("declares the identity the registry and resource browser route on", () => {
+        expect(dlgParser.id).toBe("dlg");
+        expect(dlgParser.extensions).toEqual(["dlg"]);
+        // `family` is load-bearing: the two game families collide on some extensions, and the IE resource
+        // browser derives which formats open in an editor from it.
+        expect(dlgParser.family).toBe("infinity-engine");
+    });
 
-        test("decodes the interrupt-flags field a post-BG1 header carries", () => {
-            const result = dlgParser.parse(bytesOf("MINIMAL"));
+    test("decodes the interrupt-flags field a post-BG1 header carries", () => {
+        const result = dlgParser.parse(bytesOf("MINIMAL"));
 
-            expect((result.document as DlgCanonicalDocument).headerInterrupt).toBeDefined();
-        });
+        expect((result.document as DlgCanonicalDocument).headerInterrupt).toBeDefined();
+    });
 
-        test("parses to a display tree and a canonical document", () => {
-            const result = dlgParser.parse(bytesOf("MINIMAL"));
+    test("parses to a display tree and a canonical document", () => {
+        const result = dlgParser.parse(bytesOf("MINIMAL"));
 
-            expect(result.errors ?? []).toEqual([]);
-            expect(result.format).toBe("dlg");
-            expect(result.root.fields.length).toBeGreaterThan(0);
-            expect(result.document).toBeDefined();
-        });
+        expect(result.errors ?? []).toEqual([]);
+        expect(result.format).toBe("dlg");
+        expect(result.root.fields.length).toBeGreaterThan(0);
+        expect(result.document).toBeDefined();
+    });
 
-        test("rejects a file whose signature is not a DLG", () => {
-            const notADlg = new Uint8Array(64);
-            notADlg.set(
-                [..."ITM "].map((c) => c.codePointAt(0)!),
-                0,
-            );
+    test("rejects a file whose signature is not a DLG", () => {
+        const notADlg = new Uint8Array(64);
+        notADlg.set(
+            [..."ITM "].map((c) => c.codePointAt(0)!),
+            0,
+        );
 
-            const result = dlgParser.parse(notADlg);
+        const result = dlgParser.parse(notADlg);
 
-            expect(result.errors?.join(" ")).toMatch(/signature/i);
-        });
+        expect(result.errors?.join(" ")).toMatch(/signature/i);
+    });
 
-        test.each(COMPILED)("%s survives a JSON snapshot round trip", (name) => {
-            // The snapshot carries the text block as an opaque range precisely so it describes a whole file.
-            // Without that, this reconstructs a DLG missing everything the text refs point at.
-            const original = bytesOf(name);
+    test.each(COMPILED)("%s survives a JSON snapshot round trip", (name) => {
+        // The snapshot carries the text block as an opaque range precisely so it describes a whole file.
+        // Without that, this reconstructs a DLG missing everything the text refs point at.
+        const original = bytesOf(name);
 
-            const json = createCanonicalDlgJsonSnapshot(dlgParser.parse(original));
-            const reloaded = loadCanonicalDlgJsonSnapshot(json);
+        const json = createCanonicalDlgJsonSnapshot(dlgParser.parse(original));
+        const reloaded = loadCanonicalDlgJsonSnapshot(json);
 
-            expect([...reloaded.bytes!]).toEqual([...original]);
-        });
+        expect([...reloaded.bytes!]).toEqual([...original]);
+    });
 
-        test.each(COMPILED)("%s round-trips byte-identically", (name) => {
-            const original = bytesOf(name);
+    test.each(COMPILED)("%s round-trips byte-identically", (name) => {
+        const original = bytesOf(name);
 
-            const round = dlgParser.serialize(dlgParser.parse(original));
+        const round = dlgParser.serialize(dlgParser.parse(original));
 
-            expect(round.byteLength).toBe(original.byteLength);
-            expect([...round]).toEqual([...original]);
-        });
-    },
-);
+        expect(round.byteLength).toBe(original.byteLength);
+        expect([...round]).toEqual([...original]);
+    });
+});

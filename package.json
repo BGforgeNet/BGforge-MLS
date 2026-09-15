@@ -37,7 +37,6 @@
         "build:td-plugin": "./scripts/build-ts-plugin.sh td-plugin",
         "build:client": "pnpm build:base:client --sourcemap && pnpm build:ts-plugin --sourcemap && pnpm build:td-plugin --sourcemap && pnpm build:base:webviews --sourcemap",
         "build:server": "pnpm build:base:server --sourcemap",
-        "build:webviews": "pnpm build:base:webviews --sourcemap",
         "build:test": "./scripts/build-test.sh",
         "build:format": "pnpm --filter @bgforge/format build",
         "build:transpile": "pnpm --filter @bgforge/transpile build",
@@ -53,21 +52,22 @@
         "watch:server": "pnpm build:base:server --sourcemap --watch",
         "test": "./scripts/test.sh",
         "test:all": "./scripts/test-all.sh",
-        "test:client": "cd client && pnpm test",
-        "test:server": "cd server && pnpm test",
+        "test:project": "vitest run --project",
+        "test:cov": "./scripts/test-coverage.sh",
         "test:grammars": "./scripts/test-grammars.sh",
+        "test:harness": "./scripts/test-harness.sh",
         "test:integration": "cd server && pnpm test:integration",
         "test:external": "./scripts/reset-external.sh && ./scripts/test-external.sh",
         "test:transpile-external": "./scripts/test-transpile-external.sh",
         "test:grammar": "./scripts/test-grammar.sh",
+        "bench:thumbnails": "tsx --tsconfig client/tsconfig.json scripts/bench-thumbnails.mts",
         "lsp-probe": "tsx server/scripts/lsp-probe.mts",
+        "anim-probe": "tsx animation/test/tools/anim-probe.ts",
         "regenerate-expected": "./scripts/regenerate-expected.sh",
         "regen:td-blocklist": "tsx scripts/utils/src/generate-td-lib-blocklist.ts",
         "test:cli": "vitest run --config scripts/vitest.cli.config.ts",
         "test:cli:external": "RUN_EXTERNAL_CLI_TESTS=1 vitest run --config scripts/vitest.cli.config.ts",
-        "test:server:smoke": "cd server && pnpm exec vitest run test/smoke-stdio.test.ts",
         "test:e2e": "./scripts/test-e2e.sh",
-        "test:coverage": "cd server && vitest run --coverage",
         "package": "./scripts/package.sh",
         "package:grammars": "./scripts/package-grammars.sh && ./scripts/verify-grammar-bundle.sh",
         "format": "node --no-warnings format/out/cli.js",
@@ -82,7 +82,7 @@
         "tssl-oracles": "tsx compilers/ssl/scripts/tssl-oracles.mts",
         "lint": "oxlint && pnpm lint:types && pnpm lint:tests && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
         "lint:types": "oxlint --type-aware -A all -D typescript/no-floating-promises -D typescript/no-misused-promises -D typescript/await-thenable",
-        "lint:tests": "oxlint --vitest-plugin -A all -D vitest/no-focused-tests -D vitest/no-identical-title -D vitest/no-import-node-test -D vitest/valid-describe-callback -D vitest/no-duplicate-hooks -D vitest/prefer-hooks-in-order -D vitest/require-local-test-context-for-concurrent-snapshots -D vitest/no-conditional-expect",
+        "lint:tests": "oxlint --vitest-plugin -A all -D vitest/no-focused-tests -D vitest/no-identical-title -D vitest/no-import-node-test -D vitest/valid-describe-callback -D vitest/no-duplicate-hooks -D vitest/prefer-hooks-in-order -D vitest/require-local-test-context-for-concurrent-snapshots -D vitest/no-conditional-expect -D vitest/require-to-throw-message",
         "lint:md-links": "remark . --quiet --frail --ignore-path .gitignore --use remark-validate-links",
         "ie-update": "./scripts/ie-update.sh",
         "ie-binary-update": "./scripts/ie-binary-update.sh",
@@ -112,35 +112,35 @@
         "@stryker-mutator/vitest-runner": "^9.6.1",
         "@types/mocha": "^10.0.10",
         "@types/node": "catalog:",
-        "@vitest/coverage-v8": "^4.1.11",
+        "@vitest/coverage-v8": "catalog:",
         "@vscode/codicons": "^0.0.45",
         "@vscode/vsce": "^3.9.2",
         "cac": "catalog:",
         "diff": "catalog:",
-        "esbuild": "^0.28.2",
+        "esbuild": "catalog:",
         "esbuild-svelte": "^0.9.5",
         "jsonc-parser": "^3.3.1",
         "knip": "~6.25.0",
-        "lefthook": "^2.1.10",
+        "lefthook": "^2.1.12",
         "mocha": "^11.8.0",
         "oxfmt": "0.65.0",
         "oxlint": "1.80.0",
         "oxlint-tsgolint": "^7.0.2001",
-        "playwright": "1.62.1",
+        "playwright": "1.63.0",
         "quick-lru": "catalog:",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
-        "svelte": "^5.56.10",
+        "svelte": "^5.57.0",
         "svelte-check": "^4.7.6",
-        "tree-sitter-cli": "0.26.13",
-        "tsx": "^4.23.12",
+        "tree-sitter-cli": "catalog:",
+        "tsx": "^4.23.13",
         "typescript": "catalog:",
         "vite": "^8.2.2",
         "vitest": "catalog:",
         "vscode-oniguruma": "^2.0.1",
         "vscode-textmate": "^9.3.2",
         "web-tree-sitter": "catalog:",
-        "yaml": "^2.9.0"
+        "yaml": "catalog:"
     },
     "contributes": {
         "semanticTokenTypes": [
@@ -333,7 +333,11 @@
                 "extensions": [
                     ".d"
                 ],
-                "configuration": "./language-configurations/weidu-d.language-configuration.json"
+                "configuration": "./language-configurations/weidu-d.language-configuration.json",
+                "icon": {
+                    "light": "./themes/icons/weidu-baf.png",
+                    "dark": "./themes/icons/weidu-baf.png"
+                }
             },
             {
                 "id": "weidu-d-tooltip"
@@ -420,6 +424,16 @@
             {
                 "command": "extension.bgforge.compile",
                 "title": "BGforge MLS: compile"
+            },
+            {
+                "command": "bgforge.gallery.showGame",
+                "title": "BGforge: Game Image Gallery",
+                "icon": "$(symbol-color)"
+            },
+            {
+                "command": "bgforge.gallery.showWorkspace",
+                "title": "BGforge: Workspace Image Gallery",
+                "icon": "$(symbol-color)"
             },
             {
                 "command": "extension.bgforge.dialogEditor",
@@ -554,6 +568,9 @@
                     },
                     {
                         "filenamePattern": "*.bam"
+                    },
+                    {
+                        "filenamePattern": "*.animset"
                     }
                 ],
                 "priority": "default"
@@ -881,6 +898,7 @@
         "onLanguage:weidu-tp2",
         "onLanguage:weidu-tra",
         "onView:bgforge.ieResources",
+        "onWebviewPanel:bgforge.gallery",
         "workspaceContains:**/*.tbaf",
         "workspaceContains:**/*.td",
         "workspaceContains:**/*.tssl"
@@ -889,5 +907,5 @@
     "engines": {
         "vscode": "^1.91.0"
     },
-    "packageManager": "pnpm@11.24.0"
+    "packageManager": "pnpm@12.3.4"
 }

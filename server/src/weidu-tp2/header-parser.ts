@@ -433,7 +433,7 @@ import {
     DeclarationKind,
 } from "../core/symbol";
 import { CompletionCategory, type Tp2CompletionItem } from "./completion/types";
-import { buildFunctionHover, buildVariableHover } from "./hover";
+import { buildFunctionHover, buildVariableHover } from "./hover-content";
 
 /**
  * Map callable context + def type to the appropriate CompletionCategory.

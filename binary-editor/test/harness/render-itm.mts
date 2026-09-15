@@ -24,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
+import { collectClipViolations } from "./clip-gate";
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
 import { itmParser } from "../../../binary/src/itm/index";
@@ -471,26 +472,27 @@ check(
 );
 check("tree: opcode detail field is a searchable combobox", effDetail.combobox >= 1, `count=${effDetail.combobox}`);
 
-// Per-column label tracks: a static column (Opcode/Target/Power) hugs its short label rather than inheriting a
-// wide fixed track sized for a label that only appears in another column. The reserved label width is scoped to
-// the column holding the rewritten parameter1/parameter2 fields, so a static label like "Opcode" sits close to
-// its value (a small gap), not stranded ~17ch away as it was under the old blanket fixed label column.
-const opcodeGap = await page.evaluate(() => {
-    const field = (
-        Array.from(document.querySelectorAll(".eff-tree .detail .kv.kv-multi .field")) as HTMLElement[]
-    ).find((f) => (f.querySelector(".label")?.textContent ?? "").trim() === "Opcode");
-    if (!field) return -1;
-    const label = field.querySelector(".label") as HTMLElement;
-    const ctrl = field.querySelector(".field-control") as HTMLElement;
-    const range = document.createRange();
-    range.selectNodeContents(label);
-    return Math.round(ctrl.getBoundingClientRect().left - range.getBoundingClientRect().right);
-});
-check(
-    "tree: a static label (Opcode) hugs its value - not padded for another column's wide label",
-    opcodeGap >= 0 && opcodeGap < 60,
-    `opcode label->value gap=${opcodeGap}px`,
-);
+/** Resize, then let the resize observer and the column fit it schedules run before measuring. */
+async function resizeAndSettle(width: number): Promise<void> {
+    await page.setViewportSize({ width, height: 900 });
+    for (let i = 0; i < 3; i++) await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+}
+// No value control in the effect detail is squeezed below its width class or clips its value, and the page does not
+// scroll sideways, at the default width and at narrower ones: the split detail pane is where the 3-column feature
+// block runs out of room, 800 and 480 are the stacked tree-above-detail layout.
+for (const width of [1280, 1000, 800, 480]) {
+    await resizeAndSettle(width);
+    const clips = await collectClipViolations(page, `ITM tree effect @${width}`);
+    check(
+        `tree: effect detail controls keep their sized width at ${width}px`,
+        clips.length === 0,
+        clips.map((v) => `${v.kind} ${v.label}=${v.value} ${v.scrollWidth}/${v.clientWidth}`).join("; ") || "none",
+    );
+}
+
+// Per-column label reserve scoping (a static column hugs its labels while a relabeled field's column is floored)
+// is asserted in client/test/binary-editor/webview/fields-block-columns.test.ts: the tree's detail pane is too
+// narrow for the feature block's three columns, and once one is shed the relabeled fields share Opcode's column.
 
 // Label overrides must reach the detail (the tree passes the layout `labels` map through, as the old tabs did):
 // the feature block's stackingIdEx renders as "Stacking ID (ToBEx)", not the bare humanized "Stacking Id Ex".
@@ -621,7 +623,7 @@ const diceFold = await page.evaluate(() => {
 check("tree: ITM damage dice fold into one X d Y + Z cell", diceFold.ok, diceFold.detail);
 
 // Dropdown widths are decoupled from the text-input tiers and sized to each dropdown's OWN longest option
-// (controls.ts dropdownWidth -> dd-{1..5}). The Ammo "Arrow" Yes/No dropdown carries only "0 No"/"1 Yes", so it
+// (controls.ts dropdownWidth -> dd-{1..6}). The Ammo "Arrow" Yes/No dropdown carries only "0 No"/"1 Yes", so it
 // lands on the tightest dd-1 box; a wordy dropdown like Damage Type takes a far wider box. Assert the class and
 // that the tiny dropdown is materially narrower than the wide one (it used to inherit the same M/L tier width).
 const ddWidths = await page.evaluate(() => {
@@ -726,7 +728,7 @@ await page.screenshot({ path: shotPath("shot-itm-tree.png"), fullPage: true });
 // Structure ops via the tree (full parity with the dropped Abilities/Effects tabs)
 // ============================================================
 // + ability (section-level add)
-await page.locator(".eff-tree-toolbar .eff-tree-toolbtn").click();
+await page.locator(".eff-tree-toolbar button", { hasText: "+ ability" }).click();
 await page
     .waitForFunction(
         () =>
@@ -815,7 +817,7 @@ check("ops: undo restores 3 effects", sectionKids(effectsNodeId).total === 3, `$
 // ============================================================
 // Filter: typing narrows the tree to matching effects (+ their owning headers), forcing groups expanded.
 // ============================================================
-await page.locator(".eff-tree-toolbar input.list-filter-input").fill("op 21");
+await page.locator(".eff-tree-master input.list-filter-input").fill("op 21");
 await page
     .waitForFunction(() => document.querySelectorAll(".eff-tree-effect-label").length === 1, undefined, {
         timeout: 5000,
@@ -833,7 +835,7 @@ check(
         filtered.heads[0] === "Ability 2",
     JSON.stringify(filtered),
 );
-await page.locator(".eff-tree-toolbar .list-filter-clear").click();
+await page.locator(".eff-tree-master .list-filter-clear").click();
 await page
     .waitForFunction(() => document.querySelectorAll(".eff-tree-effect").length === 3, undefined, { timeout: 5000 })
     .catch(() => undefined);

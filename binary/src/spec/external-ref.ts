@@ -77,6 +77,15 @@ export type ExternalRef =
            * sits beside PROJECTL.IDS and its symbols are labels with no file behind them.
            */
           readonly symbolResource?: { readonly table: string; readonly type: string };
+          /**
+           * The table's KEYS are creature-animation ids, so the value names a whole animation - a family of
+           * BAMs across armour levels and actions - rather than one resource.
+           *
+           * Distinct from `symbolResource`, where a symbol resolves to a single resref: here the id itself is
+           * the target and the symbol is only its name. A consumer offers to browse it; the field stays a
+           * numeric named list.
+           */
+          readonly animationIds?: true;
       }
     /**
      * Value is a row INDEX in a 2DA table, whose row NAME is the identifier (MSCHOOL row 1 is ABJURER). Same
@@ -101,6 +110,16 @@ export type ExternalRef =
           /** Flavours whose record stores a different target type. Absent - the common case - means `type` everywhere. */
           readonly byFlavour?: Readonly<Partial<Record<IeFlavour, string>>>;
       }
+    /**
+     * Value selects one of a creature animation's replacement colour ranges from the install's gradient
+     * table - a bitmap whose every row is the colours for one range, indexed by this field.
+     *
+     * No table name, unlike `ids`/`2da`: the engine reads one configured table for this and a consumer holds
+     * the same install, so naming candidates here would describe a choice nobody makes. The value space is
+     * the table's row count, which differs per edition (a stock BG2 install ships fewer rows than an
+     * Enhanced Edition), so the RANGE is the install's to state and not this declaration's.
+     */
+    | { readonly kind: "colorGradient" }
     /**
      * The field points outside its file, but at a type another field's value selects - so no single type is
      * right and no lookup can be declared. Marked rather than left bare so the absence reads as a decision

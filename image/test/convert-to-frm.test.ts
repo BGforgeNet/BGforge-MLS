@@ -71,6 +71,58 @@ describe("convertToFrm", () => {
         expect(paddedItems).toHaveLength(lens.filter((n) => n !== maxLen).length);
     });
 
+    /**
+     * HELD, not blanked. An FRM's six rotations share one frame count, so the short ones are made up to
+     * the longest - and filling that tail with transparent frames makes the creature vanish for the last
+     * few frames of every rotation but one, on a loop, which is not something the source does anywhere.
+     * Holding its final pose is the same length with nothing missing.
+     */
+    it("pads a short direction by holding its last frame, not by blanking it", () => {
+        const source = synthBam([4, 1, 1, 1, 1, 1]);
+        const { animation } = convertToFrm(source);
+
+        const short = animation.sequences[1];
+        if (!short) throw new Error("missing padded sequence");
+        const held = animation.frames[short.frameRefs[0] ?? -1];
+        if (!held) throw new Error("missing held frame");
+        expect(short.frameRefs).toHaveLength(4);
+        for (const ref of short.frameRefs.slice(1)) {
+            expect([...(animation.frames[ref]?.pixels ?? [])]).toEqual([...held.pixels]);
+        }
+    });
+
+    /**
+     * CUT, where the reader would rather every rotation end together than carry a repeated pose. Real
+     * frames go, which is why it is not the default and why the report says how many.
+     */
+    it("cuts every direction to the shortest when asked to", () => {
+        const source = synthBam([4, 1, 3, 3, 3, 3]);
+        const { animation, report } = convertToFrm(source, { unevenRotations: "clip" });
+
+        expect(animation.sequences.every((sequence) => sequence.frameRefs.length === 1)).toBe(true);
+        expect(report.items.some((item) => item.kind === "clipped-sequence")).toBe(true);
+    });
+
+    /**
+     * WRAP, which is what the editor's own stage does when it plays the source: every tile steps one
+     * shared timeline and a short cycle reads `frame mod its own length`, so it keeps animating instead
+     * of freezing. The file cannot express that, so the wrap is baked into the frames.
+     */
+    it("keeps a short direction looping when asked to wrap", () => {
+        const source = synthBam([4, 2, 2, 2, 2, 2]);
+        const { animation } = convertToFrm(source, { unevenRotations: "wrap" });
+
+        const short = animation.sequences[1];
+        if (!short) throw new Error("missing padded sequence");
+        const pixelsAt = (index: number): number[] => [
+            ...(animation.frames[short.frameRefs[index] ?? -1]?.pixels ?? []),
+        ];
+
+        expect(short.frameRefs).toHaveLength(4);
+        expect(pixelsAt(2)).toEqual(pixelsAt(0));
+        expect(pixelsAt(3)).toEqual(pixelsAt(1));
+    });
+
     it("pads a zero-frame direction with 1x1 transparent frames", () => {
         const source = synthBam([2, 0, 2, 2, 2, 2]); // slot 1 has no frames at all
         const { animation, report } = convertToFrm(source);
@@ -269,12 +321,17 @@ describe("convertToFrm", () => {
         };
     }
 
-    it("pads with the source's transparent index, so padding stays transparent when that index is non-zero", () => {
-        const source = synthBam([2, 1, 2, 2, 2, 2]); // slot 1 is short -> padded
+    /**
+     * The one padding that still synthesizes a frame: a rotation with no frames has no pose to hold. Its
+     * fill is the SOURCE's transparent index, which the palette paths map to the FRM's own slot 0 - a raw
+     * zero-fill would have read as the source's colour 0 wherever the two indices differ.
+     */
+    it("fills an empty direction with the source's transparent index, not a raw zero", () => {
+        const source = synthBam([2, 0, 2, 2, 2, 2]); // slot 1 has no frames to hold
         source.meta.transparentIndex = 5;
         const { animation, report } = convertToFrm(source);
 
-        // The default palette resolves losslessly, so padding must not force the sidecar path either.
+        // The default palette resolves losslessly, so the fill must not force the sidecar path either.
         expect(report.has("palette-remapped-to-default")).toBe(true);
         expect(report.has("padded-sequence")).toBe(true);
 
@@ -284,7 +341,6 @@ describe("convertToFrm", () => {
         if (padRef === undefined) throw new Error("missing padded frame ref");
         const padFrame = animation.frames[padRef];
         if (!padFrame) throw new Error("missing padded frame");
-        // Transparent in FRM terms is index 0; a raw zero-fill would have read as the source's color 0.
         expect([...padFrame.pixels].every((p) => p === 0)).toBe(true);
     });
 
@@ -440,6 +496,31 @@ describe("convertToFrm", () => {
             expect(report.items.filter((i) => i.kind === "empty-direction")).toHaveLength(0);
             expect(report.has("mirrored-directions")).toBe(true);
             expect(report.lossless).toBe(true);
+        });
+
+        // A fine-scheme block carries three of FRM's six rotations (SW/W/NW) exactly as a coarse one
+        // does; the extra half-step cycles have no FRM slot and drop out with the poles.
+        it("converts a fine-scheme block, mapping its 45-degree cycles and mirroring the east", () => {
+            const frames = Array.from({ length: 18 }, (_, i) => ({
+                width: 1,
+                height: 1,
+                pixels: Uint8Array.from([i + 1]),
+                offsetX: 0,
+                offsetY: 0,
+            }));
+            const source: IndexedAnimation = {
+                palette: DEFAULT_FALLOUT_PALETTE.map((c) => ({ ...c })),
+                frames,
+                sequences: Array.from({ length: 18 }, (_, i) => ({ frameRefs: [i], facing: "none" as const })),
+                meta: { sourceFormat: "bam", transparentIndex: 0 },
+            };
+            const { animation } = convertToFrm(source, { ieGroup: 1 });
+            expect(animation.sequences.map((s) => s.facing)).toEqual(["NE", "E", "SE", "SW", "W", "NW"]);
+            // Block 1 is cycles 9-17: S SSW SW WSW W WNW NW NNW N -> SW is cycle 11, W 13, NW 15.
+            expect(slotPixel(animation, 3)).toBe(12); // SW
+            expect(slotPixel(animation, 4)).toBe(14); // W
+            expect(slotPixel(animation, 5)).toBe(16); // NW
+            expect(slotPixel(animation, 1)).toBe(14); // E = mirrored W
         });
 
         it("drops the east filler dummies instead of mapping them onto the east rotations", () => {

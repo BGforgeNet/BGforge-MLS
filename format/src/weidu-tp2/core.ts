@@ -48,18 +48,11 @@ import {
     handleComment,
     pushBlankIfGap,
 } from "./utils";
-import {
-    formatControlFlow,
-    formatCondition,
-    formatCopyAction,
-    formatFunctionDef,
-    formatFunctionCall,
-    formatMatchCase,
-    formatPredicateAction,
-    formatInnerAction,
-    formatInnerPatch,
-    formatReplaceBcsBlock,
-} from "./blocks";
+import { formatControlFlow, formatCondition, formatMatchCase } from "./control-flow";
+import { formatCopyAction } from "./copy";
+import { formatFunctionDef, formatFunctionCall } from "./functions";
+import { formatInnerAction, formatInnerPatch, formatReplaceBcsBlock } from "./inner";
+import { formatPredicateAction } from "./predicate";
 import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
 import { throwOnParseError } from "../format-utils";
 

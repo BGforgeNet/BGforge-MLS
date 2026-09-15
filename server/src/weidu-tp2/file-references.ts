@@ -24,7 +24,7 @@ import * as fs from "fs";
 import { uriToPath } from "../uri-utils";
 import { SyntaxType } from "./syntax-type";
 import { findAncestorOfType, stripStringDelimiters } from "./tree-utils";
-import { selfLocation, fileLocation, resolveExisting } from "../shared/path-definition";
+import { selfLocation, fileLocation, resolveExisting, FILENAME_SEARCH_BUDGET } from "../shared/path-definition";
 
 /**
  * Extensions the extension can open usefully: the IE binary editor formats, the IE language/text
@@ -63,9 +63,6 @@ const INCLUDE_TYPES = new Set([SyntaxType.ActionInclude]);
 const RESREF_TYPES = new Set([SyntaxType.ActionCopyExisting, SyntaxType.ActionCopyExistingRegexp]);
 const STRING_TYPES = new Set([SyntaxType.TildeString, SyntaxType.DoubleString, SyntaxType.FiveTildeString]);
 const FILE_PAIR_TYPES = new Set([SyntaxType.FilePair]);
-
-// Cap the filename-first recursive walk so a huge mod tree cannot stall a definition request.
-const FILENAME_SEARCH_BUDGET = 20000;
 
 /**
  * Definition for the file paths in COPY/COMPILE/INCLUDE (and COPY_EXISTING) directives.

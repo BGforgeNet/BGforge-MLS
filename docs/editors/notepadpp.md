@@ -29,7 +29,9 @@ Download `bgforge-mls-notepadpp-<version>.zip` from the [latest GitHub release](
 3. Restart Notepad++
 4. Repeat for each language
 
-The UDL files provide file type detection (by extension) and basic highlighting (keywords, functions, constants, comments, strings, folding). The zip also includes highlight-only definitions (no LSP provider) for Fallout MSG (`.msg`), WeiDU TRA (`.tra`), Infinity 2DA (`.2da`), and Fallout scripts.lst (`scripts.lst`).
+The UDL files provide file type detection (by extension) and basic highlighting (keywords, functions, constants,
+comments, strings, folding). The zip also includes definitions for Fallout MSG (`.msg`), WeiDU TRA (`.tra`),
+Infinity 2DA (`.2da`), Fallout scripts.lst (`scripts.lst`) and Fallout Worldmap (`worldmap.txt`).
 
 Note: `.h` files default to C in Notepad++. The `fallout-ssl` UDL overrides this globally. If you also work with C headers, edit the UDL and remove `h` from the `Ext.` field.
 
@@ -69,13 +71,70 @@ mode = "io"
 executable = 'bgforge-mls-server'
 args = '--stdio'
 auto_start_server = true
+
+[lspservers.fallout-msg]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
+
+[lspservers.weidu-tra]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
+
+[lspservers.infinity-2da]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
+
+[lspservers.fallout-scripts-lst]
+mode = "io"
+executable = 'bgforge-mls-server'
+args = '--stdio'
+auto_start_server = true
 ```
 
-Note: If `bgforge-mls-server` is not on your system PATH, use the full path to the executable, e.g., `executable = 'C:\Users\<you>\AppData\Roaming\npm\bgforge-mls-server.cmd'`.
+The UDL names double as the language IDs the server dispatches on, so keep them as imported.
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column) and `scripts.lst` (formatting). The zip has no
+UDLs for SLB, Sword Coast Stratagems SSL or `weidu.log`, which the server also serves.
+
+Note: If `bgforge-mls-server` is not on your system PATH, use the full path to it in pnpm's global bin directory,
+which `pnpm bin -g` prints.
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Notepad++ they load through
+`typescript-language-server`, which reads plugins from its initialization options and starts tsserver with them:
+
+1. Install it: `pnpm add -g typescript-language-server,typescript@6`
+2. In `Settings > Style Configurator...`, select the TypeScript language and add `tssl td` to its `User ext.` field,
+   so these files open as TypeScript
+3. Add a server entry for TypeScript, replacing `<mls-node-modules>` with the `node_modules` directory holding
+   `@bgforge/mls-server`, each backslash doubled because the value is a JSON string:
+
+```toml
+[lspservers.typescript]
+mode = "io"
+executable = 'typescript-language-server'
+args = '--stdio'
+auto_start_server = true
+initialization_options = '''{
+  "plugins": [
+    { "name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>" },
+    { "name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>" }
+  ]
+}'''
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path, and resolves the name from
+`location` as a package import. `pnpm ls -g --parseable` lists that package as
+`<mls-node-modules>/@bgforge/mls-server`.
 
 ## Settings
 

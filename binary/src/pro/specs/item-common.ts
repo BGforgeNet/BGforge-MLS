@@ -15,7 +15,7 @@ import { i24, u24 } from "../../spec/codec-meta";
 export const itemCommonSpec = {
     flagsExt: { codec: u24, flags: ItemFlagsExt },
     // The "Attack modes" byte packs two independent attack-mode subtypes: primary in the low nibble, secondary
-    // in the high nibble (fallout2-ce reads `extendedFlags & 0xF` / `>> 4`). Split into two packed parts sharing
+    // in the high nibble (the engine reads the low 4 bits and the next 4 bits). Split into two packed parts sharing
     // the one wire byte so each renders as its own dropdown, the same shape as the CRE proficiency byte split.
     attackModePrimary: { codec: u8, packedAs: "attackModes", bitRange: [0, 4], enum: AttackSubType, enumOpen: true },
     attackModeSecondary: { codec: u8, packedAs: "attackModes", bitRange: [4, 4], enum: AttackSubType, enumOpen: true },

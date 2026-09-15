@@ -6,12 +6,18 @@
     import { clearSelectionMemory } from "../state/list-selection-memory";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout } from "../../../webview-utils";
     import LayoutRenderer from "./LayoutRenderer.svelte";
-    import Icon from "./Icon.svelte";
+    import BetaNotice from "../../../webview-ui/BetaNotice.svelte";
+    import Icon from "../../../webview-ui/Icon.svelte";
 
     const { bridge }: { bridge: Bridge } = $props();
 
+    // Deliberately DEEP, unlike the other host payloads in this editor's webviews: the changeSet branch
+    // below patches changed rows into `open.layout.layout.fields` in place, and it is that per-field
+    // reactivity which re-renders the layout. `$state.raw` here leaves an edited field showing its old
+    // value until something else replaces the document.
     let open = $state<OpenResult | undefined>();
-    let diagnostics = $state<Diagnostic[]>([]);
+    // Raw: replaced wholesale on every init and changeSet, never written into.
+    let diagnostics = $state.raw<Diagnostic[]>([]);
     let version = $state(0);
     // If the host never posts "init" (a dropped/failed open, a stalled worker), surface it rather than
     // sit on "Loading..." forever. Timer mechanics shared with the dialog editor's App.svelte via
@@ -118,18 +124,14 @@
     <div class="toolbar">
         <!-- Beta notice sits on the left; JSON import/export are pushed to the right (toolbar-actions
              margin-left:auto) so they sit apart from it. -->
-        <span class="toolbar-beta">
-            Beta. Send feedback to
-            <a href="https://github.com/BGforgeNet/BGforge-MLS/issues" target="_blank" rel="noreferrer"
-               >https://github.com/BGforgeNet/BGforge-MLS/issues</a>
-        </span>
+        <BetaNotice />
         <div class="toolbar-actions">
             <button class="toolbar-btn" onclick={() => bridge.dumpJson()}
-                    title="Export the current file contents as JSON to a new editor tab">
+                    title="Write the editor's contents, unsaved edits included, as a JSON sidecar (name.ext.json)">
                 <Icon name="export" /><span class="toolbar-btn-label">Dump JSON</span>
             </button>
             <button class="toolbar-btn" onclick={() => bridge.loadJson()}
-                    title="Import JSON from the active editor tab and apply it to the file">
+                    title="Apply the JSON sidecar (name.ext.json) to the editor as an undoable edit">
                 <Icon name="go-to-file" /><span class="toolbar-btn-label">Load JSON</span>
             </button>
         </div>

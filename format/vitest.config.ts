@@ -30,8 +30,8 @@ export default defineConfig({
         // scripts/test.sh / test:grammars, not by vitest unit tests, so they
         // are out of scope for this gate. Excluding them keeps the threshold
         // measuring the unit-tested pure formatters rather than diluting it
-        // with code another suite owns. See docs/architecture.md
-        // "Coverage thresholds" for the full layering.
+        // with code another suite owns. See docs/development.md
+        // "Coverage thresholds" for how floors are set.
         //
         // Floor reflects the unit-tested pure-formatter slice (ratcheted to
         // current actuals now that the grammar-driven dirs are excluded);

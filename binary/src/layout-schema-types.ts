@@ -370,13 +370,14 @@ const layoutVariantSchema = z
 /**
  * A format's full layout: one variant per object/sub type the parser can report (PRO dispatches by
  * object type and item/scenery subtype). The active variant is chosen by the `variantId` the parser
- * stamps on the parse result; absent that, the first declared variant is used.
+ * stamps on the parse result; a result with no `variantId`, or one no variant declares, gets no layout.
  */
 export const formatLayoutSchema = z.strictObject({
     schemaVersion: z.literal(1),
     format: z.string().min(1),
     variants: z.record(z.string(), layoutVariantSchema),
-    /** Content hugs and clumps left within the pane up to this width (~900 default in the renderer). */
+    /** Content hugs and clumps left within the pane up to this width. Omit for the renderer's shared default;
+     *  declare only a narrower cap (a single dense form). */
     maxContentWidthPx: z.number().int().positive().optional(),
     /**
      * Display-label overrides keyed by semantic field key (`FieldRef`). Applied at resolve time to a field's

@@ -100,4 +100,13 @@ All four LSP server grammars (fallout-ssl, weidu-baf, weidu-d, weidu-tp2) genera
 cd grammars/fallout-ssl && pnpm generate:types
 ```
 
-This splits the enum into a runtime `syntax-type.ts` (so any bundler resolves the values - an enum living only in a `.d.ts` is erased by Rolldown/tsdown), copies `tree-sitter.d.ts` to `server/src/{lang}/`, and copies `syntax-type.ts` to `shared/syntax-types/{lang}.ts` (its canonical home, so `@bgforge/format` can import the enum without depending on `server/`). `server/src/{lang}/syntax-type.ts` is a re-export shim of the shared file. Runs automatically for all four grammars as part of `pnpm build:grammar`.
+This splits the enum into a runtime `syntax-type.ts` (so any bundler resolves the values - an enum living only in a `.d.ts` is erased by Rolldown/tsdown), copies `tree-sitter.d.ts` to `server/src/{lang}/`, and copies `syntax-type.ts` to `shared/syntax-types/{lang}.ts` (its canonical home, so `@bgforge/format` can import the enum without depending on `server/`). `server/src/{lang}/syntax-type.ts` is a re-export shim of the shared file. `pnpm build:grammar` runs the same steps for the four LSP grammars `scripts/build-grammar.sh` lists.
+
+The two outputs are tracked differently:
+
+- `shared/syntax-types/{lang}.ts` is **tracked**: it carries runtime values a bundler must resolve, and it carries an
+  `Auto-generated ... Do not hand-edit` marker.
+- `server/src/{lang}/tree-sitter.d.ts` is **gitignored** (`server/src/*/tree-sitter.d.ts`) and regenerated wholesale.
+  CI runs `pnpm build:grammar` before any typecheck, and a fresh clone needs the same step before it typechecks.
+
+Change the grammar and rerun `pnpm build:grammar`; never edit either output.

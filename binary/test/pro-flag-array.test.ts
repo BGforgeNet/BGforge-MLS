@@ -33,6 +33,10 @@ const validBase = (flags: string[] = []) => ({
     sections: { miscProperties: { unknown: 0 } },
 });
 
+/** Every rejection message for a flags array, so a case pins WHICH refusal fired and on which entry. */
+const flagIssues = (flags: string[]): string[] =>
+    proCanonicalDocumentSchema.safeParse(validBase(flags)).error?.issues.map((issue) => issue.message) ?? [];
+
 describe("PRO header.flags - flat-array shape", () => {
     it("accepts an empty array", () => {
         expect(() => proCanonicalDocumentSchema.parse(validBase())).not.toThrow();
@@ -45,21 +49,25 @@ describe("PRO header.flags - flat-array shape", () => {
     it("rejects a raw integer for the flags field", () => {
         const doc = validBase();
         (doc.header as Record<string, unknown>).flags = 0x20000000;
-        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow("expected array, received number");
     });
 
     it("rejects a wrapper-object shape (legacy)", () => {
         const doc = validBase();
         (doc.header as Record<string, unknown>).flags = { flags: ["lightThru"] };
-        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(doc)).toThrow("expected array, received object");
     });
 
     it("rejects an unknown flag name", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["unknownFlag"]))).toThrow();
+        expect(flagIssues(["unknownFlag"])).toEqual([
+            '"unknownFlag" is neither a flag table key nor a "bit<N>" position',
+        ]);
     });
 
     it("rejects duplicate entries", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["lightThru", "lightThru"]))).toThrow();
+        expect(() => proCanonicalDocumentSchema.parse(validBase(["lightThru", "lightThru"]))).toThrow(
+            "flag array must not contain duplicate entries",
+        );
     });
 
     it("accepts bit<N> for unnamed positions within the codec width", () => {
@@ -68,12 +76,14 @@ describe("PRO header.flags - flat-array shape", () => {
     });
 
     it("rejects bit<N> with N >= codec width", () => {
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit32"]))).toThrow();
+        expect(flagIssues(["bit32"])).toEqual(['"bit32" is past the codec word: N must be in [0, 32)']);
     });
 
     it("rejects bit<N> overlapping a named-bit position", () => {
         // 0x20000000 == bit 29, named `lightThru`; the literal "bit29" must use the slug.
-        expect(() => proCanonicalDocumentSchema.parse(validBase(["bit29"]))).toThrow();
+        expect(flagIssues(["bit29"])).toEqual([
+            '"bit29" overlaps the flag named at position 29: use its table key instead',
+        ]);
     });
 });
 
@@ -107,7 +117,9 @@ describe("PRO header.flags - strict-disjoint invariant at the wire boundary", ()
         // so a permissive parse never produces a `["bit29"]` value here -
         // assert the schema gate fires on the doc form too.
         const overlapDoc = validBase(["bit29"]);
-        expect(() => proCanonicalDocumentSchemaPermissive.parse(overlapDoc)).toThrow();
+        expect(
+            proCanonicalDocumentSchemaPermissive.safeParse(overlapDoc).error?.issues.map((issue) => issue.message),
+        ).toEqual(['"bit29" overlaps the flag named at position 29: use its table key instead']);
     });
 
     it("packs the array back to the same int through intToFlagArray <-> flagArrayToInt", () => {

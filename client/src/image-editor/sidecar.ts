@@ -18,9 +18,16 @@ export function chooseActivePalette(args: {
     embedded: Rgba[];
     sidecar?: Rgba[];
     externalEnabled: boolean;
+    /**
+     * The replacement colour table this animation's own declaration names, where the install ships one.
+     * It outranks the table baked into the file: a colour variant of a shared body IS this palette and
+     * nothing else, so ignoring it draws every variant as whichever one the art was saved under.
+     */
+    declared?: Rgba[];
 }): Rgba[] {
     if (args.sourceFormat === "frm") {
+        // Fallout art declares no replacement palette; its sidecar is the equivalent mechanism.
         return args.externalEnabled && args.sidecar ? args.sidecar : DEFAULT_FALLOUT_PALETTE;
     }
-    return args.embedded;
+    return args.declared ?? args.embedded;
 }

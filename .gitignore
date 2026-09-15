@@ -5,7 +5,6 @@
 *.tmbundle
 *.zip
 dist/
-syntaxes-to-json.sh.err
 # Editor-bundle staging dirs. build-editors.sh now stages them under dist/, so this only
 # catches one left at the root by a build from before that change.
 /bgforge-mls*/
@@ -32,6 +31,7 @@ transpilers/out
 format/out
 binary/out
 image/out
+animation/out
 compilers/ssl/out
 compilers/tssl/out
 
@@ -48,6 +48,10 @@ node_modules
 .npmrc
 .pnpm-store/
 tmp
+# Stryker's sandbox copy of the tree, recreated per run. Its HTML report already lands under tmp/
+# (stryker.conf.json htmlReporter); this is the working dir, which only appears when the mutation
+# gate is run locally rather than on a throwaway CI checkout.
+.stryker-tmp/
 
 *.wasm
 

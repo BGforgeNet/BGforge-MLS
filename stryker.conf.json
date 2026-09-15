@@ -4,22 +4,26 @@
     "testRunner": "vitest",
     "plugins": ["@stryker-mutator/typescript-checker", "@stryker-mutator/vitest-runner"],
     "vitest": {
-        "configFile": "server/vitest.mutation.config.mts",
-        "dir": "server"
+        "configFile": "binary/vitest.mutation.config.ts",
+        "dir": "binary"
     },
     "mutate": [
-        "server/src/core/normalized-uri.ts",
-        "server/src/core/symbol-index.ts",
-        "server/src/provider-registry.ts"
+        "binary/src/spec/types.ts",
+        "binary/src/ie-common/ability-effects-writer.ts",
+        "binary/src/cre/canonical-writer.ts",
+        "binary/src/map/canonical-writer.ts"
     ],
     "checkers": ["typescript"],
-    "tsconfigFile": "server/tsconfig.json",
+    "tsconfigFile": "binary/tsconfig.json",
     "ignorePatterns": ["external", "tmp", ".vscode-test", ".dev"],
     "coverageAnalysis": "perTest",
+    "ignoreStatic": true,
+    "incremental": true,
+    "incrementalFile": "tmp/mutation/incremental.json",
     "thresholds": {
-        "high": 80,
-        "low": 70,
-        "break": 70
+        "high": 90,
+        "low": 85,
+        "break": 83
     },
     "reporters": ["clear-text", "progress", "html"],
     "htmlReporter": {

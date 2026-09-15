@@ -1,103 +1,131 @@
-terrain:
+action:
   type: 14 # keyword
   items:
-    - name: Forced
-    - name: Frequent
-    - name: Common
-    - name: Uncommon
-    - name: Rare
-    - name: None
+    - name: AMBUSH
 
-type_subinfo:
-  type: 3 # function
+    - name: FIGHTING
+
+condition:
+  type: 14 # keyword
   items:
-    - name: Ratio
-      detail: Ratio:#%
-      doc: Determines frequency of occurrence, %.
-    - name: pid
-      detail: pid:<#>
-      doc: |-
-        Determines what this critter's pid is.
+    - name: Global
+      doc: Global variable.
 
-        `pid:<string>` looks up the pid # from the string.
-    - name: Script
-      detail: Script:<#>
-      doc: Overrides the default script with a new one.
-    - name: Dead
-      doc: Means that the critter starts out in a dead state.
-    - name: Item
-      doc: |-
-        - `Item:<#>` gives an item of a given pid #.
-        - `Item:<string>` dictates an item (from a lookup table) that this critter has.
-        - `Item:(#)<string>` the # dictates quantity of the item, possibly a range.
-        - `Item:(<string>)` gives a whole list of items.
-    - name: If
-      detail: If:<something>
-      doc: |-
-        Conditionals, allows `<`,`>`,`<=`,`>=`,==`,`&` as well as tests on `Player(<stat/attribute/skill/etc.>)`,
-        `Enctr(Num_Critters)`, `Time`, `Global(<variable index>)`, `Rand(Chance%)`.
-    - name: Distance
-      detail: Distance:#
-      doc: Forces the distance for a particular critter (if possible).
-    - name: TileNum
-      detail: TileNum:#
-      doc: Forces this object to appear at a given tile `#`.
-    - name: Spatial
-      detail: Spatial<string>
-      doc: Attaches a spatial script to the map.
-    - name: Special
-      doc: Encounter entry special flag.
-    - name: Spacing
-      detail: Spacing:#
-      doc: Hexes between them (spread/density).
+    - name: Player
+
+    - name: Rand
 
 keys:
   type: 14 # keyword
   items:
     - name: lookup_name
       doc: Encounter table key
+
     - name: maps
       doc: Encounter table key - list of maps.
-    - name: team_num
-      doc: Encounter table key - team number.
+
     - name: position
       doc: Encounter table key - formation.
+
+    - name: team_num
+      doc: Encounter table key - team number.
 
 other:
   type: 14 # keyword
   items:
     - name: Chance
-    - name: Wielded
-      doc: Item is equipped.
+
     - name: Counter
       doc: Keeps count of encounter entry and doesn't let it happen if over specified count?
 
-condition:
-  type: 14 # keyword
-  items:
-    - name: Rand
-    - name: Player
-    - name: Global
-      doc: Global variable.
-
-action:
-  type: 14 # keyword
-  items:
-    - name: AMBUSH
-    - name: FIGHTING
+    - name: Wielded
+      doc: Item is equipped.
 
 positions:
   type: 14
   items:
-    - name: surrounding
-      doc: position
-    - name: straight_line
-      doc: position
-    - name: double_line
-      doc: position
-    - name: wedge
-      doc: position
     - name: cone
       doc: position
+
+    - name: double_line
+      doc: position
+
     - name: huddle
       doc: position
+
+    - name: straight_line
+      doc: position
+
+    - name: surrounding
+      doc: position
+
+    - name: wedge
+      doc: position
+
+terrain:
+  type: 14 # keyword
+  items:
+    - name: Common
+
+    - name: Forced
+
+    - name: Frequent
+
+    - name: None
+
+    - name: Rare
+
+    - name: Uncommon
+
+type_subinfo:
+  type: 3 # function
+  items:
+    - name: Dead
+      doc: Means that the critter starts out in a dead state.
+
+    - name: Distance
+      detail: Distance:#
+      doc: Forces the distance for a particular critter (if possible).
+
+    - name: If
+      detail: If:<something>
+      doc: |-
+        Conditionals, allows `<`,`>`,`<=`,`>=`,==`,`&` as well as tests on `Player(<stat/attribute/skill/etc.>)`,
+        `Enctr(Num_Critters)`, `Time`, `Global(<variable index>)`, `Rand(Chance%)`.
+
+    - name: Item
+      doc: |-
+        - `Item:<#>` gives an item of a given pid #.
+        - `Item:<string>` dictates an item (from a lookup table) that this critter has.
+        - `Item:(#)<string>` the # dictates quantity of the item, possibly a range.
+        - `Item:(<string>)` gives a whole list of items.
+
+    - name: Ratio
+      detail: Ratio:#%
+      doc: Determines frequency of occurrence, %.
+
+    - name: Script
+      detail: Script:<#>
+      doc: Overrides the default script with a new one.
+
+    - name: Spacing
+      detail: Spacing:#
+      doc: Hexes between them (spread/density).
+
+    - name: Spatial
+      detail: Spatial<string>
+      doc: Attaches a spatial script to the map.
+
+    - name: Special
+      doc: Encounter entry special flag.
+
+    - name: TileNum
+      detail: TileNum:#
+      doc: Forces this object to appear at a given tile `#`.
+
+    - name: pid
+      detail: pid:<#>
+      doc: |-
+        Determines what this critter's pid is.
+
+        `pid:<string>` looks up the pid # from the string.

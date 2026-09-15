@@ -25,7 +25,9 @@ Download `bgforge-mls-kate-<version>.zip` from the [latest GitHub release](https
 - **Windows**: `%USERPROFILE%\AppData\Local\org.kde.syntax-highlighting\syntax\`
 - **macOS**: `~/Library/Application Support/org.kde.syntax-highlighting/syntax/`
 
-Restart Kate after installing. The definitions provide keyword, function, and constant highlighting plus code folding. The zip also includes highlight-only definitions (no LSP provider) for Fallout MSG (`.msg`), WeiDU TRA (`.tra`), Infinity 2DA (`.2da`), and Fallout scripts.lst (`scripts.lst`).
+Restart Kate after installing. The definitions provide keyword, function, and constant highlighting plus code
+folding. The zip also includes definitions for Fallout MSG (`.msg`), WeiDU TRA (`.tra`), Infinity 2DA (`.2da`),
+Fallout scripts.lst (`scripts.lst`) and Fallout Worldmap (`worldmap.txt`).
 
 Note: `.h` files default to C++ in Kate. Use `Tools > Highlighting > Fallout SSL` manually for Fallout header files.
 
@@ -38,15 +40,33 @@ Add a server in `Settings > Configure Kate > LSP Client > User Server Settings`:
 ```json
 {
   "servers": {
-    "ssl": {
+    "fallout-ssl": {
       "command": ["bgforge-mls-server", "--stdio"],
-      "highlightingModeRegex": "^(Fallout SSL|WeiDU BAF|WeiDU D|WeiDU TP2|Fallout-Worldmap)$"
-    }
+      "highlightingModeRegex": "^Fallout SSL$"
+    },
+    "weidu-baf": { "use": "fallout-ssl", "highlightingModeRegex": "^WeiDU BAF$" },
+    "weidu-d": { "use": "fallout-ssl", "highlightingModeRegex": "^WeiDU D$" },
+    "weidu-tp2": { "use": "fallout-ssl", "highlightingModeRegex": "^WeiDU TP2$" },
+    "fallout-worldmap-txt": { "use": "fallout-ssl", "highlightingModeRegex": "^Fallout Worldmap$" },
+    "fallout-msg": { "use": "fallout-ssl", "highlightingModeRegex": "^Fallout MSG$" },
+    "weidu-tra": { "use": "fallout-ssl", "highlightingModeRegex": "^WeiDU TRA$" },
+    "infinity-2da": { "use": "fallout-ssl", "highlightingModeRegex": "^Infinity 2DA$" },
+    "fallout-scripts-lst": { "use": "fallout-ssl", "highlightingModeRegex": "^Fallout scripts\\.lst$" }
   }
 }
 ```
 
-The `highlightingModeRegex` must match the language names from the installed KSyntaxHighlighting definitions. The `Fallout Worldmap` KSH definition matches `worldmap.txt` by filename. For `scripts.lst`, use `Tools > Highlighting > Fallout scripts.lst` manually since the extension is generic.
+Kate sends the key of the matching entry as the document's language ID, and the server dispatches on it, so each
+language needs its own entry named after the server's language ID. `use` makes the other entries share the first
+one's server process and configuration. The `highlightingModeRegex` values match the language names from the
+installed KSyntaxHighlighting definitions.
+
+Besides the scripting languages, the server answers for MSG and TRA (formatting, outline, folding, parse-error
+diagnostics), 2DA (formatting, semantic tokens coloring each column) and `scripts.lst` (formatting). The bundle has
+no Kate definitions for SLB, Sword Coast Stratagems SSL or `weidu.log`, which the server also serves.
+
+The `Fallout Worldmap` and `Fallout scripts.lst` KSH definitions match `worldmap.txt` and `scripts.lst` by
+filename.
 
 ## File icons
 
@@ -71,18 +91,47 @@ Restart Kate. Notes:
 
 ## TypeScript plugins (TSSL/TD)
 
-If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside tsserver. See [TypeScript Plugins](typescript-plugins.md) for setup.
+If you write `.tssl` or `.td` transpiler files, the server package includes TypeScript plugins that run inside
+tsserver ([TypeScript Plugins](typescript-plugins.md) describes what they do). In Kate they load through
+`typescript-language-server`, which the LSP Client's default configuration uses for TypeScript and which passes
+plugins from its initialization options to tsserver.
 
-## Settings
-
-Kate sends settings via `workspace/configuration` (requires Kate 25.08+). Add to the server configuration:
+1. Install it: `pnpm add -g typescript-language-server,typescript@6`
+2. In `Settings > Configure Kate > Open/Save > Modes & Filetypes`, select the TypeScript filetype and add `*.tssl;*.td`
+   to its extensions
+3. Add to `User Server Settings`, replacing `<mls-node-modules>` with the `node_modules` directory holding
+   `@bgforge/mls-server`. The default `typescript` entry reuses the `javascript` one, and Kate merges these keys into
+   it:
 
 ```json
 {
   "servers": {
-    "ssl": {
+    "javascript": {
+      "initializationOptions": {
+        "plugins": [
+          { "name": "@bgforge/mls-server/out/tssl-plugin", "location": "<mls-node-modules>" },
+          { "name": "@bgforge/mls-server/out/td-plugin", "location": "<mls-node-modules>" }
+        ]
+      }
+    }
+  }
+}
+```
+
+`name` must be a package path as above: tsserver refuses a plugin named by an absolute path.
+`pnpm ls -g --parseable` lists that package as `<mls-node-modules>/@bgforge/mls-server`.
+
+## Settings
+
+Kate sends settings via `workspace/configuration` (requires Kate 25.08+). Add them to the first server entry - the
+ones with `use` read its settings:
+
+```json
+{
+  "servers": {
+    "fallout-ssl": {
       "command": ["bgforge-mls-server", "--stdio"],
-      "highlightingModeRegex": "^(Fallout SSL|WeiDU BAF|WeiDU D|WeiDU TP2|Fallout-Worldmap)$",
+      "highlightingModeRegex": "^Fallout SSL$",
       "settings": {
         "bgforge": {
           "validate": "saveAndType",

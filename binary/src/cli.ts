@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * CLI tool to parse Fallout PRO and MAP binary files and output structured JSON.
- * Also supports loading JSON back to binary via --load.
- * Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [-r] [-q]
+ * CLI tool to parse the binary formats in `parserRegistry` (Fallout PRO/MAP, Infinity Engine ITM/SPL/EFF/CRE/DLG)
+ * and output structured JSON. Also supports loading JSON back to binary via --load.
+ * Usage: fgbin <file|dir> [--save] [--check] [--load] [-r] [-q]
  */
 
 import * as fs from "fs";
@@ -25,6 +25,7 @@ import {
     runCli,
     safeProcess,
     reportDiff,
+    reportFatal,
 } from "../../shared/cli/cli-utils";
 import { MAX_FILE_SIZES } from "./max-file-sizes";
 
@@ -177,15 +178,17 @@ async function processFile(
     });
 }
 
-const HELP = `Usage: fgbin <file.pro|file.map|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
-  --save    Save parsed JSON alongside the binary file (.pro.json/.map.json)
+const HELP = `Usage: fgbin <file|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
+  Supported files: ${EXTENSIONS.join(", ")}
+  --save    Save parsed JSON alongside the binary file (file.pro -> file.pro.json)
   --check   Compare parsed output against existing JSON snapshot (exit 1 if diff)
   --load    Load JSON and write binary using the parser's native extension
   --extensions    Print supported file extensions (one per line) and exit
   --parse-only    Parse and report errors without building the JSON snapshot; exit code is the verdict.
                   For corpus sweeps that only check that files parse. Not valid with --save/--check/--load.
-  --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict;
-                  required again on --load for JSON snapshots created from ambiguous MAP bytes)
+  --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict).
+                  Not used by --load: a MAP snapshot reloads permissively only when it carries an
+                  objects-tail opaque range
   --proto-dir <dir>  Load MAP proto subtype overrides from <dir>/{items,scenery} instead of the
                      default sibling <mapDir>/../proto/. Affects MAP inputs only; errors if <dir>
                      is missing. Other formats (.pro/.itm/...) ignore it.
@@ -202,8 +205,8 @@ Examples:
   fgbin file.pro.json --load      # Convert JSON back to binary (.pro/.map/etc.)
   fgbin world.map --proto-dir mods/foo/proto
                                    # Decode MAP object subtypes against a non-sibling proto/ tree
-  fgbin sfsheng.map.json --load --graceful-map
-                                   # Reload an ambiguous MAP snapshot saved with --graceful-map`;
+  fgbin sfsheng.map --save --graceful-map
+                                   # Snapshot an ambiguous MAP; --load on the snapshot needs no flag`;
 
 /**
  * Load a JSON file and serialize it back to binary format.
@@ -266,43 +269,28 @@ function loadJsonToBinary(jsonPath: string, parseOptions: ParseOptions): void {
 }
 
 /**
- * Pull the binary-specific `--proto-dir <dir>` override out of process.argv
- * before the shared cac parser runs. Like `--graceful-map` it is binary-only,
- * so it stays out of `parseCliArgs`; unlike `--graceful-map` it takes a value,
- * so both tokens must be removed from argv or cac would read the directory as
- * the positional target. Accepts `--proto-dir <dir>` and `--proto-dir=<dir>`.
- * Returns the directory, or undefined when not passed.
+ * The `--proto-dir` value cac parsed, or undefined when not passed. Registered with cac rather than cut out of
+ * process.argv, because `--jobs` workers are spawned with that argv and must receive the flag too.
  */
-function extractProtoDirOverride(): string | undefined {
-    const argv = process.argv;
-    const eqIndex = argv.findIndex((a) => a.startsWith("--proto-dir="));
-    if (eqIndex !== -1) {
-        const value = argv[eqIndex]!.slice("--proto-dir=".length);
-        argv.splice(eqIndex, 1);
-        return value;
-    }
-    const flagIndex = argv.indexOf("--proto-dir");
-    if (flagIndex === -1) return undefined;
-    const value = argv[flagIndex + 1];
-    if (value === undefined || value.startsWith("-")) {
+function readProtoDirOverride(extra: Record<string, unknown>): string | undefined {
+    const value = extra.protoDir;
+    if (value === undefined) return undefined;
+    // cac yields `true` for a valued flag given no value, and a number for a numeric-looking one.
+    if (value === true) {
         console.error("Error: --proto-dir requires a directory argument");
         process.exit(1);
     }
-    argv.splice(flagIndex, 2);
-    return value;
+    const dir = String(value);
+    // Explicit intent fails loud: a typo'd path silently falling back to the
+    // bundled vanilla resolver would produce wrong subtypes that look fine.
+    if (!fs.existsSync(dir)) {
+        console.error(`Error: --proto-dir not found: ${dir}`);
+        process.exit(1);
+    }
+    return dir;
 }
 
 async function main() {
-    // Pull --proto-dir out of argv first so neither the local argv copy below
-    // nor the shared cac parser mistakes its value for the positional target.
-    const protoDirOverride = extractProtoDirOverride();
-    // Explicit intent fails loud: a typo'd path silently falling back to the
-    // bundled vanilla resolver would produce wrong subtypes that look fine.
-    if (protoDirOverride !== undefined && !fs.existsSync(protoDirOverride)) {
-        console.error(`Error: --proto-dir not found: ${protoDirOverride}`);
-        process.exit(1);
-    }
-
     const argv = process.argv.slice(2);
 
     // `--graceful-map` is a binary-specific preference axis, so it stays out of
@@ -348,8 +336,9 @@ async function main() {
         return;
     }
 
-    const args = parseCliArgs(HELP);
+    const args = parseCliArgs(HELP, [["--proto-dir <dir>", "Load MAP proto subtype overrides from <dir>"]]);
     if (!args) return;
+    const protoDirOverride = readProtoDirOverride(args.extra ?? {});
 
     await runCli({
         args,
@@ -362,7 +351,4 @@ async function main() {
     });
 }
 
-main().catch((error) => {
-    console.error("Error:", error.message);
-    process.exit(1);
-});
+main().catch(reportFatal);

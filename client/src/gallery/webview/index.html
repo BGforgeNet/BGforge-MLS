@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <!--
+            `img-src data:` is what lets a tile draw at all: thumbnails arrive as data: URIs, and
+            `default-src 'none'` would otherwise block every one of them, leaving a grid of empty boxes with
+            nothing in the console the host can see.
+        -->
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'none'; font-src {{cspSource}}; img-src data:; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';"
+        />
+        <title>Image Gallery</title>
+        <!--
+            Stylesheets load as link elements resolved through webview.asWebviewUri and authorised by
+            `style-src {{cspSource}}`. They are NOT inlined as nonce'd style elements: VS Code's wrapped
+            webview only honours style-src sources it can attribute to the webview origin (cspSource). A
+            bare `style-src 'nonce-...'` is honoured by raw Chromium but silently ignored by the VS Code
+            webview layer, leaving the panel unstyled. See client/src/webview-html.ts.
+        -->
+        <link href="{{codiconsUri}}" rel="stylesheet" />
+        <link href="{{baseUri}}" rel="stylesheet" />
+        <link href="{{primitivesUri}}" rel="stylesheet" />
+        <link href="{{sharedTilesUri}}" rel="stylesheet" />
+        <link href="{{animationStylesUri}}" rel="stylesheet" />
+        <link href="{{stylesUri}}" rel="stylesheet" />
+    </head>
+    <body>
+        <div id="app"></div>
+        <script nonce="{{nonce}}">
+            /* __SCRIPT__ */
+        </script>
+    </body>
+</html>

@@ -28,6 +28,15 @@ esbuild ./client/src/binary-editor/worker.ts \
     --platform=node \
     "$@"
 
+# Gallery worker bundle (thumbnail decode off the extension host, also via worker_threads).
+esbuild ./client/src/gallery/worker.ts \
+    --bundle \
+    --outfile=client/out/gallery/worker.js \
+    --external:vscode \
+    --format=cjs \
+    --platform=node \
+    "$@"
+
 # Copy codicons font assets for webview usage
 mkdir -p client/out/codicons
 cp node_modules/@vscode/codicons/dist/codicon.css \

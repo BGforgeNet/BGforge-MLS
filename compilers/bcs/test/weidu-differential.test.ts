@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import type { Parser } from "web-tree-sitter";
 import { compileBaf, decompileBcs, readBcs, writeBcs } from "@bgforge/bcs";
 import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
-import { resolveWeidu } from "../../../scripts/utils/src/weidu-binary.ts";
+import { resolveWeidu, WEIDU_HOOK_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
 import { COMPILE_SYMBOLS, FIXTURE_DIR, IDS_DIR, SYMBOLS } from "./fixture-symbols";
 
 /**
@@ -77,7 +77,7 @@ describe(`BCS - differential against the reference implementation (${SOURCES.len
             fs.copyFileSync(path.join(compiled, script), path.join(decompiled, script));
         }
         runWeidu(decompiled, ".bcs");
-    });
+    }, WEIDU_HOOK_TIMEOUT_MS);
 
     afterAll(() => {
         for (const dir of [compiled, decompiled]) if (dir) fs.rmSync(dir, { recursive: true, force: true });

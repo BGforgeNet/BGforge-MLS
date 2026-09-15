@@ -7,6 +7,7 @@ import { CurrentGame, defaultOpener } from "./current-game";
 import { timedHost } from "../timing";
 import { GameResourceTreeProvider, type ResourceNode } from "./tree-provider";
 import {
+    createColorGradientResolver,
     createNamingTableResolver,
     createResourceListResolver,
     createResourceBytesResolver,
@@ -19,6 +20,7 @@ import {
     createStrrefSearch,
     gameDirOf,
     isGameDocument,
+    type ColorGradientResolver,
     type NamingTableResolver,
     type ResourceListResolver,
     type ResourceBytesResolver,
@@ -32,8 +34,10 @@ import {
 } from "./game-lookups";
 import { viewTypeForResource } from "./editor-routing";
 import { pickStrref } from "./strref-picker";
+import { createCreatureIndexResolver, type CreatureIndexResolver } from "./creature-index";
 import { GAME_RESOURCE_SCHEME, parseResourceUri, resourceUri } from "./uri";
 import { resourceTypeCode, type Game } from "@bgforge/binary";
+import { type AnimationIndexResolver, createAnimationIndexResolver } from "@bgforge/animation";
 import { DlgReferenceIndex, type DlgSource, type InboundRef } from "../dialog-editor/dlg-references";
 
 const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
@@ -110,6 +114,21 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     pickStrref: (uri: vscode.Uri, title: string) => Promise<number | undefined>;
     slotLabel: SlotLabelResolver;
     namingTable: NamingTableResolver;
+    colorGradient: ColorGradientResolver;
+    creatures: CreatureIndexResolver;
+    /**
+     * The animations the open install declares, per game directory.
+     *
+     * One resolver for every consumer: building the index walks the install's declaration tables, and a
+     * second instance would repeat that walk and hold a second copy of the answer.
+     */
+    animations: AnimationIndexResolver;
+    /**
+     * Ask once, for a whole group of resource writes, before any of them replaces a file in the game's
+     * override folder. For a save that writes several resources at once, where a prompt per file would put
+     * the same modal in front of the reader several times over one save.
+     */
+    confirmGroupWrite: (uris: readonly vscode.Uri[]) => Promise<void>;
     resourceType: ResourceTypeResolver;
     flagBitNames: FlagBitNamesResolver;
     resourceList: ResourceListResolver;
@@ -117,6 +136,24 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     engine: EngineResolver;
     bcsSymbols: BcsSymbolResolver;
     isGameBacked: (uri: vscode.Uri) => boolean;
+    revealResource: (resref: string, ext: string) => Promise<void>;
+    /** The open install, for a consumer that needs the `Game` itself rather than one resolved lookup. */
+    gameSession: () => { dir: string; game: Game } | undefined;
+    /**
+     * The game at `dir`, opening the configured install when nothing is open yet - what every resolver here
+     * reaches for. Undefined where another install is open, or where `dir` holds no game at all.
+     *
+     * Distinct from `gameSession` in exactly the case that matters to a restored editor: a tab reopened with
+     * the window runs before the resource view is ever shown, so its game is configured but not yet open.
+     */
+    gameAt: (dir: string) => Game | undefined;
+    /**
+     * Fires after the open install changes - opened, replaced, or closed.
+     *
+     * For a consumer that reads the game ONCE rather than per lookup, and so cannot self-correct when the
+     * view opens a game later. The lookups above need nothing: each asks `currentGame` at call time.
+     */
+    onDidChangeGame: vscode.Event<void>;
 } {
     // Read per open, so correcting a garbled classic game takes effect on the next open rather than needing a
     // window reload. Empty means "let the library decide" - UTF-8 for Enhanced Editions, windows-1252 otherwise.
@@ -130,6 +167,15 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         // outside. Report it when it holds the host past the budget, as the server does for its requests.
         (dir, encoding) => timedHost("openGame", () => defaultOpener(dir, encoding)),
     );
+
+    // Built here rather than per consumer: the gallery and the animation editor both browse the declared
+    // animations, and the resolver caches one index per install.
+    const animationIndex = createAnimationIndexResolver(currentGame, (dir, error) => {
+        conlog(
+            `ieResources: cannot list the animations of ${dir}: ${error instanceof Error ? error.message : String(error)}`,
+            "error",
+        );
+    });
 
     /**
      * The game a plain `file:` record (a mod's own file) resolves against: the configured
@@ -153,6 +199,9 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         return checkedValid ? dir : undefined;
     };
     const fallbackGameDir = (): string | undefined => configuredGameDir() ?? currentGame.current?.dir;
+
+    const gameChanged = new vscode.EventEmitter<void>();
+    context.subscriptions.push(gameChanged);
 
     // Built once and shared: the resolver is also the value this returns to the binary editor, and the picker
     // needs both halves - search to find a string, resolve to show the one a typed number already names.
@@ -233,6 +282,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await setHasGame(false);
         tree.refresh();
         updateHeader();
+        gameChanged.fire();
     };
 
     const openGameDir = async (dir: string): Promise<void> => {
@@ -269,6 +319,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         await setHasGame(true);
         tree.refresh();
         updateHeader();
+        gameChanged.fire();
     };
 
     /**
@@ -446,6 +497,10 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         pickStrref: (uri, title) => pickStrref(strrefSearch, (ref) => strrefResolver(uri, ref), uri, { title }),
         slotLabel: createSlotLabelResolver(currentGame, fallbackGameDir),
         namingTable: createNamingTableResolver(currentGame, fallbackGameDir),
+        colorGradient: createColorGradientResolver(currentGame, fallbackGameDir),
+        creatures: createCreatureIndexResolver(currentGame, fallbackGameDir),
+        animations: animationIndex,
+        confirmGroupWrite: (uris) => fsProvider.confirmGroupWrite(uris),
         resourceType: createResourceTypeResolver(currentGame, fallbackGameDir),
         flagBitNames: createFlagBitNamesResolver(currentGame, fallbackGameDir),
         resourceList: createResourceListResolver(currentGame, fallbackGameDir),
@@ -453,5 +508,30 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         engine: createEngineResolver(currentGame, fallbackGameDir),
         bcsSymbols: createBcsSymbolResolver(currentGame, fallbackGameDir),
         isGameBacked: (uri) => isGameDocument(uri, fallbackGameDir),
+        /**
+         * Show a resource in the resource tree. Exported from here rather than from the provider because the
+         * `TreeView` - the only object that can reveal - is a closure of this function.
+         *
+         * Silent when the resource is not in the open game: the gallery can be showing a workspace file, or a
+         * game the user has since switched away from, and neither is an error worth a popup.
+         */
+        gameSession: () => currentGame.current,
+        gameAt: (dir) => {
+            let game: Game | undefined;
+            try {
+                game = currentGame.gameAt(dir);
+            } catch {
+                // A path that holds no game reads as "no game", the posture every lookup here takes: the
+                // caller reports it to the reader, where an exception thrown out of a document open would
+                // surface as VS Code's own unexplained "could not be opened" placeholder.
+            }
+            return game;
+        },
+        onDidChangeGame: gameChanged.event,
+        revealResource: async (resref: string, ext: string): Promise<void> => {
+            const node = tree.resourceNode(resref, ext);
+            if (node === undefined) return;
+            await treeView.reveal(node, { select: true, focus: false, expand: true });
+        },
     };
 }

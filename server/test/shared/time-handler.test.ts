@@ -126,12 +126,12 @@ describe("shared/time-handler", () => {
         });
     });
 
-    describe("drift check: architecture.md documents the current DEFAULT_THRESHOLD_MS value", () => {
-        it("docs/architecture.md mentions the threshold value in the Latency Budgets section", () => {
-            const archMdPath = path.resolve(__dirname, "../../../docs/architecture.md");
-            const content = readFileSync(archMdPath, "utf-8");
+    describe("drift check: INTERNALS.md documents the current DEFAULT_THRESHOLD_MS value", () => {
+        it("server/INTERNALS.md mentions the threshold value in the Latency Budgets section", () => {
+            const internalsMdPath = path.resolve(__dirname, "../../INTERNALS.md");
+            const content = readFileSync(internalsMdPath, "utf-8");
             // Verify the docs cite the threshold value so code and docs stay in sync.
-            // If DEFAULT_THRESHOLD_MS changes, update the Latency Budgets section in docs/architecture.md.
+            // If DEFAULT_THRESHOLD_MS changes, update the Latency Budgets section in server/INTERNALS.md.
             const thresholdPattern = new RegExp(`DEFAULT_THRESHOLD_MS\\s*=\\s*${DEFAULT_THRESHOLD_MS}\\b`);
             expect(content).toMatch(thresholdPattern);
         });

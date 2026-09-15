@@ -3,9 +3,9 @@
  * names the script it runs; that same value is the script's own SID. So an object's SID links to its script,
  * and a script's SID links to the object that runs it (whose SID equals this script's sid).
  *
- * The script's Owner ID (scr_oid) is NOT linked: fallout2-ce sets it from the object at runtime bind time
- * (scripts.cc: `script->ownerId = object->id` after `scriptGetScript(object->sid, ...)`), so on disk it is
- * stale/wrong - Broken Hills' map has Owner IDs pointing at unrelated objects of the wrong type.
+ * The script's Owner ID is NOT linked: the engine sets it from the object's id when it binds the object to its
+ * script by sid at runtime, so on disk it is stale/wrong - Broken Hills' map has Owner IDs pointing at unrelated
+ * objects of the wrong type.
  *
  * Parsed WITH the PRO resolver so objects decode (links only resolve when both records are present).
  */

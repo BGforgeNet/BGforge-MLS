@@ -17,10 +17,10 @@ text format, so its compiler emits records rather than instructions and needs no
 
 `ssl` builds the IR from the SSL grammar. `tssl` builds it from a TypeScript AST
 (`tssl/src/int/lower.ts`), so a `.tssl` reaches bytecode with no SSL text in between; it compiles the whole
-FO2tweaks repo byte-identically to the text route - 27 scripts at `-O0`, `-O1`, `-O2` and the `-O2 -s` mods
+FO2tweaks repo byte-identically to the text route - every script at `-O0`, `-O1`, `-O2` and the `-O2 -s` mods
 ship - and still refuses, positioned at the line, anything it does not lower.
 
-`tssl/src/desugar.ts` holds the expansions the two front ends must not reimplement separately: `for`,
+`ssl/src/desugar.ts` holds the expansions the two front ends must not reimplement separately: `for`,
 `foreach`, `switch` and array/map literals all reach it from both sides.
 
 `pnpm tssl-int-diff <repo-or-file> [switches] [-- more switches]` compiles each source both ways and

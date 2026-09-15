@@ -1,50 +1,26 @@
 <script lang="ts">
     import type { Bridge } from "../state/bridge";
-    import type { AnimationView, SaveAsTarget } from "../messages";
+    import type { AnimationView } from "../messages";
     import type { SourceFormat } from "@bgforge/image";
-    import ActionMenu from "./ActionMenu.svelte";
+    import { buildSaveAsOptions } from "../save-as-options";
+    import Menu from "../../../webview-ui/Menu.svelte";
 
-    const { view, bridge }: { view: AnimationView; bridge: Bridge } = $props();
+    // Null while nothing is loaded: the bar keeps its place so choosing a set moves nothing above it.
+    // Its buttons still press - each sends a message the host has no open document to act on - rather
+    // than being greyed out, which is the shape the surface asked for.
+    const {
+        view,
+        bridge,
+        onSaveAs,
+    }: { view: AnimationView | null; bridge: Bridge; onSaveAs: () => void } = $props();
 
-    // "Save as" and "Import" are both ActionMenu dropdowns: picking an entry immediately runs the action
-    // (host-side, auto-named next to the source). Every save format is offered EXCEPT the source's own
-    // exact format - plain "Save" already writes that in place. FRM is split by palette mode (sidecar
-    // writes a .pal, nearest remaps to the default Fallout palette). THREE different formats share the
-    // .bam extension - v1, compressed v1 (BAMC) and v2 - so every label carries its version, and each is
-    // its own target (a re-encode overwrites <base>.bam, which is intended).
-    interface SaveAsOption {
-        value: string;
-        label: string;
-        target: SaveAsTarget;
-        paletteMode?: "sidecar" | "nearest";
-    }
-
-    function buildSaveAsOptions(source: SourceFormat): SaveAsOption[] {
-        const frmVariants: SaveAsOption[] =
-            source === "frm"
-                ? []
-                : [
-                      { value: "frm-sidecar", label: "FRM (sidecar palette)", target: "frm", paletteMode: "sidecar" },
-                      { value: "frm-nearest", label: "FRM (nearest match)", target: "frm", paletteMode: "nearest" },
-                  ];
-        const bamUncompressed: SaveAsOption[] =
-            source === "bam" ? [] : [{ value: "bam", label: "BAM v1", target: "bam" }];
-        const bamCompressed: SaveAsOption[] =
-            source === "bamc" ? [] : [{ value: "bamc", label: "BAMC v1 (compressed)", target: "bamc" }];
-        // BAM v2 keeps true colour and per-pixel alpha, but writes its frames into separate
-        // MOSxxxx.PVRZ files - the host asks which page number to start at when it needs new ones.
-        const bamV2: SaveAsOption[] = source === "bamv2" ? [] : [{ value: "bamv2", label: "BAM v2", target: "bamv2" }];
-        return [
-            ...frmVariants,
-            ...bamUncompressed,
-            ...bamCompressed,
-            ...bamV2,
-            { value: "apng", label: "APNG", target: "apng" },
-            { value: "png-directory", label: "PNG directory", target: "png-directory" },
-        ];
-    }
-
-    const saveAsOptions = $derived(buildSaveAsOptions(view.sourceFormat));
+    // "Save as" is two controls, because the two documents ask different amounts. A single FILE gets a
+    // menu: every entry is a one-click write with nothing further to ask. A SET gets a button that opens a
+    // dialog: every set-scoped write goes into a folder the reader chooses and several need a naming
+    // family, a container and an id besides, so a menu of them would be a list that all opens the same
+    // questions. "Import" stays a menu on both, its two entries differing only in where the cycles land.
+    const isSet = $derived(view?.set !== undefined);
+    const saveAsOptions = $derived(buildSaveAsOptions(view?.sourceFormat ?? null));
 
     // Plain "Save" writes the source format back in place, so its tooltip names that format the same
     // way the "Save as" entries do - an upper-cased tag would read "BAMV2" and "BAMC".
@@ -55,17 +31,28 @@
         bamv2: "BAM v2",
     } as const satisfies Record<SourceFormat, string>;
 
-    // Import brings in a PNG directory's cycles, either replacing every current cycle or appending to them.
+    // A set's Save is not one file in one format: it writes back the members the reader has changed, each
+    // in the encoding it was read in, so naming the open member's format here would describe the wrong
+    // thing - and the "Save as" entries beside it now say "every file of this set".
+    const saveTitle = $derived.by(() => {
+        if (view === null) return "Save in place";
+        if (view.set !== undefined) return "Save the members you have changed back into the game";
+        return `Save in place as ${SOURCE_FORMAT_LABEL[view.sourceFormat]}`;
+    });
+
+    // Import brings in an exported folder's cycles, either replacing every current cycle or appending to
+    // them. One folder, two shapes: a single animation's directory applies to what is open, an exported
+    // SET applies across every member it names.
     const IMPORT_ITEMS = [
         {
             value: "replace",
             label: "Replace all cycles...",
-            title: "Replace every cycle with an imported PNG directory (its folder or manifest.json)",
+            title: "Replace every cycle from an exported folder (a PNG directory, or a whole exported set)",
         },
         {
             value: "append",
             label: "Append cycles...",
-            title: "Add an imported PNG directory's cycles after the existing ones",
+            title: "Add an exported folder's cycles after the existing ones",
         },
     ];
 
@@ -75,7 +62,7 @@
 
     function chooseSaveAs(value: string): void {
         const option = saveAsOptions.find((o) => o.value === value);
-        if (!option) return;
+        if (option === undefined) return;
         if (option.paletteMode) {
             bridge.send({ type: "saveAs", target: option.target, paletteMode: option.paletteMode });
         } else {
@@ -89,19 +76,29 @@
 </script>
 
 <div class="toolbar">
-    <button type="button" onclick={handleSave} title={`Save in place as ${SOURCE_FORMAT_LABEL[view.sourceFormat]}`}>
+    <button type="button" onclick={handleSave} title={saveTitle}>
         Save
     </button>
-    <ActionMenu
-        label="Save as..."
-        ariaLabel="Save as"
-        items={saveAsOptions.map((o) => ({ value: o.value, label: o.label }))}
-        onselect={chooseSaveAs}
-    />
-    <ActionMenu
-        label="Import PNG directory..."
-        ariaLabel="Import PNG directory"
-        items={IMPORT_ITEMS}
+    {#if isSet}
+        <button type="button" onclick={onSaveAs} title="Write every file of this set somewhere else">
+            Save as...
+        </button>
+    {:else}
+        <Menu
+            ariaLabel="Save as"
+            side="top"
+            items={saveAsOptions.map((o) => ({ id: o.value, label: o.label, ...(o.title ? { title: o.title } : {}) }))}
+            onselect={chooseSaveAs}
+        >
+            {#snippet trigger()}Save as...{/snippet}
+        </Menu>
+    {/if}
+    <Menu
+        ariaLabel="Import an exported folder"
+        side="top"
+        items={IMPORT_ITEMS.map((i) => ({ id: i.value, label: i.label, title: i.title }))}
         onselect={chooseImport}
-    />
+    >
+        {#snippet trigger()}Import...{/snippet}
+    </Menu>
 </div>

@@ -29,7 +29,7 @@
  */
 
 import { formatLayoutSchema, type FormatLayout } from "../layout-schema-types";
-import { effV2BodyLabels, effV2BodyRows } from "./../eff/effect-body-layout";
+import { effV2BodyLabels, effV2BodyRows } from "../eff/effect-body-layout";
 import { featureBlockBodyLabels, featureBlockBodyRows } from "../ie-common/feature-block-layout";
 
 // CRE embeds an effect record per `effStructureVersion`; v2 effects are byte-identical to a standalone `.eff`,
@@ -153,7 +153,6 @@ const creLabels: Record<string, string> = {
 export const creLayout: FormatLayout = formatLayoutSchema.parse({
     schemaVersion: 1,
     format: "cre",
-    maxContentWidthPx: 1180,
     labels: creLabels,
     variants: {
         creature: {
@@ -655,9 +654,10 @@ export const creLayout: FormatLayout = formatLayoutSchema.parse({
                             panels: [
                                 {
                                     title: "Sound Slots",
-                                    // 5 columns x 20 rows (column-major): 100 sound strref slots, 20 per column.
+                                    // 100 sound strref slots, filled column-major into at most 4 columns (fewer
+                                    // when the panel is too narrow to hold them).
                                     blocks: [
-                                        // Three columns, not five: each slot is a strref sized to show its
+                                        // Four columns, not five: each slot is a strref sized to show its
                                         // dialog.tlk line, and five of those overflowed the panel horizontally.
                                         { kind: "grid", columns: 4, items: slotKeys("soundSlots", "sound", 100) },
                                     ],

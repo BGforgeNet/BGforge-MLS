@@ -56,8 +56,8 @@ Needs `permissions: contents: write`, since this is the mode that pushes.
 ### Check mode: verify the committed SSL is current
 
 Set `check: true` alongside `ssl: "true"` to verify the committed `.ssl` matches a fresh compile. The action
-exits non-zero (failing the job) if any is stale, and never commits or pushes. With `ssl` off there is
-nothing committed to compare, so check mode adds nothing over the default compile.
+exits non-zero (failing the job) if any is stale or was never committed at all, and never commits or pushes.
+With `ssl` off there is nothing committed to compare, so check mode adds nothing over the default compile.
 
 ```yaml
 name: Validate compiled output
@@ -112,7 +112,7 @@ particular.
 | `commit-message`      | `chore: update compiled output`                         | Commit subject when compiled output changes.                                                                         |
 | `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                                                     |
 | `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                                           |
-| `check`               | `false`                                                 | If `true`, verify the committed `.ssl` is up to date (exit 1 if stale) and skip push. Only meaningful with `ssl`.    |
+| `check`               | `false`                                                 | If `true`, verify the `.ssl` is committed and current (exit 1 if not) and skip push. Only meaningful with `ssl`.     |
 
 ## Outputs
 

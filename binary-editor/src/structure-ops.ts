@@ -34,7 +34,8 @@ export function reparse(session: EditorSession, bytes: Uint8Array): ParseResult 
     return parser.parse(bytes, session.parseOptions);
 }
 
-function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSet {
+/** The whole view re-projected from the live model. Shared by structure ops and the `reproject` request. */
+export function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSet {
     // A structure op rebuilds the whole model, so any layout/form field whose presentation derives from
     // another record goes stale in the webview's resolved-field snapshot - the CRE item-slot item dropdowns
     // and the selected-weapon dropdown read the Items list, and a reorder/remove/add changes both their

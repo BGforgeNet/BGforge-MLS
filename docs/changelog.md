@@ -1,5 +1,41 @@
 # Changelog
 
+## Unreleased
+
+### Image gallery
+
+- New image gallery. `BGforge: Game Image Gallery` browses the images of the game at
+  `bgforge.weidu.gamePath`, `BGforge: Workspace Image Gallery` browses the open folder. Both draw a
+  thumbnail grid filtered by name, resource type and format, and draw a picked file on the panel's own
+  animation surface.
+- A game gallery carries a second tab for the animation sets the install declares. Picking one draws the
+  whole set, whose members can be edited and saved back, or converted into another engine's animation
+  files.
+- A BAM opened from a game offers the animation set it belongs to, opening it in its own tab. Where several
+  sets share the file, as recoloured creatures and class variants do, it asks which.
+- An install whose animations cannot be listed says so in the "BGforge MLS" output channel and is retried
+  on the next request, instead of showing an empty gallery for the rest of the session.
+- The gallery reports a message it does not recognise from its own view, rather than ignoring it.
+
+### Diagnostics
+
+- A syntax error reporting a missing token now offers a quick fix that inserts it.
+
+### Transpilers
+
+- TD transpilation fails with a positioned error when a trigger, an action or literal text contains `~`,
+  instead of emitting a WeiDU string the tilde terminates early.
+
+### Fixes
+
+- `.d` files show the WeiDU script icon under any file icon theme.
+- The binary editor fits a narrow editor: a list stacks above its detail, wide rows wrap, and a field's label moves
+  above its control, instead of the page running off the right edge.
+- The TextMate bundle's grammars declare their file extensions and names, so a JetBrains IDE maps those files to
+  them when the bundle is installed.
+- A PVRZ page whose header declares more pixels than the per-frame cap is refused on open, instead of the
+  editor allocating the full texture from a crafted header.
+
 ## 3.15.0
 
 ### Animation editor
@@ -922,7 +958,7 @@ Fixed crash on mod directory open on Windows.
   - Clarified `set_obj_visibility` description.
 - IE
   - Updated [IESDP](https://gibberlings3.github.io/iesdp/) and [IElib](https://ielib.bgforge.net/) defines.
-  - Added custom [icon theme](https://github.com/BGforgeNet/BGforge-MLS/blob/master/docs/icon-theme.md).
+  - Added custom [icon theme](https://github.com/BGforgeNet/BGforge-MLS/blob/master/docs/themes.md#icon-theme).
   - Added rudimentary gcc [preprocessing](https://forums.bgforge.net/viewtopic.php?f=35&t=334) support.
 
 ## 1.15.3

@@ -4,27 +4,11 @@ import { resourceTypeExt, type GameResourceRef } from "@bgforge/binary";
 import { hasViewerFor } from "./editor-routing";
 import { type CurrentGame } from "./current-game";
 import { resourceUri } from "./uri";
+import { type Node, type ResourceNode, type TypeNode, nodeId, parentTypeOf } from "./tree-nodes";
 
-/** Pinned top row showing the open game's type + path (mirrors the view header). */
-interface GameNode {
-    kind: "game";
-    label: string;
-    dir: string;
-}
-interface TypeNode {
-    kind: "type";
-    type: number;
-    ext: string;
-    count: number;
-}
-export interface ResourceNode {
-    kind: "resource";
-    resref: string;
-    type: number;
-    ext: string;
-    openable: boolean;
-}
-type Node = GameNode | TypeNode | ResourceNode;
+// Re-exported so existing importers keep reaching `ResourceNode` here, where it lived before the pure half
+// was split out.
+export type { ResourceNode } from "./tree-nodes";
 
 // ITM/SPL/CRE v1 headers carry the (unidentified / long) name strref at byte 0x08 (IESDP). Read raw rather
 // than through the spec's `strref` field property (which is what the binary editor resolves from): a hover
@@ -71,14 +55,12 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
         const current = this.currentGame.current;
         if (!current) return [];
         if (!element) {
+            // Built through the same helper `getParent` uses: `reveal` matches a row to its parent by id, so
+            // the two constructions drifting would break the walk with nothing failing at the site.
             const typeNodes: TypeNode[] = [];
-            for (const [type, list] of this.ensureGrouped()) {
-                typeNodes.push({
-                    kind: "type",
-                    type,
-                    ext: resourceTypeExt(type) ?? `0x${type.toString(16)}`,
-                    count: list.length,
-                });
+            for (const type of this.ensureGrouped().keys()) {
+                const node = this.typeNodeFor(type);
+                if (node) typeNodes.push(node);
             }
             typeNodes.sort((a, b) => a.ext.localeCompare(b.ext));
             // Pinned game row first, then the type groups.
@@ -99,7 +81,47 @@ export class GameResourceTreeProvider implements vscode.TreeDataProvider<Node> {
         return [];
     }
 
+    /** The group a row sits under. `TreeView.reveal` refuses to work without this. */
+    getParent(element: Node): Node | undefined {
+        const type = parentTypeOf(element);
+        return type === undefined ? undefined : this.typeNodeFor(type);
+    }
+
+    /** The row for one resource, so a caller holding a resref can reveal it. */
+    resourceNode(resref: string, ext: string): ResourceNode | undefined {
+        const wanted = resref.toUpperCase();
+        for (const [type, list] of this.ensureGrouped()) {
+            const groupExt = resourceTypeExt(type);
+            if (groupExt?.toLowerCase() !== ext.toLowerCase()) continue;
+            const found = list.find((r) => r.resref.toUpperCase() === wanted);
+            if (found) {
+                return {
+                    kind: "resource",
+                    resref: found.resref,
+                    type,
+                    ext: groupExt,
+                    openable: hasViewerFor(groupExt),
+                };
+            }
+        }
+        return undefined;
+    }
+
+    private typeNodeFor(type: number): TypeNode | undefined {
+        const list = this.ensureGrouped().get(type);
+        if (!list) return undefined;
+        return { kind: "type", type, ext: resourceTypeExt(type) ?? `0x${type.toString(16)}`, count: list.length };
+    }
+
     getTreeItem(element: Node): vscode.TreeItem {
+        const item = this.buildTreeItem(element);
+        // Explicit, so a row keeps its selection and expansion state when its label or count changes - and so
+        // `reveal` can match a node it was handed against the row already on screen.
+        item.id = nodeId(element);
+        return item;
+    }
+
+    private buildTreeItem(element: Node): vscode.TreeItem {
         if (element.kind === "game") {
             const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
             item.description = element.dir;

@@ -14,6 +14,13 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$ROOT_DIR"
 
+# Tools are called by bare name, not `pnpm exec`: `pnpm test` has already put node_modules/.bin on PATH, and
+# each extra launcher pays the package manager's own startup before the tool runs. Run by path, nothing is on PATH.
+command -v vitest >/dev/null || {
+    echo "test.sh: node_modules/.bin is not on PATH - run it as 'pnpm test' (or 'pnpm test:all')" >&2
+    exit 1
+}
+
 # shellcheck source=scripts/timing-lib.sh
 source "$SCRIPT_DIR/timing-lib.sh"
 
@@ -34,11 +41,9 @@ step "Resetting External Repos"
 step "Building transpile library bundle"
 pnpm build:transpile
 
-# Four suites drive the real WeiDU as their authority and SKIP without one, so resolve it BEFORE Phase 1
-# rather than letting one quietly drop itself. Three (the BCS and DLG differentials, and the DLG parser's
-# compiled fixtures) run in the unit phase, so resolving this at Phase 3 - where only the TP2 grammar
-# differential needed it - left them skipping on any host without a WeiDU already on PATH. Cached after
-# the first run.
+# Resolve WeiDU BEFORE Phase 1. No WeiDU-backed suite skips without a binary - each provisions one itself - so
+# exporting it here lets the parallel phases reuse one path instead of each suite running the provisioning
+# script. Cached after the first run.
 WEIDU_BIN="$("$SCRIPT_DIR/ensure-weidu.sh")"
 export WEIDU_BIN
 
@@ -51,29 +56,30 @@ export WEIDU_BIN
 # harnesses are RUN in headless Chromium by the separate "Harness" workflow, not here.
 step "Phase 1: Static Analysis + Dead Code"
 parallel \
-    "Shell lint" "pnpm lint:shell" \
-    "Workflow lint" "pnpm lint:workflows" \
-    "Typecheck client" "(cd client && pnpm exec tsc --noEmit)" \
+    "Shell lint" "./scripts/lint-shell.sh" \
+    "Workflow lint" "./scripts/lint-workflows.sh" \
+    "Typecheck client" "(cd client && tsc --noEmit)" \
     "Typecheck svelte" "pnpm typecheck:svelte" \
-    "Typecheck plugins" "(cd plugins/tssl-plugin && pnpm exec tsc --noEmit) && (cd plugins/td-plugin && pnpm exec tsc --noEmit)" \
-    "Typecheck server" "(cd server && pnpm exec tsc --noEmit)" \
-    "Typecheck binary" "(cd binary && pnpm exec tsc --noEmit)" \
-    "Typecheck binary-editor" "(cd binary-editor && pnpm exec tsc --noEmit)" \
-    "Typecheck binary-editor harness" "pnpm exec tsc --project binary-editor/test/harness/tsconfig.json" \
-    "Typecheck format" "(cd format && pnpm exec tsc --noEmit)" \
-    "Typecheck image" "(cd image && pnpm exec tsc --noEmit)" \
-    "Typecheck transpilers" "(cd transpilers && pnpm exec tsc --noEmit)" \
-    "Typecheck bcs" "(cd compilers/bcs && pnpm exec tsc --noEmit)" \
-    "Typecheck ssl" "(cd compilers/ssl && pnpm exec tsc --noEmit)" \
-    "Typecheck tssl" "(cd compilers/tssl && pnpm exec tsc --noEmit)" \
-    "Oxlint" "pnpm exec oxlint" \
+    "Typecheck plugins" "(cd plugins/tssl-plugin && tsc --noEmit) && (cd plugins/td-plugin && tsc --noEmit)" \
+    "Typecheck server" "(cd server && tsc --noEmit)" \
+    "Typecheck binary" "(cd binary && tsc --noEmit)" \
+    "Typecheck binary-editor" "(cd binary-editor && tsc --noEmit)" \
+    "Typecheck binary-editor harness" "tsc --project binary-editor/test/harness/tsconfig.json" \
+    "Typecheck format" "(cd format && tsc --noEmit)" \
+    "Typecheck image" "(cd image && tsc --noEmit)" \
+    "Typecheck animation" "(cd animation && tsc --noEmit)" \
+    "Typecheck transpilers" "(cd transpilers && tsc --noEmit)" \
+    "Typecheck bcs" "(cd compilers/bcs && tsc --noEmit)" \
+    "Typecheck ssl" "(cd compilers/ssl && tsc --noEmit)" \
+    "Typecheck tssl" "(cd compilers/tssl && tsc --noEmit)" \
+    "Oxlint" "oxlint" \
     "Type-aware lint" "pnpm lint:types" \
     "Test lint" "pnpm lint:tests" \
-    "Lint scripts" "pnpm lint:scripts" \
+    "Lint scripts" "./scripts/lint-scripts.sh" \
     "Lint md-links" "pnpm lint:md-links" \
-    "Format check" "pnpm exec oxfmt --check" \
+    "Format check" "oxfmt --check" \
     "Script tests" "pnpm test:scripts" \
-    "Knip" "pnpm knip" \
+    "Knip" "knip" \
     "Knip prod" "pnpm knip:prod"
 
 # --- Phase 1.5: Unit tests ---
@@ -90,19 +96,20 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
     # (verified over repeated runs); worker caps mirror the no-coverage block.
     step "Phase 1.5: Unit tests + coverage (parallel)"
     parallel \
-        "Coverage server" "(cd server && pnpm exec vitest run --coverage --maxWorkers=3)" \
-        "Coverage client" "pnpm exec vitest run --config client/vitest.config.mts --coverage --maxWorkers=2" \
-        "Coverage tssl-plugin" "pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.mts --coverage --maxWorkers=1" \
-        "Coverage td-plugin" "pnpm exec vitest run --config plugins/td-plugin/vitest.config.mts --coverage --maxWorkers=1" \
-        "Coverage transpilers" "pnpm exec vitest run --config transpilers/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage format" "pnpm exec vitest run --config format/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage binary" "pnpm exec vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
-        "Coverage binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage image" "pnpm exec vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage bcs" "pnpm exec vitest run --config compilers/bcs/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage shared" "pnpm exec vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
+        "Coverage server" "(cd server && vitest run --coverage --maxWorkers=3)" \
+        "Coverage client" "vitest run --config client/vitest.config.mts --coverage --maxWorkers=2" \
+        "Coverage tssl-plugin" "vitest run --config plugins/tssl-plugin/vitest.config.mts --coverage --maxWorkers=1" \
+        "Coverage td-plugin" "vitest run --config plugins/td-plugin/vitest.config.mts --coverage --maxWorkers=1" \
+        "Coverage transpilers" "vitest run --config transpilers/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage format" "vitest run --config format/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage binary" "vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
+        "Coverage binary-editor" "vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage image" "vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage animation" "vitest run --config animation/vitest.config.ts --coverage --maxWorkers=2" \
+        "Coverage bcs" "vitest run --config compilers/bcs/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage ssl" "vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage tssl" "vitest run --config compilers/tssl/vitest.config.ts --coverage --maxWorkers=1" \
+        "Coverage shared" "vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
 else
     # Without coverage the .tmp shard race above does not apply, so the runs
     # parallelize; each is capped with --maxWorkers because ten uncapped
@@ -112,19 +119,20 @@ else
     # ones); the small suites finish early and free their slots.
     step "Phase 1.5: Unit tests (parallel, no coverage)"
     parallel \
-        "Unit server" "(cd server && pnpm exec vitest run --maxWorkers=3)" \
-        "Unit client" "pnpm exec vitest run --config client/vitest.config.mts --maxWorkers=2" \
-        "Unit tssl-plugin" "pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.mts --maxWorkers=1" \
-        "Unit td-plugin" "pnpm exec vitest run --config plugins/td-plugin/vitest.config.mts --maxWorkers=1" \
-        "Unit transpilers" "pnpm exec vitest run --config transpilers/vitest.config.ts --maxWorkers=2" \
-        "Unit format" "pnpm exec vitest run --config format/vitest.config.ts --maxWorkers=1" \
-        "Unit binary" "pnpm exec vitest run --config binary/vitest.config.ts --maxWorkers=3" \
-        "Unit binary-editor" "pnpm exec vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
-        "Unit image" "pnpm exec vitest run --config image/vitest.config.ts --maxWorkers=2" \
-        "Unit bcs" "pnpm exec vitest run --config compilers/bcs/vitest.config.ts --maxWorkers=1" \
-        "Unit ssl" "pnpm exec vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=1" \
-        "Unit tssl" "pnpm exec vitest run --config compilers/tssl/vitest.config.ts --maxWorkers=1" \
-        "Unit shared" "pnpm exec vitest run --config shared/vitest.config.ts --maxWorkers=1"
+        "Unit server" "(cd server && vitest run --maxWorkers=3)" \
+        "Unit client" "vitest run --config client/vitest.config.mts --maxWorkers=2" \
+        "Unit tssl-plugin" "vitest run --config plugins/tssl-plugin/vitest.config.mts --maxWorkers=1" \
+        "Unit td-plugin" "vitest run --config plugins/td-plugin/vitest.config.mts --maxWorkers=1" \
+        "Unit transpilers" "vitest run --config transpilers/vitest.config.ts --maxWorkers=2" \
+        "Unit format" "vitest run --config format/vitest.config.ts --maxWorkers=1" \
+        "Unit binary" "vitest run --config binary/vitest.config.ts --maxWorkers=3" \
+        "Unit binary-editor" "vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
+        "Unit image" "vitest run --config image/vitest.config.ts --maxWorkers=2" \
+        "Unit animation" "vitest run --config animation/vitest.config.ts --maxWorkers=2" \
+        "Unit bcs" "vitest run --config compilers/bcs/vitest.config.ts --maxWorkers=1" \
+        "Unit ssl" "vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=1" \
+        "Unit tssl" "vitest run --config compilers/tssl/vitest.config.ts --maxWorkers=1" \
+        "Unit shared" "vitest run --config shared/vitest.config.ts --maxWorkers=1"
 fi
 
 # --- Phase 2: Builds (server and CLIs in parallel, independent of each other) ---
@@ -153,10 +161,10 @@ fi
 # job here that writes external/ breaks every other job in the block.
 step "Phase 3: Smoke + Samples + CLI + Grammars + Integration + Corpus canary"
 parallel \
-    "Smoke test" "(cd server && pnpm exec vitest run --config vitest.smoke.config.mts)" \
+    "Smoke test" "(cd server && vitest run --config vitest.smoke.config.mts)" \
     "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli" \
-    "Grammar tests" "SKIP_FORMAT_BUILD=1 pnpm test:grammars" \
-    "Server integration" "(cd server && pnpm exec vitest run --config vitest.integration.config.mts)" \
-    "Corpus canary" "pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
+    "Grammar tests" "SKIP_FORMAT_BUILD=1 ./scripts/test-grammars.sh" \
+    "Server integration" "(cd server && vitest run --config vitest.integration.config.mts)" \
+    "Corpus canary" "vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
 
 timing_summary "All tests passed"

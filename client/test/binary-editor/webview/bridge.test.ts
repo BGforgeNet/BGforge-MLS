@@ -225,3 +225,53 @@ describe("Bridge.requestThumbnail", () => {
         expect(bridge.handle({ type: "thumbnail", requestId: 999, dataUri: "data:image/png;base64,AA" })).toBe(false);
     });
 });
+
+/**
+ * The open game's whole gradient table, for the creature-colour picker. Cached for the panel's life like the
+ * resource lists, and for the same reason: it is a property of the install, not the record, so no edit can
+ * stale it.
+ */
+describe("Bridge.requestGradientTable", () => {
+    it("correlates a gradientTable response to its request by requestId", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const p = bridge.requestGradientTable();
+        bridge.handle({ type: "gradientTable", requestId: sent[0]!.requestId, gradients: [["#000000"]] });
+
+        await expect(p).resolves.toEqual([["#000000"]]);
+        expect(sent[0]).toMatchObject({ type: "requestGradientTable" });
+    });
+
+    it("asks the host once and serves later callers from the cache", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const first = bridge.requestGradientTable();
+        const second = bridge.requestGradientTable();
+        bridge.handle({ type: "gradientTable", requestId: sent[0]!.requestId, gradients: [["#000000"]] });
+
+        expect(sent).toHaveLength(1);
+        await expect(first).resolves.toEqual([["#000000"]]);
+        await expect(second).resolves.toEqual([["#000000"]]);
+    });
+
+    it("drops a failed request from the cache so a later open retries", async () => {
+        const sent: { requestId: number }[] = [];
+        const bridge = new Bridge((m) => sent.push(m as { requestId: number }));
+
+        const first = bridge.requestGradientTable();
+        bridge.handle({ type: "error", requestId: sent[0]!.requestId, message: "no game" });
+        await expect(first).rejects.toThrow("no game");
+        // Without the cache eviction this would replay the rejection forever instead of asking again.
+        await Promise.resolve();
+        void bridge.requestGradientTable();
+
+        expect(sent).toHaveLength(2);
+    });
+
+    it("leaves a gradientTable for no live request unhandled rather than throwing", () => {
+        const bridge = new Bridge(() => {});
+        expect(bridge.handle({ type: "gradientTable", requestId: 999, gradients: [] })).toBe(false);
+    });
+});

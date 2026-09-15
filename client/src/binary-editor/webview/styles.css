@@ -6,23 +6,6 @@
  */
 
 /* ---- root / layout (re-themed; layout sizing preserved from the working baseline) ---- */
-html,
-body {
-    height: 100%;
-    margin: 0;
-}
-body {
-    font-family: var(--vscode-font-family, sans-serif);
-    font-size: var(--vscode-font-size, 13px);
-    color: var(--vscode-foreground);
-    background: var(--vscode-editor-background);
-}
-#app {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    box-sizing: border-box;
-}
 
 /* ---- toolbar ---- */
 .toolbar {
@@ -41,18 +24,6 @@ body {
     gap: 0.5rem;
 }
 
-/* Beta notice on the left of the toolbar - low-emphasis, themed muted text with a themed link. */
-.toolbar-beta {
-    font-size: 0.9em;
-    color: var(--vscode-descriptionForeground);
-}
-.toolbar-beta a {
-    color: var(--vscode-textLink-foreground);
-}
-.toolbar-beta a:hover {
-    color: var(--vscode-textLink-activeForeground);
-}
-
 /* ---- toolbar buttons (icon + label, secondary appearance) ---- */
 .toolbar-btn {
     display: inline-flex;
@@ -65,29 +36,6 @@ body {
 }
 
 /* ---- buttons (toolbar / actions): primary by default, secondary variant for low-emphasis controls ---- */
-button {
-    appearance: none;
-    font: inherit;
-    cursor: pointer;
-    border: 1px solid transparent;
-    border-radius: 2px;
-    padding: 0.25rem 0.7rem;
-    background: var(--vscode-button-background);
-    color: var(--vscode-button-foreground);
-    line-height: 1.3;
-    white-space: nowrap;
-}
-button:hover {
-    background: var(--vscode-button-hoverBackground, var(--vscode-button-background));
-}
-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-}
-:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
-}
 
 /* Row actions, quick-fixes, and the section-tab buttons are low-emphasis: render them as secondary. */
 .row-actions-btn,
@@ -271,9 +219,8 @@ button:disabled {
    and let the detail FORM grow to its natural height and flow into the page scroll - so a tall detail (e.g. an
    ITM ability) shows in full under one page scroll instead of a nested inner scrollbar. align-items:flex-start
    keeps the short master column hugging the top instead of stretching to the detail's height. The inline-list
-   variant is bounded the same way below. All rendering happens inside .layout-root (the former tabs path is
-   retired): the unscoped .master-detail/.detail rules above carry the shared structure, and these scoped
-   rules layer the layout-specific alignment/overflow behavior on top. */
+   variant is bounded the same way below. The unscoped .master-detail/.detail rules above carry the shared
+   structure, and these .layout-root-scoped rules layer the alignment/overflow behavior on top. */
 .layout-root .master-detail {
     align-items: flex-start;
 }
@@ -286,31 +233,38 @@ button:disabled {
        tree viewport so the two can't diverge (see --bb-list-max-height). `height:auto` still hugs a short list. */
     max-height: var(--bb-list-max-height, 48rem);
 }
+/* A narrow editor stacks the list above the detail: side by side needs the 16rem column plus the widest detail
+   row (a label and a dd-6 dropdown, ~570px) and the panel chrome, so below that the pair ran off the right edge.
+   The webview viewport is the editor's width, so a media query measures the right box. The shorter list cap keeps
+   the detail within reach below it. */
+@media (max-width: 900px) {
+    .master-detail {
+        flex-direction: column;
+    }
+    .layout-root .master-detail {
+        align-items: stretch;
+        --bb-list-max-height: 20rem;
+    }
+    .master {
+        flex: 0 0 auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--vscode-panel-border);
+    }
+}
 /* Abilities+effects tree: a single VIRTUALIZED collapsible column on the master side. The whole view is in
    memory; the groups are flattened (respecting collapse + filter) into fixed-height rows and only the rows in
    the viewport are mounted (.eff-tree-vrow absolutely positioned over a full-height spacer). The
    .eff-tree-vlist is the lone scroll container (max-height bounds it; the detail flows into the page scroll),
    so there is no nested double-scroll. */
+/* The tree takes the shared .master width; min-width:0 keeps its toolbar's min-content from pinning it wider. */
 .eff-tree-master {
-    /* min-width:0 so flex-basis actually governs the width: without it the column's min-content (the toolbar -
-       "+ ability" button + filter + icons) silently pins it far wider (~23rem) than the short rows need
-       ("Ability N", "Effect N - op NNN", "Global (Equipping)"), wasting width the detail pane could use. 14rem
-       clears the widest label (Global header floors at ~12rem) and keeps the filter input usable (~10ch). */
-    flex-basis: 14rem;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
     overflow: visible;
 }
-.eff-tree-toolbar {
+.eff-tree-toolbar-end {
+    margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.4rem;
-    border-bottom: 1px solid var(--vscode-panel-border);
-}
-.eff-tree-toolbtn {
-    flex: 0 0 auto;
 }
 /* Collapse-all / expand-all icon buttons at the right of the tree toolbar. */
 .eff-tree-iconbtn {
@@ -328,10 +282,6 @@ button:disabled {
     opacity: 1;
     background: var(--vscode-toolbar-hoverBackground);
     border-radius: 3px;
-}
-.eff-tree-filter {
-    flex: 1 1 auto;
-    min-width: 0;
 }
 .eff-tree-vlist {
     overflow-y: auto;
@@ -598,8 +548,7 @@ button:disabled {
     color: var(--vscode-textLink-activeForeground);
 }
 /* Wraps the control plus its trailing chrome (diagnostic) so .field has exactly two children
-   (label + value). In the flex tabs path this is the value side; the layout path makes it the subgrid's
-   second column. */
+   (label + value); this wrapper is the field subgrid's second column. */
 .field-control {
     display: flex;
     align-items: center;
@@ -613,7 +562,11 @@ button:disabled {
    bonus); spinners are dropped so the box stays compact. */
 .field-control.joined {
     flex-wrap: nowrap;
-    gap: 0;
+}
+/* The run itself packs tight; the wrapper's normal gap separates it from the trailing affordances. */
+.field-control.joined .joined-run {
+    display: inline-flex;
+    align-items: center;
 }
 .field-control.joined .joined-sep {
     padding: 0 0.3rem;
@@ -643,70 +596,9 @@ select {
     border-radius: 2px;
     padding: 0.2rem 0.4rem;
 }
-/* The combobox is the single enum control: a bordered box holding a borderless text input (the search field)
- * that FILLS the box, with the chevron overlaid absolutely on the right. The input must span the full box
- * width because bits-ui anchors the open dropdown-list popup to the input element - if the input were narrower
- * than the box (e.g. a flex sibling shrunk by the chevron), the list would be offset from the value field by
- * the chevron width. Right-padding on the input keeps the value text clear of the overlaid chevron. Width is
- * applied to .bb-combobox (the box) by the field-control tier rules below. */
-.bb-combobox {
-    position: relative;
-    display: inline-block;
-    color: var(--vscode-input-foreground, var(--vscode-foreground));
-    background: var(--vscode-input-background);
-    border: 1px solid var(--vscode-input-border, transparent);
-    border-radius: 2px;
-}
-.bb-combobox:focus-within {
-    border-color: var(--vscode-focusBorder);
-}
-.bb-combobox-input {
-    font: inherit;
-    color: inherit;
-    background: transparent;
-    border: none;
-    box-sizing: border-box;
-    width: 100%;
-    padding: 0.2rem 1.5rem 0.2rem 0.4rem; /* right pad clears the overlaid chevron */
-}
-.bb-combobox-trigger {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    display: inline-flex;
-    align-items: center;
-    padding: 0 0.4rem;
-    color: var(--vscode-descriptionForeground);
-    pointer-events: none; /* decorative chevron: clicks fall through to the input, which owns opening */
-}
-.bb-combobox-trigger::after {
-    content: "\25BE"; /* down-pointing triangle indicating a dropdown */
-    font-size: 0.8em;
-}
-/* The dropdown list spans at least the value field's width (the anchor is the full-width input), so the list is
- * never narrower than the closed control. It can still grow wider for a long option. */
-.bb-combobox-content {
-    min-width: var(--bits-combobox-anchor-width);
-    padding: 0; /* the viewport carries the inner padding - it is the rect bits-ui's highlight check measures */
-}
-.bb-combobox-viewport {
-    /* Inset items from the viewport edges so the top item clears bits-ui's strict "fully inside the viewport"
-     * highlight check (nodeRect.top > viewportRect.top etc.), which otherwise never highlights the first match. */
-    padding: 0.2rem;
-}
-/* How many options the rendered cap left out. Styled apart from the items so it does not read as one - it is a
- * notice, not something to pick. */
-.bb-combobox-more {
-    padding: 0.2rem 0.5rem;
-    color: var(--vscode-descriptionForeground);
-    font-style: italic;
-    white-space: nowrap;
-}
 input[type="text"]:focus,
 input[type="number"]:focus,
-select:focus,
-.bb-combobox-input:focus {
+select:focus {
     outline: none;
     border-color: var(--vscode-focusBorder);
 }
@@ -759,163 +651,6 @@ input[type="text"]::placeholder {
     opacity: 1;
     border-color: transparent;
     background: transparent;
-}
-
-/* ---- bb-popup-* (shared popup surface rules for Select, Combobox, and Menu primitives) ----
- * Content/item rules that were near-identical across bb-select, bb-combobox, and bb-menu are
- * consolidated here. Each primitive's Content element carries both the primitive-specific class
- * (for anchor-width vars and any other primitive-specific overrides) AND .bb-popup-content; each
- * Item carries .bb-popup-item. Floating positioning is applied via CSSOM, CSP-safe under the strict
- * nonce policy. bits-ui sets data-highlighted, data-selected, and data-disabled on items. */
-.bb-popup-content {
-    z-index: 50;
-    max-height: 18rem;
-    box-sizing: border-box;
-    color: var(--vscode-input-foreground, var(--vscode-foreground));
-    background: var(--vscode-input-background);
-    border: 1px solid var(--vscode-panel-border);
-    border-radius: 2px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
-    padding: 0.2rem;
-}
-.bb-popup-item {
-    box-sizing: border-box;
-    cursor: pointer;
-    padding: 0.2rem 0.5rem;
-    border-radius: 2px;
-    color: var(--vscode-foreground);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.bb-popup-item[data-highlighted] {
-    background: var(--vscode-list-hoverBackground);
-}
-.bb-popup-item[data-selected] {
-    background: var(--vscode-list-activeSelectionBackground);
-    color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground));
-}
-.bb-popup-item[data-disabled] {
-    opacity: 0.5;
-    cursor: default;
-}
-
-/* ---- bb-menu (themed contextual action menu via the Menu primitive wrapper) ----
- * Generic, format-agnostic theming for the headless DropdownMenu primitive. bits-ui sets
- * data-highlighted and data-disabled on items; there is no data-selected (menus are not selection
- * controls). The menu surface uses .bb-popup-content for the shared floating panel rules.
- * Content/item rules are shared via .bb-popup-content and .bb-popup-item above.
- * Floating positioning is applied via CSSOM, CSP-safe under the strict nonce policy. */
-.bb-menu-trigger {
-    /* Secondary button: icon-only "more actions" affordance. */
-    appearance: none;
-    font: inherit;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.1rem 0.3rem;
-    background: var(--vscode-button-secondaryBackground, transparent);
-    color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
-    border: 1px solid var(--vscode-button-border, transparent);
-    border-radius: 2px;
-    line-height: 1;
-}
-.bb-menu-trigger:hover {
-    background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
-}
-.bb-menu-trigger[data-state="open"] {
-    outline: none;
-    border-color: var(--vscode-focusBorder);
-}
-.bb-menu-content {
-    /* Menu panels do not need an anchor-width constraint; they size to their widest item. */
-    min-width: 10rem;
-}
-.bb-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-.bb-menu-item-danger {
-    color: var(--vscode-errorForeground);
-}
-.bb-menu-item-danger[data-highlighted] {
-    /* Keep the highlighted background but keep the danger color. */
-    background: var(--vscode-list-hoverBackground);
-    color: var(--vscode-errorForeground);
-}
-
-/* ---- bb-checkbox (themed boolean control via the Checkbox primitive wrapper) ----
- * Generic, format-agnostic theming for the headless Checkbox primitive. bits-ui sets data-state="checked"
- * | "unchecked" | "indeterminate" on the Root button, and data-disabled when the control is disabled.
- * The checkmark is drawn with a CSS ::after pseudo-element so no icon font is required - the control
- * renders correctly in both the real webview and the standalone harness. Falls back from the optional
- * --vscode-checkbox-* vars (not always defined by all VS Code themes) to --vscode-input-* equivalents. */
-.bb-checkbox-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-    user-select: none;
-}
-.bb-checkbox-label:has([data-disabled]) {
-    opacity: 0.5;
-    cursor: default;
-}
-.bb-checkbox-root {
-    appearance: none;
-    flex: 0 0 auto;
-    width: 1em;
-    height: 1em;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--vscode-checkbox-background, var(--vscode-input-background));
-    border: 1px solid var(--vscode-checkbox-border, var(--vscode-input-border, #3c3c3c));
-    border-radius: 2px;
-    padding: 0;
-    cursor: pointer;
-    /* Reset the global button styles that override the checkbox look. */
-    color: var(--vscode-checkbox-foreground, var(--vscode-foreground));
-    line-height: 1;
-    white-space: normal;
-}
-.bb-checkbox-root:focus-visible {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: 1px;
-}
-.bb-checkbox-root[data-state="checked"] {
-    background: var(--vscode-checkbox-background, var(--vscode-input-background));
-    border-color: var(--vscode-focusBorder, var(--vscode-checkbox-border, #007fd4));
-}
-.bb-checkbox-root[data-disabled] {
-    cursor: default;
-}
-/* CSS-drawn checkmark inside .bb-checkbox-indicator: a rotated L-shape using ::after. Visible only when the
- * sibling data-checked attribute is true (set by the Checkbox.svelte children snippet prop). */
-.bb-checkbox-indicator {
-    display: block;
-    width: 100%;
-    height: 100%;
-    position: relative;
-    pointer-events: none;
-}
-.bb-checkbox-indicator[data-checked="true"]::after {
-    content: "";
-    position: absolute;
-    left: 20%;
-    top: 5%;
-    width: 35%;
-    height: 65%;
-    border-right: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
-    border-bottom: 2px solid var(--vscode-checkbox-foreground, var(--vscode-foreground));
-    transform: rotate(45deg);
-}
-.bb-checkbox-text {
-    font: inherit;
-    color: var(--vscode-foreground);
 }
 
 /* ---- bb-tabs (in-house accessible tablist strip for primitives/Tabs.svelte) ----
@@ -1131,6 +866,8 @@ input[type="text"]::placeholder {
 /* ---- row actions (master/detail header) ---- */
 .row-actions {
     display: inline-flex;
+    /* Wraps so a narrow detail pane is bounded by its widest button, not by the whole strip. */
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.2rem;
     padding: 0.5rem 0.75rem;
@@ -1203,27 +940,21 @@ input[type="text"]::placeholder {
     align-items: center;
     gap: 0.3rem;
 }
+/* Icon-only quick fix for a fixed-size cell (matrix, join, a title); its label is the tooltip. */
+.quick-fix.compact {
+    padding: 0 0.2rem;
+}
+/* Affordances beside a title that names a field: a flag box legend, or a panel title over a bare flag block. */
+.layout-root .flag-group > legend .diag,
+.layout-root .flag-group > legend .quick-fix,
+.layout-root .panel > h3 .diag,
+.layout-root .panel > h3 .quick-fix {
+    margin-left: 0.4rem;
+    text-transform: none;
+    letter-spacing: normal;
+}
 
 /* ---- placeholder / error / loading states ---- */
-.placeholder {
-    color: var(--vscode-descriptionForeground);
-    padding: 0.75rem;
-    font-style: italic;
-}
-.error-state {
-    padding: 1rem 1.25rem;
-    color: var(--vscode-errorForeground);
-}
-.error-state h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.15em;
-    font-weight: 600;
-    color: var(--vscode-errorForeground);
-}
-.error-state p {
-    margin: 0;
-    color: var(--vscode-foreground);
-}
 
 /* ============================================================================
  * Declarative layout renderer (single dense page; PRO and future migrated formats).
@@ -1280,6 +1011,9 @@ input[type="text"]::placeholder {
 }
 .panel-blocks {
     display: flex;
+    /* A block that no longer fits beside its neighbour (a flags box beside a one-column fields list in a narrow
+       editor) drops below it instead of squeezing the fields' controls under their width class. */
+    flex-wrap: wrap;
     gap: var(--bb-col-gap, 16px);
     align-items: flex-start;
 }
@@ -1335,6 +1069,8 @@ input[type="text"]::placeholder {
 /* flag checkbox columns */
 .flag-columns {
     display: flex;
+    /* Checkbox columns wrap in a narrow editor rather than holding the panel wider than the page. */
+    flex-wrap: wrap;
     gap: 16px;
     align-items: flex-start;
 }
@@ -1363,6 +1099,8 @@ input[type="text"]::placeholder {
 .flag-groups {
     display: flex;
     flex-direction: row;
+    /* In a narrow editor the bulk bar drops below the columns instead of pinning the panel's width. */
+    flex-wrap: wrap;
     gap: 16px;
     flex: 1 1 auto;
     min-inline-size: 0;
@@ -1418,6 +1156,8 @@ input[type="text"]::placeholder {
 }
 .flag-group-cols {
     display: flex;
+    /* Category columns wrap rather than holding the panel wider than a narrow editor. */
+    flex-wrap: wrap;
     gap: 16px;
     align-items: flex-start;
 }
@@ -1427,11 +1167,16 @@ input[type="text"]::placeholder {
     gap: 10px;
     align-items: stretch;
 }
-/* stats matrix: N fixed-width column groups, each Base|Bonus */
+/* stats matrix: N fixed-width column groups, each Base|Bonus. A wrapping row rather than a fixed N-column grid, so
+   a narrow panel is bounded by one group's width; multicol would re-balance groups of unequal height even when
+   all of them fit side by side. */
 .layout-root .matrix {
-    display: grid;
-    justify-content: start;
-    gap: 0 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+}
+.layout-root .matrix .mcol {
+    flex: 0 0 var(--mcol-w);
 }
 .layout-root .matrix .mcol .sub {
     display: flex;
@@ -1470,6 +1215,20 @@ input[type="text"]::placeholder {
 }
 .layout-root .matrix .strow .c {
     width: 56px;
+}
+/* The cells' doc links and affordances, between the label and the cells. `flex: none` makes the label (the only
+   flexible track) give way, so the cells keep their x; hidden when empty so it adds no flex gap. */
+.layout-root .matrix .strow .m-aff {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex: none;
+}
+.layout-root .matrix .strow .m-aff:empty {
+    display: none;
+}
+.layout-root .matrix .strow .m-aff .jump-link {
+    margin-left: 0;
 }
 /* skills grid: N columns of label + control, clumped left */
 /* Multi-column, so the block sheds columns rather than overflowing when the panel is narrow or the labels are
@@ -1613,6 +1372,104 @@ input[type="text"]::placeholder {
     min-width: 0;
     text-overflow: ellipsis;
 }
+/* Creature-colour fields: the number indexes the install's gradient table, so the twelve colours it selects
+   are shown beside it as the value. The strip is a fixed slot - a field the game cannot resolve renders the
+   input at the same width with no strip, so nothing in the column moves either way. Clicking it opens the
+   gradient picker, so it is a real button and keeps the focus ring. */
+.layout-root .gradient-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4ch;
+    /* The strip sits BESIDE the input rather than inside its tier: sized to the tier, the input would lose
+       the strip's width and clip its own digits. The value track is max-content, so the wider control widens
+       the track and the column stays aligned. */
+    width: max-content;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.layout-root .gradient-input input {
+    width: var(--val-ch, 16ch);
+    box-sizing: border-box;
+    min-width: 0;
+}
+.layout-root .gradient-input.disabled {
+    opacity: 0.6;
+}
+.layout-root .gradient-swatch {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 4.5ch;
+    height: 1.15rem;
+    padding: 0;
+    border: 1px solid var(--vscode-input-border, var(--vscode-descriptionForeground));
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: pointer;
+    background: none;
+}
+.layout-root .gradient-swatch:disabled {
+    cursor: default;
+}
+.layout-root .gradient-band {
+    flex: 1 1 0;
+}
+/* The picker floats over the form: a table of a couple of hundred gradients would otherwise push every field
+   below it down the page when opened. Anchored to the swatch's wrapper, which is the positioned ancestor. */
+.layout-root .gradient-input {
+    position: relative;
+}
+.layout-root .gradient-picker {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 20;
+    max-height: 18rem;
+    overflow-y: auto;
+    padding: 0.2rem;
+    background: var(--vscode-dropdown-background, var(--vscode-editor-background));
+    border: 1px solid var(--vscode-dropdown-border, var(--vscode-focusBorder));
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
+}
+.layout-root .gradient-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5ch;
+    width: 100%;
+    padding: 0.1rem 0.3rem;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+.layout-root .gradient-option:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+.layout-root .gradient-option.selected {
+    border-color: var(--vscode-focusBorder);
+}
+.layout-root .gradient-index {
+    flex: 0 0 3ch;
+    text-align: right;
+    color: var(--vscode-descriptionForeground);
+}
+.layout-root .gradient-strip {
+    display: inline-flex;
+    flex: 0 0 auto;
+    width: 9ch;
+    height: 1rem;
+    overflow: hidden;
+    border: 1px solid var(--vscode-input-border, transparent);
+    border-radius: 2px;
+}
+.layout-root .gradient-empty {
+    margin: 0;
+    padding: 0.3rem 0.5rem;
+    color: var(--vscode-descriptionForeground);
+}
+
 /* Dropdown widths (enums only; see controls.ts dropdownWidth). A dropdown shares its column with hex/resref/
  * number inputs that need MORE room than enum option labels, so inheriting the text-input tiers above left
  * every dropdown over-wide. Size a dropdown to its OWN longest option instead, quantized to this small ch scale
@@ -1671,9 +1528,9 @@ input[type="text"]::placeholder {
 .layout-root .kv.kv-multi .field-control {
     justify-self: start;
     /* The span is the grid item in the (auto) value track; min-width:0 + max-width:100% let it shrink to the
-       track in a pane too narrow to hold every column at full tier width (e.g. the tree's split detail) instead
-       of staying at its tier width and overflowing into the next column. The control inside is capped at 100%
-       below, so it follows the span down rather than spilling. */
+       track rather than overflow into the next column. A too-narrow pane first sheds columns (fitKvColumns in
+       state/fit-kv-columns.ts, which detects exactly this shrink), so the shrink is left only for a single column
+       that still does not fit. The control inside is capped at 100% below, so it follows the span down. */
     min-width: 0;
     max-width: 100%;
 }
@@ -1683,10 +1540,25 @@ input[type="text"]::placeholder {
     width: var(--val-ch, 16ch);
     box-sizing: border-box; /* outer width = --val-ch for every control type (see kv:not(.kv-multi) above) */
     min-width: 0;
-    /* Never exceed the value cell: in a pane too narrow to hold the tier at full width the track collapses, and
-       without this cap the fixed-width control would overflow it and overlap the next column's label. Capping at
-       100% shrinks the control with its track (tier is the max, not a floor), keeping columns aligned. */
+    /* Never exceed the value cell: without this cap a control in a collapsed track would overflow it and overlap
+       the next column's label. Reached only once the grid is down to one column (see the span rule above). */
     max-width: 100%;
+}
+/* One column still too narrow for a label beside its control (fitKvColumns sets the class): each field spans the
+   grid and puts its label above the control, which gets the full width for its class. */
+.layout-root .kv.kv-multi.kv-stacked .field {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 2px;
+}
+/* The row layout's flex bases (a 12rem label) would become heights in the column. */
+.layout-root .kv.kv-multi.kv-stacked .field > * {
+    flex: none;
+}
+.layout-root .kv.kv-multi.kv-stacked .field + .field {
+    margin-top: 4px;
 }
 /* Inline-list rows (MAP variables) render an editable Field but sit in a flex .vrow, outside the .kv grid, so
    the tier-width rules above don't reach them - without this the input falls back to its intrinsic width and

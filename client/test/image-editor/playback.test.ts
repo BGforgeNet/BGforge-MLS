@@ -2,12 +2,14 @@ import { expect, test } from "vitest";
 import {
     advance,
     createPlayback,
+    cycleFrameIndex,
     msPerFrame,
     pause,
     play,
     setFrame,
     stop,
     tick,
+    timelineFrameCount,
     toggleLoop,
     type PlaybackState,
 } from "../../src/image-editor/webview/render/playback";
@@ -154,4 +156,37 @@ test("tick keeps the sub-frame remainder after a whole-frame step", () => {
     const result = tick(state, 250); // two 100ms frames + 50ms
     expect(result.state.frame).toBe(2);
     expect(result.leftoverMs).toBe(50);
+});
+
+test("a cycle shorter than the timeline wraps round its own length", () => {
+    // The reported defect: a death knight's 11-frame walk shares a file with an 81-frame spell, so a
+    // timeline sized past it left the walk on one held frame for the rest of the playthrough.
+    expect(cycleFrameIndex(11, 0)).toBe(0);
+    expect(cycleFrameIndex(11, 10)).toBe(10);
+    expect(cycleFrameIndex(11, 11)).toBe(0);
+    expect(cycleFrameIndex(11, 25)).toBe(3);
+});
+
+test("cycleFrameIndex answers 0 for a cycle with no frames rather than dividing by zero", () => {
+    expect(cycleFrameIndex(0, 7)).toBe(0);
+});
+
+test("a reversed cycle runs from its last frame back to its first", () => {
+    // Getting up has no clip of its own: it is the dying band played backwards, so the timeline still
+    // advances forwards and the cycle is read from the other end.
+    expect(cycleFrameIndex(4, 0, true)).toBe(3);
+    expect(cycleFrameIndex(4, 3, true)).toBe(0);
+    expect(cycleFrameIndex(4, 4, true)).toBe(3);
+});
+
+test("a reversed cycle with no frames still answers 0", () => {
+    expect(cycleFrameIndex(0, 7, true)).toBe(0);
+});
+
+test("the timeline spans the longest cycle it is given", () => {
+    expect(timelineFrameCount([{ frameRefs: [1, 2, 3] }, { frameRefs: [4] }])).toBe(3);
+});
+
+test("the timeline of nothing drawn is empty", () => {
+    expect(timelineFrameCount([])).toBe(0);
 });

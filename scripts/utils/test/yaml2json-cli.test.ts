@@ -5,8 +5,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { tsxCommand } from "../../../shared/tsx-command.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -36,10 +37,8 @@ repository:
         const outputFile = path.join(tmpDir, "output.json");
         fs.writeFileSync(inputFile, inputYaml, "utf8");
 
-        execSync(`pnpm exec tsx scripts/utils/src/yaml2json.ts "${inputFile}" "${outputFile}"`, {
-            cwd: process.cwd(),
-            timeout: SPAWN_TIMEOUT_MS,
-        });
+        const { file, args } = tsxCommand("scripts/utils/src/yaml2json.ts", [inputFile, outputFile]);
+        execFileSync(file, args, { cwd: process.cwd(), timeout: SPAWN_TIMEOUT_MS });
 
         const result = JSON.parse(fs.readFileSync(outputFile, "utf8"));
         expect(result.scopeName).toBe("source.test");

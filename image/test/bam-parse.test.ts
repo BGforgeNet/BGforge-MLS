@@ -45,6 +45,23 @@ describe("parseBamV1 direction-layout resolution", () => {
         expect(parseBamV1(serializeBamV1(anim)).meta.directionLayout).toBe("ie8");
     });
 
+    it("stamps ie9 for a nine-cycle file - one action across the wheel's western arc", () => {
+        const frames = Array.from({ length: 10 }, (_, i) => ({
+            width: 1,
+            height: 1,
+            pixels: Uint8Array.from([i]),
+            offsetX: 0,
+            offsetY: 0,
+        }));
+        const anim: IndexedAnimation = {
+            palette: emptyPalette(),
+            frames,
+            sequences: Array.from({ length: 9 }, (_, i) => ({ frameRefs: [i], facing: "none" as const })),
+            meta: { sourceFormat: "bam", transparentIndex: 0 },
+        };
+        expect(parseBamV1(serializeBamV1(anim)).meta.directionLayout).toBe("ie9");
+    });
+
     it("stamps non-directional when no fingerprint matches", () => {
         expect(parseBamV1(synthBamBytes()).meta.directionLayout).toBe("non-directional");
     });

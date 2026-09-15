@@ -23,7 +23,9 @@ const view = buildBamFixture();
 // Swapped before the reload below, so the same host stub serves both fixtures.
 let currentView = view;
 
+const sentToHost: WebviewToHost[] = [];
 function hostUp(m: WebviewToHost): HostToWebview[] {
+    sentToHost.push(m);
     return m.type === "ready" ? [{ type: "init", view: currentView }] : [];
 }
 
@@ -73,7 +75,63 @@ const colors = await page.evaluate(() =>
 );
 check("grid: every sequence renders a distinct color", new Set(colors).size === colors.length, JSON.stringify(colors));
 
+// A single file has no set to choose among, and the host refuses a set pick from one.
+const setGroups = await page.getByRole("group", { name: "Animation set", exact: true }).count();
+check("file view: no set picker or stance list", setGroups === 0, `groups=${setGroups}`);
+
+// The toolbar's "Save as" is the shared Menu primitive (webview-ui), the same control the binary editor's
+// row actions use. It opens UPWARD - the toolbar sits at the bottom of the panel - and a picked item must
+// reach the host, which is the half a rendered screenshot cannot show.
+const saveAs = page.getByRole("button", { name: "Save as", exact: true });
+check("toolbar: the save-as menu mounts as the shared primitive", (await saveAs.count()) === 1, "");
+await saveAs.click();
+await page.waitForSelector(".bb-menu-item", { timeout: 3000 });
+const menuBox = await page.locator(".bb-menu-content").boundingBox();
+const triggerBox = await saveAs.boundingBox();
+check(
+    "toolbar: the menu opens above its trigger, not off the bottom of the panel",
+    menuBox !== null && triggerBox !== null && menuBox.y + menuBox.height <= triggerBox.y + 1,
+    `menu=${JSON.stringify(menuBox)} trigger=${JSON.stringify(triggerBox)}`,
+);
+await page.screenshot({ path: shotPath("shot-bam-saveas.png"), fullPage: true });
+
+await page.locator(".bb-menu-item").first().click();
+await page.waitForFunction(() => true, undefined, { timeout: 1000 });
+const saved = sentToHost.filter((m) => m.type === "saveAs");
+check("toolbar: picking an entry sends its saveAs to the host", saved.length === 1, JSON.stringify(saved));
+
 await page.screenshot({ path: shotPath("shot-bam.png"), fullPage: true });
+
+// A file read out of a game carries the sets drawing it: one opens directly, several ask which - the host's
+// half, so here only the button's wording and that a click reaches the host.
+const openSetButton = page.locator(".set-pick");
+currentView = { ...view, drawnBy: [{ id: 0x7a00, title: "SPIDER_GIANT" }] };
+await page.reload();
+await page.waitForSelector(".cycle-grid canvas", { timeout: 5000 });
+const oneLabel = (await openSetButton.textContent())?.trim();
+check("drawn by one set: the button names it", oneLabel === "Open SPIDER_GIANT", `label=${oneLabel}`);
+await openSetButton.click();
+await page.waitForFunction(() => true, undefined, { timeout: 1000 });
+const opened = sentToHost.filter((m) => m.type === "openDrawnBy").length;
+check("drawn by one set: a click asks the host to open it", opened === 1, `sent=${opened}`);
+await page.screenshot({ path: shotPath("shot-bam-drawn-by.png"), fullPage: true });
+
+currentView = {
+    ...view,
+    drawnBy: [
+        { id: 0x7a00, title: "SPIDER_GIANT" },
+        { id: 0x7a01, title: "SPIDER_HUGE" },
+        { id: 0x7a02, title: "SPIDER_PHASE" },
+    ],
+};
+await page.reload();
+await page.waitForSelector(".cycle-grid canvas", { timeout: 5000 });
+const severalLabel = (await openSetButton.textContent())?.trim();
+check(
+    "drawn by several sets: the button counts them",
+    severalLabel === "Open one of 3 sets...",
+    `label=${severalLabel}`,
+);
 
 // Multi-sequence fixture: past the >8-cycle threshold the manual grid-columns control must mount,
 // seed the grid from the heuristic's suggestion, and re-lay the grid on a manual override.

@@ -96,6 +96,16 @@ describe("decodePvrz", () => {
         expect(() => decodePvrz(bytes)).toThrow(/decodePvrz: decompression failed/);
     });
 
+    it("refuses header dimensions past the per-frame pixel cap before allocating the RGBA output", () => {
+        // 16384x16384 is 16x the cap; the block data would fit under the inflate cap for BC1, so only the
+        // dimension bound stands between the header and a gigabyte-scale allocation.
+        expect(() => decodePvrz(wrap(pvrHeader(7, 16384, 16384)))).toThrow(/exceeds the .*-pixel cap/);
+    });
+
+    it("refuses a zero-sized texture", () => {
+        expect(() => decodePvrz(wrap(pvrHeader(11, 0, 4)))).toThrow(/exceeds the .*-pixel cap/);
+    });
+
     it("reports the block data being short of what the dimensions require", () => {
         // 8x8 BC3 needs four blocks (64 bytes); supply one.
         expect(() => decodePvrz(wrap(new Uint8Array([...pvrHeader(11, 8, 8), ...new Uint8Array(16)])))).toThrow(

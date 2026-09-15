@@ -7,7 +7,9 @@
  * was in. One wedged child then costs the whole job's time limit rather than one failing test.
  *
  * The value is deliberately far above any real run: it is a hang detector, not a performance budget, and a
- * timeout that fires on a merely slow machine would be a flake generator. Sites needing a tighter bound pass
- * their own; `scripts/utils/test/spawn-timeouts.test.ts` enforces that every site passes one.
+ * timeout that fires on a merely slow machine would be a flake generator. Sites needing a different bound
+ * pass their own - tighter where the child is quick, larger where its cost scales with something other than
+ * the work requested (a child that enumerates the whole tree, untracked files included).
+ * `scripts/utils/test/spawn-timeouts.test.ts` enforces that every site passes one.
  */
 export const SPAWN_TIMEOUT_MS = 120_000;

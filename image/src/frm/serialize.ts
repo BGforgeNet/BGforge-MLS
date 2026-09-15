@@ -6,6 +6,15 @@ function frameBytes(f: Frame): Uint8Array {
     return f.rawEncoding ?? f.pixels;
 }
 
+/**
+ * The header's frame-area size (0x3a) is COMPUTED here rather than carried from the source.
+ *
+ * Every combined `.frm` the game ships round-trips byte-identically (12220 of 12220 measured), so this
+ * matches what Fallout's own tooling wrote. Two producers disagree and are corrected rather than
+ * reproduced: every shipped `.fr0`-`.fr5` member declares its six-direction PARENT's area, roughly six
+ * times its own, and one mod's translated art declares 0. The engine reads both, so the field is not
+ * load-bearing - but re-declaring a value known to be wrong is not worth the byte fidelity.
+ */
 export function serializeFrm(anim: IndexedAnimation): Uint8Array {
     const be = false; // FRM is big-endian
     const seqs = anim.sequences;

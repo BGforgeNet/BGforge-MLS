@@ -6,6 +6,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import pLimit from "p-limit";
 import { type Hover, type InlayHint, type Location, type Range, MarkupKind } from "vscode-languageserver/node";
 import { conlog } from "../logger";
 import { EXT_TBAF, EXT_TD, EXT_TSSL, LANG_TYPESCRIPT, MSG_LANGUAGES, TRA_LANGUAGES } from "../core/languages";
@@ -23,6 +24,7 @@ import {
     regexTraRef,
 } from "../core/patterns";
 import { pathToUri } from "../uri-utils";
+import { WORKSPACE_SCAN_CONCURRENCY } from "../path-utils";
 import { decodeFileBytes } from "./encoding";
 import { getLineKey, type TraEntries, type TraEntry, type TraExt } from "./entries";
 import { resolveAbsolutePath } from "./loader";
@@ -488,17 +490,23 @@ export async function findReferencesInConsumers(
     const consumerFiles = state.consumers.get(traFileKey);
     if (!consumerFiles) return locations;
 
+    // Bounded like the loader's own reads over this same consumer set (loader.ts's
+    // buildConsumerIndex): the corpus runs to thousands of files in a real mod workspace, and
+    // an unbounded fan-out here blocks the event loop for the whole find-references request.
+    const limit = pLimit(WORKSPACE_SCAN_CONCURRENCY);
     const reads = await Promise.all(
-        [...consumerFiles].map(async (absPath) => {
-            try {
-                const raw = await fs.promises.readFile(absPath);
-                const { text } = decodeFileBytes(raw);
-                return { absPath, text };
-            } catch {
-                // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path
-                return undefined;
-            }
-        }),
+        [...consumerFiles].map((absPath) =>
+            limit(async () => {
+                try {
+                    const raw = await fs.promises.readFile(absPath);
+                    const { text } = decodeFileBytes(raw);
+                    return { absPath, text };
+                } catch {
+                    // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path
+                    return undefined;
+                }
+            }),
+        ),
     );
 
     for (const read of reads) {

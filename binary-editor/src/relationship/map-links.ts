@@ -6,7 +6,7 @@
  *   - object's SID field  -> the script with that sid (scriptsBySid).
  *   - script's SID field  -> the object that references it, i.e. whose SID equals this script's sid (objectsBySid).
  *
- * The script's `Owner ID` (scr_oid) is deliberately NOT used: it is engine runtime state cached at bind time
+ * The script's `Owner ID` is deliberately NOT used: it is engine runtime state cached at bind time
  * and is frequently stale or wrong on disk (e.g. Broken Hills' map has Owner IDs pointing at unrelated objects
  * of the wrong type), whereas the object<->script `sid` reference is authored and reliable.
  *

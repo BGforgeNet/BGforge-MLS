@@ -88,7 +88,7 @@ describe("formatLayoutSchema (zod validation)", () => {
                 format: "pro",
                 variants: { v: { rows: [{ panels: [{ blocks: [{ kind: "bogus" }] }] }] } },
             }),
-        ).toThrow();
+        ).toThrow("Invalid discriminator value. Expected 'fields' | 'group' | 'flags' | 'flagGroups'");
     });
 
     it("rejects a fields block with no fields", () => {
@@ -98,7 +98,7 @@ describe("formatLayoutSchema (zod validation)", () => {
                 format: "pro",
                 variants: { v: { rows: [{ panels: [{ blocks: [{ kind: "fields", fields: [] }] }] }] } },
             }),
-        ).toThrow();
+        ).toThrow("Too small: expected array to have >=1 items");
     });
 
     it("accepts a master-detail list block with a detailVariant of detail rows", () => {
@@ -185,46 +185,48 @@ describe("formatLayoutSchema (zod validation)", () => {
     });
 
     it("rejects a detailVariant that nests another list block (a detail pane holds no sub-lists)", () => {
-        expect(() =>
-            formatLayoutSchema.parse({
-                schemaVersion: 1,
-                format: "cre",
-                variants: {
-                    v: {
-                        rows: [
-                            {
-                                panels: [
-                                    {
-                                        blocks: [
-                                            {
-                                                kind: "list",
-                                                sectionKey: "Effects",
-                                                render: "master-detail",
-                                                detailVariant: [
-                                                    {
-                                                        panels: [
-                                                            {
-                                                                blocks: [
-                                                                    {
-                                                                        kind: "list",
-                                                                        sectionKey: "Sub",
-                                                                        render: "inline",
-                                                                    },
-                                                                ],
-                                                            },
-                                                        ],
-                                                    },
-                                                ],
-                                            },
-                                        ],
-                                    },
-                                ],
-                            },
-                        ],
+        expect(
+            () =>
+                formatLayoutSchema.parse({
+                    schemaVersion: 1,
+                    format: "cre",
+                    variants: {
+                        v: {
+                            rows: [
+                                {
+                                    panels: [
+                                        {
+                                            blocks: [
+                                                {
+                                                    kind: "list",
+                                                    sectionKey: "Effects",
+                                                    render: "master-detail",
+                                                    detailVariant: [
+                                                        {
+                                                            panels: [
+                                                                {
+                                                                    blocks: [
+                                                                        {
+                                                                            kind: "list",
+                                                                            sectionKey: "Sub",
+                                                                            render: "inline",
+                                                                        },
+                                                                    ],
+                                                                },
+                                                            ],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
                     },
-                },
-            }),
-        ).toThrow();
+                }),
+            // A detail pane's block union has no `list` member, so the nested block fails to discriminate.
+        ).toThrow("Invalid discriminator value. Expected 'fields' | 'group' | 'flags' | 'grid' | 'matrix'");
     });
 });
 

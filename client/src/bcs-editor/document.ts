@@ -49,8 +49,8 @@ function noGameNotice(source: vscode.Uri): string {
         "// ACTION.IDS and friends give a name to - and those tables differ between editions and are extended",
         "// by mods, so there is no vendored copy to fall back on.",
         "//",
-        "// Open a game in the BGforge IE Game Resources view, or set bgforge.weidu.gamePath, then reopen this",
-        "// file.",
+        "// Open a game in the BGforge IE Game Resources view, or set bgforge.weidu.gamePath, and this file",
+        "// redraws as script.",
         "",
     ].join("\n");
 }

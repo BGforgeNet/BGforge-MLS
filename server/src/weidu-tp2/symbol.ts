@@ -114,7 +114,7 @@ function firstIdentifierFromVarNodes(node: Node): Node | null {
  * Determine SymbolKind for a variable-assigning node.
  * Arrays -> Array, constant-like names -> Constant, rest -> Variable.
  * Constant heuristic: first word fully uppercase (see tree-utils.ts:looksLikeConstant,
- * weidu-tp2.tmLanguage.yml:set-sprint-constant-vars, hover.ts:buildVariableHover).
+ * weidu-tp2.tmLanguage.yml:set-sprint-constant-vars, hover-content.ts:buildVariableHover).
  */
 function varSymbolKind(nodeType: string, name: string): SymbolKind {
     if (ARRAY_DEF_TYPES.has(nodeType)) return SymbolKind.Array;

@@ -8,7 +8,9 @@
     // Production webview root: the extension host posts a DialogModel; on each
     // message (initial load and live file edits) the model updates reactively and
     // DialogGraph re-lays-out. The harness mounts DialogGraph directly instead.
-    let model = $state<DialogModel | null>(null);
+    // Raw: the parsed dialog arrives whole and is replaced whole. DialogGraph clones it into its own
+    // deep edit model, which is the only thing anything writes into.
+    let model = $state.raw<DialogModel | null>(null);
     let error = $state<string | null>(null);
     let timedOut = $state(false);
 

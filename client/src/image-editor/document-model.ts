@@ -25,7 +25,7 @@ import {
 } from "@bgforge/image";
 import type { DocumentBackup } from "./backup";
 import { chooseActivePalette } from "./sidecar";
-import { packFramePixels, type AnimationView, type MetaPatch, type SequenceView } from "./webview/messages";
+import { packFramePixels, type ModelAnimationView, type MetaPatch, type SequenceView } from "./webview/messages";
 
 function paletteEquals(a: Rgba[], b: Rgba[]): boolean {
     if (a === b) return true;
@@ -141,6 +141,13 @@ export class ImageDocumentModel {
     private animationValue: Animation;
     private readonly basename: string;
     private sidecarPalette: Rgba[] | undefined;
+    /**
+     * The replacement colour table this document's ANIMATION declares, where the install ships one.
+     *
+     * Set by the opener rather than read here: the declaration lives in the animation index and the file
+     * in the game archive, neither of which a document model reaches.
+     */
+    private declaredPalette: Rgba[] | undefined;
     private hasSidecar = false;
     private externalEnabled = false;
     /**
@@ -151,6 +158,13 @@ export class ImageDocumentModel {
     private basePage: number | undefined;
     private undoStack: DocumentSnapshot[] = [];
     private redoStack: DocumentSnapshot[] = [];
+    /**
+     * True for a model rebuilt from a hot-exit backup, which is unsaved by definition.
+     *
+     * Its undo stack starts empty - the snapshots were not backed up - so undo alone cannot say whether
+     * this differs from what is on disk, and only the origin can.
+     */
+    private restored = false;
 
     onChange?: () => void;
 
@@ -176,6 +190,7 @@ export class ImageDocumentModel {
             ? ImageDocumentModel.fromRgbaAnimation(rgbaFromBackup(backup), basename)
             : ImageDocumentModel.fromBytes(backup.bytes, basename, sidecarBytes);
         model.externalEnabled = backup.externalPalette;
+        model.restored = true;
         return model;
     }
 
@@ -193,6 +208,16 @@ export class ImageDocumentModel {
     static fromAnimation(animation: IndexedAnimation, basename: string, sidecarBytes?: Uint8Array): ImageDocumentModel {
         const sidecarPalette = sidecarBytes !== undefined ? parsePal(sidecarBytes) : undefined;
         return new ImageDocumentModel(animation, basename, sidecarPalette);
+    }
+
+    /**
+     * Point this document at the replacement colour table its animation declares.
+     *
+     * Applied after construction because it is a property of the ANIMATION rather than of the file: the
+     * six colour dragons are one body under six declared palettes, and the file cannot say which.
+     */
+    useDeclaredPalette(palette: Rgba[] | undefined): void {
+        this.declaredPalette = palette;
     }
 
     private setSidecar(sidecarPalette: Rgba[] | undefined): void {
@@ -260,6 +285,7 @@ export class ImageDocumentModel {
             embedded: indexed.palette,
             sidecar: this.sidecarPalette,
             externalEnabled: this.externalEnabled,
+            ...(this.declaredPalette === undefined ? {} : { declared: this.declaredPalette }),
         });
     }
 
@@ -268,7 +294,7 @@ export class ImageDocumentModel {
      * frame's geometry crosses regardless - so an open can paint from the frames it shows and fetch
      * the rest on demand.
      */
-    toView(options?: { include?: ReadonlySet<number> }): AnimationView {
+    toView(options?: { include?: ReadonlySet<number> }): ModelAnimationView {
         const { frames, pixels } = packFramePixels(this.animationValue.frames, options?.include);
         // FRM sequences are built in header-direction order, so the sequence index selects its
         // dirOffsets entry; BAM/BAMC have none, so the anchor's direction shift is 0.
@@ -413,6 +439,20 @@ export class ImageDocumentModel {
         this.snapshotForUndo();
         this.animationValue = animation;
         this.onChange?.();
+    }
+
+    /**
+     * Whether anything undoable has been done to this model since it was read.
+     *
+     * Read by a set save, which writes only the members the reader actually changed: a set holds a dozen
+     * files and writing every one of them into the game's override folder over a single edit would put
+     * eleven unrequested copies there.
+     *
+     * Undoing back to the start clears it, because the undo stack is what an undo pops from - so a member
+     * edited and then fully undone is correctly not written.
+     */
+    get edited(): boolean {
+        return this.restored || this.undoStack.length > 0;
     }
 
     undo(): void {

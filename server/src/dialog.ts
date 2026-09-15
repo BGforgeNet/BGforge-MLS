@@ -8,40 +8,19 @@ import { initParser, parseWithCache, isInitialized } from "../../shared/parsers/
 import { conlog } from "./logger";
 import { SyntaxType } from "./fallout-ssl/syntax-type";
 import { sslNameKey } from "../../shared/fallout-ssl-names";
-import type {
-    SSLDialogBlock,
-    SSLDialogBlockItem,
-    SSLDialogBranch,
-    SSLDialogData,
-    SSLDialogGroup,
-    SSLDialogNode,
-    SSLDialogOption,
-    SSLDialogOptionType,
-    SSLDialogReply,
+import {
+    type SSLDialogBlock,
+    type SSLDialogBlockItem,
+    type SSLDialogBranch,
+    type SSLDialogData,
+    type SSLDialogGroup,
+    type SSLDialogNode,
+    type SSLDialogOption,
+    type SSLDialogReply,
+    isSslMessageFn,
+    isSslOptionFn,
 } from "../../shared/dialog-types";
 export { type SSLDialogData as DialogData } from "../../shared/dialog-types";
-
-// Membership sets for SSL option/message types. Using ReadonlySet<string>
-// (rather than Set<SSLDialogOptionType>) lets the .has() check act as a
-// type guard via `isOptionFn`/`isMessageFn` below - no `as` cast needed.
-const OPTION_FN_NAMES: ReadonlySet<string> = new Set<SSLDialogOptionType>([
-    "NOption",
-    "NLowOption",
-    "GOption",
-    "GLowOption",
-    "BOption",
-    "BLowOption",
-]);
-
-const MESSAGE_FN_NAMES: ReadonlySet<string> = new Set<SSLDialogOptionType>(["NMessage", "GMessage", "BMessage"]);
-
-function isOptionFn(name: string): name is SSLDialogOptionType {
-    return OPTION_FN_NAMES.has(name);
-}
-
-function isMessageFn(name: string): name is SSLDialogOptionType {
-    return MESSAGE_FN_NAMES.has(name);
-}
 
 // Default: no side-effect set supplied -> no detection (honest under-badging, preserving
 // the parser's pre-side-effect behavior for callers that don't pass the set).
@@ -368,7 +347,7 @@ function parseProcedure(
             }
 
             // NOption, GOption, BOption, and Low variants - narrows funcName.
-            if (isOptionFn(funcName) && arg0 && arg1) {
+            if (isSslOptionFn(funcName) && arg0 && arg1) {
                 const target = arg1.text;
                 const ifSpans = enclosingIfSpans(node);
                 options.push({
@@ -390,7 +369,7 @@ function parseProcedure(
             }
 
             // NMessage, GMessage, BMessage (terminal) - narrows funcName.
-            if (isMessageFn(funcName) && arg0) {
+            if (isSslMessageFn(funcName) && arg0) {
                 const ifSpans = enclosingIfSpans(node);
                 options.push({
                     type: funcName,
@@ -516,7 +495,7 @@ function nodeInsertAnchor(proc: SyntaxNode, fullText: string): { offset: number;
 function isDialogCallExpr(callExpr: SyntaxNode): boolean {
     const fn = callExpr.childForFieldName("func")?.text;
     if (!fn) return false;
-    return fn === "Reply" || isOptionFn(fn) || isMessageFn(fn);
+    return fn === "Reply" || isSslOptionFn(fn) || isSslMessageFn(fn);
 }
 
 /**
