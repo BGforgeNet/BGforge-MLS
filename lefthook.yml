@@ -204,27 +204,5 @@ pre-commit:
         - "pnpm-lock.yaml"
       run: node_modules/.bin/tsc --noEmit --project plugins/td-plugin/tsconfig.json
 
-# svelte-check lives here rather than in pre-commit: at ~12s it was the slowest command by
-# 2.5x, and since a parallel hook cannot finish before its slowest member, it set the floor for
-# every commit touching client, shared, binary or binary-editor - which is most of them.
-# Moving it costs nothing in coverage, only lateness: it still runs before anything leaves the
-# machine, and CI runs it unconditionally either way.
-#
-# Its glob keeps `shared/**` - .svelte files import it directly (dialog-editor/webview/*.svelte
-# pulls dialog-model, dialog-reachability, dialog-edit-ops), and tsc cannot see a .svelte, so
-# nothing else covers that edge. `server/**` is gone: the only client->server imports are in
-# client/src/dialog-editor/test/harness/**, which are .ts and already covered by typecheck-client.
-pre-push:
-  parallel: true
-  commands:
-    typecheck-svelte:
-      glob:
-        - "client/**"
-        - "shared/**"
-        - "binary-editor/**"
-        - "binary/**"
-        - "tsconfig*.json"
-        - "package.json"
-        - "pnpm-workspace.yaml"
-        - "pnpm-lock.yaml"
-      run: pnpm typecheck:svelte
+# svelte-check runs in no local hook: it is the slowest check by far, CI's test:all runs it unconditionally,
+# and --incremental is no shortcut - with client/tsconfig.json it skips most files and passed a planted error.
