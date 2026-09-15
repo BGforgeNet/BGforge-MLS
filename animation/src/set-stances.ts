@@ -129,7 +129,7 @@ function wholeFileBand(merged: MergedTables): FileBands {
     const slots: IeDirectionSlot[] = merged.sequences.flatMap((_, seqIndex) =>
         merged.holdsArt[seqIndex] === true ? [{ seqIndex, facing: "none" as const }] : [],
     );
-    return { bands: [slots], drawn: [slots.length > 0], scheme: undefined, confidence: "inferred" };
+    return { bands: [slots], artCycles: [slots.length], scheme: undefined, confidence: "inferred" };
 }
 
 /**
@@ -155,14 +155,14 @@ function bandsOf(
     }
     const merged = mergeParts(tables);
     if (merged === undefined) return undefined;
-    /** A band draws where any of its cycles holds art - the rest are the skeleton a packed file carries. */
-    const drawn = (bands: readonly (readonly IeDirectionSlot[])[]): boolean[] =>
-        bands.map((slots) => slots.some((slot) => merged.holdsArt[slot.seqIndex] === true));
+    /** How many of each band's cycles hold art - a band with none is the skeleton a packed file carries. */
+    const artCycles = (bands: readonly (readonly IeDirectionSlot[])[]): number[] =>
+        bands.map((slots) => slots.filter((slot) => merged.holdsArt[slot.seqIndex] === true).length);
     if (overlaying !== undefined) {
         // The geometry and the scheme are the base's; which of those bands DRAW stays this file's own,
         // since an overlay need not cover every stance the thing it is drawn over has.
         const bands = bandsOverlaying(overlaying, merged.sequences.length);
-        return { bands, drawn: drawn(bands), scheme: overlaying.scheme, confidence: overlaying.confidence };
+        return { bands, artCycles: artCycles(bands), scheme: overlaying.scheme, confidence: overlaying.confidence };
     }
     if (stride !== undefined) {
         const bands = ieBandsOfStride(merged.sequences, merged.frameCount, stride, coarse);
@@ -170,7 +170,7 @@ function bandsOf(
         // A stride the block table has a scheme for keeps its stance names; a wider one is numbered.
         return bands === undefined
             ? undefined
-            : { bands, drawn: drawn(bands), scheme: schemeForStride(stride), confidence: "declared" };
+            : { bands, artCycles: artCycles(bands), scheme: schemeForStride(stride), confidence: "declared" };
     }
     const analysis = interpretIeDirections(merged.sequences, merged.frameCount);
     if (analysis === undefined) return wholeFileBand(merged);
@@ -178,7 +178,7 @@ function bandsOf(
     // facings are a reading of block structure, good enough to draw and not to write a target from.
     return {
         bands: analysis.groups,
-        drawn: drawn(analysis.groups),
+        artCycles: artCycles(analysis.groups),
         scheme: analysis.scheme,
         // A merge across parts is itself the identification. The fingerprint the interpreter looks for is a
         // base file's PADDED eastern slots, and merging the twin fills exactly those - so a member that

@@ -89,13 +89,14 @@ export type BandConfidence = "declared" | "inferred";
 export interface FileBands {
     bands: readonly (readonly IeDirectionSlot[])[];
     /**
-     * Which bands hold art, one per band.
+     * How many of each band's cycles hold art, one count per band; zero is a band the file does not draw.
      *
      * A packed file carries every band of its family's skeleton and draws the one its own name promises, so
      * without this a file of eleven bands lists eleven stances of which one draws anything - and everything
-     * downstream, a conversion's loss report included, then speaks about ten that are not there.
+     * downstream, a conversion's loss report included, then speaks about ten that are not there. A count
+     * rather than a flag because a band drawing ONE cycle is a neighbour's bleed, not a stance.
      */
-    drawn: readonly boolean[];
+    artCycles: readonly number[];
     /** The block scheme, where one was resolved - what the block table keys its names on. */
     scheme: IeScheme | undefined;
     confidence: BandConfidence;
@@ -201,17 +202,23 @@ export function stancesOfMembers(
         // The band this file is named for, kept only where the file actually draws it. A file whose cycles
         // did not band into the skeleton its name assumes has nothing at that position, and filtering to it
         // would drop the member entirely - so the surplus rows are the better failure of the two.
-        const own = member.ownBand !== undefined && file.drawn[member.ownBand] === true ? member.ownBand : undefined;
+        const drawn = (band: number): boolean => (file.artCycles[band] ?? 0) > 0;
+        const own = member.ownBand !== undefined && drawn(member.ownBand) ? member.ownBand : undefined;
         for (const [band, slots] of file.bands.entries()) {
             // The index is kept as it stands: a filtered band is still where it was in the file, and that
             // position is what addresses it there. A band the scheme addresses no sequence to goes with the
             // undrawn ones - it is padding the format forces on the file, and it holds a frame per facing,
             // so only the declaration can rule it out.
-            if (slots.length === 0 || file.drawn[band] !== true || groups?.[band]?.unused === true) continue;
+            if (slots.length === 0 || !drawn(band) || groups?.[band]?.unused === true) continue;
             // A file of a shared skeleton yields its own band, and of the rest only the ones no sibling is
             // named for: a claimed band here is a copy of art the file named for it already offers, so
             // listing it puts one clip in the list several times with nothing to choose between the rows.
             if (own !== undefined && band !== own && claimed.has(band)) continue;
+            // A file whose own band draws nothing keeps its surplus, except a claimed band drawn in a single
+            // cycle: that is the neighbour's art bleeding one facing into this file, where a file that did not
+            // band into its skeleton draws every cycle - measured across three installs, nothing in between.
+            const bleed = member.ownBand !== undefined && own === undefined && claimed.has(band);
+            if (bleed && slots.length > 1 && file.artCycles[band] === 1) continue;
             const group = groups?.[band];
             // One row per sequence the band is played for. A band the table does not name yields no
             // sequences and so one nameless row, which is the numbered case.

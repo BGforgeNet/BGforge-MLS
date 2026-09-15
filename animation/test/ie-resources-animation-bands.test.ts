@@ -28,7 +28,7 @@ function band(count: number): { seqIndex: number; facing: Facing }[] {
 function bands(count: number, slots = 5, scheme: FileBands["scheme"] = "ie8"): FileBands {
     return {
         bands: Array.from({ length: count }, () => band(slots)),
-        drawn: Array.from({ length: count }, () => true),
+        artCycles: Array.from({ length: count }, () => slots),
         scheme,
         confidence: "declared",
     };
@@ -436,6 +436,42 @@ describe("stancesOfMembers", () => {
         ]);
     });
 
+    /**
+     * A split file named for a band it does not draw still carries the bands of the files beside it, and some
+     * installs pad those with one cycle of the neighbour's art - a single facing, the rest placeholders. Listed,
+     * that is a second row for a sibling's stance that plays one facing out of nine.
+     */
+    describe("a file named for a band it does not draw", () => {
+        const attack = { ...member("G2", "MEAEG2"), ownBand: 0 };
+        const conjure = { ...member("G26", "MEAEG26"), ownBand: 6 };
+        /** Seven nine-cycle bands, art in `artCycles[band]` of each band's cycles. */
+        const split = (artCycles: readonly number[]): FileBands => ({
+            bands: Array.from({ length: 7 }, () => band(9)),
+            artCycles,
+            scheme: "ie9",
+            confidence: "declared",
+        });
+        const attackFile = split([9, 0, 0, 0, 0, 0, 0]);
+
+        it("leaves a sibling's band it holds in a single cycle to the sibling", () => {
+            const stances = stancesOfMembers([attack, conjure], (row) =>
+                row.resref === "MEAEG2" ? attackFile : split([1, 0, 0, 0, 0, 0, 0]),
+            );
+
+            expect(stances.map((stance) => `${stance.resref}#${stance.band}`)).toEqual(["MEAEG2#0"]);
+        });
+
+        // The files that did not band into the skeleton their name assumes: every cycle draws, so the rows are
+        // art nothing else offers, and the surplus is the better failure of the two.
+        it("keeps a sibling's band it draws in every cycle", () => {
+            const stances = stancesOfMembers([attack, conjure], (row) =>
+                row.resref === "MEAEG2" ? attackFile : split([9, 0, 0, 0, 0, 0, 0]),
+            );
+
+            expect(stances.map((stance) => `${stance.resref}#${stance.band}`)).toEqual(["MEAEG2#0", "MEAEG26#0"]);
+        });
+    });
+
     it("keeps every band of a file that declares none of them its own", () => {
         // The cast file is the other shape: eight bands, no sibling carrying any of them, and each one a
         // different clip. A filter keyed on the family rather than on the file would empty it.
@@ -558,7 +594,7 @@ describe("stancesOfMembers", () => {
     it("drops a band with no drawable facings", () => {
         const empty: FileBands = {
             bands: [band(5), [], band(5)],
-            drawn: [true, true, true],
+            artCycles: [5, 0, 5],
             scheme: "ie8",
             confidence: "declared",
         };
@@ -573,7 +609,7 @@ describe("stancesOfMembers", () => {
     it("drops a band whose slots hold no art, keeping the index of the ones that do", () => {
         const skeleton: FileBands = {
             bands: [band(5), band(5), band(5)],
-            drawn: [false, true, false],
+            artCycles: [0, 5, 0],
             scheme: "ie8",
             confidence: "declared",
         };
