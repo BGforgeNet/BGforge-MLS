@@ -62,6 +62,8 @@
     let items: GalleryTile[] = $state.raw([]);
     let sets: SetTile[] = $state.raw([]);
     let note: string | undefined = $state();
+    /** Whether the empty list is empty for want of an open game, which the panel can offer to fix. */
+    let noGameOpen = $state(false);
     let query = $state("");
     let tag = $state("");
     /** The chosen file format, or "" for every one. A separate axis from the tag: a type spans formats. */
@@ -108,6 +110,7 @@
             items = message.items;
             sets = message.sets;
             note = message.note;
+            noGameOpen = message.noGameOpen === true;
             focusSet = message.focusSet;
             // A restored panel can ask for a tab this source cannot fill; resolveTab decides, not the
             // stored value. A panel opened ON an animation asks for the sets tab.
@@ -180,7 +183,14 @@
 </div>
 {#if tab === "files"}
     {#if loaded && items.length === 0}
+        <!-- The empty state says what is missing; where the missing thing is an open game, it also supplies
+             it, rather than naming a command the reader has to go and find. -->
         <p class="empty">{note ?? "No drawable resources here."}</p>
+        {#if noGameOpen}
+            <p class="empty-action">
+                <button type="button" onclick={() => post({ type: "openGame" })}>Open game...</button>
+            </p>
+        {/if}
     {:else}
         <!-- The file grid stays reachable while something is drawn - it is how the next file is chosen -
              so it keeps a band of its own rather than being replaced by the stage. -->

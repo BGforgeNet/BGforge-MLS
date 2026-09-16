@@ -188,6 +188,14 @@ select {
     font-size: 0.9em;
 }
 
+/* The note's own action, sized to the note rather than to the column: `.view-controls` stretches its
+   children, which would make this read as a primary action of the whole palette section. */
+.creature-opengame {
+    align-self: flex-start;
+    font-size: 0.9em;
+    padding: 0.1rem 0.5rem;
+}
+
 /* Three-way background selector and the loop toggle: both render as a secondary/outline button that
    flips to the primary (filled) button style while active, so the selected option reads at a glance. */
 .bg-options,

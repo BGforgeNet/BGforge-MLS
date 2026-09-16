@@ -313,6 +313,8 @@ export type WebviewToHost =
     // The install's creatures, for choosing whose colours to draw an IE creature animation in.
     | { type: "requestCreatures" }
     | { type: "setCreature"; resref: string | null }
+    // A webview cannot run a command, so the note that asks for a game asks the host to open one instead.
+    | { type: "openGame" }
     // Frames whose pixels the open did not carry, asked for as the view comes to need them.
     | { type: "requestFrames"; indices: number[] }
     // Set documents only: which stance and which armour level of the open set to show. The key is the
@@ -472,6 +474,7 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
         case "ready":
         case "save":
         case "requestCreatures":
+        case "openGame":
         case "pickSet":
         case "openDrawnBy":
         case "beginSaveAs":

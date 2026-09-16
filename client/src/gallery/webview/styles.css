@@ -158,6 +158,14 @@
     text-align: center;
 }
 
+/* The empty state's own action, centred under its sentence. Its top padding is the note's bottom, which
+   `.empty` spends on all four sides, so the two read as one block rather than two stacked ones. */
+.empty-action {
+    margin: 0;
+    padding: 0 24px 24px;
+    text-align: center;
+}
+
 /* Tab strip. Styled here rather than in a component <style> block: this panel runs under a strict nonce
    CSP that drops the non-nonced <style> tag Svelte would inject, so the real panel would show it unstyled
    while every headless render looked right. */

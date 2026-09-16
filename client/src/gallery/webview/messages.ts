@@ -39,6 +39,13 @@ export type HostToWebview =
           title: string;
           items: GalleryTile[];
           note?: string;
+          /**
+           * The list is empty because no game is open, so the panel can offer to open one.
+           *
+           * Declared rather than read back out of `note`: that text is written for a reader and reworded
+           * whenever the wording improves, which is not something a control should depend on.
+           */
+          noGameOpen?: true;
           /** Empty when the panel has no game behind it, which is what hides the tab strip. */
           sets: SetTile[];
           /**
@@ -85,6 +92,8 @@ export type WebviewToHost =
     | { type: "open"; id: string }
     /** Draw a whole animation set on this panel, with the set and action pickers the editor tab has. */
     | { type: "showSet"; id: number }
+    /** Nothing to browse because no game is open: a webview cannot run the command that opens one. */
+    | { type: "openGame" }
     /** The animation surface's own protocol, going the other way. See the `viewer` message above. */
     | { type: "viewer"; message: AnimationWebviewToHost }
     /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
@@ -111,6 +120,8 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
             return typeof m.id === "string";
         case "showSet":
             return typeof m.id === "number";
+        case "openGame":
+            return true;
         case "viewer":
             return isAnimationWebviewToHost(m.message);
         case "runtimeError":

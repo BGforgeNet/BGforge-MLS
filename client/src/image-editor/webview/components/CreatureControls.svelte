@@ -17,12 +17,15 @@
         active,
         onrequest,
         onchoose,
+        onopengame,
     }: {
         creatures: CreatureOption[];
         active: string | undefined;
         /** Ask the host for the list. Called on first open - most files are never recoloured. */
         onrequest: () => void;
         onchoose: (resref: string | null) => void;
+        /** Open an install, for the note that says the colours need one. A webview cannot run the command. */
+        onopengame: () => void;
     } = $props();
 
     // Drawing in the file's own palette is a choice like any other, so it is an option rather than a cleared
@@ -83,7 +86,10 @@
     {#if !requested}
         <!-- Nothing is known before the list is asked for, and a count of an unfetched list would be a lie. -->
     {:else if creatures.length === 0}
+        <!-- The note names what is missing and the button supplies it: telling a reader to open a game is
+             only half an answer while the way to do it is a command they have to go and find. -->
         <p class="creature-note">No creatures - open a game to draw this in real colours.</p>
+        <button type="button" class="creature-opengame" onclick={onopengame}>Open game...</button>
     {:else if matchCount === 0}
         <p class="creature-note">No creature uses this animation - showing all.</p>
     {:else if !onlyMatching}

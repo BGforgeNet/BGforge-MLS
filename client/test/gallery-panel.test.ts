@@ -11,11 +11,15 @@ import type * as vscodeTypes from "vscode";
 import { type GalleryItem, type GallerySource } from "../src/gallery/source";
 import { type HostToWebview, type SetTile, type WebviewToHost } from "../src/gallery/webview/messages";
 
-const { showErrorMessageMock } = vi.hoisted(() => ({ showErrorMessageMock: vi.fn() }));
+const { showErrorMessageMock, executeCommandMock } = vi.hoisted(() => ({
+    showErrorMessageMock: vi.fn(),
+    executeCommandMock: vi.fn(),
+}));
 
 vi.mock("vscode", () => ({
     Uri: { joinPath: (...parts: unknown[]) => ({ toString: () => parts.join("/") }) },
     window: { showErrorMessage: showErrorMessageMock },
+    commands: { executeCommand: executeCommandMock },
 }));
 
 // The panel's chrome comes from the shared builder, which reads real template and bundle files off disk;
@@ -124,6 +128,33 @@ describe("wireGalleryPanel over a game that opens later", () => {
         const init = posted.find((message) => message.type === "init");
         expect(init).toMatchObject({ items: [], sets: [] });
         expect(init && "note" in init && init.note).toContain("No game is open");
+        // The flag, not the wording, is what puts the Open game button on the empty state - the note is
+        // prose and gets reworded, which is not something a control may depend on.
+        expect(init).toMatchObject({ noGameOpen: true });
+    });
+
+    /**
+     * The workspace gallery's empty state is a missing FOLDER, and offering to open a game there would
+     * answer a question the reader did not ask.
+     */
+    it("offers no game button when what is missing is a folder", () => {
+        const { panel, posted, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "workspace" }, context, deps);
+        send({ type: "ready" });
+
+        const init = posted.find((message) => message.type === "init");
+        expect(init && "note" in init && init.note).toContain("No folder is open");
+        expect(init && "noGameOpen" in init).toBe(false);
+    });
+
+    it("opens a game when the empty state's button asks for one", () => {
+        const { panel, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+
+        send({ type: "openGame" });
+
+        expect(executeCommandMock).toHaveBeenCalledWith("bgforge.ieResources.openGame");
     });
 
     it("re-answers with the game's contents once one opens", () => {

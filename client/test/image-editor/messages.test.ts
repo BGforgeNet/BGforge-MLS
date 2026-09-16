@@ -24,6 +24,9 @@ test("accepts valid messages", () => {
     expect(isWebviewToHost({ type: "saveAs", target: "frm", paletteMode: "nearest" })).toBe(true);
     expect(isWebviewToHost({ type: "import", mode: "append" })).toBe(true);
     expect(isWebviewToHost({ type: "requestCreatures" })).toBe(true);
+    // The creature note's button. A type the guard does not name is refused as a contract mismatch, so
+    // adding one to the union alone leaves the button silently dead.
+    expect(isWebviewToHost({ type: "openGame" })).toBe(true);
     expect(isWebviewToHost({ type: "setCreature", resref: "AGNASI" })).toBe(true);
     // null is how the webview clears the choice back to the file's own palette.
     expect(isWebviewToHost({ type: "setCreature", resref: null })).toBe(true);

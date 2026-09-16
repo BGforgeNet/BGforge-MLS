@@ -631,6 +631,7 @@
                     active={activeCreature}
                     onrequest={() => bridge.send({ type: "requestCreatures" })}
                     onchoose={(resref) => bridge.send({ type: "setCreature", resref })}
+                    onopengame={() => bridge.send({ type: "openGame" })}
                 />
             {/if}
             <MetaControls {view} {bridge} />

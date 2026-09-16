@@ -427,6 +427,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 this.post(channel, { type: "creatures", entries: this.creatureOptions(document) });
                 break;
             }
+            case "openGame":
+                // The same command the resource view's welcome offers, so the two ways in cannot drift.
+                void vscode.commands.executeCommand("bgforge.ieResources.openGame");
+                break;
             case "setCreature": {
                 const active = this.resolveCreature(document, message.resref);
                 if (active === undefined) this.activeCreature.delete(document);

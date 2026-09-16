@@ -138,9 +138,11 @@ export function wireGalleryPanel(
 
     // Nothing to browse is a legitimate state, not a failure - and the panel must say WHICH state, because
     // "no pictures here" and "you have not opened a game" send the reader in opposite directions.
+    // The game case names the command nowhere: the panel offers a button for it, and a note that also
+    // recited the command would be telling the reader to go and do what is under their cursor.
     const emptyNote = (): string =>
         state.source === "game"
-            ? 'No game is open. Run "BGforge: Open IE Game..." to browse an install.'
+            ? "No game is open, so there is no install to browse."
             : "No folder is open. Open a folder to browse the images in it.";
 
     let source: GallerySource | undefined;
@@ -204,6 +206,7 @@ export function wireGalleryPanel(
             sets: [...deps.sets()],
             ...(state.focusSet === undefined ? {} : { focusSet: state.focusSet }),
             ...(source === undefined ? { note: emptyNote() } : {}),
+            ...(source === undefined && state.source === "game" ? { noGameOpen: true as const } : {}),
         } satisfies HostToWebview);
         // Stated on every reading, not only when it changes: `init` replaces the webview's whole world, so
         // a stage left drawn without this would be a picture the browse list no longer marks a row for.
@@ -255,6 +258,10 @@ export function wireGalleryPanel(
             }
             case "showSet":
                 void showSet(message.id);
+                break;
+            case "openGame":
+                // The same command the resource view's welcome offers, so the two ways in cannot drift.
+                void vscode.commands.executeCommand("bgforge.ieResources.openGame");
                 break;
             case "viewer":
                 stage?.receive(message.message);
