@@ -31,6 +31,12 @@ export interface CycleGridAnalysis {
 const MAX_SINGLE_DIRECTION_SET = 8;
 
 export function analyzeCycleGrid(cycleCount: number, scheme?: IeScheme): CycleGridAnalysis {
+    // `resolved` turns on the scheme being PRESENT, not on the interpreter having confirmed it, and
+    // narrowing it to confirmed readings was considered and rejected: the hint is drawn only for a
+    // multi-sequence analysis, which a file short of one block never is, so the unconfirmed readings that
+    // reach it are the east twins and the long monster walks - where the division is right and hedging it
+    // would lose a correct sentence on hundreds of files per install to catch nothing.
+    //
     // A resolved scheme knows the block size, so "several sequences" is a division rather than a guess.
     // Without one the cycle count is all there is, and >8 is the only signal available.
     const stride = ieBlockSize(scheme);

@@ -73,8 +73,9 @@ describe("scheme accessors", () => {
     test("directionLayoutOf stamps only a detected shape", () => {
         const { sequences, frameCount } = westArcSequences(1);
         expect(directionLayoutOf(interpretIeDirections(sequences, frameCount))).toBe("ie9");
-        // Interpretable but undetected - a lone short set - is not what the file is declared to be.
-        expect(directionLayoutOf(interpretIeDirections([seq([0]), seq([1])], 2))).toBe("non-directional");
+        // Interpretable but undetected - a lone west arc - is not what the file is declared to be.
+        const shortSet = Array.from({ length: 5 }, (_, i) => seq([i]));
+        expect(directionLayoutOf(interpretIeDirections(shortSet, 5))).toBe("non-directional");
         expect(directionLayoutOf(undefined)).toBe("non-directional");
     });
 });
@@ -217,6 +218,23 @@ describe("interpretIeDirections", () => {
         expect(result?.detected).toBe(false);
         expect(result?.groups).toHaveLength(1);
         expect(result?.groups[0]?.map((s) => s.facing)).toEqual(["S", "SW", "W", "NW", "N"]);
+    });
+
+    /**
+     * Below the west arc there is no scheme left to be a partial block OF: the coarse scheme stores five
+     * cycles, the fine one nine, the wheel sixteen. So a two-cycle file is not an unconfirmed band, it is
+     * not a band - and reading it as the leading slots of one is what had a spell graphic reported as eight
+     * directions with its east mirrored.
+     */
+    test("refuses a cycle count short of the smallest arc any scheme stores", () => {
+        expect(interpretIeDirections([seq([0]), seq([1])], 2)).toBeUndefined();
+        expect(interpretIeDirections([seq([0])], 1)).toBeUndefined();
+        expect(
+            interpretIeDirections(
+                Array.from({ length: 4 }, (_, i) => seq([i])),
+                4,
+            ),
+        ).toBeUndefined();
     });
 
     test("returns undefined for shapes that cannot map onto 8-slot blocks", () => {

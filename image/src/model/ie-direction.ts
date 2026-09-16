@@ -102,8 +102,9 @@ export function directionLayoutOf(analysis: IeDirectionAnalysis | undefined): Di
 
 /**
  * Interpret an untagged (all facings "none") cycle list as IE direction blocks. Returns undefined when
- * the shape maps onto no scheme's block size (tagged facings, zero cycles, or a >8 count divisible by
- * neither stride) - then only a flat cycle view makes sense.
+ * the shape maps onto no scheme's block size (tagged facings, zero cycles, a count short of the smallest
+ * arc any scheme stores, or a >8 count divisible by neither stride) - then only a flat cycle view makes
+ * sense.
  */
 export function interpretIeDirections(sequences: SequenceShape[], frameCount: number): IeDirectionAnalysis | undefined {
     if (sequences.length === 0) return undefined;
@@ -246,8 +247,12 @@ function chooseScheme(
 ): SchemeShape | undefined {
     const count = sequences.length;
     const fits = SCHEMES.filter((s) => count % s.facings.length === 0);
-    // A short lone set is a partial 8-slot block - the coarse scheme's first cycles, nothing to contest.
-    if (fits.length === 0) return count < IE_STRIDE ? SCHEMES[0] : undefined;
+    // A short lone set is a partial 8-slot block - the coarse scheme's first cycles, nothing to contest -
+    // but only down to the arc that scheme actually STORES. Below five there is no scheme left for the file
+    // to be a partial block of (the fine one stores nine, the wheel sixteen), so it is not a band at all
+    // rather than an unconfirmed one: item icons, fog of war and spell graphics live here, and reading them
+    // as the leading slots of a band is how a two-cycle graphic came to be reported as eight directions.
+    if (fits.length === 0) return count >= IE_WEST_SLOTS && count < IE_STRIDE ? SCHEMES[0] : undefined;
     const [first, ...rest] = fits;
     if (first === undefined) return undefined;
     let best = first;

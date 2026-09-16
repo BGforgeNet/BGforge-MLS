@@ -160,6 +160,10 @@ const MIRROR_EAST: ReadonlyArray<{ east: Facing; west: Facing }> = (["NE", "E", 
  * directional builder never chases a sentinel into the frame table.
  */
 function extractIeGroup(anim: IndexedAnimation, groupIndex: number, report: LossReport): IndexedAnimation {
+    // The interpretation is read ungated, which is safe only because a caller reaches this by resolving a
+    // block count from the DETECTED layout stamp (`ieGroupCount` -> `directionLayoutOf`). A caller passing
+    // `ieGroup` on its own would tag an FRM with slot facings the fallback invented, and mirror east
+    // rotations out of them - so keep the group count coming from the stamp rather than from a raw read.
     const group = interpretIeDirections(anim.sequences, anim.frames.length)?.groups[groupIndex];
     if (!group || group.length === 0) {
         throw new Error(

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { animationFacts } from "../../src/image-editor/webview/render/animation-facts";
 import type { AnimationView, SetView } from "../../src/image-editor/webview/messages";
-import type { DirectionBlocks } from "../../src/image-editor/webview/render/compass-layout";
+import { type DirectionBlocks, directionBlocks } from "../../src/image-editor/webview/render/compass-layout";
 import { familyDescription, sectionLabel } from "@bgforge/animation";
 import { ieFacingsForStride } from "@bgforge/image/ie-direction";
 
@@ -74,7 +74,7 @@ function labelled(facts: ReturnType<typeof animationFacts>, id: string): string 
 describe("animationFacts directions", () => {
     /** The eight-slot scheme stores its whole band; the reader gets eight facings from it. */
     it("reads an eight-slot band as eight directions", () => {
-        const facts = animationFacts({ view: view(), blocks: blocks({ scheme: "ie8" }) });
+        const facts = animationFacts({ view: view(), blocks: blocks({ scheme: "ie8", detected: true }) });
 
         expect(labelled(facts, "directions")).toBe("8 directions");
     });
@@ -84,10 +84,52 @@ describe("animationFacts directions", () => {
      * nine would name the cycle count, not the directions - the engine draws sixteen.
      */
     it("reads a nine-cycle band as sixteen directions, not nine", () => {
-        const facts = animationFacts({ view: view(), blocks: blocks({ scheme: "ie9" }) });
+        const facts = animationFacts({ view: view(), blocks: blocks({ scheme: "ie9", detected: true }) });
 
         expect(labelled(facts, "directions")).toBe("16 directions");
         expect(labelled(facts, "mirrored")).toBe("east mirrored");
+    });
+
+    /**
+     * A block read the interpreter did not confirm is a guess, and the header does not make it.
+     *
+     * Nothing structural separates an item icon's two cycles from the leading two of a real eight-slot
+     * band, so the width is neither named nor denied until a declaration or the interpreter's own
+     * fingerprint says which.
+     */
+    it("says the directions are unknown for a block read nothing confirms", () => {
+        const facts = animationFacts({ view: view(), blocks: blocks({ scheme: "ie8", detected: false }) });
+
+        expect(labelled(facts, "directions")).toBe("directions unknown");
+        expect(labelled(facts, "mirrored")).toBeUndefined();
+    });
+
+    /**
+     * Through the reader that actually produces the blocks rather than a hand-written shape.
+     *
+     * Measured on wm_chao.bam, a two-cycle spell graphic the header called eight directions with its east
+     * mirrored. Two cycles are short of every scheme's stored arc, so this is the settled negative rather
+     * than the unknown above: the reader hands back no blocks at all.
+     */
+    it("says no directions for a two-cycle file read through the real block reader", () => {
+        // The file's own header: two one-frame cycles over two 32x32 frames anchored at the origin.
+        const spellGraphic = view({
+            sequences: [
+                { frameRefs: [0], facing: "none", dirOffsetX: 0, dirOffsetY: 0 },
+                { frameRefs: [1], facing: "none", dirOffsetX: 0, dirOffsetY: 0 },
+            ],
+            frames: [
+                { width: 32, height: 32, offsetX: 0, offsetY: 0 },
+                { width: 32, height: 32, offsetX: 0, offsetY: 0 },
+            ],
+        });
+
+        expect(directionBlocks(spellGraphic)).toBeUndefined();
+
+        const facts = animationFacts({ view: spellGraphic, blocks: directionBlocks(spellGraphic) });
+
+        expect(labelled(facts, "directions")).toBe("no directions");
+        expect(labelled(facts, "mirrored")).toBeUndefined();
     });
 
     /** Nothing is mirrored here, so the chip is absent: a header says what is unusual, not what is normal. */
@@ -174,20 +216,26 @@ describe("animationFacts mirroring", () => {
      * this fact exists to show, and the one nothing in the picture reveals.
      */
     it("calls a lone eight-slot base file's east mirrored", () => {
-        const facts = animationFacts({ view: view({ composedFiles: 1 }), blocks: blocks({ scheme: "ie8" }) });
+        const facts = animationFacts({
+            view: view({ composedFiles: 1 }),
+            blocks: blocks({ scheme: "ie8", detected: true }),
+        });
 
         expect(labelled(facts, "mirrored")).toBe("east mirrored");
     });
 
     it("says nothing about mirroring for a base-and-east pair, which stores all eight", () => {
-        const facts = animationFacts({ view: view({ composedFiles: 2 }), blocks: blocks({ scheme: "ie8" }) });
+        const facts = animationFacts({
+            view: view({ composedFiles: 2 }),
+            blocks: blocks({ scheme: "ie8", detected: true }),
+        });
 
         expect(labelled(facts, "mirrored")).toBeUndefined();
     });
 
     /** The count belongs in the tooltip: "east mirrored" alone does not say how much is real art. */
     it("says how many facings are stored behind the mirrored chip", () => {
-        const facts = animationFacts({ view: view(), blocks: blocks({ scheme: "ie9" }) });
+        const facts = animationFacts({ view: view(), blocks: blocks({ scheme: "ie9", detected: true }) });
 
         expect(facts.find((fact) => fact.id === "mirrored")?.title).toContain("9 of 16");
     });
@@ -247,7 +295,7 @@ describe("animationFacts tooltips", () => {
     it("gives every fact a tooltip saying more than its label", () => {
         const facts = animationFacts({
             view: view({ composedFiles: 2, set: set({ section: "character" }) }),
-            blocks: blocks({ scheme: "ie8" }),
+            blocks: blocks({ scheme: "ie8", detected: true }),
         });
 
         expect(facts.length).toBeGreaterThan(2);
