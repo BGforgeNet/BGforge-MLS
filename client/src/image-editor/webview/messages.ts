@@ -415,7 +415,10 @@ export function saveRequestKey(request: SaveRequestView): string {
         request.section,
         request.notes,
         request.destination,
-    ].join(" ");
+        // Escaped rather than typed: a raw NUL in the source makes ripgrep and git grep treat this whole
+        // file as binary and skip it silently. The separator itself is deliberate - no field can contain
+        // one, so no combination of fields can collide with another.
+    ].join("\0");
 }
 
 /**
