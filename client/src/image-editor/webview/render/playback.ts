@@ -20,11 +20,12 @@ export const DEFAULT_PLAYBACK_FPS = 15;
  * The transport's resting state, for a surface that is drawn before anything is loaded.
  *
  * No frames, so every control resolves to its own disabled case by the rules already here rather than by a
- * second "nothing loaded" branch through each of them.
+ * second "nothing loaded" branch through each of them. Looping is already on, matching what the first
+ * animation will arrive with: the reader should not watch the Loop control light itself as the file lands.
  */
 export const IDLE_PLAYBACK: PlaybackState = {
     playing: false,
-    loop: false,
+    loop: true,
     frame: 0,
     fps: DEFAULT_PLAYBACK_FPS,
     frameCount: 0,
@@ -35,6 +36,25 @@ export function createPlayback(opts: { frameCount: number; fps: number }): Playb
     // stored fps metadata is untouched (a 0-fps FRM still shows and saves 0).
     const fps = opts.fps >= 1 ? opts.fps : DEFAULT_PLAYBACK_FPS;
     return { playing: false, loop: false, frame: 0, fps, frameCount: opts.frameCount };
+}
+
+/**
+ * The transport for a newly opened animation, carrying over what the reader chose on the last one.
+ *
+ * Play and loop belong to the READER, not to the file: picking another stance asks to watch a different
+ * clip, not to stop watching, so a transport left running keeps running and a loop left on stays on -
+ * the same lifetime `zoom` and `background` already have. The frame is not carried: a different clip
+ * starts at its own beginning, and its own fps and length replace the old one's.
+ *
+ * With nothing to carry - the first animation a panel opens - looping starts ON, because the reason to
+ * open an animation is to watch it move.
+ */
+export function nextPlayback(previous: PlaybackState | null, opts: { frameCount: number; fps: number }): PlaybackState {
+    const fresh = createPlayback(opts);
+    // Below two frames every transport control disables itself, so a carried `playing` would leave a
+    // transport claiming to run with no control able to stop it.
+    const playing = previous?.playing === true && fresh.frameCount > 1;
+    return { ...fresh, playing, loop: previous?.loop ?? true };
 }
 
 export function play(state: PlaybackState): PlaybackState {

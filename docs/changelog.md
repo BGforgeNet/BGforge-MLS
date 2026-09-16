@@ -17,6 +17,8 @@
 - Animation browser now supports entire sets of Infinity Engine creature animations, when an IE game is open.
 - Creature BAMs that store the western directions and mirror the eastern ones open as a compass rose, as does a
   single nine-direction block such as the Throne of Bhaal dragons, instead of a flat row of cycles.
+- Playback starts with looping on, and carries its play and loop settings from one animation to the next, so
+  moving between a set's stances no longer stops the animation and rewinds it.
 - Converting an FRM to a BAM writes its directions in the right rotation order.
 
 ### Binary editor

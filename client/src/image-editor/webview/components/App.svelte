@@ -11,9 +11,9 @@
     } from "../messages";
     import { checkerboardCss, GREEN, type Background } from "../render/indexed-to-rgba";
     import {
-        createPlayback,
         cycleFrameIndex,
         IDLE_PLAYBACK,
+        nextPlayback,
         setFrame,
         tick,
         timelineFrameCount,
@@ -366,7 +366,10 @@
     $effect(() => {
         if (!view) return;
         const frameCount = untrack(() => timelineFrameCount(drawnCycles));
-        playback = createPlayback({ frameCount, fps: view.meta.fps ?? 0 });
+        // The outgoing transport, read untracked like the frame count beside it: `nextPlayback` carries the
+        // reader's play and loop choices onto the new animation, and tracking what this effect writes
+        // would restart it on every transition.
+        playback = nextPlayback(untrack(() => playback), { frameCount, fps: view.meta.fps ?? 0 });
 
         let raf: number;
         let lastTime: number | undefined;

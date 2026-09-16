@@ -4,6 +4,7 @@ import {
     createPlayback,
     cycleFrameIndex,
     msPerFrame,
+    nextPlayback,
     pause,
     play,
     setFrame,
@@ -17,6 +18,37 @@ import {
 test("createPlayback returns a stopped state at frame 0", () => {
     const state = createPlayback({ frameCount: 5, fps: 10 });
     expect(state).toEqual({ playing: false, loop: false, frame: 0, fps: 10, frameCount: 5 });
+});
+
+test("the first animation of a session starts looping, and stopped", () => {
+    // Loop is the reader's default because the reason to open an animation is to watch it move; a first
+    // open has no previous transport to take it from.
+    const state = nextPlayback(null, { frameCount: 5, fps: 10 });
+    expect(state).toEqual({ playing: false, loop: true, frame: 0, fps: 10, frameCount: 5 });
+});
+
+test("a new animation keeps the transport the reader left running", () => {
+    // Switching stance asks to watch a different clip, not to stop watching: play and loop are the
+    // reader's choices and outlive the animation they were made on, as zoom and background already do.
+    const previous: PlaybackState = { playing: true, loop: false, frame: 7, fps: 10, frameCount: 12 };
+
+    const state = nextPlayback(previous, { frameCount: 5, fps: 24 });
+
+    expect(state).toEqual({ playing: true, loop: false, frame: 0, fps: 24, frameCount: 5 });
+});
+
+test("a transport the reader stopped stays stopped on the next animation", () => {
+    const previous: PlaybackState = { playing: false, loop: true, frame: 0, fps: 10, frameCount: 12 };
+
+    expect(nextPlayback(previous, { frameCount: 5, fps: 10 }).playing).toBe(false);
+});
+
+test("a single-frame animation does not inherit playing, which its controls refuse", () => {
+    // Every transport control disables itself below two frames, so a carried `playing` would leave a
+    // transport claiming to run while nothing can pause or stop it.
+    const previous: PlaybackState = { playing: true, loop: true, frame: 3, fps: 10, frameCount: 12 };
+
+    expect(nextPlayback(previous, { frameCount: 1, fps: 10 }).playing).toBe(false);
 });
 
 test("createPlayback resolves a zero or negative fps to the 15 fps default", () => {
