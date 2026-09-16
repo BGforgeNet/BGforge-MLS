@@ -34,7 +34,8 @@ function hostUp(m: WebviewToHost): HostToWebview[] {
     if (m.type === "ready") return [{ type: "init", view }];
     if (m.type === "requestCreatures") {
         creatureRequests += 1;
-        return [{ type: "creatures", entries: CREATURES }];
+        // A game answered: this harness renders the picker with an install's creatures in it.
+        return [{ type: "creatures", entries: CREATURES, gameOpen: true }];
     }
     if (m.type === "setCreature") {
         chosen.push(m.resref);

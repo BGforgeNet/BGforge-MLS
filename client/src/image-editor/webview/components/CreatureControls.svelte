@@ -14,12 +14,20 @@
 
     const {
         creatures,
+        gameOpen,
         active,
         onrequest,
         onchoose,
         onopengame,
     }: {
         creatures: CreatureOption[];
+        /**
+         * Whether an install answered the last request.
+         *
+         * The note below used to read this off `creatures.length`, which says the same thing for "no game
+         * open" and "this install lists no creatures" - so a reader with a game open was told to open one.
+         */
+        gameOpen: boolean;
         active: string | undefined;
         /** Ask the host for the list. Called on first open - most files are never recoloured. */
         onrequest: () => void;
@@ -37,7 +45,7 @@
     // Reactive: the empty-state note below reads it, so a plain field would never re-render.
     let requested = $state(false);
     function load(): void {
-        if (!shouldFetchCreatures(requested, creatures.length)) return;
+        if (!shouldFetchCreatures(requested, gameOpen)) return;
         requested = true;
         onrequest();
     }
@@ -85,11 +93,14 @@
     />
     {#if !requested}
         <!-- Nothing is known before the list is asked for, and a count of an unfetched list would be a lie. -->
-    {:else if creatures.length === 0}
+    {:else if !gameOpen}
         <!-- The note names what is missing and the button supplies it: telling a reader to open a game is
              only half an answer while the way to do it is a command they have to go and find. -->
         <p class="creature-note">No creatures - open a game to draw this in real colours.</p>
         <button type="button" class="creature-opengame" onclick={onopengame}>Open game...</button>
+    {:else if creatures.length === 0}
+        <!-- A game answered and named nobody. Opening one is not the fix, so this state does not offer it. -->
+        <p class="creature-note">This install lists no creatures to take colours from.</p>
     {:else if matchCount === 0}
         <p class="creature-note">No creature uses this animation - showing all.</p>
     {:else if !onlyMatching}

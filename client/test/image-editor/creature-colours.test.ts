@@ -182,6 +182,7 @@ describe("the creatures on offer", () => {
         expect(posted).toEqual([
             {
                 type: "creatures",
+                gameOpen: true,
                 entries: [
                     { resref: "AGNASI", name: "Agnasi", matches: true },
                     { resref: "ZOMBIE1", name: "", matches: true },
@@ -201,7 +202,26 @@ describe("the creatures on offer", () => {
 
         await send({ type: "requestCreatures" });
 
-        expect(posted).toEqual([{ type: "creatures", entries: [] }]);
+        expect(posted).toEqual([{ type: "creatures", gameOpen: false, entries: [] }]);
+    });
+
+    /**
+     * The two empty answers, told apart.
+     *
+     * An install that lists no creatures answers with an empty list, exactly as no install does - and only
+     * one of them is fixed by opening a game, which is what the picker's note offers to do. The resolver
+     * has always drawn this distinction (undefined against an empty array); the provider used to collapse
+     * it before the webview could see it.
+     */
+    it("says a game answered even when it names no creatures", async () => {
+        const provider = new ImageEditorProvider(context, undefined, colorSource({ creatures: () => [] }));
+        const document = await provider.openDocument(fileUri(DOC_PATH));
+        const { channel, posted, send } = makeChannel();
+        provider.attach(document, channel, surface);
+
+        await send({ type: "requestCreatures" });
+
+        expect(posted).toEqual([{ type: "creatures", gameOpen: true, entries: [] }]);
     });
 });
 

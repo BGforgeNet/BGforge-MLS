@@ -110,6 +110,8 @@
      * Raw: a host payload replaced wholesale, and an install ships thousands of them.
      */
     let creatures = $state.raw<CreatureOption[]>([]);
+    /** Whether an install answered the last request - false before one has, which is not the same as none. */
+    let creaturesGameOpen = $state(false);
     let activeCreature = $state<string | undefined>();
     /**
      * The Save As dialog: whether it is up, the defaults the host answered with, and its plan for the
@@ -304,6 +306,7 @@
                 loadedPixels = next;
             } else if (m.type === "creatures") {
                 creatures = m.entries;
+                creaturesGameOpen = m.gameOpen;
             } else if (m.type === "saveAsSetup") {
                 saveAsSetup = m.setup;
             } else if (m.type === "savePlan") {
@@ -628,6 +631,7 @@
             {#if !view || (view.colorModel === "indexed" && view.sourceFormat !== "frm")}
                 <CreatureControls
                     {creatures}
+                    gameOpen={creaturesGameOpen}
                     active={activeCreature}
                     onrequest={() => bridge.send({ type: "requestCreatures" })}
                     onchoose={(resref) => bridge.send({ type: "setCreature", resref })}

@@ -294,20 +294,29 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
      * hundreds of creatures, so the matching set is a useful default and not a small one, and borrowing a
      * palette from an unrelated creature is a legitimate thing to want.
      */
-    private creatureOptions(document: ImageEditorDocument): CreatureOption[] {
-        const index = this.creatureColors?.creatures(document.uri) ?? [];
+    /**
+     * The creatures to offer, and whether a game answered at all.
+     *
+     * Both, because an empty list means two different things and the webview branches on which: the
+     * resolver returns undefined where no install could be resolved and an empty array for an install that
+     * lists no creatures. Collapsing the two here is what made the picker's note tell a reader with a game
+     * open to go and open one.
+     */
+    private creatureOptions(document: ImageEditorDocument): { entries: CreatureOption[]; gameOpen: boolean } {
+        const index = this.creatureColors?.creatures(document.uri);
         const code = this.animationCodeOf(document);
-        const options = index.map((entry) => ({
+        const options = (index ?? []).map((entry) => ({
             resref: entry.resref,
             name: entry.name,
             matches: entry.animationCode !== "" && entry.animationCode === code,
         }));
         // Matching first, then by name so the list reads alphabetically within each half; a creature the
         // string table cannot name sorts by its resref, which is all it has.
-        return options.sort((a, b) => {
+        const entries = options.sort((a, b) => {
             if (a.matches !== b.matches) return a.matches ? -1 : 1;
             return (a.name || a.resref).localeCompare(b.name || b.resref);
         });
+        return { entries, gameOpen: index !== undefined };
     }
 
     /** The document's own palette - what it shows with no creature chosen. Empty for a palette-less BAM v2. */
@@ -424,7 +433,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 document.setExternalPalette(message.enabled);
                 break;
             case "requestCreatures": {
-                this.post(channel, { type: "creatures", entries: this.creatureOptions(document) });
+                this.post(channel, { type: "creatures", ...this.creatureOptions(document) });
                 break;
             }
             case "openGame":

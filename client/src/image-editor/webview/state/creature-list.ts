@@ -8,10 +8,12 @@
 /**
  * Whether opening the picker should ask the host for the list.
  *
- * Asked-and-answered stops the repeat. An EMPTY answer is not an answer to keep: it means no game is open,
- * which the note beside the picker tells the reader to fix - so the next open must ask again rather than
- * serve the pre-game emptiness for the rest of the document's life.
+ * Asked-and-answered stops the repeat, and what counts as an answer is a GAME having answered - not the
+ * list being non-empty. Until one has, the note beside the picker asks the reader to open an install, so
+ * the next open must pick up the one they just opened rather than serving the pre-game emptiness for the
+ * rest of the document's life. Keying on emptiness instead also re-asked, forever, for an install that
+ * genuinely lists no creatures.
  */
-export function shouldFetchCreatures(asked: boolean, listed: number): boolean {
-    return !asked || listed === 0;
+export function shouldFetchCreatures(asked: boolean, gameOpen: boolean): boolean {
+    return !asked || !gameOpen;
 }

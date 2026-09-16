@@ -522,7 +522,13 @@ export type HostToWebview =
     // Answer to `requestFrames`: `frames[i]` is the frame at `indices[i]`, spanning `pixels`.
     | { type: "frames"; indices: number[]; frames: FrameView[]; pixels: ArrayBuffer }
     /** Creatures the open game holds, the ones using this animation first. Empty outside a game. */
-    | { type: "creatures"; entries: CreatureOption[] }
+    /**
+     * The install's creatures, and whether an install answered.
+     *
+     * `gameOpen` is stated rather than read off `entries.length`: no game and an install that lists no
+     * creatures both arrive as an empty list, and only the first of them is fixed by opening a game.
+     */
+    | { type: "creatures"; entries: CreatureOption[]; gameOpen: boolean }
     /** The palette the view should draw with: a creature's resolved colours, or the animation's own when
      *  `creature` is absent. A view state - the document's own palette is never changed by it. */
     | { type: "palette"; palette: Rgba[]; creature?: string }
