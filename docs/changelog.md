@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.16.1
+
+- Republishes 3.16.0, which reached GitHub Releases but not the VS Marketplace, Open VSX or npm. No other changes.
+
 ## 3.16.0
 
 ### Image gallery
