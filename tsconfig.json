@@ -1,4 +1,6 @@
 {
     "extends": "./tsconfig.base.json",
-    "include": []
+    // Only the root-level tool configs: every package has its own tsconfig, so listing them here would
+    // typecheck each package twice. Without an entry, an editor checks these files with no Node types.
+    "include": ["knip.ts", "vitest.config.ts"]
 }
