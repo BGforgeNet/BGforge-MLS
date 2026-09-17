@@ -64,6 +64,7 @@ parallel \
     "Typecheck bcs" "(cd compilers/bcs && tsc --noEmit)" \
     "Typecheck ssl" "(cd compilers/ssl && tsc --noEmit)" \
     "Typecheck tssl" "(cd compilers/tssl && tsc --noEmit)" \
+    "Typecheck root configs" "tsc --project tsconfig.json" \
     "Oxlint" "oxlint" \
     "Type-aware lint" "pnpm lint:types" \
     "Test lint" "pnpm lint:tests" \
