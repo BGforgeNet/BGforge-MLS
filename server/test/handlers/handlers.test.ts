@@ -131,6 +131,7 @@ beforeAll(() => {
     initSettingsService(() => Promise.resolve(defaultSettings));
     initServerContext({
         capabilities: { configuration: false, workspaceFolders: false, fileWatching: false },
+        client: { info: undefined, capabilities: {} },
         workspaceRoot: undefined,
         projectSettings: {} as ProjectSettings,
         settings: { ...defaultSettings, debug: false },

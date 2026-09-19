@@ -91,8 +91,11 @@ async function waitForFile(filePath: string, timeoutMs = 10000): Promise<void> {
     throw new Error(`Timed out waiting for file ${filePath}`);
 }
 
-/** Spawn the built server and complete the initialize/initialized handshake. Returns the process. */
-async function spawnInitialized(): Promise<ChildProcess> {
+/**
+ * Spawn the built server and complete the initialize/initialized handshake. Returns the process.
+ * `initParams` is merged over the default initialize params.
+ */
+async function spawnInitialized(initParams: Record<string, unknown> = {}): Promise<ChildProcess> {
     const proc = spawn("node", [SERVER_PATH, "--stdio"], {
         stdio: ["pipe", "pipe", "pipe"],
     });
@@ -105,6 +108,7 @@ async function spawnInitialized(): Promise<ChildProcess> {
             capabilities: {},
             rootUri: null,
             workspaceFolders: null,
+            ...initParams,
         },
     });
     if (!initResponse.result) {
@@ -577,6 +581,31 @@ begin("DIALOG", [start]);
                 `Expected a debug hover log after enabling bgforge.debug via didChangeConfiguration. ` +
                     `logMessage notifications seen: ${JSON.stringify(messages.filter((m) => m.method === "window/logMessage"))}`,
             ).toBeDefined();
+        },
+    );
+
+    it(
+        "config: switching bgforge.debug on logs what the client announced at initialize",
+        { timeout: 30000 },
+        async () => {
+            const capabilities = { textDocument: { hover: { contentFormat: ["markdown"] } } };
+            proc = await spawnInitialized({ clientInfo: { name: "Smoke Editor", version: "9.9" }, capabilities });
+            const messages = collectMessages(proc);
+
+            notify(proc, {
+                jsonrpc: "2.0",
+                method: "workspace/didChangeConfiguration",
+                params: { settings: { bgforge: { debug: true } } },
+            });
+
+            const logLines = () =>
+                messages.flatMap((m) => {
+                    const message = (m.params as { message?: unknown } | undefined)?.message;
+                    return m.method === "window/logMessage" && typeof message === "string" ? [message] : [];
+                });
+            await expect
+                .poll(() => logLines().find((line) => line.includes("LSP client:")), { timeout: 10000 })
+                .toBe(`[debug] LSP client: Smoke Editor 9.9; capabilities: ${JSON.stringify(capabilities, null, 2)}`);
         },
     );
 });

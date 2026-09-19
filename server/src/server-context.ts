@@ -19,6 +19,7 @@
  * tests on the first request the client sends.
  */
 
+import type { ClientCapabilities, InitializeParams } from "vscode-languageserver/node";
 import { conlog, setDebugLogging } from "./logger";
 import type { MLSsettings, ProjectSettings } from "./settings";
 import type { Translation } from "./translation";
@@ -42,9 +43,16 @@ interface ClientCapabilityFlags {
     readonly fileWatching: boolean;
 }
 
+/** What the client said about itself in `initialize`, kept whole for the debug log. */
+interface ClientAnnouncement {
+    readonly info: InitializeParams["clientInfo"];
+    readonly capabilities: ClientCapabilities;
+}
+
 /** Session-scoped state container populated once by onInitialize. */
 interface ServerContext {
     readonly capabilities: ClientCapabilityFlags;
+    readonly client: ClientAnnouncement;
     readonly workspaceRoot: string | undefined;
     readonly projectSettings: ProjectSettings;
     settings: MLSsettings;
@@ -84,8 +92,20 @@ initWatchdog.unref();
 export function initServerContext(value: ServerContext): void {
     clearTimeout(initWatchdog);
     ctx = value;
-    setDebugLogging(value.settings.debug);
+    applyDebugSetting(false, value.settings.debug, value.client);
     resolveContextReady(value);
+}
+
+/**
+ * Toggle debug logging and, each time it switches on, log what the client announced at `initialize`.
+ * Logged on the switch rather than at startup because the real settings arrive only after the handshake,
+ * and the setting can be switched on mid-session, which does not restart the server.
+ */
+function applyDebugSetting(wasEnabled: boolean, enabled: boolean, client: ClientAnnouncement): void {
+    setDebugLogging(enabled);
+    if (!enabled || wasEnabled) return;
+    const name = client.info ? `${client.info.name} ${client.info.version ?? ""}`.trimEnd() : "(not announced)";
+    conlog(`LSP client: ${name}; capabilities: ${JSON.stringify(client.capabilities, null, 2)}`, "debug");
 }
 
 /**
@@ -111,6 +131,7 @@ export function updateServerSettings(s: MLSsettings): void {
     if (!ctx) {
         throw new Error("ServerContext not initialized. Call initServerContext first.");
     }
+    const wasEnabled = ctx.settings.debug;
     ctx.settings = s;
-    setDebugLogging(s.debug);
+    applyDebugSetting(wasEnabled, s.debug, ctx.client);
 }

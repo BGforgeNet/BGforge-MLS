@@ -6,9 +6,11 @@
  */
 
 import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
+import { MarkupKind } from "vscode-languageserver/node";
 import type { MLSsettings, ProjectSettings } from "../src/settings";
 import type { Translation } from "../src/translation";
 import { ConfiguredGame } from "../src/ie-resources/configured-game";
+import type * as ServerContextModule from "../src/server-context";
 
 const { mockConlog } = vi.hoisted(() => ({ mockConlog: vi.fn() }));
 vi.mock("../src/logger", () => ({
@@ -20,6 +22,10 @@ vi.mock("../src/logger", () => ({
 function makeStubContext() {
     return {
         capabilities: { configuration: false, workspaceFolders: false, fileWatching: false },
+        client: {
+            info: { name: "Test Editor", version: "1.2.3" },
+            capabilities: { textDocument: { hover: { contentFormat: [MarkupKind.Markdown] } } },
+        },
         workspaceRoot: undefined,
         projectSettings: {} as ProjectSettings,
         settings: {} as MLSsettings,
@@ -29,7 +35,7 @@ function makeStubContext() {
 }
 
 describe("server-context", () => {
-    let initServerContext: (value: ReturnType<typeof makeStubContext>) => void;
+    let initServerContext: typeof ServerContextModule.initServerContext;
     let getServerContext: () => Promise<ReturnType<typeof makeStubContext>>;
     let tryGetServerContext: () => ReturnType<typeof makeStubContext> | undefined;
     let updateServerSettings: (s: MLSsettings) => void;
@@ -139,6 +145,43 @@ describe("server-context", () => {
             updateServerSettings(newSettings);
 
             expect(tryGetServerContext()?.settings).toBe(newSettings);
+        });
+    });
+
+    describe("client announcement debug log", () => {
+        const debugCalls = () => mockConlog.mock.calls.filter((c) => c[1] === "debug").map((c) => c[0] as string);
+        const withDebug = (debug: boolean) => ({ debug }) as MLSsettings;
+
+        it("logs the client's name and capabilities when debug switches on", () => {
+            initServerContext(makeStubContext());
+            updateServerSettings(withDebug(true));
+
+            expect(debugCalls()).toStrictEqual([
+                'LSP client: Test Editor 1.2.3; capabilities: {\n  "textDocument": {\n    "hover": {\n' +
+                    '      "contentFormat": [\n        "markdown"\n      ]\n    }\n  }\n}',
+            ]);
+        });
+
+        it("logs again only after debug was switched off in between", () => {
+            initServerContext(makeStubContext());
+            updateServerSettings(withDebug(true));
+            updateServerSettings(withDebug(true));
+            expect(debugCalls()).toHaveLength(1);
+
+            updateServerSettings(withDebug(false));
+            updateServerSettings(withDebug(true));
+            expect(debugCalls()).toHaveLength(2);
+        });
+
+        it("logs at init when the initial settings already have debug on", () => {
+            initServerContext({ ...makeStubContext(), settings: withDebug(true) });
+            expect(debugCalls()).toHaveLength(1);
+        });
+
+        it("says so when the client sent no clientInfo", () => {
+            initServerContext({ ...makeStubContext(), client: { info: undefined, capabilities: {} } });
+            updateServerSettings(withDebug(true));
+            expect(debugCalls()).toStrictEqual(["LSP client: (not announced); capabilities: {}"]);
         });
     });
 });

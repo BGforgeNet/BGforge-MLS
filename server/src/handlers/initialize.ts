@@ -156,6 +156,7 @@ export function register(ctx: HandlerContext): void {
                 workspaceFolders: capabilityFlags.workspaceFolders,
                 fileWatching: capabilityFlags.fileWatching,
             },
+            client: { info: params.clientInfo, capabilities: caps },
             workspaceRoot,
             projectSettings,
             settings: defaultSettings,
