@@ -495,9 +495,39 @@
             }
         },
         {
+            // Client code reads workspace content through `vscode.workspace.fs`, which dispatches by URI
+            // scheme - including to the two providers this extension itself registers (`bgforge-ie-resource`,
+            // `bgforge-script`), whose files `node:fs` cannot see at all. Reaching past it also returns
+            // nothing in a virtual or remote workspace, and fails silently rather than erroring.
+            //
+            // The point of the rule is not that `fs` is always wrong here - the allowlisted sites below are
+            // correct. It is that three kinds of path (extension-owned asset, absolute path from a setting,
+            // workspace content) otherwise look identical at the call site, so nothing records which kind a
+            // given `fs` call holds. The allowlist is where that distinction is written down; a new `fs`
+            // import has to join it and say which kind it is.
+            "files": ["client/src/**/*.ts"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "patterns": [
+                            {
+                                "group": ["fs", "node:fs", "fs/promises", "node:fs/promises"],
+                                "message": "Workspace content goes through vscode.workspace.fs / workspace.findFiles. For an extension-owned asset or an absolute install path, add the file to the allowlist in .oxlintrc.json and say which kind it is."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
             // bits-ui is an accessible headless component primitive library.
             // All imports must go through the primitive wrappers (webview-ui/ for the ones shared
             // across editors) so the dependency has one swap point if it is ever replaced.
+            //
+            // The `patterns` group repeats the node-fs ban from the override above because oxlint REPLACES a
+            // rule's options per override instead of merging them - verified by probe. Without it these two
+            // directories would silently drop that ban.
             "files": ["client/src/binary-editor/webview/**", "client/src/image-editor/webview/**"],
             "rules": {
                 "no-restricted-imports": [
@@ -508,6 +538,12 @@
                                 "name": "bits-ui",
                                 "message": "Import bits-ui only via webview/components/primitives wrappers."
                             }
+                        ],
+                        "patterns": [
+                            {
+                                "group": ["fs", "node:fs", "fs/promises", "node:fs/promises"],
+                                "message": "Webview code is a browser bundle; it has no filesystem. Data reaches it by postMessage from the host."
+                            }
                         ]
                     }
                 ]
@@ -515,8 +551,59 @@
         },
         {
             // The primitive wrapper directories are the designated single import
-            // point for bits-ui; the restriction above does not apply here.
+            // point for bits-ui; that restriction does not apply here. The node-fs group is restated rather
+            // than switched off with it, since per-override options replace rather than merge and these
+            // directories are still browser code.
             "files": ["client/src/binary-editor/webview/components/primitives/**", "client/src/webview-ui/**"],
+            "rules": {
+                "no-restricted-imports": [
+                    "error",
+                    {
+                        "patterns": [
+                            {
+                                "group": ["fs", "node:fs", "fs/promises", "node:fs/promises"],
+                                "message": "Webview code is a browser bundle; it has no filesystem. Data reaches it by postMessage from the host."
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            // Raw filesystem access is correct at these sites, by the PROVENANCE of the path each holds.
+            // None of them is workspace content, so no FileSystemProvider can serve them and
+            // `vscode.workspace.fs` would buy nothing:
+            //   webview-assets.ts, script-view/parser.ts - the extension's OWN installed files (webview
+            //     HTML, web-tree-sitter.wasm), resolved against the bundle directory.
+            //   gallery/game-source.ts, ie-resources/register.ts - an absolute game install path taken from
+            //     `bgforge.weidu.gamePath`, which is a real local directory by definition.
+            //   gallery/worker.ts - a worker_threads worker reading BIF archives; Node by construction, and
+            //     `vscode` does not exist in a worker thread.
+            "files": [
+                "client/src/webview-assets.ts",
+                "client/src/script-view/parser.ts",
+                "client/src/gallery/game-source.ts",
+                "client/src/gallery/worker.ts",
+                "client/src/ie-resources/register.ts"
+            ],
+            "rules": {
+                "no-restricted-imports": "off"
+            }
+        },
+        {
+            // Test harnesses and build drivers are Node programs that run outside the extension host.
+            "files": ["client/src/**/test/**"],
+            "rules": {
+                "no-restricted-imports": "off"
+            }
+        },
+        {
+            // KNOWN VIOLATION, not an exemption - the one site the rule above was written for. This walks
+            // WORKSPACE content with readdirSync, so it sees nothing behind a FileSystemProvider and nothing
+            // in a virtual workspace. It belongs on `workspace.findFiles`. The entry exists only so the rule
+            // can be enforced before the fix lands, and should be deleted together with the last `fs` call
+            // in that file.
+            "files": ["client/src/gallery/workspace-source.ts"],
             "rules": {
                 "no-restricted-imports": "off"
             }

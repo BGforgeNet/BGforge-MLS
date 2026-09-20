@@ -71,6 +71,10 @@ gate and the sibling to copy: `docs/development.md`.
   branded type for URIs as Map/Set keys.
 - **Never call `connection.window.show{Information,Warning,Error}Message`** in server code. Use `showInfo()`,
   `showWarning()`, `showError()`, `showErrorWithActions()` from `user-messages.ts`. Enforced by an oxlint rule.
+- **`node:fs` in `client/src` is allowlisted, not banned.** Workspace content goes through `vscode.workspace.fs` /
+  `workspace.findFiles`; raw `fs` stays correct for the extension's own installed files and for an absolute install
+  path. A new `fs` call site must join the allowlist and say which kind of path it holds. Enforced by
+  `no-restricted-imports`; the allowlist, and the reason per site, are in `.oxlintrc.json`.
 - **Webview CSP:** `style-src` must include `{{cspSource}}`, not a bare nonce - the real panel silently drops a
   nonce-only stylesheet while headless renders still pass. Load CSS as `webview.asWebviewUri()` `<link>`, keep the
   nonce for `script-src`, add each CSS dir to `localResourceRoots`. Why: the header of `client/src/webview-html.ts`.
