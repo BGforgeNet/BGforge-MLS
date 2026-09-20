@@ -87,7 +87,18 @@ vi.mock("vscode", () => ({
         },
         executeCommand: async () => {},
     },
-    workspace: { workspaceFolders: [] },
+    workspace: {
+        workspaceFolders: [],
+        // The gallery keeps one watcher for the extension's lifetime to move workspace stamps. Nothing here
+        // browses a workspace, so it need only exist and be disposable.
+        createFileSystemWatcher: () => ({
+            onDidCreate: () => ({ dispose: () => {} }),
+            onDidChange: () => ({ dispose: () => {} }),
+            onDidDelete: () => ({ dispose: () => {} }),
+            dispose: () => {},
+        }),
+        findFiles: () => Promise.resolve([]),
+    },
 }));
 
 // The chrome comes from the shared builder, which reads template and bundle files off disk; nothing here
@@ -156,25 +167,27 @@ describe("the gallery opens at most one panel", () => {
         expect(created[0]?.posted.length).toBe(before);
     });
 
-    it("moves the live panel to the other source instead of opening one beside it", () => {
+    // Awaited, not read straight back: retargeting takes a fresh reading of the corpus, and for the workspace
+    // that means asking the editor for a file listing rather than the disk.
+    it("moves the live panel to the other source instead of opening one beside it", async () => {
         showGame();
         created[0]?.ready();
 
         showWorkspace();
 
         expect(created).toHaveLength(1);
-        expect(created[0]?.lastSource()).toBe("workspace");
+        await vi.waitFor(() => expect(created[0]?.lastSource()).toBe("workspace"));
         expect(created[0]?.panel.title).toBe("Workspace Image Gallery");
     });
 
-    it("points the live panel at an animation a link names", () => {
+    it("points the live panel at an animation a link names", async () => {
         showGame();
         created[0]?.ready();
 
         commands.get("bgforge.gallery.showAnimation")?.(0x6500);
 
         expect(created).toHaveLength(1);
-        expect(lastInit(created[0]?.posted ?? [])).toMatchObject({ focusSet: 0x6500 });
+        await vi.waitFor(() => expect(lastInit(created[0]?.posted ?? [])).toMatchObject({ focusSet: 0x6500 }));
     });
 
     it("opens a new panel once the live one is closed", () => {

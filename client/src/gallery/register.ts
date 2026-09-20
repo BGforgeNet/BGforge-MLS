@@ -20,7 +20,7 @@ import {
     wireGalleryPanel,
 } from "./panel";
 import { type GallerySource } from "./source";
-import { workspaceSource } from "./workspace-source";
+import { SKIP_DIRS, workspaceSource } from "./workspace-source";
 import { resourceUri } from "../ie-resources/uri";
 import { animationSetAddress } from "../ie-resources/open-set";
 import { drawsAnimation } from "../image-editor/formats";
@@ -73,7 +73,31 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         return at?.kind === "file" ? vscode.Uri.file(at.path) : undefined;
     };
 
-    const sourceFor = (kind: "game" | "workspace"): GallerySource | undefined => {
+    /**
+     * One workspace watcher for the extension's lifetime, feeding every workspace source's stamps.
+     *
+     * Owned here rather than inside a source: sources are rebuilt on every retarget and on every game change,
+     * and a watcher each would have to be disposed with them, which `GallerySource` has no hook for.
+     */
+    const revisions = new Map<string, number>();
+    const removed = new Set<string>();
+    const watcher = vscode.workspace.createFileSystemWatcher("**/*");
+    const bump = (uri: vscode.Uri): void => {
+        removed.delete(uri.fsPath);
+        revisions.set(uri.fsPath, (revisions.get(uri.fsPath) ?? 0) + 1);
+    };
+    context.subscriptions.push(
+        watcher,
+        watcher.onDidCreate(bump),
+        watcher.onDidChange(bump),
+        watcher.onDidDelete((uri) => removed.add(uri.fsPath)),
+    );
+
+    // Kept off `findFiles` as well as filtered inside the source: the filter is what the source promises, this
+    // is what stops the editor walking a real checkout's `node_modules` to produce a list we then discard.
+    const heavyDirs = `**/{${[...SKIP_DIRS].join(",")}}/**`;
+
+    const sourceFor = async (kind: "game" | "workspace"): Promise<GallerySource | undefined> => {
         if (kind === "game") {
             const current = deps.gameSession();
             return current === undefined ? undefined : gameSource(current.game, { reveal: deps.revealResource });
@@ -86,6 +110,13 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
                 reveal: async (fsPath) => {
                     await vscode.commands.executeCommand("revealInExplorer", vscode.Uri.file(fsPath));
                 },
+                // Through the editor rather than the disk, so a workspace served by a FileSystemProvider - a
+                // virtual or remote folder - lists as readily as a local one.
+                listFiles: async (root) => {
+                    const found = await vscode.workspace.findFiles(new vscode.RelativePattern(root, "**/*"), heavyDirs);
+                    return found.map((uri) => uri.fsPath);
+                },
+                revision: (fsPath) => (removed.has(fsPath) ? undefined : (revisions.get(fsPath) ?? 0)),
             },
         );
     };

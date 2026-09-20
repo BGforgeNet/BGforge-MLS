@@ -122,10 +122,48 @@ describe("gameSource", () => {
     });
 });
 
+/**
+ * Every file under `root`, absolute, unfiltered - what the host's `findFiles` hands the source.
+ *
+ * The real implementation asks the editor; this one reads the temp tree the case just wrote, so the cases
+ * still exercise the source against a real directory shape rather than a list typed by hand.
+ */
+function allFiles(root: string): string[] {
+    const out: string[] = [];
+    for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
+        const abs = path.join(root, entry.name);
+        if (entry.isDirectory()) out.push(...allFiles(abs));
+        else out.push(abs);
+    }
+    return out;
+}
+
+/** The host side of the source's deps, with the two hooks a case needs to move a file's revision. */
+function hostDeps(reveal: (fsPath: string) => Promise<void> = vi.fn(async () => {})) {
+    const revisions = new Map<string, number>();
+    const deleted = new Set<string>();
+    return {
+        deps: {
+            reveal,
+            listFiles: (root: string): Promise<readonly string[]> => Promise.resolve(allFiles(root)),
+            revision: (fsPath: string): number | undefined =>
+                deleted.has(fsPath) ? undefined : (revisions.get(fsPath) ?? 0),
+        },
+        /** What the host's watcher does on a change event. */
+        changed: (fsPath: string): void => {
+            revisions.set(fsPath, (revisions.get(fsPath) ?? 0) + 1);
+        },
+        /** What it does on a delete event. */
+        removed: (fsPath: string): void => {
+            deleted.add(fsPath);
+        },
+    };
+}
+
 describe("workspaceSource", () => {
-    it("labels by path relative to the folder root and lists only drawables", () => {
+    it("labels by path relative to the folder root and lists only drawables", async () => {
         const dir = tmpDir({ "art/icon.bam": "x", "art/notes.txt": "x", "sprite.frm": "x" });
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        const src = await workspaceSource([{ name: "mod", path: dir }], hostDeps().deps);
         expect(
             src
                 .list()
@@ -134,18 +172,18 @@ describe("workspaceSource", () => {
         ).toEqual(["art/icon.bam", "sprite.frm"]);
     });
 
-    it("prefixes the folder name only when the workspace has more than one root", () => {
+    it("prefixes the folder name only when the workspace has more than one root", async () => {
         const one = tmpDir({ "icon.bam": "x" });
         const two = tmpDir({ "other.bam": "x" });
-        const single = workspaceSource([{ name: "mod", path: one }], { reveal: vi.fn() });
+        const single = await workspaceSource([{ name: "mod", path: one }], hostDeps().deps);
         expect(single.list().map((i) => i.label)).toEqual(["icon.bam"]);
 
-        const multi = workspaceSource(
+        const multi = await workspaceSource(
             [
                 { name: "mod", path: one },
                 { name: "other", path: two },
             ],
-            { reveal: vi.fn() },
+            hostDeps().deps,
         );
         expect(
             multi
@@ -155,29 +193,43 @@ describe("workspaceSource", () => {
         ).toEqual(["mod/icon.bam", "other/other.bam"]);
     });
 
-    it("locates an item at its real path on disk", () => {
+    it("locates an item at its real path on disk", async () => {
         const dir = tmpDir({ "icon.bam": "x" });
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        const src = await workspaceSource([{ name: "mod", path: dir }], hostDeps().deps);
         const [item] = src.list();
         expect(src.locate(item!.id)).toEqual({ kind: "file", path: path.join(dir, "icon.bam") });
     });
 
     // A workspace file is editable while the gallery is open, so unlike a biffed resource its stamp has to
     // move when the bytes do - otherwise an edited icon keeps showing its old thumbnail.
-    it("changes an item's stamp when the file changes", () => {
+    it("changes an item's stamp when the host reports the file changed", async () => {
         const dir = tmpDir({ "icon.bam": "x" });
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        const host = hostDeps();
+        const src = await workspaceSource([{ name: "mod", path: dir }], host.deps);
         const [item] = src.list();
         const before = src.stamp(item!.id);
-        fs.writeFileSync(path.join(dir, "icon.bam"), "much longer contents");
+        expect(before).toBeDefined();
+        host.changed(path.join(dir, "icon.bam"));
         expect(src.stamp(item!.id)).not.toBe(before);
     });
 
-    it("has no stamp for a file that has since been deleted", () => {
-        const dir = tmpDir({ "icon.bam": "x" });
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+    it("keeps an item's stamp still while nothing reports a change", async () => {
+        const dir = tmpDir({ "icon.bam": "x", "other.bam": "x" });
+        const host = hostDeps();
+        const src = await workspaceSource([{ name: "mod", path: dir }], host.deps);
         const [item] = src.list();
-        fs.rmSync(path.join(dir, "icon.bam"));
+        const before = src.stamp(item!.id);
+        // A neighbour moving must not move this item's stamp, or every edit re-decodes the whole grid.
+        host.changed(path.join(dir, "other.bam"));
+        expect(src.stamp(item!.id)).toBe(before);
+    });
+
+    it("has no stamp for a file the host reports deleted", async () => {
+        const dir = tmpDir({ "icon.bam": "x" });
+        const host = hostDeps();
+        const src = await workspaceSource([{ name: "mod", path: dir }], host.deps);
+        const [item] = src.list();
+        host.removed(path.join(dir, "icon.bam"));
         expect(src.stamp(item!.id)).toBeUndefined();
     });
 
@@ -186,18 +238,20 @@ describe("workspaceSource", () => {
      * while a modder's folder may not - so the match has to ignore case or every v2 in the workspace goes
      * blank on a case-sensitive host.
      */
-    it("finds a PVRZ page beside the file that names it, whatever its case", () => {
+    it("finds a PVRZ page beside the file that names it, whatever its case", async () => {
         const dir = tmpDir({ "art/icon.bam": "x", "art/mos0012.pvrz": "page" });
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        const src = await workspaceSource([{ name: "mod", path: dir }], hostDeps().deps);
         expect(src.locateAux("MOS0012.PVRZ", "art/icon.bam")).toEqual({
             kind: "file",
             path: path.join(dir, "art", "mos0012.pvrz"),
         });
     });
 
-    it("has no page when none sits beside the file, or the item is unknown", () => {
-        const dir = tmpDir({ "art/icon.bam": "x" });
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+    // The page is not a drawable, so it is absent from the item index - a listing filtered to gallery items
+    // could not answer this at all.
+    it("has no page when none sits beside the file, or the item is unknown", async () => {
+        const dir = tmpDir({ "art/icon.bam": "x", "elsewhere/mos0012.pvrz": "page" });
+        const src = await workspaceSource([{ name: "mod", path: dir }], hostDeps().deps);
         expect(src.locateAux("MOS0012.PVRZ", "art/icon.bam")).toBeUndefined();
         expect(src.locateAux("MOS0012.PVRZ", "nosuch.bam")).toBeUndefined();
     });
@@ -205,21 +259,21 @@ describe("workspaceSource", () => {
     it("reveals nothing for an item it does not have", async () => {
         const dir = tmpDir({ "icon.bam": "x" });
         const reveal = vi.fn(async () => {});
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal });
+        const src = await workspaceSource([{ name: "mod", path: dir }], hostDeps(reveal).deps);
         await src.reveal("nosuch.bam");
         expect(reveal).not.toHaveBeenCalled();
     });
 
-    it("skips directories that never hold art", () => {
+    it("skips directories that never hold art", async () => {
         const dir = tmpDir({ "node_modules/pkg/icon.bam": "x", ".git/icon.bam": "x", "real.bam": "x" });
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal: vi.fn() });
+        const src = await workspaceSource([{ name: "mod", path: dir }], hostDeps().deps);
         expect(src.list().map((i) => i.label)).toEqual(["real.bam"]);
     });
 
     it("reveals through the injected action, by path", async () => {
         const dir = tmpDir({ "icon.bam": "x" });
         const reveal = vi.fn(async () => {});
-        const src = workspaceSource([{ name: "mod", path: dir }], { reveal });
+        const src = await workspaceSource([{ name: "mod", path: dir }], hostDeps(reveal).deps);
         const [item] = src.list();
         await src.reveal(item!.id);
         expect(reveal).toHaveBeenCalledWith(path.join(dir, "icon.bam"));

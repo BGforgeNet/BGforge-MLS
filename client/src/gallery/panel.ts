@@ -51,7 +51,7 @@ export interface GalleryPanelState {
 
 export interface GalleryDeps {
     /** The source for a kind, or undefined when it is not available (no game open, no workspace folders). */
-    sourceFor(kind: "game" | "workspace"): GallerySource | undefined;
+    sourceFor(kind: "game" | "workspace"): Promise<GallerySource | undefined>;
     /**
      * Open an item this panel has no stage for, in whichever editor owns it.
      *
@@ -180,24 +180,50 @@ export function wireGalleryPanel(
     };
 
     /**
+     * The in-flight reading, so anything that needs the corpus can wait for it.
+     *
+     * Taking a reading is asynchronous for the workspace, which asks the editor for its file list rather than
+     * the disk. `postInit` awaits this rather than posting whatever `source` happens to hold, or a panel that
+     * reports ready before the listing lands would draw an empty grid and never revisit it.
+     */
+    let mounted: Promise<void> = Promise.resolve();
+
+    /**
      * Take a reading of the corpus this panel browses.
      *
      * Re-run whenever the game changes, so everything downstream is rebuilt against the new install rather
      * than left pointing at the old one: the pump's thumbnail cache is keyed per item, not per game.
      */
     const mount = (): void => {
-        source = deps.sourceFor(state.source);
-        pump =
-            source &&
-            new ThumbnailPump({
-                source,
-                post: (message: HostToWebview) => void panel.webview.postMessage(message),
-                send: (request) => port.postMessage(request),
-            });
+        mounted = (async () => {
+            try {
+                source = await deps.sourceFor(state.source);
+            } catch (error) {
+                // Taking a reading can now fail - it asks the editor for a listing, and a workspace behind a
+                // file system provider can refuse. Say so and fall through to the empty state: swallowing it
+                // would leave a blank grid that never explains itself, and rethrowing would strand `postInit`
+                // on a rejected promise, which is the same blank grid plus an unhandled rejection.
+                void vscode.window.showErrorMessage(
+                    `Image gallery could not read the ${state.source}: ${error instanceof Error ? error.message : String(error)}`,
+                );
+                source = undefined;
+            }
+            pump =
+                source &&
+                new ThumbnailPump({
+                    source,
+                    post: (message: HostToWebview) => void panel.webview.postMessage(message),
+                    send: (request) => port.postMessage(request),
+                });
+        })();
     };
 
     /** The whole reading in one message: which corpus, what is in it, and the note shown when it is empty. */
     const postInit = (): void => {
+        void mounted.then(() => postReading());
+    };
+
+    const postReading = (): void => {
         void panel.webview.postMessage({
             type: "init",
             source: state.source,

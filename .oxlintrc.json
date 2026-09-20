@@ -596,17 +596,6 @@
             "rules": {
                 "no-restricted-imports": "off"
             }
-        },
-        {
-            // KNOWN VIOLATION, not an exemption - the one site the rule above was written for. This walks
-            // WORKSPACE content with readdirSync, so it sees nothing behind a FileSystemProvider and nothing
-            // in a virtual workspace. It belongs on `workspace.findFiles`. The entry exists only so the rule
-            // can be enforced before the fix lands, and should be deleted together with the last `fs` call
-            // in that file.
-            "files": ["client/src/gallery/workspace-source.ts"],
-            "rules": {
-                "no-restricted-imports": "off"
-            }
         }
     ],
     "ignorePatterns": ["**/node_modules/**", "**/out/**"]

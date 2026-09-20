@@ -35,6 +35,19 @@ const { wireGalleryPanel } = await import("../src/gallery/panel");
 const ITEM: GalleryItem = { id: "MOGHG1.bam", label: "MOGHG1", ext: "bam" };
 const SET: SetTile = { id: 0x6500, label: "OGRE_MAGE", resref: "MOGH", unsupported: undefined };
 
+/**
+ * Wait until the panel has posted `count` readings, and hand them back.
+ *
+ * Taking a reading is asynchronous - the workspace source asks the editor for its file listing - so `init`,
+ * and the pump the panel builds beside it, land a turn after the message that triggered them. The webview
+ * only asks for thumbnails once it has an `init`, so waiting for one here is also what production does.
+ */
+async function readings(posted: HostToWebview[], count = 1): Promise<HostToWebview[]> {
+    const inits = (): HostToWebview[] => posted.filter((message) => message.type === "init");
+    await vi.waitFor(() => expect(inits()).toHaveLength(count));
+    return inits();
+}
+
 function fakeSource(): GallerySource {
     return {
         kind: "game",
@@ -96,7 +109,7 @@ describe("wireGalleryPanel over a game that opens later", () => {
     };
 
     const deps = {
-        sourceFor: () => (open ? fakeSource() : undefined),
+        sourceFor: () => Promise.resolve(open ? fakeSource() : undefined),
         open: async () => {},
         animationUri: () => undefined,
         sets: (): readonly SetTile[] => (open ? [SET] : []),
@@ -120,12 +133,12 @@ describe("wireGalleryPanel over a game that opens later", () => {
         staged = [];
     });
 
-    it("says which empty state it is in while no game is open", () => {
+    it("says which empty state it is in while no game is open", async () => {
         const { panel, posted, send } = fakePanel();
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
 
-        const init = posted.find((message) => message.type === "init");
+        const [init] = await readings(posted);
         expect(init).toMatchObject({ items: [], sets: [] });
         expect(init && "note" in init && init.note).toContain("No game is open");
         // The flag, not the wording, is what puts the Open game button on the empty state - the note is
@@ -137,14 +150,34 @@ describe("wireGalleryPanel over a game that opens later", () => {
      * The workspace gallery's empty state is a missing FOLDER, and offering to open a game there would
      * answer a question the reader did not ask.
      */
-    it("offers no game button when what is missing is a folder", () => {
+    it("offers no game button when what is missing is a folder", async () => {
         const { panel, posted, send } = fakePanel();
         wireGalleryPanel(panel, { source: "workspace" }, context, deps);
         send({ type: "ready" });
 
-        const init = posted.find((message) => message.type === "init");
+        const [init] = await readings(posted);
         expect(init && "note" in init && init.note).toContain("No folder is open");
         expect(init && "noGameOpen" in init).toBe(false);
+    });
+
+    /**
+     * Taking a reading can fail now that it asks the editor rather than the disk - a workspace served by a
+     * file system provider can refuse. The panel must say which corpus failed and why, and still draw its
+     * empty state: a silent failure is a blank grid that never explains itself.
+     */
+    it("says so and falls back to the empty state when the reading fails", async () => {
+        const { panel, posted, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "workspace" }, context, {
+            ...deps,
+            sourceFor: () => Promise.reject(new Error("provider refused")),
+        });
+        send({ type: "ready" });
+
+        const [init] = await readings(posted);
+        expect(showErrorMessageMock).toHaveBeenCalledWith(
+            "Image gallery could not read the workspace: provider refused",
+        );
+        expect(init).toMatchObject({ items: [] });
     });
 
     it("opens a game when the empty state's button asks for one", () => {
@@ -157,32 +190,33 @@ describe("wireGalleryPanel over a game that opens later", () => {
         expect(executeCommandMock).toHaveBeenCalledWith("bgforge.ieResources.openGame");
     });
 
-    it("re-answers with the game's contents once one opens", () => {
+    it("re-answers with the game's contents once one opens", async () => {
         const { panel, posted, send } = fakePanel();
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
+        await readings(posted);
 
         open = true;
         expect(listener, "the panel never subscribed to the game changing").toBeDefined();
         listener?.();
 
-        const inits = posted.filter((message) => message.type === "init");
-        expect(inits).toHaveLength(2);
+        const inits = await readings(posted, 2);
         // The note is what the panel shows INSTEAD of the grid, so it has to go when the grid can fill.
         expect(inits[1]).toMatchObject({ items: [ITEM], sets: [SET] });
         expect(inits[1] && "note" in inits[1]).toBe(false);
     });
 
-    it("goes back to the empty state when the game closes", () => {
+    it("goes back to the empty state when the game closes", async () => {
         const { panel, posted, send } = fakePanel();
         open = true;
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
+        await readings(posted);
 
         open = false;
         listener?.();
 
-        const inits = posted.filter((message) => message.type === "init");
+        const inits = await readings(posted, 2);
         expect(inits[1]).toMatchObject({ items: [], sets: [] });
         expect(inits[1] && "note" in inits[1] && inits[1].note).toContain("No game is open");
     });
@@ -196,6 +230,7 @@ describe("wireGalleryPanel over a game that opens later", () => {
         open = true;
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
+        await readings(posted);
 
         send({ type: "showSet", id: SET.id });
         await vi.waitFor(() =>
@@ -226,7 +261,7 @@ describe("wireGalleryPanel message routing", () => {
     };
 
     const deps = {
-        sourceFor: () => fakeSource(),
+        sourceFor: () => Promise.resolve(fakeSource()),
         open: async (_source: GallerySource, id: string) => {
             openCalls.push({ id });
         },
@@ -262,10 +297,11 @@ describe("wireGalleryPanel message routing", () => {
         expect(showErrorMessageMock).toHaveBeenCalledWith("Image gallery worker stopped: worker crashed");
     });
 
-    it("forwards a requestThumbnails message to the pump", () => {
+    it("forwards a requestThumbnails message to the pump", async () => {
         const { panel, posted, send } = fakePanel();
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
+        await readings(posted);
 
         send({ type: "requestThumbnails", ids: [ITEM.id], size: 64 });
 
@@ -274,10 +310,11 @@ describe("wireGalleryPanel message routing", () => {
         expect(posted).toContainEqual({ type: "thumbnail", id: ITEM.id });
     });
 
-    it("hands an item with no stage on this panel to deps.open", () => {
-        const { panel, send } = fakePanel();
+    it("hands an item with no stage on this panel to deps.open", async () => {
+        const { panel, posted, send } = fakePanel();
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
+        await readings(posted);
 
         send({ type: "open", id: ITEM.id });
 
@@ -290,6 +327,7 @@ describe("wireGalleryPanel message routing", () => {
         animationUriResult = { toString: () => "anim:MOGHG1" } as vscodeTypes.Uri;
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
+        await readings(posted);
 
         send({ type: "open", id: ITEM.id });
         await vi.waitFor(() =>
@@ -320,10 +358,12 @@ describe("wireGalleryPanel message routing", () => {
         ["a missing field", { type: "open" }],
         ["an unknown type", { type: "detonate" }],
         ["a non-object", "ready"],
-    ])("refuses %s and says so instead of acting on it", (_name, message) => {
+    ])("refuses %s and says so instead of acting on it", async (_name, message) => {
         const { panel, posted, send } = fakePanel();
         wireGalleryPanel(panel, { source: "game" }, context, deps);
         send({ type: "ready" });
+        // Settled first, so the reading's own messages cannot land between the count and the assertion.
+        await readings(posted);
         const before = posted.length;
 
         send(message as never);
