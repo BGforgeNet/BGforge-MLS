@@ -46,6 +46,10 @@ step "Resetting External Repos"
 # harness needs its own step because binary-editor's package tsconfig is DOM-less and excludes it (the
 # harness needs a DOM lib for its in-browser page.evaluate callbacks - see the harness tsconfig). The
 # harnesses are RUN in headless Chromium by the separate "Harness" workflow, not here.
+# "Typecheck svelte" is this phase's pole, finishing well after everything else. Left as is (2026-09-21):
+# scoping it to the components cut its time by under a tenth, because the cost is transpiling them and
+# the graph the webviews import, not the .ts files `tsc` already checks; and while it runs alone the box
+# does less work, so the wait costs wall time but no CPU.
 step "Phase 1: Static Analysis + Dead Code"
 parallel \
     "Shell lint" "./scripts/lint-shell.sh" \
