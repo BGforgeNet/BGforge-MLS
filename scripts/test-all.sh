@@ -78,13 +78,30 @@ export WEIDU_BIN
 # negligible net gain and still timed out SSL's corpus beforeAll hooks. They are work-bound, not
 # schedule-bound - there is no split of them that simply having more cores would not serve better.
 #
+# Further shapes measured on 2026-09-21, recorded so they are not re-run from scratch:
+#
+# FEWER JOB SLOTS, chain first - rejected. The other three jobs together run shorter than the chain, so
+# one shared slot for them looks free, and it is: the phase came out the same length with CPU inside the
+# run-to-run spread. It costs nothing and buys nothing.
+#
+# PER-POOL WORKER BUDGETS on the chain's two vitest legs - applied, at --maxWorkers=80% below. Uncapped,
+# the SSL leg alone fans out across most of the cores while the other jobs run beside it; capping took
+# roughly a sixth off its CPU with that leg no slower. A cap of 6 was also measured and rejected: nearly
+# a quarter off, but a sixth slower. A percentage, not a count, because vitest clamps a percentage to
+# the cores it finds and does not clamp a plain number - so a count sized for this box would
+# oversubscribe a smaller CI runner instead of capping it.
+#
+# Measure any of this with the knobs passed as ARGUMENTS. Exporting them as SSL_WORKERS/SRV_WORKERS made
+# the chain about a fifth slower though nothing in the repo or its dependencies reads either name, while
+# same-shaped dummy names did not; that produced three confidently wrong conclusions before it was found.
+#
 # test:cli:external is the same suite as test:cli with the external-corpus cases enabled, so this tier
 # runs it INSTEAD of test:cli rather than as a second job - running both compiled the shared cases twice.
 step "Phase 3 + Extended: All remaining tests"
 parallel \
     "Smoke test" "(cd server && vitest run --config vitest.smoke.config.mts)" \
     "Sample + CLI tests" "./server/test/td/test.sh && ./server/test/tbaf/test.sh && pnpm test:cli:external" \
-    "Corpus chain (format + binary, SSL, server integration)" "$SCRIPT_DIR/test-external.sh && vitest run --config compilers/ssl/vitest.integration.config.ts && (cd server && vitest run --config vitest.integration.config.mts)" \
+    "Corpus chain (format + binary, SSL, server integration)" "$SCRIPT_DIR/test-external.sh && vitest run --config compilers/ssl/vitest.integration.config.ts --maxWorkers=80% && (cd server && vitest run --config vitest.integration.config.mts --maxWorkers=80%)" \
     "Grammar tests" "SKIP_FORMAT_BUILD=1 ./scripts/test-grammars.sh"
 
 # The webview drivers (`pnpm test:harness`) are deliberately NOT here: they gate every push and PR in
