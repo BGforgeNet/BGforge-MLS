@@ -220,8 +220,7 @@ export function resolveStringLiteral(expr: Expression): string {
 /**
  * Check whether source text contains import/re-export statements.
  * Used by TBAF and TD to skip esbuild bundling for files without imports,
- * because esbuild tree-shakes block-scoped functions and applies number
- * folding (1000 -> 1e3) that breaks transpiler output.
+ * because esbuild tree-shakes block-scoped functions, which breaks transpiler output.
  */
 export function hasImports(text: string): boolean {
     return /^\s*(import|export\s+\*\s+from)\s+/m.test(text);

@@ -21,6 +21,7 @@ import {
     type FunctionDeclaration,
     type SourceFile,
     type Statement,
+    type VariableStatement,
     Node,
     SyntaxKind,
 } from "ts-morph";
@@ -91,6 +92,8 @@ interface ParseContext {
     readonly vars: VarsContext; // mutable by design - inlineUserFunction mutates it
     readonly funcs: FuncsContext;
     readonly calledAsFunction: Set<string>;
+    /** Local names the file exports as `default` through an export list (see `defaultExportedCall`). */
+    readonly defaultExports: ReadonlySet<string>;
 }
 
 /**
@@ -103,6 +106,7 @@ export function parse(sourceFile: SourceFile): TDScript {
         vars: new Map(),
         funcs: new Map(),
         calledAsFunction: new Set(),
+        defaultExports: collectDefaultExportNames(sourceFile),
     };
 
     // Pass 1: Collect declarations
@@ -194,8 +198,12 @@ function getFunctionEntryTrigger(ctx: ParseContext, func: FunctionDeclaration): 
  * Transform a top-level statement to TD constructs.
  */
 function transformTopLevel(ctx: ParseContext, stmt: Statement): TDConstruct[] | null {
-    // Skip variable and function declarations
-    if (stmt.isKind(SyntaxKind.VariableStatement) || stmt.isKind(SyntaxKind.FunctionDeclaration)) {
+    // Skip variable and function declarations - except a binding the file exports as default
+    if (stmt.isKind(SyntaxKind.VariableStatement)) {
+        const call = defaultExportedCall(ctx, stmt);
+        return call ? transformTopLevelCall(ctx, call) : null;
+    }
+    if (stmt.isKind(SyntaxKind.FunctionDeclaration)) {
         return null;
     }
 
@@ -222,6 +230,34 @@ function transformTopLevel(ctx: ParseContext, stmt: Statement): TDConstruct[] | 
     }
 
     return null;
+}
+
+/**
+ * Local names exported as `default` through an export list, re-exports from another module excluded.
+ */
+function collectDefaultExportNames(sourceFile: SourceFile): Set<string> {
+    const names = new Set<string>();
+    for (const decl of sourceFile.getExportDeclarations()) {
+        if (decl.getModuleSpecifier()) continue;
+        for (const spec of decl.getNamedExports()) {
+            if (spec.getAliasNode()?.getText() === "default") names.add(spec.getName());
+        }
+    }
+    return names;
+}
+
+/**
+ * The call a variable statement binds to the file's default export, if it does.
+ *
+ * Bundling rewrites the entry's `export default begin(...)` as `var x_default = begin(...)` plus
+ * `export { x_default as default }`, so this is the same construct the ExportAssignment branch reads unbundled.
+ */
+function defaultExportedCall(ctx: ParseContext, stmt: VariableStatement): CallExpression | undefined {
+    const declarations = stmt.getDeclarations();
+    const decl = declarations[0];
+    if (declarations.length !== 1 || decl === undefined || !ctx.defaultExports.has(decl.getName())) return undefined;
+    const init = decl.getInitializer();
+    return init && Node.isCallExpression(init) ? init : undefined;
 }
 
 /**

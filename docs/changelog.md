@@ -6,6 +6,8 @@
 
 - A TBAF or TD file that imports another file writes round numbers such as 1000 in full, instead of the `1e3` form
   WeiDU rejects.
+- A TD dialog declared with `export default` is emitted when its file imports another file, instead of the output
+  coming out empty.
 
 ## 3.16.1
 

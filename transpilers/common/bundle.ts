@@ -34,7 +34,7 @@ export interface BundledSource {
  * Bundle a TBAF file and its imports into a single TypeScript string.
  *
  * Skips bundling for files without imports - esbuild tree-shakes block-scoped
- * functions and applies number folding (1000 -> 1e3) that breaks transpiler output.
+ * functions, which breaks transpiler output.
  *
  * @param filePath Absolute path to the .tbaf/.td file
  * @param sourceText Content of the source file
@@ -43,7 +43,7 @@ export interface BundledSource {
 export async function bundle(filePath: string, sourceText: string): Promise<BundledSource> {
     // Transform local enums even for files without imports.
     // Note: esbuild bundling is skipped for files without imports to avoid
-    // tree-shaking block-scoped functions and number folding issues.
+    // tree-shaking block-scoped functions.
     if (!hasImports(sourceText)) {
         // Nothing was bundled, so every line still belongs to this file - but flattening an enum drops
         // lines, and without the map the ones below it would be reported where the enum used to end.
