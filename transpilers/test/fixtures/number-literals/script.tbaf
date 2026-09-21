@@ -1,0 +1,13 @@
+/**
+ * Round numbers in a file that bundles. The bundler prints the shortest form of a number (`1000` as
+ * `1e3`), which WeiDU rejects in BAF; each value below has trailing zeros, so each one would come out
+ * in exponent form without the fix.
+ */
+
+import { LIMIT } from "./lib";
+
+if (GlobalGT("x", "GLOBAL", 1000)) {
+    SetGlobal("imported", "GLOBAL", LIMIT);
+    SetGlobal("million", "GLOBAL", 1500000);
+    SetGlobal("negative", "GLOBAL", -2000);
+}

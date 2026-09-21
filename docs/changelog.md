@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Transpilers
+
+- A TBAF or TD file that imports another file writes round numbers such as 1000 in full, instead of the `1e3` form
+  WeiDU rejects.
+
 ## 3.16.1
 
 - Republishes 3.16.0, which reached GitHub Releases but not the VS Marketplace, Open VSX or npm. No other changes.

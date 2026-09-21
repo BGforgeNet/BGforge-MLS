@@ -10,6 +10,7 @@
 import { describe, expect, it } from "vitest";
 import {
     cleanupEsbuildOutput,
+    expandExponentLiterals,
     forEachCodeSegment,
     replaceOutsideStrings,
     skipBlockComment,
@@ -99,6 +100,38 @@ describe("cleanupEsbuildOutput", () => {
             cleanupEsbuildOutput(code, MARKER, survivors);
             expect(survivors).toEqual([0, 1]);
         });
+    });
+});
+
+describe("expandExponentLiterals", () => {
+    it("expands the exponent forms esbuild prints for round integers", () => {
+        // The right-hand forms are what esbuild 0.28 emitted for 1000, 1234000, 1500000 and 10000000000.
+        expect(expandExponentLiterals("f(1e3, 1234e3, 15e5, 1e10);")).toBe("f(1000, 1234000, 1500000, 10000000000);");
+    });
+
+    it("expands behind a unary minus", () => {
+        expect(expandExponentLiterals("x = -2e6;")).toBe("x = -2000000;");
+    });
+
+    it("expands an explicit plus exponent", () => {
+        expect(expandExponentLiterals("x = 1e+3;")).toBe("x = 1000;");
+    });
+
+    it("leaves a negative exponent and a fractional mantissa alone", () => {
+        expect(expandExponentLiterals("f(1e-3, 1.5e3, .5e3);")).toBe("f(1e-3, 1.5e3, .5e3);");
+    });
+
+    it("leaves hex digits and identifiers alone", () => {
+        expect(expandExponentLiterals("f(0x1e3, x1e3, e3);")).toBe("f(0x1e3, x1e3, e3);");
+    });
+
+    it("leaves strings and comments alone", () => {
+        const code = 'f("1e3", `1e3`); // 1e3\n/* 1e3 */';
+        expect(expandExponentLiterals(code)).toBe(code);
+    });
+
+    it("keeps the line count, which the bundle's line maps depend on", () => {
+        expect(expandExponentLiterals("a = 1e3;\nb = 2e3;\n").split("\n")).toHaveLength(3);
     });
 });
 

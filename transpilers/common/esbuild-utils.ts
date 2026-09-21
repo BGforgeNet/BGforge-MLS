@@ -190,7 +190,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
 
     // Strip ESM module boilerplate from esbuild output
     const afterCleanup: number[] = [];
-    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, afterCleanup);
+    const cleaned = expandExponentLiterals(cleanupEsbuildOutput(outputFile.text, marker, afterCleanup));
 
     // Post-expand: expand any remaining cross-file enum compat objects
     // and strip prefixes from externalized enum property accesses
@@ -378,6 +378,19 @@ export function cleanupEsbuildOutput(
     }
 
     return code;
+}
+
+/**
+ * Write esbuild's exponent-form integers (`1e3`, `15e5`) back out in decimal.
+ *
+ * esbuild prints the shortest form of a number and has no option to keep the source's, and WeiDU refuses
+ * `1e3` in BAF - which is also what a D action string holds. Only the integer forms are expanded; a negative
+ * exponent or a fractional mantissa is left as written.
+ */
+export function expandExponentLiterals(code: string): string {
+    return replaceOutsideStrings(code, /(?<![\w.])\d+e\+?\d+\b/g, (literal) =>
+        literal.replace(/e\+?(\d+)$/, (_, exponent: string) => "0".repeat(Number(exponent))),
+    );
 }
 
 /**
