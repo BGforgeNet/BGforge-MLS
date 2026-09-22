@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.16.2
 
 ### Transpilers
 
@@ -8,6 +8,11 @@
   WeiDU rejects.
 - A TD dialog declared with `export default` is emitted when its file imports another file, instead of the output
   coming out empty.
+
+### Other editors
+
+- With `bgforge.debug` on, the server logs the editor's name and the LSP capabilities its client announced, to check
+  which features a given editor supports.
 
 ## 3.16.1
 

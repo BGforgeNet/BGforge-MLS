@@ -2,6 +2,20 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
+## 0.4.1
+
+### Fixed
+
+- Bundling a `.tbaf` or `.td` that imports other files writes round numbers such as 1000 in full, instead of
+  the `1e3` form WeiDU rejects.
+- A TD dialog declared with `export default` is emitted when its file imports other files, instead of the
+  output coming out empty.
+- TD fails with a positioned error when a trigger, an action or literal text contains `~`, instead of
+  emitting a WeiDU string the tilde terminates early.
+- TBAF and TD insert a substituted value literally: a value containing `$&` or `$1` is no longer read as a
+  replacement pattern.
+- A constant-expression parse error names the tokens it expected and found, instead of internal numbers.
+
 ## 0.4.0
 
 ### Fixed
