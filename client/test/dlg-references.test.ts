@@ -104,26 +104,6 @@ describe("DlgReferenceIndex", () => {
         expect(index.ready).toBe(true);
     });
 
-    it("re-reads one dialog without rebuilding the rest", async () => {
-        const index = await built();
-        // OTHER's jump into HELLO:0 is retargeted at HELLO:1.
-        index.update(
-            "OTHER",
-            dlg(
-                [
-                    [0, 0],
-                    [0, 1],
-                ],
-                [to("HELLO", 1)],
-            ),
-        );
-
-        expect(index.inbound("HELLO", 0)).toEqual([]);
-        expect(index.inbound("HELLO", 1)).toContainEqual({ dialog: "OTHER", state: 1, transition: 0 });
-        // The rest of the index survived the targeted update.
-        expect(index.inbound("HELLO", 1)).toContainEqual({ dialog: "HELLO", state: 0, transition: 0 });
-    });
-
     it("skips a dialog it cannot read rather than abandoning the scan", async () => {
         const index = new DlgReferenceIndex();
         const broken: DlgSource = {
@@ -192,14 +172,6 @@ describe("DlgReferenceIndex.inboundToDialog - which replies elsewhere reach into
         const index = await built();
 
         expect(index.inboundToDialog("NOBODY")).toEqual([]);
-    });
-
-    it("drops a source's edges when that file is re-read after a save", async () => {
-        const index = await built();
-        // OTHER saved with its jump into HELLO removed.
-        index.update("OTHER", dlg([[0, 0]], []));
-
-        expect(index.inboundToDialog("HELLO")).toEqual([]);
     });
 });
 

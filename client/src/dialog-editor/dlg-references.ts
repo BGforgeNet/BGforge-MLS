@@ -86,8 +86,6 @@ export function neighbourStates(
 export class DlgReferenceIndex {
     /** target `RESREF:state` -> the replies that lead there. */
     private targets = new Map<string, InboundRef[]>();
-    /** Every edge a given dialog contributes, so re-reading one file can retract exactly its own. */
-    private bySource = new Map<string, { key: string; target: string; ref: InboundRef }[]>();
     /** target dialog -> every reply leading into it, for "what should be drawn alongside this one". */
     private byTargetDialog = new Map<string, InboundRef[]>();
     private built = false;
@@ -118,7 +116,6 @@ export class DlgReferenceIndex {
      */
     async build(source: DlgSource, signal?: AbortSignal): Promise<void> {
         this.targets = new Map();
-        this.bySource = new Map();
         this.byTargetDialog = new Map();
         this.built = false;
         const names = source.list();
@@ -134,32 +131,6 @@ export class DlgReferenceIndex {
         this.built = true;
     }
 
-    /** Re-read one dialog - after a save - replacing only the edges it contributes. */
-    update(resref: string, bytes: Uint8Array): void {
-        this.retract(resref);
-        this.ingest(resref, () => bytes);
-    }
-
-    private retract(resref: string): void {
-        const name = resref.toUpperCase();
-        for (const { key: stateKey, target: dialog, ref } of this.bySource.get(name) ?? []) {
-            const list = this.targets.get(stateKey);
-            if (list) {
-                const remaining = list.filter((r) => r !== ref);
-                if (remaining.length === 0) this.targets.delete(stateKey);
-                else this.targets.set(stateKey, remaining);
-            }
-            // Every edge this file contributes is retracted together, so removing it from each target it
-            // reached is exact - no other edge of its own can still be holding the entry open.
-            const arriving = this.byTargetDialog.get(dialog);
-            if (!arriving) continue;
-            const left = arriving.filter((r) => r !== ref);
-            if (left.length === 0) this.byTargetDialog.delete(dialog);
-            else this.byTargetDialog.set(dialog, left);
-        }
-        this.bySource.delete(name);
-    }
-
     /**
      * Record every jump one dialog makes. A file that will not parse is skipped: a game holds resources this
      * editor cannot read, and one of them must not abandon the scan of the rest.
@@ -172,7 +143,6 @@ export class DlgReferenceIndex {
             return;
         }
         const source = resref.toUpperCase();
-        const own: { key: string; target: string; ref: InboundRef }[] = [];
 
         for (const [stateIndex, state] of dlg.states.entries()) {
             for (let i = 0; i < state.transitionCount; i++) {
@@ -181,20 +151,15 @@ export class DlgReferenceIndex {
                 // flag it would register as a jump to state 0 of this dialog.
                 if (!transition || transition.terminatesDialog) continue;
                 const target = resrefName(transition.nextDialog) || source;
-                const entry = {
-                    key: key(target, transition.nextState),
-                    target,
-                    ref: { dialog: source, state: stateIndex, transition: i },
-                };
-                own.push(entry);
-                const list = this.targets.get(entry.key);
-                if (list) list.push(entry.ref);
-                else this.targets.set(entry.key, [entry.ref]);
+                const stateKey = key(target, transition.nextState);
+                const ref: InboundRef = { dialog: source, state: stateIndex, transition: i };
+                const list = this.targets.get(stateKey);
+                if (list) list.push(ref);
+                else this.targets.set(stateKey, [ref]);
                 const arriving = this.byTargetDialog.get(target) ?? [];
-                arriving.push(entry.ref);
+                arriving.push(ref);
                 this.byTargetDialog.set(target, arriving);
             }
         }
-        this.bySource.set(source, own);
     }
 }
