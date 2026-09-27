@@ -349,7 +349,7 @@
                 "extensions": [
                     ".slb"
                 ],
-                "configuration": "./language-configurations/weidu-slb.language-configuration.json",
+                "configuration": "./language-configurations/weidu-ssl.language-configuration.json",
                 "icon": {
                     "light": "./themes/icons/weidu-baf.png",
                     "dark": "./themes/icons/weidu-baf.png"
