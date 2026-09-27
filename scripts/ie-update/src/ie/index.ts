@@ -13,6 +13,4 @@ export { cmpStr, litscal, findFiles } from "../../../utils/src/yaml-helpers.ts";
 
 export type { CompletionItem, OffsetItem, ActionItem, ActionParam, IESDPGame } from "./types.ts";
 
-export { COMPLETION_TYPE_CONSTANT, COMPLETION_TYPE_FUNCTION } from "./types.ts";
-
 export { validateActionItem, validateArray, validateIESDPGame, validateOffsetItem } from "./validate.ts";

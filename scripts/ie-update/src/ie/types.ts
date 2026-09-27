@@ -52,7 +52,3 @@ export interface IESDPGame {
     readonly "2da": string;
     readonly actions: string;
 }
-
-/** VSCode completion item kind constants matching the Python values */
-export const COMPLETION_TYPE_CONSTANT = 21;
-export const COMPLETION_TYPE_FUNCTION = 3;
