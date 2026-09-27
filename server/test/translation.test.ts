@@ -1049,6 +1049,29 @@ translation~`;
             expect(notifyReload).not.toHaveBeenCalled();
         });
 
+        it("reloads an upper-case .TRA file, matching the loader's case-insensitive discovery", async () => {
+            const notifyReload = vi.fn();
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir, notifyReload);
+            await t.init();
+            // reloadFile realpaths the document, so it must exist on disk to reach the extension check.
+            fs.writeFileSync(path.join(tempDir, "SETUP.TRA"), `@100 = ~Old text~`);
+
+            t.reloadFile(`file://${tempDir}/SETUP.TRA`, "weidu-tra", `@100 = ~Updated text~`);
+
+            expect(notifyReload).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not reload a file whose extension merely ends in tra", async () => {
+            const notifyReload = vi.fn();
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir, notifyReload);
+            await t.init();
+            fs.writeFileSync(path.join(tempDir, "test.xtra"), `@100 = ~Old text~`);
+
+            t.reloadFile(`file://${tempDir}/test.xtra`, "weidu-tra", `@100 = ~Updated text~`);
+
+            expect(notifyReload).not.toHaveBeenCalled();
+        });
+
         it("works without a reload-notify callback (optional constructor argument)", async () => {
             const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir);
             await t.init();

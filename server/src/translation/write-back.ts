@@ -173,7 +173,8 @@ export function reloadFileLines(state: TranslationState, wsPath: string, text: s
         conlog(`Translation: can't detect tra path for ${wsPath}, skipping reload`);
         return;
     }
-    const ext = path.parse(traPath).ext.slice(-3);
+    // Case-insensitive like the loader's discovery (findFiles), so a `.TRA` it loaded also reloads.
+    const ext = path.extname(traPath).slice(1).toLowerCase();
     if (ext !== "tra" && ext !== "msg") {
         conlog(`Translation: unknown extension ${ext}`);
         return;

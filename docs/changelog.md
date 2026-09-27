@@ -7,6 +7,10 @@
 - When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
   does not exist.
 
+### Translations
+
+- A `.tra` or `.msg` file with an upper-case extension (`SETUP.TRA`) is re-read when saved, like a lower-case one.
+
 ## 3.16.2
 
 ### Transpilers
