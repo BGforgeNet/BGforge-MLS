@@ -1,2 +1,6 @@
 # tree-sitter build artifacts
 parser.so
+
+# Test temp output (samples-expected is committed)
+test/samples-formatted/
+test/samples-formatted-2/
