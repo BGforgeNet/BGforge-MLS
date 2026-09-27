@@ -111,8 +111,8 @@ export function clearLocalSymbolsCache(uri: string): void {
 }
 
 /**
- * Clear entire cache.
- * Used for testing.
+ * Clear entire cache. The tests' isolation reset: the cache is module state keyed by (uri, version), and
+ * tests reuse both across different texts.
  */
 export function clearAllLocalSymbolsCache(): void {
     cache.clearAll();

@@ -33,7 +33,7 @@ vi.mock("../../src/lsp-connection", () => ({
 
 import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
 import { localCompletion } from "../../src/weidu-tp2/ast-utils";
-import { parseHeaderVariables } from "../../src/weidu-tp2/header-parser";
+import { parseFile } from "../../src/weidu-tp2/header-parser";
 import { isPhantomAssignment } from "../../src/weidu-tp2/tree-utils";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { defaultSettings } from "../../src/settings";
@@ -68,7 +68,7 @@ describe("weidu-tp2: phantom assignment rejection", () => {
   DECOMPILE_AND_PATCH BEGIN
     REPLACE_TEXTUALLY ~foo~ ~bar~
   END`;
-        const vars = parseHeaderVariables(text, "file:///test.tp2");
+        const vars = parseFile("file:///test.tp2", text).symbols;
         const fake = vars.find((v) => v.name === "COPY_EXISTN");
         expect(fake).toBeUndefined();
     });
@@ -81,7 +81,7 @@ describe("weidu-tp2: phantom assignment rejection", () => {
 
     it("should still extract real variables from OUTER_SPRINT", () => {
         const text = `OUTER_SPRINT my_str ~hello~`;
-        const vars = parseHeaderVariables(text, "file:///test.tp2");
+        const vars = parseFile("file:///test.tp2", text).symbols;
         expect(vars.find((v) => v.name === "my_str")).toBeDefined();
     });
 
@@ -159,7 +159,7 @@ alpha`;
 
 describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
     // Direct tests for the isPhantomAssignment utility itself, independent of
-    // the downstream consumers (localCompletion, parseHeaderVariables).
+    // the downstream consumers (localCompletion, parseFile).
     // If isPhantomAssignment breaks, these tests pinpoint the failure to the
     // utility rather than leaving it ambiguous between detector and caller.
 

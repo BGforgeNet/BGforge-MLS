@@ -3,58 +3,61 @@
  */
 
 import { describe, expect, it, beforeAll } from "vitest";
-import { parseHeaderVariables, parseFile } from "../../src/weidu-tp2/header-parser";
+import { parseFile } from "../../src/weidu-tp2/header-parser";
 import { initParser } from "../../../shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();
 });
 
-describe("parseHeaderVariables", () => {
+/** The file-scope variable symbols parseFile indexes, in document order. */
+const fileVariables = (text: string) => parseFile("test://file.tph", text).symbols.filter(isVariableSymbol);
+
+describe("parseFile variable symbols", () => {
     describe("top-level variable extraction", () => {
         it("extracts OUTER_SET variables", () => {
             const input = `OUTER_SET count = 10`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("count");
-            expect(result[0]!.declarationKind).toBe("set");
-            expect(result[0]!.inferredType).toBe("int");
-            expect(result[0]!.value).toBe("10");
+            expect(result[0]!.variable.declarationKind).toBe("set");
+            expect(result[0]!.variable.type).toBe("int");
+            expect(result[0]!.variable.value).toBe("10");
         });
 
         it("extracts OUTER_SPRINT variables", () => {
             const input = `OUTER_SPRINT name ~hello~`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("name");
-            expect(result[0]!.declarationKind).toBe("sprint");
-            expect(result[0]!.inferredType).toBe("string");
-            expect(result[0]!.value).toBe("~hello~");
+            expect(result[0]!.variable.declarationKind).toBe("sprint");
+            expect(result[0]!.variable.type).toBe("string");
+            expect(result[0]!.variable.value).toBe("~hello~");
         });
 
         it("strips tilde delimiters from OUTER_SPRINT variable names", () => {
             const input = `OUTER_SPRINT ~SCROLL_WIZARD~ ~SCRL9P~`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("SCROLL_WIZARD");
-            expect(result[0]!.declarationKind).toBe("sprint");
+            expect(result[0]!.variable.declarationKind).toBe("sprint");
         });
 
         it("strips tilde delimiters from OUTER_TEXT_SPRINT variable names", () => {
             const input = `OUTER_TEXT_SPRINT ~MY_PATH~ ~override~`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("MY_PATH");
-            expect(result[0]!.declarationKind).toBe("text_sprint");
+            expect(result[0]!.variable.declarationKind).toBe("text_sprint");
         });
 
         it("extracts OUTER_TEXT_SPRINT variables", () => {
             const input = `OUTER_TEXT_SPRINT content ~file.txt~`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("content");
-            expect(result[0]!.declarationKind).toBe("text_sprint");
-            expect(result[0]!.inferredType).toBe("string");
+            expect(result[0]!.variable.declarationKind).toBe("text_sprint");
+            expect(result[0]!.variable.type).toBe("string");
         });
     });
 
@@ -64,7 +67,7 @@ describe("parseHeaderVariables", () => {
 DEFINE_ACTION_FUNCTION test_func BEGIN
     OUTER_SET local_count = 5
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(0);
         });
 
@@ -73,7 +76,7 @@ END`;
 DEFINE_PATCH_FUNCTION test_func BEGIN
     SET patch_var = 42
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(0);
         });
 
@@ -84,7 +87,7 @@ DEFINE_ACTION_FUNCTION outer BEGIN
         OUTER_SET nested_var = 100
     END
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(0);
         });
 
@@ -94,7 +97,7 @@ OUTER_SET global_var = 1
 DEFINE_ACTION_FUNCTION test_func BEGIN
     OUTER_SET local_var = 5
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("global_var");
         });
@@ -104,7 +107,7 @@ END`;
 ACTION_IF flag BEGIN
     OUTER_SET nested_var = 100
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("nested_var");
         });
@@ -118,12 +121,11 @@ END`;
  * @type int
  */
 OUTER_SET item_count = 0`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("item_count");
-            expect(result[0]!.jsdoc).toBeDefined();
-            expect(result[0]!.jsdoc?.type).toBe("int");
-            expect(result[0]!.jsdoc?.desc).toBe("Counter for items.");
+            expect(result[0]!.variable.type).toBe("int");
+            expect(result[0]!.variable.description).toBe("Counter for items.");
         });
 
         it("does not extract JSDoc variables from inside function bodies", () => {
@@ -135,7 +137,7 @@ DEFINE_ACTION_FUNCTION test BEGIN
      */
     OUTER_SPRINT temp_str ~default~
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(0);
         });
 
@@ -143,10 +145,10 @@ END`;
             const input = `
 // Regular comment
 OUTER_SET no_doc = 5`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("no_doc");
-            expect(result[0]!.jsdoc).toBeUndefined();
+            expect(result[0]!.variable.description).toBeUndefined();
         });
     });
 
@@ -155,7 +157,7 @@ OUTER_SET no_doc = 5`;
             const input = `
 OUTER_SET count = 1
 OUTER_SET max_count = 100`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(2);
             expect(result[0]!.name).toBe("count");
             expect(result[1]!.name).toBe("max_count");
@@ -166,11 +168,11 @@ OUTER_SET max_count = 100`;
 OUTER_SET num = 42
 OUTER_SPRINT label ~hello~
 OUTER_TEXT_SPRINT path ~file.txt~`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(3);
-            expect(result[0]!.declarationKind).toBe("set");
-            expect(result[1]!.declarationKind).toBe("sprint");
-            expect(result[2]!.declarationKind).toBe("text_sprint");
+            expect(result[0]!.variable.declarationKind).toBe("set");
+            expect(result[1]!.variable.declarationKind).toBe("sprint");
+            expect(result[2]!.variable.declarationKind).toBe("text_sprint");
         });
     });
 
@@ -184,7 +186,7 @@ DEFINE_ACTION_FUNCTION my_func
 BEGIN
     OUTER_SET local_var = 1
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("global");
         });
@@ -198,7 +200,7 @@ DEFINE_PATCH_FUNCTION my_func
 BEGIN
     SET local_var = 42
 END`;
-            const result = parseHeaderVariables(input, "test://file.tph");
+            const result = fileVariables(input);
             expect(result).toHaveLength(1);
             expect(result[0]!.name).toBe("global");
         });

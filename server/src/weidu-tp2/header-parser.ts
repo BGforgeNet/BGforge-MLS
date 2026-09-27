@@ -122,22 +122,6 @@ export function parseHeader(text: string, uri: string): FunctionInfo[] {
     return extractFunctions(tree.rootNode, uri);
 }
 
-/**
- * Parse a TP2 file and extract all top-level variable definitions with JSDoc.
- */
-export function parseHeaderVariables(text: string, uri: string): VariableInfo[] {
-    if (!isInitialized()) {
-        return [];
-    }
-
-    const tree = parseWithCache(text);
-    if (!tree) {
-        return [];
-    }
-
-    return extractVariables(tree.rootNode, uri);
-}
-
 interface ExtractAllResult {
     functions: FunctionInfo[];
     variables: VariableInfo[];
@@ -212,13 +196,9 @@ function extractAll(root: SyntaxNode, uri: string): ExtractAllResult {
     return { functions, variables, refs };
 }
 
-// Backwards-compatible helpers for non-hot callers (parseHeader / parseHeaderVariables).
+// The functions alone, for parseHeader.
 function extractFunctions(root: SyntaxNode, uri: string): FunctionInfo[] {
     return extractAll(root, uri).functions;
-}
-
-function extractVariables(root: SyntaxNode, uri: string): VariableInfo[] {
-    return extractAll(root, uri).variables;
 }
 
 /**
