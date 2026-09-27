@@ -143,11 +143,6 @@ export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAUL
 }
 
 export function formatNode(node: SyntaxNode, depth: number): string {
-    // Handle ERROR nodes: preserve original text
-    if (node.type === SyntaxType.ERROR) {
-        return node.text;
-    }
-
     switch (node.type) {
         case SyntaxType.SourceFile: {
             const content = formatChildren(node, depth);

@@ -84,14 +84,10 @@ function emitConstructTracked(construct: TDConstruct): EmittedText {
 }
 
 /**
- * Emit a top-level construct.
+ * Emit a top-level construct other than BEGIN/APPEND, which emitConstructTracked resolves per state.
  */
-function emitConstruct(construct: TDConstruct): string {
+function emitConstruct(construct: Exclude<TDConstruct, TDBegin | TDAppend>): string {
     switch (construct.type) {
-        case TDConstructType.Begin:
-            return emitBegin(construct);
-        case TDConstructType.Append:
-            return emitAppend(construct);
         case TDConstructType.ExtendTop:
         case TDConstructType.ExtendBottom:
             return emitExtend(construct);
@@ -116,10 +112,6 @@ function emitConstruct(construct: TDConstruct): string {
 // BEGIN / APPEND
 // =============================================================================
 
-function emitBegin(begin: TDBegin): string {
-    return emitBeginTracked(begin).text;
-}
-
 function emitBeginTracked(begin: TDBegin): EmittedText {
     const nonPausing = begin.nonPausing ? " 1" : "";
     const out = new TrackedText();
@@ -132,10 +124,6 @@ function emitBeginTracked(begin: TDBegin): EmittedText {
         ),
     );
     return { text: out.text, origins: out.origins };
-}
-
-function emitAppend(append: TDAppend): string {
-    return emitAppendTracked(append).text;
 }
 
 function emitAppendTracked(append: TDAppend): EmittedText {
