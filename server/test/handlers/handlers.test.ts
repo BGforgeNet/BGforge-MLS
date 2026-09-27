@@ -55,7 +55,6 @@ function makeCtx(docs: Map<string, TextDocument>): { ctx: HandlerContext; wired:
 
     const connection = {
         onCompletion: record("onCompletion"),
-        onCompletionResolve: record("onCompletionResolve"),
         onFoldingRanges: record("onFoldingRanges"),
         onSelectionRanges: record("onSelectionRanges"),
         onDocumentFormatting: record("onDocumentFormatting"),

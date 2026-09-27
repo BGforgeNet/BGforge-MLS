@@ -12,7 +12,6 @@ export function getServerCapabilities(): ServerCapabilities {
     return {
         textDocumentSync: TextDocumentSyncKind.Incremental,
         completionProvider: {
-            resolveProvider: true,
             completionItem: { labelDetailsSupport: true },
             triggerCharacters: ["@"],
         },

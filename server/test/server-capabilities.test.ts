@@ -28,4 +28,13 @@ describe("server-capabilities", () => {
             full: true,
         });
     });
+
+    it("does not advertise completion resolve, since every item is complete when first returned", () => {
+        // A resolve provider makes the client send completionItem/resolve for each item it shows; with
+        // nothing to add, that is a round trip per item for no change.
+        expect(getServerCapabilities().completionProvider).toStrictEqual({
+            completionItem: { labelDetailsSupport: true },
+            triggerCharacters: ["@"],
+        });
+    });
 });
