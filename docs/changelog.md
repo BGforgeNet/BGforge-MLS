@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### WeiDU
+
+- When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
+  does not exist.
+
 ## 3.16.2
 
 ### Transpilers

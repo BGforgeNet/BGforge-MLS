@@ -186,7 +186,7 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
             let showedSpecificError = false;
             if (err && parseResult.errors.length === 0) {
                 if (getErrnoCode(err) === "ENOENT") {
-                    showError(`WeiDU not found at '${weiduPath}'. Check bgforge.mls.weidu.path setting.`);
+                    showError(`WeiDU not found at '${weiduPath}'. Check the bgforge.weidu.path setting.`);
                     showedSpecificError = true;
                 }
                 parseResult = addFallbackDiagnostic(
