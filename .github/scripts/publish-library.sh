@@ -17,6 +17,7 @@ prefix="${TAG_NAME%%/*}"      # e.g. binary
 tag_version="${TAG_NAME#*/v}" # e.g. 0.2.0
 
 needs_grammar=""
+needs_build=""
 
 # Map the tag prefix to the package name, its package.json, and its publish script.
 # The allowlist is also the validation: an unrecognized prefix aborts.
@@ -38,7 +39,10 @@ case "$prefix" in
         pkgname="@bgforge/transpile"
         pkgjson="transpilers/package.json"
         script="scripts/publish-transpile.sh"
-        testcfg=""
+        testcfg="transpilers/vitest.config.ts"
+        needs_build=1
+        # Its grammar-acceptance tests parse the emitted BAF/D through shared/parsers.
+        needs_grammar=1
         ;;
     tssl)
         pkgname="@bgforge/tssl"
@@ -63,8 +67,9 @@ fi
 echo "Publishing $pkgname@$pkg_version (tag $TAG_NAME)"
 
 # format bundles the tree-sitter grammar WASM and its gate reads the grammar's generated
-# node types - both gitignored artifacts this lean checkout lacks. publish-format.sh builds
-# them itself, but that runs after the gate below, too late for the tests.
+# node types; transpile's gate parses its output through the WASM that build:grammar links
+# into shared/parsers. All are gitignored artifacts this lean checkout lacks, and
+# publish-format.sh builds them only after the gate below, too late for the tests.
 if [[ -n "$needs_grammar" ]]; then
     pnpm build:grammar
     # build:grammar also regenerates tracked grammar sources; restore them so regen drift
@@ -73,16 +78,19 @@ if [[ -n "$needs_grammar" ]]; then
     export SKIP_GRAMMAR_BUILD=1
 fi
 
+# transpile's suite smoke-tests its own built bundle and bin (bundle.test.ts, cli.test.ts), so it
+# builds before the gate rather than inside its publish script.
+if [[ -n "$needs_build" ]]; then
+    pnpm build:transpile
+    export SKIP_BUILD=1
+fi
+
 # Run the package's vitest suite as a pre-publish gate FROM THE REPO ROOT. These
 # suites resolve shared fixtures (client/testFixture/, external/) relative to the
 # working directory, so cwd must be the repo root - the same way scripts/test.sh
 # invokes them. `pnpm --filter <pkg> test` would re-root cwd into the package dir
 # and break binary's fixture resolution (its fixtures live at the repo root).
-# transpile has no package vitest suite (its coverage lives in the repo-level
-# sample tests), so its testcfg is empty and the gate is skipped for it.
-if [[ -n "$testcfg" ]]; then
-    pnpm exec vitest run --config "$testcfg"
-fi
+pnpm exec vitest run --config "$testcfg"
 
 # The publish-<pkg>.sh script builds the package and runs `pnpm publish` (adding
 # --provenance under GitHub Actions). It also refuses a dirty working tree.
