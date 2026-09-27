@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Dialog editor
+
+- In a `.dlg` dialog, an action the editor refuses (Del on a state that cannot be deleted) shows a message saying
+  why, as it already did for `.d` and `.ssl` dialogs, instead of doing nothing.
+
 ### WeiDU
 
 - When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that

@@ -22,10 +22,9 @@ import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest }
 import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../../../shared/languages";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
 import type { DialogMessages } from "../../../shared/dialog-model";
-import { surfaceWebviewRuntimeError } from "../webview-error";
-import { reportSlowFrame } from "../timing";
 import { buildDialogHostHtml } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
+import { handleSharedDialogMessage } from "./shared-host-messages";
 import { isWebviewToHost } from "./webview/messages";
 
 // The languageIds that ARE dialog files. `.td`/`.tssl` are contributed as languageId "typescript" (so the TS
@@ -95,6 +94,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             // Same reject-and-ignore posture as the binary editor's isWebviewToHost: an unrecognized
             // or malformed message changes nothing rather than acting on partial data.
             if (!isWebviewToHost(raw)) return;
+            if (handleSharedDialogMessage(raw, path.basename(document.uri.fsPath))) return;
             switch (raw.type) {
                 case "ready":
                     core.handleReady();
@@ -103,35 +103,13 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 case "revealSource":
                     void this.revealSource(document, raw.offset);
                     break;
-                // A user-facing notice from the webview (e.g. Del pressed on a non-deletable node): surface it
-                // as a VS Code notification so a blocked action explains itself instead of silently doing nothing.
-                case "notify":
-                    if (raw.level === "warn") void vscode.window.showWarningMessage(raw.text);
-                    else void vscode.window.showInformationMessage(raw.text);
-                    break;
                 // The webview emits one "edit" (the whole model) per user action; the core serializes and
                 // applies them (see host-core.ts).
                 case "edit":
                     core.handleEdit(raw.model, raw.seq ?? 0);
                     break;
-                // A fatal error caught by the webview's installFatalErrorHandler (see main.ts). Parity with
-                // the binary editor's "runtimeError" case (provider.ts): surface through the same
-                // operator-visible channels (output channel + toast) instead of leaving a silently blank panel.
-                case "runtimeError": {
-                    const file = path.basename(document.uri.fsPath);
-                    surfaceWebviewRuntimeError({
-                        editor: "Dialog editor",
-                        file,
-                        message: raw.message,
-                        stack: raw.stack,
-                    });
-                    break;
-                }
-                // The webview held its own thread long enough to stop painting (observeSlowFrames in
-                // webview-utils.ts). Logged rather than shown: a stall is a diagnostic, and a toast for one
-                // would itself be noise on exactly the machine already struggling.
-                case "slowFrame":
-                    reportSlowFrame("Dialog editor", path.basename(document.uri.fsPath), raw.ms);
+                // The compiled-dialog messages (openGame, pickString, detach) mean nothing for source.
+                default:
                     break;
             }
         });

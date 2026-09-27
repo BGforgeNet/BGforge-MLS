@@ -392,6 +392,21 @@ describe("DlgDialogEditorProvider", () => {
         expect(toast).toContain("SELFDLG.dlg");
     });
 
+    test("shows the webview's notices, so a refused action explains itself", async () => {
+        // The webview posts `notify` when it refuses an action (Del on a node that cannot be deleted); a host
+        // that drops it leaves the key looking broken.
+        const h = harness();
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        prompts.length = 0;
+        told.length = 0;
+
+        h.send({ type: "notify", level: "warn", text: "This state cannot be deleted." });
+        h.send({ type: "notify", text: "Nothing to paste." });
+
+        expect(prompts).toStrictEqual(["This state cannot be deleted."]);
+        expect(told).toStrictEqual(["Nothing to paste."]);
+    });
+
     test("ignores a message that does not match the webview protocol", async () => {
         // The shared guard replaced a local cast: a malformed message must change nothing rather than reach a
         // handler with fields it never checked.
