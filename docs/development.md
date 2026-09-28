@@ -7,7 +7,7 @@ This project uses `pnpm` exclusively - `pnpm exec <command>`, never `npx`.
 
 ## Prerequisites
 
-- **Node.js 24**, the line CI builds and tests on. The published packages declare `engines.node` `>=20`, which is the
+- **Node.js 24**, the line CI builds and tests on. The published packages declare `engines.node` `>=22`, which is the
   floor for consumers, not the development version.
 - **pnpm** at the version pinned by the root `package.json` `packageManager` field.
 - **Network access** for the first `pnpm build:grammar` (tree-sitter downloads its WASI SDK into its own cache), for

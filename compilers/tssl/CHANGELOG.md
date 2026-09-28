@@ -4,6 +4,10 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
 ## Unreleased
 
+### Changed
+
+- Requires Node 22 or newer, up from 20.
+
 ### Deprecated
 
 - `compile()`, which writes the `.ssl` itself: `transpile()` plus a write of the result does the same. It will

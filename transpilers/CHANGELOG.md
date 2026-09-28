@@ -4,6 +4,10 @@ Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
 ## Unreleased
 
+### Changed
+
+- Requires Node 22 or newer, up from 20.
+
 ### Deprecated
 
 - `tbaf.compile()` and `td.compile()`, which write the output file themselves: `transpile()` plus a write to

@@ -6,6 +6,7 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
 ### Changed
 
+- Requires Node 22 or newer, up from 20.
 - `validateFormatting` catches whitespace changed inside a string, not only outside one: the `stripComments*`
   normalizers now keep each string's whitespace as visible `\u{..}` escapes (dropping `\r`), so their output
   differs from 0.7.0 for any text holding a string with whitespace in it.

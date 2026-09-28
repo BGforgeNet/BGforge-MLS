@@ -13,7 +13,7 @@ pnpm add @bgforge/transpile
 npm install @bgforge/transpile
 ```
 
-Requires Node 20 or newer.
+Requires Node 22 or newer.
 
 ## Usage
 

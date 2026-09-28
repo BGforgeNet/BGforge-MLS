@@ -56,7 +56,7 @@ It is type-checked via `test/harness/tsconfig.json`, which includes the DOM lib 
   pnpm exec playwright install chromium
   ```
 
-- **Node 20+** (matched to the project's minimum supported runtime).
+- **Node 22+** (matched to the packages' `engines.node`).
 
 - **`tsx`** - available via the repo's dev dependencies (`pnpm exec tsx ...`).
 

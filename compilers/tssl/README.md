@@ -13,7 +13,7 @@ is what a human reads and what an external compiler can be pointed at.
 pnpm add -g @bgforge/tssl
 ```
 
-Requires Node 20 or newer.
+Requires Node 22 or newer.
 
 ## Usage
 

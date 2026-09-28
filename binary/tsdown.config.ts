@@ -8,7 +8,7 @@ export default defineConfig({
     clean: true,
     sourcemap: false,
     platform: "node",
-    target: "node20",
+    target: "node22",
     outDir: "out",
     // Emit .js (not .mjs): package.json is type:module and bin/exports point at
     // out/cli.js / out/index.js. Rolldown shares parser code between the two

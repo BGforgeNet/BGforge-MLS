@@ -14,7 +14,7 @@ a build script or checked by hand.
 pnpm add -g @bgforge/ssl
 ```
 
-Requires Node 20 or newer.
+Requires Node 22 or newer.
 
 ## Output
 

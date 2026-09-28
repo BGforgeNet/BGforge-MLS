@@ -10,7 +10,7 @@ export default defineConfig({
     clean: true,
     sourcemap: false,
     platform: "node",
-    target: "node20",
+    target: "node22",
     outDir: "out",
     fixedExtension: false,
 });

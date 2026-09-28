@@ -57,15 +57,21 @@ So, per bump:
   range decides). `tsc` does not read `.svelte` files, so after the move run `pnpm typecheck:svelte` as well as
   every `tsc` config.
 - `@types/node` tracks the latest LTS Node major. The published packages support LTS Node only (`engines.node`
-  `>=20`), so do not bump `@types/node` to odd-numbered "Current" majors - that would expose type definitions for APIs
+  `>=22`), so do not bump `@types/node` to odd-numbered "Current" majors - that would expose type definitions for APIs
   not present at the supported runtime floor. Move it forward only when a new even-numbered Node release reaches LTS.
   That is a calendar trigger nothing in the repo can fire, so it needs checking rather than waiting on: an even major
   is released in April and enters LTS the following October, and `curl -s https://nodejs.org/dist/index.json` reports
   each release's `lts` field.
+- The extension's own code - the client, the language server it starts, and every library bundled into either - runs
+  on the Node inside the oldest VS Code that `engines.vscode` admits, not on `engines.node`, and VS Code 1.91 carries
+  Node 20. So every tsconfig keeps `lib` at `es2023`, which keeps the compiler refusing the built-ins that Node lacks
+  (`Promise.withResolvers`, the Set methods, `zlib.crc32`), until `engines.vscode` rises to a release whose Node has
+  them.
 - `ini` (runtime dep of `@bgforge/format`) is held at `^6.x`; `7.0.0` is a major with potential parse/stringify
   behavior changes that need a changelog review before adoption. It also carries a second, independent hold reason:
-  ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) drops Node 20/21, which the published packages still support
-  (`engines.node` `>=20`). Both reasons must clear before the bump.
+  ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) sits above both `engines.node` `>=22` and the Node inside the
+  oldest supported VS Code, which runs `@bgforge/format` inside the language server. Both reasons must clear before the
+  bump.
 - `playwright` (devDep) is pinned to an EXACT version (no caret) because the webview harnesses launch a browser from
   Playwright's version-keyed cache: a development machine and the `Harness` CI job download that browser via
   `playwright install`, and a caret drift to a version whose browser revision is not cached would break the harness

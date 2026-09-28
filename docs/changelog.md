@@ -95,6 +95,7 @@
 
 ### Other editors
 
+- `@bgforge/mls-server` requires Node 22 or newer, up from 20.
 - In the animation viewer, picking a stance or armour level of a set that cannot be drawn shows a warning and
   keeps the animation on screen, instead of replacing the whole view with "Could not open file".
 - In the animation viewer, a save or conversion that is refused or fails says why in a notification and keeps
