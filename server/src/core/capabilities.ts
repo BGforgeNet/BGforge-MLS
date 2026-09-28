@@ -30,6 +30,7 @@ import type {
     WorkspaceEdit,
 } from "vscode-languageserver/node";
 import type { IndexedSymbol } from "./symbol";
+import type { ScanProgress } from "./workspace-scanner";
 import type { NormalizedUri } from "./normalized-uri";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
 import type { StrRefSite } from "../ie-resources/strref-sites";
@@ -109,6 +110,8 @@ export interface ProviderContext {
      * the parse.
      */
     scanAfter?: Promise<unknown>;
+    /** Where the startup scan reports how far it has got. */
+    scanProgress?: ScanProgress;
 }
 
 // =============================================================================
