@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Language features
+
+- Go to definition on an `#include` or file path written in a different letter case than the file on disk works
+  when a folder above the workspace can be entered but not listed, as on shared hosts with private home folders.
+
 ### Dialog editor
 
 - In a `.dlg` dialog, an action the editor refuses (Del on a state that cannot be deleted) shows a message saying

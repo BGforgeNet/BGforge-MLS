@@ -47,11 +47,19 @@ export function resolveExisting(absPath: string): string | null {
     if (fs.existsSync(absPath)) {
         return absPath;
     }
-    const parts = absPath.split(path.sep);
-    const first = parts[0] ?? "";
-    let current = first === "" ? path.sep : first;
+    // Walk only below the deepest ancestor that exists as written. Listing the ancestors above it would
+    // spend the budget on directories whose names already match, and fail on one that may be entered but
+    // not listed (an execute-only home directory).
+    let current = path.dirname(absPath);
+    while (!fs.existsSync(current)) {
+        const parent = path.dirname(current);
+        if (parent === current) {
+            return null;
+        }
+        current = parent;
+    }
     let budget = 0;
-    for (const want of parts.slice(1)) {
+    for (const want of path.relative(current, absPath).split(path.sep)) {
         if (want === "") {
             continue;
         }
