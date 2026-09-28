@@ -75,6 +75,7 @@
 
 - In the animation viewer, picking a stance or armour level of a set that cannot be drawn shows a warning and
   keeps the animation on screen, instead of replacing the whole view with "Could not open file".
+- The image gallery says why an item or animation it could not open failed, instead of ignoring the click.
 
 ### Translations
 

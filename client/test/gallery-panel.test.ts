@@ -322,6 +322,28 @@ describe("wireGalleryPanel message routing", () => {
         expect(staged).toEqual([]);
     });
 
+    // A click that fails to open anything and says nothing reads as a click that missed.
+    it("says why an item could not be opened", async () => {
+        const { panel, posted, send } = fakePanel();
+        const failing = {
+            ...deps,
+            open: async () => {
+                throw new Error("unreadable file");
+            },
+        };
+        wireGalleryPanel(panel, { source: "game" }, context, failing);
+        send({ type: "ready" });
+        await readings(posted);
+
+        send({ type: "open", id: ITEM.id });
+
+        await vi.waitFor(() =>
+            expect(showErrorMessageMock).toHaveBeenCalledWith(
+                `Image gallery could not open ${ITEM.id}: unreadable file`,
+            ),
+        );
+    });
+
     it("draws an item this panel can stage instead of handing it off", async () => {
         const { panel, posted, send } = fakePanel();
         animationUriResult = { toString: () => "anim:MOGHG1" } as vscodeTypes.Uri;

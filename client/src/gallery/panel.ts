@@ -179,6 +179,14 @@ export function wireGalleryPanel(
         if (uri !== undefined) await showOnStage(uri, { set: id });
     };
 
+    /** A pick that failed to open is said, naming what was picked: silence reads as a click that missed. */
+    const opening = (what: string | number, done: Promise<void>): void => {
+        done.catch((error: unknown) => {
+            const reason = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Image gallery could not open ${what}: ${reason}`);
+        });
+    };
+
     /**
      * The in-flight reading, so anything that needs the corpus can wait for it.
      *
@@ -265,7 +273,7 @@ export function wireGalleryPanel(
                 postInit();
                 // A panel opened ON an animation draws it straight away: the link was a request to look at
                 // that set, and landing on its row with an empty stage would answer only half of it.
-                if (state.focusSet !== undefined) void showSet(state.focusSet);
+                if (state.focusSet !== undefined) opening(state.focusSet, showSet(state.focusSet));
                 break;
             case "requestThumbnails":
                 pump?.request(message.ids, message.size);
@@ -278,12 +286,14 @@ export function wireGalleryPanel(
                 // answers "where did the thing I am now looking at come from" when the view has moved, and
                 // moving focus out of the panel to answer it here would take the reader off the picture.
                 const uri = deps.animationUri(source, message.id);
-                if (uri === undefined) void deps.open(source, message.id);
-                else void showOnStage(uri, { item: message.id });
+                opening(
+                    message.id,
+                    uri === undefined ? deps.open(source, message.id) : showOnStage(uri, { item: message.id }),
+                );
                 break;
             }
             case "showSet":
-                void showSet(message.id);
+                opening(message.id, showSet(message.id));
                 break;
             case "openGame":
                 // The same command the resource view's welcome offers, so the two ways in cannot drift.
