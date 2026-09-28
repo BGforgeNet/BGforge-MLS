@@ -209,6 +209,9 @@ type Source =
           rank: number;
       };
 
+/** A lookup table's cached answer: null when the game does not ship it, its error when it cannot be read. */
+type TableEntry<T> = null | { table: T } | { error: Error };
+
 interface TreeEntry {
     resref: string; // uppercased
     type: number;
@@ -362,20 +365,21 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const baseIdentity = detectGameIdentity(key);
     const tlkEncoding = options.encoding ?? (baseIdentity.edition === "ee" ? "utf-8" : "windows-1252");
     const tlkCache = new Map<"male" | "female", Tlk | null>();
-    const idsCache = new Map<string, ReadonlyMap<number, string> | null>();
-    const idsAllCache = new Map<string, ReadonlyMap<number, readonly string[]> | null>();
-    const twoDaCache = new Map<string, ReadonlyMap<number, string> | null>();
-    const twoDaTableCache = new Map<string, TwoDaTable | null>();
+    const idsCache = new Map<string, TableEntry<ReadonlyMap<number, string>>>();
+    const idsAllCache = new Map<string, TableEntry<ReadonlyMap<number, readonly string[]>>>();
+    const twoDaCache = new Map<string, TableEntry<ReadonlyMap<number, string>>>();
+    const twoDaTableCache = new Map<string, TableEntry<TwoDaTable>>();
 
     /**
      * One resource-backed lookup table, parsed on first use and cached by resref.
      *
      * An absent table is a normal answer - not every game ships every IDS, and `itemtype.2da` is
-     * Enhanced-Edition-only - so a miss caches as null rather than re-reading on every lookup. Shared by the
-     * four table accessors below, which otherwise differ only in their cache, parser and resource type.
+     * Enhanced-Edition-only - so a miss caches as null rather than re-reading on every lookup. A table that is
+     * there but cannot be read is a fault, cached as its error and thrown on every lookup, naming the table.
+     * Shared by the four table accessors below, which otherwise differ only in their cache, parser and type.
      */
     function cachedTable<T>(
-        cache: Map<string, T | null>,
+        cache: Map<string, TableEntry<T>>,
         resref: string,
         resType: number,
         parse: (bytes: Uint8Array) => T,
@@ -383,15 +387,22 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         const cacheKey = resref.toLowerCase();
         let entry = cache.get(cacheKey);
         if (entry === undefined) {
-            entry = null;
-            try {
-                entry = parse(readResource(resref, resType));
-            } catch {
-                // Resource not found, or unreadable - reported as "no table" by the null above.
+            if (winningSource(resref, resType) === undefined) {
+                entry = null;
+            } else {
+                try {
+                    entry = { table: parse(readResource(resref, resType)) };
+                } catch (error) {
+                    const name = `${resref.toUpperCase()}.${(resourceTypeExt(resType) ?? "").toUpperCase()}`;
+                    const reason = error instanceof Error ? error.message : String(error);
+                    entry = { error: new Error(`Cannot read ${name}: ${reason}`, { cause: error }) };
+                }
             }
             cache.set(cacheKey, entry);
         }
-        return entry ?? undefined;
+        if (entry === null) return undefined;
+        if ("error" in entry) throw entry.error;
+        return entry.table;
     }
 
     // WeiDU-style language resolution: EE games keep dialog.tlk under lang/<lang>/, so without an explicit lang
@@ -439,8 +450,12 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             let names: string[];
             try {
                 names = fs.readdirSync(dirPath);
-            } catch {
-                return;
+            } catch (error) {
+                const code = (error as NodeJS.ErrnoException).code;
+                // A plain file at the folder's name holds no overrides; any other failure would serve the
+                // folder's files from the BIF below them without a word, so it is refused.
+                if (code === "ENOTDIR") return;
+                throw new Error(`Cannot list ${dirPath}: ${code ?? String(error)}`, { cause: error });
             }
             for (const name of names) {
                 const dot = name.lastIndexOf(".");

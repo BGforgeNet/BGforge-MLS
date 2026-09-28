@@ -775,6 +775,33 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    // Absent is an answer; present-but-unreadable is a fault, and folding it into "absent" leaves every name the
+    // table would have supplied silently numeric.
+    it("refuses a table that is present but cannot be read, naming it, and keeps refusing", () => {
+        const dir = makeGameDir();
+        fs.mkdirSync(path.join(dir, "override", "sndslot.ids"), { recursive: true });
+        const game = openGame(dir);
+        try {
+            expect(() => game.ids("SNDSLOT")).toThrow(/^Cannot read SNDSLOT\.IDS: .*EISDIR/);
+            expect(() => game.ids("sndslot")).toThrow(/^Cannot read SNDSLOT\.IDS: /);
+        } finally {
+            game.close();
+        }
+    });
+
+    // Skipping an override folder the scan cannot list would serve every file in it from the BIF below instead.
+    it("refuses to open a game whose override folder cannot be listed, naming it", () => {
+        const dir = makeGameDir();
+        fs.symlinkSync("override", path.join(dir, "override"));
+        expect(() => openGame(dir)).toThrow(/^Cannot list .*override: ELOOP/);
+    });
+
+    it("opens a game where a plain file sits at an override folder's name", () => {
+        const dir = makeGameDir({ override: new Uint8Array([1]) });
+        const game = openGame(dir);
+        game.close();
+    });
+
     it("reuses one open BIF across reads and reports missing resources", () => {
         const game = openGame(makeGameDir());
         try {

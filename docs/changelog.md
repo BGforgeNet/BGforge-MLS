@@ -67,6 +67,9 @@
 - When the editor's background worker fails a request, such as loading a list's rows, the view stops waiting
   for it and shows the error, instead of loading forever.
 - An undo or redo the editor cannot apply says so and why, instead of quietly redrawing the view.
+- Opening a game whose override folder cannot be read fails and names the folder, instead of showing the archived
+  copies of the files in it. An IDS or 2DA table that is present but unreadable is reported by name wherever it
+  is needed, instead of being treated as absent.
 
 ### Translations
 
