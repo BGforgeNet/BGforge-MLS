@@ -4,9 +4,8 @@
  * for sub-effects spawned by spell opcodes that reference an external EFF.
  */
 
-import { group, readerAt } from "../ie-common/parse-helpers";
+import { group, iePreambleError, readerAt } from "../ie-common/parse-helpers";
 import { walkStruct } from "../spec/walk-display";
-import { bytesEqual } from "../ie-common/types";
 import type { BinaryParser, ParseOptions, ParseResult } from "../types";
 import { effBodySchema, effHeaderSchema, type EffBodyData, type EffHeaderData } from "./schemas";
 import { effBodySpecAnnotated, effBodyPresentation } from "./specs/body.overrides";
@@ -42,16 +41,8 @@ class EffParser implements BinaryParser {
             );
         }
 
-        const signature = [...data.subarray(0, 4)];
-        if (!bytesEqual(signature, [...EFF_SIGNATURE])) {
-            return this.fail(`Not an EFF file: signature ${JSON.stringify(String.fromCodePoint(...signature))}`);
-        }
-        const version = [...data.subarray(4, 8)];
-        if (!bytesEqual(version, [...EFF_VERSION_V2])) {
-            return this.fail(
-                `Unsupported EFF version: ${JSON.stringify(String.fromCodePoint(...version))} (only V2.0 is supported)`,
-            );
-        }
+        const preambleError = iePreambleError(data, "EFF", EFF_SIGNATURE, EFF_VERSION_V2);
+        if (preambleError !== undefined) return this.fail(preambleError);
 
         const header: EffHeaderData = effHeaderSchema.read(readerAt(data, 0));
         const body: EffBodyData = effBodySchema.read(readerAt(data, EFF_HEADER_SIZE));

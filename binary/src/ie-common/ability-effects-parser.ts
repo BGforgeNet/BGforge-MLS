@@ -11,10 +11,10 @@
  * `BinaryParser` instead of restating the parse discipline twice.
  */
 
-import { group, readerAt } from "./parse-helpers";
+import { group, iePreambleError, readerAt } from "./parse-helpers";
 import { walkStruct } from "../spec/walk-display";
 import { effectPresentation, effectSpecAnnotated } from "./specs/effect.overrides";
-import { EFFECT_SIZE, bytesEqual } from "./types";
+import { EFFECT_SIZE } from "./types";
 import { toTypedBinarySchema, type SpecCodec } from "../spec/derive-typed-binary";
 import type { SpecData, StructSpec } from "../spec/types";
 import type { StructPresentation } from "../spec/presentation";
@@ -93,16 +93,8 @@ export function createIeAbilityEffectsParser<HeaderData extends IeAbilityEffects
             return fail(`File too small: ${data.byteLength} bytes, need at least ${headerSize} for header`);
         }
 
-        const sig = [...data.subarray(0, 4)];
-        if (!bytesEqual(sig, signature)) {
-            return fail(`Not an ${label} file: signature ${JSON.stringify(String.fromCodePoint(...sig))}`);
-        }
-        const version = [...data.subarray(4, 8)];
-        if (!bytesEqual(version, versionV1)) {
-            return fail(
-                `Unsupported ${label} version: ${JSON.stringify(String.fromCodePoint(...version))} (only V1 is supported)`,
-            );
-        }
+        const preambleError = iePreambleError(data, label, signature, versionV1);
+        if (preambleError !== undefined) return fail(preambleError);
 
         const header: HeaderData = headerCodec.schema.read(readerAt(data, 0));
 
