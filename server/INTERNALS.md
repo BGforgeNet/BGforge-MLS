@@ -118,7 +118,8 @@ document starts the worker it will need. Watched-file events outside open docume
 `ProviderRegistry.handleWatchedFileChange()` (`src/core/file-watcher-manager.ts`), which calls `reloadFileData()`
 or `onWatchedFileDeleted()` on whichever provider claims the extension.
 
-**Shutdown** (`src/server.ts`) disposes the debouncers, aborts in-flight compiles and stops the two ts-morph workers.
+**Shutdown** (`src/server.ts`) disposes the debouncers, aborts in-flight compiles and stops the worker threads: the
+built-in SSL compiler's and the two ts-morph workers.
 
 ## Request Routing
 
@@ -312,7 +313,7 @@ in [grammars/README.md](../grammars/README.md) (Type Generation). Parsed trees a
 | Provider     | Completion | Hover | Signature | Definition | References | Call Hierarchy | Format | Symbols | Workspace Symbols | Rename |    Inlay     | Folding | Selection Range | Diagnostics | Quick Fixes | JSDoc | Semantic Tokens |
 | ------------ | :--------: | :---: | :-------: | :--------: | :--------: | :------------: | :----: | :-----: | :---------------: | :----: | :----------: | :-----: | :-------------: | :---------: | :---------: | :---: | :-------------: |
 | fallout-ssl  |     Y      |   Y   |     Y     |     Y      |     Y      |       Y        |   Y    |    Y    |         Y         |   Y    |     .msg     |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
-| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |      n/a       |   Y    |         |        n/a        |  n/a   | .tra, strref |    Y    |        Y        |      Y      |      Y      |  n/a  |                 |
+| weidu-baf    |     Y      |   Y   |           |    n/a     |    n/a     |      n/a       |   Y    |   n/a   |        n/a        |  n/a   | .tra, strref |    Y    |        Y        |      Y      |      Y      |  n/a  |                 |
 | weidu-d      |     Y      |   Y   |           |     Y      |     Y      |                |   Y    |    Y    |         Y         |   Y    |     .tra     |    Y    |        Y        |      Y      |      Y      |   Y   |                 |
 | weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |       Y        |   Y    |    Y    |         Y         |   Y    |     .tra     |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
 | weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |      n/a       |  n/a   |   n/a   |        n/a        |  n/a   |     n/a      |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |

@@ -11,8 +11,8 @@
  * only in an engine are marked, per game, as unverified.
  *
  * A shipped declaration always wins: this is the fallback for an install that has none, never an override of
- * one that does. `~/.claude/rules/coding.md` calls vendoring a value space the environment owns a defect; the
- * point here is that a classic install does not own it.
+ * one that does. Vendoring a table an install ships would go stale against the next version of it; a classic
+ * install ships none, so there is nothing here to go stale against.
  */
 
 /**

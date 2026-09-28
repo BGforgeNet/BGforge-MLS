@@ -181,12 +181,9 @@ export const IE_16_POINT_WIDE_PAIRED: ConversionTarget = {
  * install section by section: every section here stores what the documentation says, and holds an eastern
  * companion exactly where it says the east is not computed.
  *
- * Four sections are deliberately absent, and a caller refuses rather than guessing for them. The quadrant
- * family stores sixteen slots holding eight pictures; the wide sixteen-direction family spreads its sixteen
- * across a base and a companion - neither shape is one of the profiles above, which either store every
- * facing in the base or keep an eight-point west arc with a companion. The burrowing family states TWO
- * geometries chosen by a `mirror` field this project neither reads nor writes, so a conversion into it
- * could not declare which one it wrote. `effect` is not a directional family at all.
+ * Two sections are deliberately absent, and a caller refuses rather than guessing for them. The quadrant
+ * family stores sixteen slots holding eight pictures, which is none of the profiles above; `effect` is not a
+ * directional family at all.
  */
 const SECTION_GEOMETRY: Readonly<Record<string, ConversionTarget>> = {
     ambient: IE_8_POINT_PAIRED,

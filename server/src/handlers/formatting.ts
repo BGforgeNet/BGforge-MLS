@@ -22,7 +22,7 @@ export function register(ctx: HandlerContext): void {
                     // Use sendNotification (fire-and-forget) instead of showWarningMessage
                     // (request/response) to avoid blocking the formatting response.
                     // Cannot use showWarning() wrapper here for the same reason (it's request/response).
-                    // The ESLint no-restricted-syntax rule only targets .show*Message() member access.
+                    // The oxlint bgforge-mls/no-showmessage rule only targets .window.show*Message() member access.
                     void ctx.connection.sendNotification("window/showMessage", {
                         type: MessageType.Warning,
                         message: decodeFileUris(result.warning),

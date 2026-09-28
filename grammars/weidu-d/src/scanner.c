@@ -6,8 +6,8 @@
  * each piece re-states the identifier pattern in a second "no extras skipped" lex mode, so the
  * generated DFA carries a duplicate of the identifier machine in every state a filename can reach -
  * 200 of 786 lex states, and the single ts_lex function it produces is large enough that V8's
- * optimising tier costs about a second of CPU and a gigabyte of transient heap the first time any
- * .d file is parsed in a process. Scanning the pieces here keeps them out of that DFA.
+ * optimising tier pays a heavy one-off cost in CPU and transient heap the first time any .d file
+ * is parsed in a process. Scanning the pieces here keeps them out of that DFA.
  *
  * Adjacency is the whole point, so this scanner never skips leading whitespace: tree-sitter offers
  * the external tokens before the internal lex machine runs, and returning false when the next

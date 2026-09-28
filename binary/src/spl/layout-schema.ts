@@ -1,6 +1,6 @@
 /**
  * SPL declarative layout. Same shape as ITM (header fields + Abilities + Effects), rendered on a single
- * dense page instead of the legacy tabs. One variant ("spell"), stamped by the parser.
+ * dense page. One variant ("spell"), stamped by the parser.
  *
  * Field refs are the SPL adapter's semantic keys (`spl.header.<camelCase>`, verified against the model).
  * Omitted (round-trip unaffected - serializer rebuilds from the model): signature/version magic, the many

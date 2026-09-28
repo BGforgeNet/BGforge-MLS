@@ -22,9 +22,9 @@ module-local and reached through the entry points below. `test/public-api.test.t
   install.
 - `setTile` - build the gallery's tile summary for a set.
 - `readNeutralSet` - the neutral model: one set read out of a game into an engine-independent shape.
-- `convertSet` / `allocateAnimationId` - what a conversion target (`FALLOUT_FRM`, `IE_16_POINT_FULL`,
-  `IE_16_POINT_MIRRORED`, `IE_8_POINT_MIRRORED`, `IE_8_POINT_PAIRED`) can hold and how to carry a
-  conversion out; the files it would write come back as `MemberWrite`s for the caller to apply.
+- `convertSet` / `allocateAnimationId` - what a conversion target (`FALLOUT_FRM` and the `IE_*_POINT_*`
+  profiles) can hold and how to carry a conversion out; the files it would write come back as
+  `MemberWrite`s for the caller to apply.
 - `armourLabel` - display label for an armour level.
 - `@bgforge/animation/group-labels` - a Buffer/zlib-free subpath exporting `ieGroups` (names for the
   direction blocks a packed IE animation file holds). Split from the main entry point because the

@@ -287,8 +287,8 @@ async function main() {
         processFile,
         // One chunk per worker: the per-PROCESS warmup outweighs the per-file skew the default of 8
         // levels out. The first WeiDU-D parse in a process makes V8's optimizing tier compile that
-        // grammar's 286 KB lexer function, costing ~1s and 1.3 GB whatever the file is - paid once per
-        // child, so the Infinity Engine corpus pays it 10 times here against 80 at the default.
+        // grammar's large lexer function, a heavy one-off cost in CPU and heap whatever the file is - paid
+        // once per child, so one chunk per worker pays it once per worker rather than eight times.
         chunksPerJob: 1,
     });
 }

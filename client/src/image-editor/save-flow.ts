@@ -361,9 +361,9 @@ async function saveSetAs(
         const confirmed = await vscode.window.showWarningMessage(message, { modal: true, detail }, "Save anyway");
         if (confirmed !== "Save anyway") return;
     }
-    // The last of the questions that used to arrive after Save. What a folder already holds is knowable
-    // the moment one is chosen, and the dialog chooses one - so it says how many files it would replace
-    // beside the names it would write, and pressing Save there is the consent.
+    // What a folder already holds is knowable the moment one is chosen, and the dialog chooses one - so it
+    // says how many files it would replace beside the names it would write, and pressing Save there is the
+    // consent. Only a save that skipped the dialog asks here.
     if (asked === undefined && !(await confirmOverwrite(plan.writes.map((write) => write.path)))) return;
 
     await writeAll(plan.writes);
@@ -567,9 +567,9 @@ function isRetarget(context: SaveContext, document: ImageEditorDocument, request
  * Why a request cannot be reshaped, where it cannot, so the plan says so instead of the write quietly
  * producing something else.
  *
- * The converter re-serializes each member as BAM v1, compressed or not - it has no BAM v2 writer, and a
- * request asking for one used to come back reporting the v1 files it had written as if they were what
- * was asked for. Writing the set AS IT STANDS does reach v2, which is what the reason points at.
+ * The converter re-serializes each member as BAM v1, compressed or not - it has no BAM v2 writer, so a
+ * request for one would get v1 files reported as though they were what was asked for. Writing the set AS
+ * IT STANDS does reach v2, which is what the reason points at.
  */
 function retargetRefusal(request: SaveRequestView, retarget: boolean): string | undefined {
     if (!retarget || request.format !== "bam" || request.bamVersion !== 2) return undefined;
@@ -586,8 +586,7 @@ function retargetRefusal(request: SaveRequestView, retarget: boolean): string | 
  * plan is answered on every control the dialog has. Undefined where the folder could not be read at
  * all, which the plan says rather than reporting an empty folder that was never looked into.
  *
- * This is why the write no longer stops to ask for overwrite consent: what a folder already holds
- * becomes knowable the moment one is chosen, and the dialog chooses one.
+ * This is what lets the dialog, rather than the write, ask for overwrite consent.
  */
 async function alreadyThere(folder: string, names: readonly string[]): Promise<number | undefined> {
     let entries: [string, vscode.FileType][];
@@ -826,9 +825,9 @@ async function runRetarget(
         // eslint-disable-next-line no-await-in-loop -- sequential so a failure names the file it stopped on
         await write(`${member.resref}.${member.extension}`, member.bytes);
     }
-    // The declaration itself, precomputed rather than described: the notes used to tell the reader to
-    // write this by hand from values only this side knew. The east flag comes from the same choice that
-    // stored the east, since the engine reads that flag rather than looking for the files.
+    // The declaration itself, written rather than described, since its values are known only on this side.
+    // The east flag comes from the same choice that stored the east, since the engine reads that flag rather
+    // than looking for the files.
     for (const file of declarations) {
         // eslint-disable-next-line no-await-in-loop -- as above
         await write(file.name, new TextEncoder().encode(file.text));
@@ -1014,7 +1013,7 @@ async function importSet(
  * Consent for every file a save is about to replace, naming them.
  *
  * A BAM v2 save writes N+1 files - the `.bam` plus one `MOSxxxx.PVRZ` per page - and the pages
- * are the half nothing used to ask about. Their names come from page NUMBERS, not from the
+ * are the half easiest to overlook. Their names come from page NUMBERS, not from the
  * animation's, so they collide with whatever else in that folder happens to use the same range:
  * a Save As carries the source's own numbers into a folder that may already have them, and a
  * repack allocates from a base page the user picked without seeing the folder's contents.

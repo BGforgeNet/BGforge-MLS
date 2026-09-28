@@ -2,9 +2,9 @@
  * Infinity Engine CRE v1 parser. The header points at five variable-length
  * sections plus a fixed item-slot block; the effects table's per-record
  * size depends on the header byte at 0x0033 (`effStructureVersion`):
- *   - 0 -> the 48-byte feature block (0x30 bytes each) - the SHARED `effectSpec`
+ *   - 0 -> the 48-byte feature block (0x30 bytes each) - the `ie-common` `effectSpec`
  *          (byte-identical to EFF v1; the same record ITM/SPL embed)
- *   - 1 -> EFF v2 body records (0x108 bytes each, shared via ie-common)
+ *   - 1 -> EFF v2 body records (0x108 bytes each), the EFF format's own body spec
  * Both kinds round-trip byte-identically through the canonical-doc layer.
  */
 

@@ -541,8 +541,7 @@ class ProParser implements BinaryParser {
             formatName: this.name,
             root: group("PRO File", groups),
             errors: errors.length > 0 ? errors : undefined,
-            // Layout-variant id for the declarative renderer (object type + item/scenery subtype).
-            // Only "critter" has a layout today; other variants resolve to undefined and fall back to tabs.
+            // Layout-variant id for the declarative renderer - see proVariantId.
             variantId: proVariantId(objectType, subType),
         };
         try {

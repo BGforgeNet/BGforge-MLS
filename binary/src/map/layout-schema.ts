@@ -1,10 +1,9 @@
 /**
- * MAP declarative layout. Renders a Fallout map on a single dense page instead of the legacy section tabs:
- * the header fields in a panel (with Map Flags as a flag column), the global/local variable arrays as inline
- * lists, the per-elevation object lists and the four script sections (System / Spatial / Timer / Item) as
- * master-detail list blocks - each delegating to the same windowed getChildren path the legacy tabs used, so
- * the nested object tree and the per-extent script slots render exactly as before. One variant ("map"),
- * stamped by the parser.
+ * MAP declarative layout. Renders a Fallout map on a single dense page: the header fields in a panel (with Map
+ * Flags as a flag column), the global/local variable arrays as inline lists, the per-elevation object lists
+ * and the four script sections (System / Spatial / Timer / Item) as master-detail list blocks - each
+ * delegating to the windowed getChildren path, which is what renders the nested object tree and the
+ * per-extent script slots. One variant ("map"), stamped by the parser.
  *
  * Section keys are the MAP adapter's DISPLAY-root node names (`projectDisplayRoot`), not the raw parse-tree
  * group names: the objects section is projected so each elevation's object array is lifted to a top-level

@@ -105,8 +105,8 @@ export function getContextAtPosition(text: string, line: number, character: numb
     }
 
     // Cached like every other tree-sitter consumer in the server - this was the one site left on a raw
-    // parse, and it sits on the completion path, so each keystroke re-parsed the whole document: 89.6ms
-    // against 1.3ms cached on a 12250-line installer.
+    // parse, and it sits on the completion path, so each keystroke re-parsed the whole document, about 70x
+    // the cost of the cached tree on a large installer.
     const tree = parseWithCache(text);
     if (!tree) {
         return [];
