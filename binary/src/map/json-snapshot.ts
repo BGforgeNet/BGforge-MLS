@@ -1,3 +1,8 @@
+/**
+ * MAP JSON snapshot. Hand-written rather than built on `ie-common/json-snapshot.ts`: a MAP snapshot is
+ * normalized before it is persisted, and its reload takes its parse options from the snapshot itself.
+ */
+
 import { mapParser } from "./index";
 import {
     createMapCanonicalSnapshot,
