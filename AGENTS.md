@@ -86,7 +86,7 @@ gate and the sibling to copy: `docs/development.md`.
   `scripts/syntaxes-to-json.sh`.
 - **Stanzas marked `# Auto-generated`** inside `syntaxes/*.tmLanguage.yml` come from `server/data/*.yml` via
   `generate-data.sh`. Edit the data source and regenerate. Full list: `docs/data-pipeline.md`.
-- **Generated artifacts are excluded from `oxfmt` but stay linted by `oxlint`.** The asymmetry is deliberate - do not
+- **Generated source is excluded from `oxfmt` but stays linted by `oxlint`.** The asymmetry is deliberate - do not
   "align" the two ignore lists. Authoritative exclusion list: `.oxfmtrc.json` `ignorePatterns`. Why, and the two
   guards that keep it honest: `docs/ignore-files.md`.
 - **Sort `server/data/*.yml`** with `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts <file>`. Never
