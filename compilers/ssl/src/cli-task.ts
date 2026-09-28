@@ -32,6 +32,14 @@ export interface TaskResult {
 /** Everything one input needs, which is the whole command line minus the other inputs. */
 export type TaskArgs = Omit<SslArgs, "inputs" | "notices" | "help" | "jobs">;
 
+/**
+ * Whether a run parses source, and so needs the grammar loaded - the slowest part of starting up. Decompiling
+ * and listing read bytecode, and preprocessing stops before the parser.
+ */
+export function needsGrammar(args: TaskArgs): boolean {
+    return !args.preprocessOnly && !args.decompile && !args.listing;
+}
+
 /** What an input turned into, and anything about it worth putting on the `-d` line. */
 interface Rendered {
     output: string | Uint8Array;

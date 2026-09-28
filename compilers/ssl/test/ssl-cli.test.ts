@@ -68,6 +68,28 @@ describe("ssl CLI", () => {
             expect(fs.readFileSync(path.join(tmpDir, "built.ssl"), "utf-8")).toContain("procedure start begin");
         });
 
+        // Decompiling reads bytecode and never parses source, so a pool of workers doing it has no use for the
+        // grammar - proved by running the bundle from a copy that has none beside it.
+        it("decompiles several inputs in parallel without loading the grammar", () => {
+            const inputs = [compiled("pooled-a"), compiled("pooled-b")];
+            const bundle = path.join(tmpDir, "bundle");
+            fs.mkdirSync(bundle);
+            const out = path.dirname(CLI);
+            for (const file of fs.readdirSync(out).filter((name) => name.endsWith(".js"))) {
+                fs.copyFileSync(path.join(out, file), path.join(bundle, file));
+            }
+            // The bundle imports web-tree-sitter by name; only the grammar files are meant to be missing.
+            fs.symlinkSync(path.join(REPO_ROOT, "compilers/ssl/node_modules"), path.join(bundle, "node_modules"));
+
+            const result = spawnSync(process.execPath, [path.join(bundle, "cli.js"), "-j2", "-x", ...inputs], {
+                encoding: "utf-8",
+                timeout: SPAWN_TIMEOUT_MS,
+            });
+            expect(result.stderr).toBe("");
+            expect(result.status).toBe(0);
+            expect(fs.readFileSync(path.join(tmpDir, "pooled-b.ssl"), "utf-8")).toContain("procedure start begin");
+        });
+
         it("refuses to write over a source already beside the compiled script, and names -o", () => {
             const original = source("kept.ssl", HELLO);
             expect(run(original).code).toBe(0);

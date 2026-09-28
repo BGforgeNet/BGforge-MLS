@@ -9,6 +9,10 @@
  * Output is buffered per input and flushed IN INPUT ORDER, so a parallel run reads exactly like a
  * sequential one and two runs of the same command produce the same transcript. Workers therefore return
  * their lines rather than printing them; see `cli-task.ts`.
+ *
+ * A pool of its own rather than the `--jobs` runner the other CLIs share (`shared/cli/cli-utils.ts`): that
+ * runner re-launches its CLI with a `--files-from` list read by the shared argument parser, and this CLI keeps
+ * the reference compiler's argument grammar, in which each input may carry its own `-o` and no such switch exists.
  */
 
 import * as os from "node:os";
