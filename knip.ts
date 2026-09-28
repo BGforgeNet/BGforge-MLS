@@ -59,11 +59,14 @@ const config: KnipConfig = {
                 "src/test/*.test.ts",
                 // vitest unit tests (run via client/vitest.config.mts)
                 "test/**/*.test.ts",
+                // The dialog-editor render harness: drivers run by path (scripts/test-harness.sh), and the
+                // page entry its build.mts hands esbuild as a path. Entries rather than ignored, so the
+                // Playwright and esbuild dependencies it alone imports count as used. gen-real-model.ts
+                // regenerates real-model.ts and is run by hand.
+                "src/dialog-editor/test/harness/*.mts",
+                "src/dialog-editor/test/harness/harness-main.ts",
+                "src/dialog-editor/test/harness/gen-real-model.ts",
             ],
-            // The dialog-editor render harness is environment-only (Playwright + browser
-            // globals), run via `pnpm exec tsx`, not imported by the build or tests - same
-            // treatment as binary-editor/test/harness. Keep it out of knip's analysis.
-            ignore: ["src/dialog-editor/test/harness/**"],
         },
         server: {
             // vitest.mutation.config.mts is no longer what Stryker drives - the mutation scope moved to
@@ -206,12 +209,13 @@ const config: KnipConfig = {
             ignoreDependencies: ["sslc-emscripten-noderawfs"],
         },
         "binary-editor": {
-            entry: ["test/**/*.test.ts"],
-            // Bench files invoked explicitly; not reachable from any declared entry point.
-            // Harness files are environment-only (playwright, browser globals) and excluded from
-            // the package typecheck/lint - keep them out of knip's analysis too. test/fixtures holds
-            // fixture data plus standalone generators run via `pnpm exec tsx`, not imported by tests.
-            ignore: ["test/perf/**", "test/harness/**", "test/fixtures/**"],
+            // The render harness's drivers run by path (scripts/test-harness.sh), and build.mts hands esbuild
+            // its page entries as paths. Entries rather than ignored, so the Playwright, esbuild and Svelte
+            // dependencies only the harness imports count as used.
+            entry: ["test/**/*.test.ts", "test/harness/*.mts", "test/harness/*-main.ts"],
+            // Bench files invoked explicitly; not reachable from any declared entry point. test/fixtures
+            // holds fixture data plus standalone generators run via `pnpm exec tsx`, not imported by tests.
+            ignore: ["test/perf/**", "test/fixtures/**"],
         },
     },
     ignore: [

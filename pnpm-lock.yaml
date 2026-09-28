@@ -125,6 +125,9 @@ catalogs:
     esbuild:
       specifier: ^0.28.2
       version: 0.28.2
+    esbuild-svelte:
+      specifier: ^0.9.5
+      version: 0.9.5
     esbuild-wasm:
       specifier: ^0.28.2
       version: 0.28.2
@@ -134,9 +137,18 @@ catalogs:
     fast-glob:
       specifier: ^3.3.3
       version: 3.3.3
+    mocha:
+      specifier: ^11.8.0
+      version: 11.8.0
+    playwright:
+      specifier: 1.63.0
+      version: 1.63.0
     quick-lru:
       specifier: ^7.3.0
       version: 7.3.0
+    svelte:
+      specifier: ^5.57.0
+      version: 5.57.0
     tree-sitter-cli:
       specifier: 0.27.0
       version: 0.27.0
@@ -161,6 +173,12 @@ catalogs:
     vscode-languageserver-protocol:
       specifier: 3.18.3
       version: 3.18.3
+    vscode-oniguruma:
+      specifier: ^2.0.1
+      version: 2.0.1
+    vscode-textmate:
+      specifier: ^9.3.2
+      version: 9.3.2
     web-tree-sitter:
       specifier: ^0.27.0
       version: 0.27.0
@@ -214,7 +232,7 @@ importers:
         specifier: 'catalog:'
         version: 0.28.2
       esbuild-svelte:
-        specifier: ^0.9.5
+        specifier: 'catalog:'
         version: 0.9.5(esbuild@0.28.2)(svelte@5.57.0)
       jsonc-parser:
         specifier: ^3.3.1
@@ -222,9 +240,6 @@ importers:
       knip:
         specifier: ~6.25.0
         version: 6.25.0
-      mocha:
-        specifier: ^11.8.0
-        version: 11.8.0
       oxfmt:
         specifier: 0.65.0
         version: 0.65.0(svelte@5.57.0)
@@ -235,7 +250,7 @@ importers:
         specifier: ^7.0.2001
         version: 7.0.2001
       playwright:
-        specifier: 1.63.0
+        specifier: 'catalog:'
         version: 1.63.0
       quick-lru:
         specifier: 'catalog:'
@@ -247,7 +262,7 @@ importers:
         specifier: ^13.1.0
         version: 13.1.0(supports-color@8.1.1)
       svelte:
-        specifier: ^5.57.0
+        specifier: 'catalog:'
         version: 5.57.0
       svelte-check:
         specifier: ^4.7.6
@@ -267,12 +282,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
-      vscode-oniguruma:
-        specifier: ^2.0.1
-        version: 2.0.1
-      vscode-textmate:
-        specifier: ^9.3.2
-        version: 9.3.2
       web-tree-sitter:
         specifier: 'catalog:'
         version: 0.27.0
@@ -330,6 +339,18 @@ importers:
         specifier: workspace:*
         version: link:../binary
     devDependencies:
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+      esbuild-svelte:
+        specifier: 'catalog:'
+        version: 0.9.5(esbuild@0.28.2)(svelte@5.57.0)
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      svelte:
+        specifier: 'catalog:'
+        version: 5.57.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -360,12 +381,21 @@ importers:
       elkjs:
         specifier: ^0.12.0
         version: 0.12.0
+      svelte:
+        specifier: 'catalog:'
+        version: 5.57.0
       vscode-languageclient:
         specifier: 'catalog:'
         version: 10.1.1
       vscode-languageserver-protocol:
         specifier: 'catalog:'
         version: 3.18.3
+      vscode-oniguruma:
+        specifier: 'catalog:'
+        version: 2.0.1
+      vscode-textmate:
+        specifier: 'catalog:'
+        version: 9.3.2
       web-tree-sitter:
         specifier: 'catalog:'
         version: 0.27.0
@@ -379,9 +409,24 @@ importers:
       '@vscode/test-electron':
         specifier: ^3.1.0
         version: 3.1.0(supports-color@8.1.1)
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+      esbuild-svelte:
+        specifier: 'catalog:'
+        version: 0.9.5(esbuild@0.28.2)(svelte@5.57.0)
       fast-glob:
         specifier: 'catalog:'
         version: 3.3.3
+      mocha:
+        specifier: 'catalog:'
+        version: 11.8.0
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
   compilers/bcs:
     dependencies:
@@ -486,6 +531,9 @@ importers:
 
   image:
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
@@ -559,6 +607,12 @@ importers:
       vscode-languageserver-textdocument:
         specifier: ^1.0.14
         version: 1.0.14
+      vscode-oniguruma:
+        specifier: 'catalog:'
+        version: 2.0.1
+      vscode-textmate:
+        specifier: 'catalog:'
+        version: 9.3.2
       web-tree-sitter:
         specifier: 'catalog:'
         version: 0.27.0
@@ -584,6 +638,9 @@ importers:
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
   transpilers/common:
     dependencies:

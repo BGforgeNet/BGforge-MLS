@@ -51,7 +51,8 @@
     },
     "devDependencies": {
         "fast-check": "catalog:",
-        "tsdown": "catalog:"
+        "tsdown": "catalog:",
+        "vitest": "catalog:"
     },
     "engines": {
         "node": ">=20"

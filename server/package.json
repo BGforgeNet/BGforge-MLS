@@ -52,6 +52,8 @@
         "vitest": "catalog:",
         "vscode-languageserver": "catalog:",
         "vscode-languageserver-textdocument": "^1.0.14",
+        "vscode-oniguruma": "catalog:",
+        "vscode-textmate": "catalog:",
         "web-tree-sitter": "catalog:",
         "yaml": "catalog:"
     },

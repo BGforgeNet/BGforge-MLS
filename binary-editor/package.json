@@ -12,6 +12,10 @@
         "@bgforge/binary": "workspace:*"
     },
     "devDependencies": {
+        "esbuild": "catalog:",
+        "esbuild-svelte": "catalog:",
+        "playwright": "catalog:",
+        "svelte": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:"
     }
