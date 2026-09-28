@@ -9,14 +9,21 @@
  * into each webview bundle.
  */
 
-/** Minimal view of the `acquireVsCodeApi()` handle the helpers here need. */
-interface VsCodeApi {
+/** The handle VS Code injects into a webview. `acquireVsCodeApi()` may be called only once per webview. */
+export interface VsCodeApi {
     postMessage(message: unknown): void;
+    getState(): unknown;
+    setState(state: unknown): void;
+}
+
+declare global {
+    /** Injected by the VS Code webview runtime; absent in a standalone render harness. */
+    function acquireVsCodeApi(): VsCodeApi;
 }
 
 export interface FatalErrorHandlerOptions {
     /** The `acquireVsCodeApi()` handle, used to report the error to the host. */
-    readonly vscode: VsCodeApi;
+    readonly vscode: Pick<VsCodeApi, "postMessage">;
     /**
      * Human label for this webview ("Dialog editor" / "Binary editor" / "Animation editor"). Drives
      * the console prefix and the default messages for uncaught errors; the
