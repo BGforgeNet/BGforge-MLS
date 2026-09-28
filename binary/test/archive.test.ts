@@ -849,6 +849,19 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    // The read of an auxiliary file takes the same plain file name its write does - not a path into
+    // a folder below override, and not one out of it.
+    it("refuses to read an auxiliary file by anything but a plain file name", () => {
+        const dir = makeGameDir({ "override/sub/x.pal": new Uint8Array([1]) });
+        const game = openGame(dir);
+        try {
+            expect(() => game.readAuxFile("sub/x.pal")).toThrow('Refusing to read "sub/x.pal": not a plain file name');
+            expect(() => game.auxFile("..\\x.pal")).toThrow("not a plain file name");
+        } finally {
+            game.close();
+        }
+    });
+
     it("reuses one open BIF across reads and reports missing resources", () => {
         const game = openGame(makeGameDir());
         try {

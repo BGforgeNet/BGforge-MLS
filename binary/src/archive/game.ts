@@ -286,16 +286,18 @@ function resolveLangDir(gameDir: string, edition: string, explicitLang?: string)
  */
 function escapesGameDir(relative: string): boolean {
     if (path.isAbsolute(relative) || /^[a-z]:/i.test(relative)) return true;
-    return relative.split("/").some((seg) => seg === "..");
+    // Both separators: a name from a setting or a caller is not normalized as a KEY's is, and on Windows a
+    // backslash is one.
+    return relative.split(/[\\/]/).some((seg) => seg === "..");
 }
 
 /**
- * A name the write paths join under a game folder must be one plain filename segment: the read paths refuse
- * `..` and rooted names through `escapesGameDir`, and a write must not be the one direction that escapes.
+ * A name joined under a game folder must be one plain filename segment, whichever way it goes: a path would
+ * reach into a folder below, or out of the install through `..` or a rooted name.
  */
-function assertPlainName(name: string): void {
+function assertPlainName(name: string, verb: "read" | "write"): void {
     if (name === "" || name === "." || name === ".." || /[\\/]/.test(name) || escapesGameDir(name)) {
-        throw new Error(`Refusing to write "${name}": not a plain file name`);
+        throw new Error(`Refusing to ${verb} "${name}": not a plain file name`);
     }
 }
 
@@ -562,6 +564,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
 
     /** Where an auxiliary loose file sits in `override`, or undefined when there is none. */
     function auxFilePath(fileName: string): string | undefined {
+        assertPlainName(fileName, "read");
         return resolveGamePath(gameDir, `override/${fileName}`);
     }
 
@@ -648,7 +651,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return { kind: "bif", archivePath, entry: tileset ? source.tilesetIndex : source.fileIndex, tileset };
         },
         write(resref, type, bytes, writeOptions) {
-            assertPlainName(resref);
+            assertPlainName(resref, "write");
             const typeCode = typeCodeOf(type);
             const ext = resourceTypeExt(typeCode);
             if (!ext) throw new Error(`No file extension known for resType 0x${typeCode.toString(16)}`);
@@ -705,7 +708,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return looseSourceIn(resref, typeCodeOf(type), folder)?.path;
         },
         writeAuxFile(fileName, bytes) {
-            assertPlainName(fileName);
+            assertPlainName(fileName, "write");
             const target = path.join(ensureFolder(gameDir, "override"), fileName.toLowerCase());
             atomicWriteFileSync(target, bytes);
             return target;
