@@ -39,6 +39,10 @@
 
 ### WeiDU
 
+- Renaming a D state label edits the right ranges when other files are parsed between the rename's two requests,
+  such as during a workspace scan.
+- A compile started while an earlier one of the same file was still running no longer has its temporary file
+  deleted by the earlier one, and is still stopped when the editor shuts down.
 - TP2 completion inside a function call offers parameter names or values correctly when accented or other
   non-ASCII text appears earlier in the file, instead of mixing up which of the two the cursor is on.
 - When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
