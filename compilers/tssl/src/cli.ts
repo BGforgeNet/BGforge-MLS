@@ -16,8 +16,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { EXT_TSSL } from "@bgforge/shared/languages";
-import { emitProgram } from "../../ssl/src/compile";
-import { optimize } from "../../ssl/src/optimize";
+import { emitProgram, optimize } from "@bgforge/ssl";
 import { createBatchState, transpile, type TranspileBatchState } from "./index";
 import { lowerTsslProgram } from "./int/lower";
 import {

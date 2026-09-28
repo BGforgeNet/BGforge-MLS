@@ -475,6 +475,9 @@ importers:
       '@bgforge/shared':
         specifier: workspace:*
         version: link:../../shared
+      '@bgforge/ssl':
+        specifier: workspace:*
+        version: link:../ssl
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)

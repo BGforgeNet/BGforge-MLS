@@ -151,7 +151,8 @@ server ------> format, binary/archive                    (tsconfig paths)
    |---------> compilers/ssl, compilers/tssl,
    |           compilers/bcs, transpilers                (relative source imports)
 
-compilers/tssl --> compilers/ssl, transpilers/common
+compilers/tssl --> compilers/ssl                         (tsconfig paths)
+   |-----------> transpilers/common                      (relative source imports)
 transpilers ----> transpilers/tbaf, transpilers/td, transpilers/common
 plugins/td-plugin ....> server/out/td-runtime.d.ts       (read at run time)
 
@@ -161,9 +162,11 @@ nearly every package --> shared                          (workspace dependency)
 Packages reach each other three ways, and none of them goes through another package's bundle:
 
 - **tsconfig `paths` to the sibling's `src/`**, which esbuild honours: `client/tsconfig.json` maps `@bgforge/binary`,
-  `@bgforge/image` and `@bgforge/animation`; `server/tsconfig.json` maps `@bgforge/format` and
-  `@bgforge/binary/archive`. `@bgforge/binary-editor` and `@bgforge/shared` are workspace dependencies whose entry
-  points are their source, so they need no `paths` entry.
+  `@bgforge/image` and `@bgforge/animation`; `server/tsconfig.json` maps `@bgforge/format`,
+  `@bgforge/binary/archive` and `@bgforge/ssl`; `compilers/tssl/tsconfig.json` maps `@bgforge/ssl`. Each consumer's
+  vitest config aliases the same packages, and tsx reads only the tsconfig it is given, so the root scripts that run
+  TSSL source pass `--tsconfig compilers/tssl/tsconfig.json`. `@bgforge/binary-editor` and `@bgforge/shared` are
+  workspace dependencies whose entry points are their source, so they need no `paths` entry.
 - **Relative source imports** across the tree, whether or not the target package has an entry of its own - the
   server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/ssl/src/`, the client reaching
   `compilers/ssl/src/` and `compilers/bcs/src/`.

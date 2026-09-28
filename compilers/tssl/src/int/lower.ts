@@ -21,9 +21,19 @@
  */
 
 import { SyntaxKind, type FunctionDeclaration, type Node, type Project } from "ts-morph";
-import type { BinaryOp, Declaration, Expr, ProcedureDecl, Program, Stmt, VariableDecl } from "../../../ssl/src/int/ir";
-import { engineFunction } from "../../../ssl/src/int/engine-functions";
-import { Expansions, type Desugarer, type Origin } from "../../../ssl/src/desugar";
+import {
+    engineFunction,
+    Expansions,
+    type BinaryOp,
+    type Declaration,
+    type Desugarer,
+    type Expr,
+    type Origin,
+    type ProcedureDecl,
+    type Program,
+    type Stmt,
+    type VariableDecl,
+} from "@bgforge/ssl";
 import { buildProgramModel, refuseAt, type TsslProgram } from "../program-model";
 import { sslName, type InlineFunc } from "../types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";

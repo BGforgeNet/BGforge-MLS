@@ -55,6 +55,7 @@
     },
     "devDependencies": {
         "@bgforge/shared": "workspace:*",
+        "@bgforge/ssl": "workspace:*",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },

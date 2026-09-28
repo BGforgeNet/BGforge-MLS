@@ -28,6 +28,7 @@ export default defineConfig({
             "@bgforge/binary/archive": path.resolve(import.meta.dirname, "../binary/src/archive/index.ts"),
             "@bgforge/format/internal": path.resolve(import.meta.dirname, "../format/src/internal.ts"),
             "@bgforge/format": path.resolve(import.meta.dirname, "../format/src/index.ts"),
+            "@bgforge/ssl": path.resolve(import.meta.dirname, "../compilers/ssl/src/index.ts"),
         },
     },
     // The coverage provider counts only files under the root, so without this a run started from the
