@@ -262,7 +262,7 @@ const HELP = `Usage: fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r]
   --jobs <n>           Process directory files with N parallel workers
   --exclude-from <p>   Skip the files listed in <p> (# comments and blanks ignored)
   --exclude-base <d>   Resolve --exclude-from entries against <d> (default: the target)
-  Without --save or --check: single file prints to stdout, directory shows what would change`;
+  Without --save or --check: the formatted text of each file is printed to stdout`;
 
 async function main() {
     const args = parseCliArgs(HELP);
