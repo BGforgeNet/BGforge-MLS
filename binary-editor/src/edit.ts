@@ -2,7 +2,6 @@ import { formatAdapterRegistry, type ParseResult } from "@bgforge/binary";
 import { assertNotLocked, writeFieldValue } from "./model";
 import { layoutFieldRows, type EditorSession } from "./session";
 import { projectRow } from "./window";
-import { serializeSession } from "./serialize";
 import type { EditResult, NodeId } from "./types";
 
 /**
@@ -68,14 +67,6 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
     invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
 
-    // Format-validity for the slice: the structure still serializes.
-    let formatValid = true;
-    try {
-        serializeSession(session);
-    } catch {
-        formatValid = false;
-    }
-
     const changed = [projectRow(session.model, node, rel)];
     // Re-project the cascaded siblings (the cleared slots) so the UI reflects them precisely - the blanket
     // resend below also carries them, but this keeps the changeset explicit about what the cascade touched.
@@ -98,7 +89,6 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
             changed,
             diagnostics: rel ? rel.constraints(session.model) : [],
             dirty: session.dirty,
-            formatValid,
         },
     };
 }
