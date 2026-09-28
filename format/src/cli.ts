@@ -266,7 +266,7 @@ const HELP = `Usage: fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r]
   Without --save or --check: the formatted text of each file is printed to stdout`;
 
 async function main() {
-    const args = parseCliArgs(HELP);
+    const args = parseCliArgs(HELP, { modes: ["save", "check", "save-and-check", "check-idempotency"] });
     if (!args) return;
 
     const stat = fs.statSync(args.target);

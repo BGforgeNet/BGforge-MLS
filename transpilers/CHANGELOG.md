@@ -12,6 +12,9 @@ Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
   imports too, as it already did in one with imports.
 - TBAF inlines a function whose returned condition calls another user function, instead of failing with "a
   node that was removed or forgotten".
+- `fgtp` refuses `--save-and-check` and `--check-idempotency` with an error instead of printing the output to
+  stdout as though neither were given. `--help` no longer lists `--save-and-check`, which never saved or checked
+  anything.
 
 ## 0.4.1
 

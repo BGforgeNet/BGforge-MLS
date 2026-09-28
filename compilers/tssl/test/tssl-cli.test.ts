@@ -48,6 +48,17 @@ describe("tssl CLI integration", () => {
         expect(run("--help").code).toBe(0);
     });
 
+    // Its processFile writes on every mode but `check`, so an unimplemented check mode would write.
+    it.each(["--save-and-check", "--check-idempotency"])("refuses %s without writing anything", (flag) => {
+        const file = path.join(tmpDir, "mode.tssl");
+        fs.writeFileSync(file, 'function start() {\n    display_msg("hi");\n}\n', "utf-8");
+
+        const { code, stderr } = run(file, flag);
+        expect(code).toBe(1);
+        expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
+        expect(fs.readdirSync(tmpDir)).toStrictEqual(["mode.tssl"]);
+    });
+
     describe("which outputs a run writes", () => {
         const source = 'function start() {\n    display_msg("hi");\n}\n';
 

@@ -105,6 +105,15 @@ describe("bin CLI integration", () => {
         });
     });
 
+    describe("modes fgbin does not implement", () => {
+        it.each(["--save-and-check", "--check-idempotency"])("refuses %s instead of printing the snapshot", (flag) => {
+            const { code, stdout, stderr } = run(path.join(FIXTURES, "misc", "00000001.pro"), flag);
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
+            expect(stdout).toBe("");
+        });
+    });
+
     describe("--extensions flag", () => {
         // The actions/binary/ shell scripts depend on this output shape:
         // one extension per line, no dot, exit 0. Changes here must be

@@ -168,6 +168,18 @@ describe("transpile CLI integration", () => {
         });
     });
 
+    describe("modes fgtp does not implement", () => {
+        it.each(["--save-and-check", "--check-idempotency"])("refuses %s instead of printing the output", (flag) => {
+            const tmpTd = path.join(tmpDir, "mode.td");
+            fs.copyFileSync(path.join(SAMPLES_DIR, "botsmith.td"), tmpTd);
+
+            const { code, stdout, stderr } = run(tmpTd, flag);
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
+            expect(stdout).toBe("");
+        });
+    });
+
     describe("error handling", () => {
         it("exits 1 for unsupported file type", () => {
             const file = path.join(tmpDir, "test.xyz");

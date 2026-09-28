@@ -161,12 +161,16 @@ function emitFor(extra: Record<string, unknown>): Emit {
 }
 
 async function main() {
-    const args = parseCliArgs(HELP, [
-        ["--ssl", "Also write the readable .ssl"],
-        ["--no-int", "Skip the bytecode"],
-        ["--opt <level>", "Optimisation level"],
-        ["-s, --short-circuit", "Short-circuit and/or"],
-    ]);
+    const args = parseCliArgs(HELP, {
+        extraOptions: [
+            ["--ssl", "Also write the readable .ssl"],
+            ["--no-int", "Skip the bytecode"],
+            ["--opt <level>", "Optimisation level"],
+            ["-s, --short-circuit", "Short-circuit and/or"],
+        ],
+        // Writing is the default, so `--save` is accepted as a synonym for it.
+        modes: ["save", "check"],
+    });
     if (!args) return;
 
     const extra = args.extra ?? {};

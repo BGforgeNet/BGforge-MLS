@@ -63,14 +63,33 @@ interface CliArgs {
 /** One caller-specific option: the flag spelling cac takes, and its help line. */
 export type ExtraOption = readonly [flags: string, description: string];
 
+/** The flag that selects each mode other than the default. */
+const MODE_FLAGS: Readonly<Record<Exclude<OutputMode, "stdout">, string>> = {
+    save: "--save",
+    check: "--check",
+    "save-and-check": "--save-and-check",
+    "check-idempotency": "--check-idempotency",
+};
+
+interface ParseCliOptions {
+    /**
+     * Options belonging to ONE cli rather than to all of them. Registered here rather than read out of
+     * `process.argv` by the caller so cac still validates them and `--help` still lists them; their values
+     * come back in `extra` rather than widening `CliArgs` with fields the other CLIs have no use for.
+     */
+    readonly extraOptions?: readonly ExtraOption[];
+    /**
+     * The modes the caller's processFile implements, besides the default. Any other mode flag is refused: a
+     * processFile falls through to its last branch on a mode it does not handle and reports success. Required,
+     * so a new command states them rather than inheriting every one.
+     */
+    readonly modes: readonly Exclude<OutputMode, "stdout">[];
+}
+
 /**
- * @param extraOptions Options belonging to ONE cli rather than to all three. Registered here rather
- * than read out of `process.argv` by the caller so cac still validates them and `--help` still lists
- * them; their values come back in `extra` rather than widening `CliArgs` with fields the other CLIs
- * have no use for.
  * @returns null when `--help` was handled and the caller should stop; a bad argument exits here instead.
  */
-export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOption[] = []): CliArgs | null {
+export function parseCliArgs(helpText: string, { extraOptions = [], modes }: ParseCliOptions): CliArgs | null {
     const cli = cac();
     const command = cli.command("[target]", "File or directory to process");
     for (const [flags, description] of extraOptions) command.option(flags, description);
@@ -134,6 +153,10 @@ export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOptio
             : check
               ? "check"
               : "stdout";
+    if (mode !== "stdout" && !modes.includes(mode)) {
+        console.error(`Error: ${MODE_FLAGS[mode]} is not supported by this command`);
+        process.exit(1);
+    }
 
     return {
         target,

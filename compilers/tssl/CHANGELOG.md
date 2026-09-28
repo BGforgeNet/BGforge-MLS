@@ -2,6 +2,13 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
+## Unreleased
+
+### Fixed
+
+- `tssl` refuses `--save-and-check` and `--check-idempotency` with an error. Both used to write the outputs
+  like a plain run, so a check that should have left the tree alone rewrote it.
+
 ## 0.2.0
 
 ### Added

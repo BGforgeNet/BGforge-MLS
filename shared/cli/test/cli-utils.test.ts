@@ -298,6 +298,7 @@ describe("exclusions", () => {
 });
 
 describe("parseCliArgs", () => {
+    const EVERY_MODE = { modes: ["save", "check", "save-and-check", "check-idempotency"] } as const;
     const originalArgv = process.argv;
     let exitSpy: ReturnType<typeof vi.spyOn>;
     // cac's outputHelp writes through console.info, so that is the stream --help has to be read on.
@@ -321,19 +322,19 @@ describe("parseCliArgs", () => {
 
     it("parses save mode", () => {
         process.argv = ["node", "cli.js", __filename, "--save"];
-        const args = parseCliArgs("help");
+        const args = parseCliArgs("help", EVERY_MODE);
         expect(args?.mode).toBe("save");
     });
 
     it("parses check mode", () => {
         process.argv = ["node", "cli.js", __filename, "--check"];
-        const args = parseCliArgs("help");
+        const args = parseCliArgs("help", EVERY_MODE);
         expect(args?.mode).toBe("check");
     });
 
     it("defaults to stdout mode", () => {
         process.argv = ["node", "cli.js", __filename];
-        const args = parseCliArgs("help");
+        const args = parseCliArgs("help", EVERY_MODE);
         expect(args?.mode).toBe("stdout");
     });
 
@@ -341,47 +342,69 @@ describe("parseCliArgs", () => {
         // Options belonging to one CLI rather than to all of them: registered here so cac still
         // validates them and --help still lists them, with the values kept out of CliArgs proper.
         process.argv = ["node", "cli.js", __filename, "--sample", "--opt", "2"];
-        const args = parseCliArgs("help", [
-            ["--sample", "An option belonging to one CLI rather than to all of them"],
-            ["--opt <level>", "Optimisation level"],
-        ]);
+        const args = parseCliArgs("help", {
+            ...EVERY_MODE,
+            extraOptions: [
+                ["--sample", "An option belonging to one CLI rather than to all of them"],
+                ["--opt <level>", "Optimisation level"],
+            ],
+        });
         expect(args?.extra?.sample).toBe(true);
         expect(String(args?.extra?.opt)).toBe("2");
     });
 
     it("leaves a caller option absent from `extra` when it is not passed", () => {
         process.argv = ["node", "cli.js", __filename];
-        const args = parseCliArgs("help", [["--sample", "An option belonging to one CLI rather than to all of them"]]);
+        const args = parseCliArgs("help", {
+            ...EVERY_MODE,
+            extraOptions: [["--sample", "An option belonging to one CLI rather than to all of them"]],
+        });
         expect(args?.extra?.sample).toBeUndefined();
+    });
+
+    // A mode the command's processFile does not handle falls through to whatever its last branch does - printing
+    // to stdout, or writing where a check was asked for - and reports success.
+    it.each(["--save-and-check", "--check-idempotency"])(
+        "refuses %s when the command does not implement it",
+        (flag) => {
+            process.argv = ["node", "cli.js", __filename, flag];
+            expect(() => parseCliArgs("help", { modes: ["save", "check"] })).toThrow("exit");
+            expect(errorSpy).toHaveBeenCalledWith(`Error: ${flag} is not supported by this command`);
+        },
+    );
+
+    it("accepts a mode the command implements", () => {
+        process.argv = ["node", "cli.js", __filename, "--check"];
+        expect(parseCliArgs("help", { modes: ["save", "check"] })?.mode).toBe("check");
     });
 
     it("parses save-and-check mode", () => {
         process.argv = ["node", "cli.js", __filename, "--save-and-check"];
-        const args = parseCliArgs("help");
+        const args = parseCliArgs("help", EVERY_MODE);
         expect(args?.mode).toBe("save-and-check");
     });
 
     it("parses recursive flag -r", () => {
         process.argv = ["node", "cli.js", __dirname, "-r"];
-        const args = parseCliArgs("help");
+        const args = parseCliArgs("help", EVERY_MODE);
         expect(args?.recursive).toBe(true);
     });
 
     it("parses recursive flag --recursive", () => {
         process.argv = ["node", "cli.js", __dirname, "--recursive"];
-        const args = parseCliArgs("help");
+        const args = parseCliArgs("help", EVERY_MODE);
         expect(args?.recursive).toBe(true);
     });
 
     it("parses quiet flag", () => {
         process.argv = ["node", "cli.js", __filename, "-q"];
-        const args = parseCliArgs("help");
+        const args = parseCliArgs("help", EVERY_MODE);
         expect(args?.quiet).toBe(true);
     });
 
     it("returns null and prints the help text once, verbatim, on --help", () => {
         process.argv = ["node", "cli.js", "--help"];
-        expect(parseCliArgs("Usage info")).toBeNull();
+        expect(parseCliArgs("Usage info", EVERY_MODE)).toBeNull();
         // Registering the text with cac AND printing it here gave two copies, the cac one colon-suffixed.
         expect(infoSpy).toHaveBeenCalledTimes(1);
         expect(infoSpy).toHaveBeenCalledWith("Usage info");
@@ -389,34 +412,34 @@ describe("parseCliArgs", () => {
 
     it("exits on missing target", () => {
         process.argv = ["node", "cli.js", "--save"];
-        expect(() => parseCliArgs("help")).toThrow("exit");
+        expect(() => parseCliArgs("help", EVERY_MODE)).toThrow("exit");
         expect(errorSpy).toHaveBeenCalledWith("Error: No file or directory specified");
     });
 
     it("exits on nonexistent target", () => {
         process.argv = ["node", "cli.js", "/nonexistent/path/xyz"];
-        expect(() => parseCliArgs("help")).toThrow("exit");
+        expect(() => parseCliArgs("help", EVERY_MODE)).toThrow("exit");
         expect(errorSpy).toHaveBeenCalledWith("Error: Not found: /nonexistent/path/xyz");
     });
 
     it("defaults jobs to 1 and parses --jobs", () => {
         process.argv = ["node", "cli.js", __dirname, "-r"];
-        expect(parseCliArgs("help")?.jobs).toBe(1);
+        expect(parseCliArgs("help", EVERY_MODE)?.jobs).toBe(1);
         process.argv = ["node", "cli.js", __dirname, "-r", "--jobs", "4"];
-        expect(parseCliArgs("help")?.jobs).toBe(4);
+        expect(parseCliArgs("help", EVERY_MODE)?.jobs).toBe(4);
     });
 
     it("exits on a non-positive or non-numeric --jobs", () => {
         process.argv = ["node", "cli.js", __dirname, "-r", "--jobs", "0"];
-        expect(() => parseCliArgs("help")).toThrow("exit");
+        expect(() => parseCliArgs("help", EVERY_MODE)).toThrow("exit");
         process.argv = ["node", "cli.js", __dirname, "-r", "--jobs", "many"];
-        expect(() => parseCliArgs("help")).toThrow("exit");
+        expect(() => parseCliArgs("help", EVERY_MODE)).toThrow("exit");
         expect(errorSpy).toHaveBeenCalledWith("Error: --jobs must be a positive integer, got: many");
     });
 
     it("parses --files-from", () => {
         process.argv = ["node", "cli.js", __dirname, "-r", "--files-from", "list.txt"];
-        expect(parseCliArgs("help")?.filesFrom).toBe("list.txt");
+        expect(parseCliArgs("help", EVERY_MODE)?.filesFrom).toBe("list.txt");
     });
 });
 

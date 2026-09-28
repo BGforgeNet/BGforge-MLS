@@ -336,7 +336,10 @@ async function main() {
         return;
     }
 
-    const args = parseCliArgs(HELP, [["--proto-dir <dir>", "Load MAP proto subtype overrides from <dir>"]]);
+    const args = parseCliArgs(HELP, {
+        extraOptions: [["--proto-dir <dir>", "Load MAP proto subtype overrides from <dir>"]],
+        modes: ["save", "check"],
+    });
     if (!args) return;
     const protoDirOverride = readProtoDirOverride(args.extra ?? {});
 
