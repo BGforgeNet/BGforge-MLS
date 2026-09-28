@@ -381,9 +381,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 if (pick === "unchanged") break;
                 // A refusal reposts the view AND says so: the picker offers what the archive's index lists,
                 // and a file listed there can still be undecodable - a control that silently snapped back
-                // would leave the reader thinking the click missed.
+                // would leave the reader thinking the click missed. Said by the host, not as the webview's
+                // `error`, which replaces the whole view with the could-not-open screen.
                 this.post(channel, { type: "init", view: initialView(document) });
-                this.post(channel, { type: "error", message: "That part of the set could not be drawn." });
+                void vscode.window.showWarningMessage("That part of the set could not be drawn.");
                 break;
             }
             case "pickSet":

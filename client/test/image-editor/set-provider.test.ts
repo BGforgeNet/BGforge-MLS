@@ -29,6 +29,7 @@ const {
     readDirMock,
     showInformationMock,
     showErrorMock,
+    showWarningMock,
     statMock,
 } = vi.hoisted(() => ({
     readFileMock: vi.fn(),
@@ -39,6 +40,7 @@ const {
     readDirMock: vi.fn(),
     showInformationMock: vi.fn(),
     showErrorMock: vi.fn(),
+    showWarningMock: vi.fn(),
     statMock: vi.fn(),
 }));
 
@@ -81,7 +83,7 @@ vi.mock("vscode", () => {
             showQuickPick: showQuickPickMock,
             showInputBox: showInputMock,
             showInformationMessage: showInformationMock,
-            showWarningMessage: vi.fn(),
+            showWarningMessage: showWarningMock,
             showErrorMessage: showErrorMock,
             setStatusBarMessage: vi.fn(),
         },
@@ -286,10 +288,25 @@ beforeEach(() => {
     readDirMock.mockResolvedValue([]);
     showInformationMock.mockReset();
     showErrorMock.mockReset();
+    showWarningMock.mockReset();
     // An empty destination folder: stat throws for an absent path, which is how the overwrite gate reads
     // "nothing here to replace". Left as a resolving stub it would report every write as a collision.
     statMock.mockReset();
     statMock.mockRejectedValue(new Error("ENOENT"));
+});
+
+describe("picking a stance the set cannot draw", () => {
+    // The webview's `error` is the "could not open file" screen in place of the whole view, so a refused
+    // pick said that way took down an editor whose other stances still draw.
+    it("warns in the host and keeps the view up, rather than posting a fatal error", async () => {
+        const { posted, send } = await openSet();
+
+        await send({ type: "selectSetStance", key: "TSTBG1#0" });
+
+        expect(posted.filter((message) => message.type === "error")).toEqual([]);
+        expect(posted.map((message) => message.type)).toContain("init");
+        expect(showWarningMock).toHaveBeenCalledWith("That part of the set could not be drawn.");
+    });
 });
 
 describe("picking another set", () => {

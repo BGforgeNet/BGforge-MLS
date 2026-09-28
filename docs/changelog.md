@@ -71,6 +71,11 @@
   copies of the files in it. An IDS or 2DA table that is present but unreadable is reported by name wherever it
   is needed, instead of being treated as absent.
 
+### Other editors
+
+- In the animation viewer, picking a stance or armour level of a set that cannot be drawn shows a warning and
+  keeps the animation on screen, instead of replacing the whole view with "Could not open file".
+
 ### Translations
 
 - A `.tra` or `.msg` file with an upper-case extension (`SETUP.TRA`) is re-read when saved, like a lower-case one.
