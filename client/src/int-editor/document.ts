@@ -17,10 +17,7 @@
  */
 
 import * as vscode from "vscode";
-import { decompileToProgram } from "../../../compilers/ssl/src/int/decompile";
-import { printProgram } from "../../../compilers/ssl/src/int/print";
-import { formatDisassembly } from "../../../compilers/ssl/src/int/disasm";
-import { readInt } from "../../../compilers/ssl/src/int/read";
+import { decompileToProgram, formatDisassembly, printProgram, readInt } from "@bgforge/ssl";
 import { conlog } from "../logging";
 
 /** Marks a rendering that is a listing rather than source, so a save can be refused with the reason. */

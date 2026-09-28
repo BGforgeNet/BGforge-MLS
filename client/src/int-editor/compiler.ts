@@ -4,9 +4,7 @@
  * The grammar's loading and caching is `script-view/parser.ts`, shared with the `.bcs` view.
  */
 
-import { buildProgram, emitProgram } from "../../../compilers/ssl/src/compile";
-import { decompileToProgram } from "../../../compilers/ssl/src/int/decompile";
-import { preserveStringOrder } from "../../../compilers/ssl/src/int/string-order";
+import { buildProgram, decompileToProgram, emitProgram, preserveStringOrder } from "@bgforge/ssl";
 import { loadParser } from "../script-view/parser";
 
 /**

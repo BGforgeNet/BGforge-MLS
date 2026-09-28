@@ -6,7 +6,7 @@
  * a URI, and the protocol's column convention.
  */
 
-import type { CompilerProblem } from "../../../compilers/ssl/src/problems";
+import type { CompilerProblem } from "@bgforge/ssl";
 import { pathToUri } from "../uri-utils";
 import type { Diagnostic } from "./compile-worker-protocol";
 

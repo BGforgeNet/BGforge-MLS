@@ -16,7 +16,7 @@
 import * as cp from "child_process";
 import * as os from "os";
 import * as path from "path";
-import { parseArgs } from "../../../compilers/ssl/src/args";
+import { parseArgs } from "@bgforge/ssl";
 import {
     addFallbackDiagnostic,
     errorMessage,

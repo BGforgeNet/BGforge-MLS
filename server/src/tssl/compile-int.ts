@@ -15,7 +15,7 @@
  */
 
 import { EXT_TSSL } from "../core/languages";
-import { parseArgs } from "../../../compilers/ssl/src/args";
+import { parseArgs } from "@bgforge/ssl";
 import { intOutputPath } from "../core/int-output-path";
 import { compileOnWorker } from "./compile-worker-client";
 import { abortAllCompiles, withCompileLifecycle } from "../core/compile-with-tmp-file";

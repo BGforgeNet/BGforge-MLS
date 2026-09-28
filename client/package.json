@@ -19,6 +19,7 @@
         "@bgforge/binary": "workspace:*",
         "@bgforge/binary-editor": "workspace:*",
         "@bgforge/image": "workspace:*",
+        "@bgforge/ssl": "workspace:*",
         "@xyflow/svelte": "^1.6.6",
         "bits-ui": "2.19.0",
         "elkjs": "^0.12.0",

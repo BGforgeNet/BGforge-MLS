@@ -145,11 +145,12 @@ Shared webview components and stylesheets are in `client/src/webview-ui/`; the e
 ```
 client ------> binary-editor ---> binary
    |---------> binary, image, animation ---> image
-   |---------> compilers/ssl, compilers/bcs              (relative source imports)
+   |---------> compilers/ssl                             (tsconfig paths)
+   |---------> compilers/bcs                             (relative source imports)
 
-server ------> format, binary/archive                    (tsconfig paths)
-   |---------> compilers/ssl, compilers/tssl,
-   |           compilers/bcs, transpilers                (relative source imports)
+server ------> format, binary/archive, compilers/ssl     (tsconfig paths)
+   |---------> compilers/tssl, compilers/bcs,
+   |           transpilers                               (relative source imports)
 
 compilers/tssl --> compilers/ssl                         (tsconfig paths)
    |-----------> transpilers/common                      (relative source imports)
@@ -162,14 +163,14 @@ nearly every package --> shared                          (workspace dependency)
 Packages reach each other three ways, and none of them goes through another package's bundle:
 
 - **tsconfig `paths` to the sibling's `src/`**, which esbuild honours: `client/tsconfig.json` maps `@bgforge/binary`,
-  `@bgforge/image` and `@bgforge/animation`; `server/tsconfig.json` maps `@bgforge/format`,
+  `@bgforge/image`, `@bgforge/animation` and `@bgforge/ssl`; `server/tsconfig.json` maps `@bgforge/format`,
   `@bgforge/binary/archive` and `@bgforge/ssl`; `compilers/tssl/tsconfig.json` maps `@bgforge/ssl`. Each consumer's
   vitest config aliases the same packages, and tsx reads only the tsconfig it is given, so the root scripts that run
   TSSL source pass `--tsconfig compilers/tssl/tsconfig.json`. `@bgforge/binary-editor` and `@bgforge/shared` are
   workspace dependencies whose entry points are their source, so they need no `paths` entry.
 - **Relative source imports** across the tree, whether or not the target package has an entry of its own - the
-  server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/ssl/src/`, the client reaching
-  `compilers/ssl/src/` and `compilers/bcs/src/`.
+  server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/bcs/src/`, the client reaching
+  `compilers/bcs/src/`.
 - **A build output as an input**: `td-plugin` finds `td-runtime.d.ts`, which the server build copies into
   `server/out/`, by path at run time.
 

@@ -12,7 +12,7 @@
 
 import * as fs from "fs";
 import { parentPort } from "worker_threads";
-import { compileSource } from "../../../compilers/ssl/src/compile";
+import { compileSource } from "@bgforge/ssl";
 import { getParser as getSSLParser, initParser as initSSLParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { pathToUri } from "../uri-utils";
 import { problemDiagnostics } from "./compile-diagnostics";

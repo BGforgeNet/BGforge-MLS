@@ -9,7 +9,7 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { emitProgram } from "../../ssl/src/compile";
+import { emitProgram } from "@bgforge/ssl";
 import { lowerTsslProgram } from "../src/int/lower";
 
 let tmpDir: string;

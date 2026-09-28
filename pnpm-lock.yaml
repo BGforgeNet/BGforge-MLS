@@ -372,6 +372,9 @@ importers:
       '@bgforge/image':
         specifier: workspace:*
         version: link:../image
+      '@bgforge/ssl':
+        specifier: workspace:*
+        version: link:../compilers/ssl
       '@xyflow/svelte':
         specifier: ^1.6.6
         version: 1.6.6(svelte@5.57.0)
@@ -601,6 +604,9 @@ importers:
       '@bgforge/shared':
         specifier: workspace:*
         version: link:../shared
+      '@bgforge/ssl':
+        specifier: workspace:*
+        version: link:../compilers/ssl
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3

@@ -43,6 +43,7 @@
         "@bgforge/binary": "workspace:*",
         "@bgforge/format": "workspace:*",
         "@bgforge/shared": "workspace:*",
+        "@bgforge/ssl": "workspace:*",
         "@types/node": "catalog:",
         "fast-check": "catalog:",
         "fast-glob": "catalog:",
