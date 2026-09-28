@@ -178,9 +178,14 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 await this.handleWebviewMessage(document, panel, message);
             } catch (error) {
                 // A rejected bridge send (worker crash/hang timeout) lands here instead of becoming an
-                // unhandled promise rejection. Surface it in the webview's error banner so the failure is
-                // visible rather than a silently dead editor.
-                this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+                // unhandled promise rejection. Surface it in the webview's error banner, naming the request it
+                // answers so the webview settles the promise waiting on it rather than waiting forever.
+                const requestId = "requestId" in message ? message.requestId : undefined;
+                this.post(panel, {
+                    type: "error",
+                    ...(requestId === undefined ? {} : { requestId }),
+                    message: error instanceof Error ? error.message : String(error),
+                });
             }
         });
     }

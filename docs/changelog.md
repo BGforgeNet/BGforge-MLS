@@ -64,6 +64,8 @@
 
 - In a `.map`, a script's SID link follows an edit to an object's SID, instead of still jumping to the object that
   no longer runs that script.
+- When the editor's background worker fails a request, such as loading a list's rows, the view stops waiting
+  for it and shows the error, instead of loading forever.
 
 ### Translations
 

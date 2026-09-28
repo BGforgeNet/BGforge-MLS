@@ -58,6 +58,8 @@ vi.mock("node:worker_threads", () => {
             request: { type: string; uri?: string; bytes?: Uint8Array; engine?: string };
         }): void {
             workerRequests.push(msg.request);
+            // A dead worker, for the one request only the failure test sends.
+            if (msg.request.type === "getChildren") throw new Error("worker is gone");
             const response =
                 msg.request.type === "reproject"
                     ? { type: "structure", result: { changeSet: CHANGE_SET } }
@@ -201,6 +203,7 @@ describe("binary editor hot-exit restore", () => {
 function fakePanel() {
     const posted: { type: string }[] = [];
     let dispose: (() => void) | undefined;
+    let receive: ((message: unknown) => Promise<void>) | undefined;
     const panel = {
         webview: {
             options: {},
@@ -211,15 +214,44 @@ function fakePanel() {
                 posted.push(message);
                 return Promise.resolve(true);
             },
-            onDidReceiveMessage: () => ({ dispose: () => {} }),
+            onDidReceiveMessage: (listener: (message: unknown) => Promise<void>) => {
+                receive = listener;
+                return { dispose: () => {} };
+            },
         },
         onDidDispose: (cb: () => void) => {
             dispose = cb;
             return { dispose: () => {} };
         },
     };
-    return { posted, panel: panel as unknown as vscode.WebviewPanel, close: () => dispose?.() };
+    return {
+        posted,
+        panel: panel as unknown as vscode.WebviewPanel,
+        close: () => dispose?.(),
+        send: (message: unknown) => receive?.(message),
+    };
 }
+
+describe("binary editor request failures", () => {
+    beforeEach(() => {
+        workerRequests.length = 0;
+        readFileMock.mockReset();
+        readFileMock.mockImplementation(() => Promise.resolve(DISK_BYTES));
+    });
+
+    // The webview holds a promise per requestId and settles it only on a reply naming that id, so an error
+    // without one leaves the view waiting for rows that are never coming.
+    it("answers a request the worker failed with an error naming the request", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const { panel, posted, send } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+
+        await send({ type: "requestChildren", requestId: 7, nodeId: null, start: 0, end: 10 });
+
+        expect(posted).toContainEqual({ type: "error", requestId: 7, message: "worker is gone" });
+    });
+});
 
 describe("binary editor across a game change", () => {
     beforeEach(() => {
