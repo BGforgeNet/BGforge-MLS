@@ -5,7 +5,7 @@
     // <style> block is intentionally avoided because the webview runs under a strict nonce CSP that blocks
     // non-nonced injected <style> tags.
     //
-    // Verified against bits-ui@2.15.0 (client/node_modules/bits-ui/dist/bits/dialog):
+    // Verified against bits-ui@2.19.0 (client/node_modules/bits-ui/dist/bits/dialog):
     //   Dialog.Root      - props: open (bool), onOpenChange, onOpenChangeComplete.
     //   Dialog.Portal    - portals the content out of the DOM tree.
     //   Dialog.Overlay   - the backdrop; a presence layer, so it renders only while open.

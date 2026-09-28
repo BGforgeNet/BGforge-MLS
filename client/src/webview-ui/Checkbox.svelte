@@ -5,7 +5,7 @@
     // block is intentionally avoided because the webview runs under a strict nonce CSP that blocks
     // non-nonced injected <style> tags.
     //
-    // Verified against bits-ui@2.15.0 (client/node_modules/bits-ui/dist/bits/checkbox):
+    // Verified against bits-ui@2.19.0 (client/node_modules/bits-ui/dist/bits/checkbox):
     //   Checkbox.Root  - renders a <button role="checkbox">; props: checked ($bindable bool, default false),
     //                    onCheckedChange (callback), disabled, indeterminate, readonly, name, value, type.
     //                    Exposes data-state="checked"|"unchecked"|"indeterminate" on the root button.
