@@ -466,6 +466,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
 
 export function registerDlgDialogEditor(context: vscode.ExtensionContext, deps: DlgHostDeps): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider("bgforge.dlgViewer", new DlgDialogEditorProvider(context, deps), {
+        // Kept alive for the reason given at the source-dialog editor's registration (panel.ts).
         webviewOptions: { retainContextWhenHidden: true },
         supportsMultipleEditorsPerDocument: false,
     });

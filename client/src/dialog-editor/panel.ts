@@ -175,6 +175,9 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
 export function registerDialogEditor(context: vscode.ExtensionContext, client: LanguageClient): vscode.Disposable {
     const provider = new DialogEditorProvider(context, client);
     const editor = vscode.window.registerCustomEditorProvider("bgforge.dialogEditor", provider, {
+        // The webview alone holds the reader's view - selection, graph viewport, tree/graph mode, collapsed
+        // branches, the find query, an edit in progress - and persists none of it, so a hidden tab kept alive
+        // comes back as it was left, at the cost of its memory while hidden.
         webviewOptions: { retainContextWhenHidden: true },
         supportsMultipleEditorsPerDocument: false,
     });
