@@ -76,6 +76,29 @@ describe("user-function inlining", () => {
         expect(out).toContain("OR(2)\n    !See(Player1)\n    !Range(Player1)");
     });
 
+    it("inlines a function whose returned condition calls another user function", async () => {
+        const src = [
+            "function hasFlag(name) {",
+            '    return Global(name, "GLOBAL", 1);',
+            "}",
+            "function ready() {",
+            '    return hasFlag("a") && See(Player1);',
+            "}",
+            "if (ready()) {",
+            "    Attack(Player1);",
+            "}",
+            "",
+        ].join("\n");
+        const out = await t(src);
+        expect(out).toContain('IF\n  Global("a", "GLOBAL", 1)\n  See(Player1)\nTHEN');
+    });
+
+    it("substitutes a parameter in code but not inside a string of the returned condition", async () => {
+        const src = `function flag(i) {\n    return Global("i", "GLOBAL", i);\n}\nif (flag(3)) {\n    Continue();\n}\n`;
+        const out = await t(src);
+        expect(out).toContain('Global("i", "GLOBAL", 3)');
+    });
+
     it("rejects a multi-condition function inside an OR group", async () => {
         await expect(
             t(`${FUNC}if (See(Player2) || isThreatened()) {\n    Attack(Player1);\n}\n`),

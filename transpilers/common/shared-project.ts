@@ -8,7 +8,8 @@
  *
  * Different callers MUST use distinct virtual paths to avoid stepping on
  * each other's source files between turns of the event loop. Convention:
- * `<caller-tag>.ts`, e.g. "enum-transform.ts", "tbaf-expr.ts".
+ * `<caller-tag>.ts`, e.g. "enum-transform.ts". A caller that can re-enter itself before it is done with the
+ * previous file's nodes cannot use this pattern at all.
  *
  * No lib files are loaded. Every caller here asks only for syntactic answers - an AST walk or
  * `getSyntacticDiagnostics` - and none reaches the type checker, so the declarations the default

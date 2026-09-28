@@ -8,6 +8,8 @@
   inside a loop over `i` is no longer rewritten to `"step 1"`, `"step 2"`.
 - A number written in exponent form, such as `1e3`, reaches the BAF or D output in decimal in a file without
   imports too, as it already did in one with imports.
+- TBAF inlines a function whose returned condition calls another user function, instead of failing with "a
+  node that was removed or forgotten".
 
 ### Formatter
 

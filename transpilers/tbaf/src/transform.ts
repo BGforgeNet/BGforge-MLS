@@ -26,7 +26,6 @@ import type { FuncsContext, TransformerContext } from "./transformer-context";
 import { buildSwitchCondition, invertConditions, transformConditionExpr } from "./condition-algebra";
 import { unrollFor, unrollForOf, unrollForAsActions, unrollForOfAsActions } from "./loop-unroll";
 import { TranspileError } from "../../common/transpile-error";
-import { getSharedProject } from "../../common/shared-project";
 import { lineNumberOfNode } from "../../common/line-index";
 
 export class TBAFTransformer implements TransformerContext {
@@ -34,6 +33,8 @@ export class TBAFTransformer implements TransformerContext {
     funcs: FuncsContext = new Map();
     private blocks: BAFBlock[] = [];
     private sourceFile!: SourceFile;
+    /** Names the next parsed-expression file uniquely within the compile's project. */
+    private exprFiles = 0;
 
     /**
      * Transform a bundled TypeScript source file to BAF IR.
@@ -366,10 +367,12 @@ export class TBAFTransformer implements TransformerContext {
      * @returns The parsed Expression node, or undefined if parsing fails
      */
     parseExpressionFromText(text: string): Expression | undefined {
-        const project = getSharedProject();
-        const tempFile = project.createSourceFile("tbaf-expr.ts", `const _x_ = ${text};`, {
-            overwrite: true,
-        });
+        // Each expression gets its own file in the compile's own project: inlining a function called from
+        // inside another inlined condition parses again while the outer expression's nodes are still in use,
+        // and overwriting one shared file would free them. The project, and these files, go with the compile.
+        const tempFile = this.sourceFile
+            .getProject()
+            .createSourceFile(`tbaf-expr-${this.exprFiles++}.ts`, `const _x_ = ${text};`);
         const varDecl = tempFile.getVariableDeclarations()[0];
         return varDecl?.getInitializer();
     }
