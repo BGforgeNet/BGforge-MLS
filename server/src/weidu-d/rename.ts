@@ -8,11 +8,11 @@
  * Public API: prepareRenameSymbol, renameSymbol.
  */
 
-import type { Position, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
+import type { Position, Range, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
 import { findLabelNodeAtPosition } from "./state-utils";
-import { findAllDialogLabelRefs, type LabelRef } from "./reference-finder";
+import { findAllDialogLabelRefs } from "./reference-finder";
 
 /** WeiDU D state labels: alphanumeric identifiers. */
 const VALID_STATE_LABEL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -52,7 +52,7 @@ export function prepareRenameSymbol(
         text,
         dialogFile: labelInfo.dialogFile,
         labelName: labelInfo.labelNode.text,
-        refs,
+        ranges: refs.map((ref) => makeRange(ref.node)),
     };
 
     return {
@@ -80,30 +80,27 @@ export function renameSymbol(text: string, position: Position, newName: string, 
         return null;
     }
 
-    // Reuse cached refs from prepareRename if the text and label match
+    // Reuse the ranges prepareRename found if the text and label match. Only a definition-bearing label is
+    // ever cached, so a hit needs no second definition check.
     const cached = lastPrepareResult;
-    const refs =
+    lastPrepareResult = null;
+    let ranges: readonly Range[];
+    if (
         cached &&
         cached.text === text &&
         cached.dialogFile === labelInfo.dialogFile &&
         cached.labelName === labelInfo.labelNode.text
-            ? cached.refs
-            : findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
-    lastPrepareResult = null;
-
-    if (refs.length === 0) {
-        return null;
+    ) {
+        ranges = cached.ranges;
+    } else {
+        const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
+        if (!refs.some((r) => r.isDefinition)) {
+            return null;
+        }
+        ranges = refs.map((ref) => makeRange(ref.node));
     }
 
-    const hasDefinition = refs.some((r) => r.isDefinition);
-    if (!hasDefinition) {
-        return null;
-    }
-
-    const edits: TextEdit[] = refs.map((ref) => ({
-        range: makeRange(ref.node),
-        newText: newName,
-    }));
+    const edits: TextEdit[] = ranges.map((range) => ({ range, newText: newName }));
 
     return { changes: { [uri]: edits } };
 }
@@ -111,14 +108,16 @@ export function renameSymbol(text: string, position: Position, newName: string, 
 /**
  * Cache the last prepareRename result to avoid double AST traversal.
  * LSP calls prepareRename then rename sequentially - the second call
- * reuses the refs found by the first if the text hasn't changed.
+ * reuses the ranges found by the first if the text hasn't changed.
  *
  * Request-scoped memoisation: safe as module state because LSP callbacks are
  * sequential - prepareRename always runs to completion before rename is invoked.
+ * It holds plain ranges, never tree nodes: other parses between the two requests
+ * can evict the tree from the parse cache, which frees the memory its nodes read.
  */
 let lastPrepareResult: {
     readonly text: string;
     readonly dialogFile: string;
     readonly labelName: string;
-    readonly refs: readonly LabelRef[];
+    readonly ranges: readonly Range[];
 } | null = null;

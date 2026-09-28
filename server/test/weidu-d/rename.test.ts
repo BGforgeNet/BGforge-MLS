@@ -13,7 +13,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { prepareRenameSymbol, renameSymbol } from "../../src/weidu-d/rename";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser, parseWithCache } from "../../../shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();
@@ -29,6 +29,24 @@ function countEdits(text: string, position: Position, newName: string): number {
 }
 
 describe("weidu-d/rename", () => {
+    it("renames exactly the right ranges when the parse cache evicted the tree after prepareRename", () => {
+        // Between the two requests other documents are parsed (a workspace scan, other open files); the cache
+        // deletes the trees it evicts, so nothing from the first request's tree may be read in the second.
+        const text = "BEGIN ~DIALOG~\n\nIF ~~ THEN BEGIN s1\n    SAY ~Hi~\n    IF ~~ THEN GOTO s1\nEND\n";
+        const position: Position = { line: 2, character: 17 };
+        expect(prepareRenameSymbol(text, position)?.placeholder).toBe("s1");
+        for (let i = 0; i < 300; i++) {
+            parseWithCache(`BEGIN ~D${i}~\nIF ~~ THEN BEGIN state_${i}\n    SAY ~${"x".repeat(i)}~\nEND\n`);
+        }
+
+        const edits = renameSymbol(text, position, "renamed", URI)?.changes?.[URI];
+
+        expect(edits).toStrictEqual([
+            { range: { start: { line: 2, character: 17 }, end: { line: 2, character: 19 } }, newText: "renamed" },
+            { range: { start: { line: 4, character: 20 }, end: { line: 4, character: 22 } }, newText: "renamed" },
+        ]);
+    });
+
     describe("prepareRenameSymbol()", () => {
         it("returns range and placeholder for a state definition label", () => {
             const text = "BEGIN ~DIALOG~\n\nIF ~~ THEN BEGIN my_state\n    SAY ~Hello~\nEND\n";
