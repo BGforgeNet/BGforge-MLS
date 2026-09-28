@@ -11,7 +11,9 @@ and source `_shared/lib.sh` - which holds the changed-file scan (`lc_emit_list`)
 (`finalize_commit_and_push`) - from their own `<action>/scripts/list-changed.sh` and
 `<action>/scripts/commit-and-push.sh`, which supply only the per-CLI bits (the diff-to-worklist mapping and what to
 stage). `tssl` runs its own `tssl/scripts/switches.sh`, `tssl/scripts/run.sh` and `tssl/scripts/finish.sh` instead,
-sourcing `_shared/lib.sh` only from `finish.sh`. `_shared/` is reached as `${{ github.action_path }}/../_shared` from
+sourcing `_shared/lib.sh` only from `finish.sh`: TSSL has imports, so the dependents of a changed module are not in
+the event's changed-file list, and it compiles the whole scan path in one run and checks the regenerated `.ssl`
+against git rather than taking a `--check` flag per file. `_shared/` is reached as `${{ github.action_path }}/../_shared` from
 `action.yml` and as `${GITHUB_ACTION_PATH}/../_shared` from the scripts, which resolves because a remote action
 reference downloads the whole repository; the release tag must therefore include `_shared/`
 (see [`docs/releasing.md`](../docs/releasing.md)).
