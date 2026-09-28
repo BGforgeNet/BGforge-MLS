@@ -84,6 +84,8 @@
   copies of the files in it. An IDS or 2DA table that is present but unreadable is reported by name wherever it
   is needed, instead of being treated as absent.
 - An error reading a game's `chitin.key`, a BIF archive or a `dialog.tlk` names the file.
+- A damaged or crafted FRM or BAM v2 file, a compressed BIF that ends early, and a DLG snapshot claiming more
+  than a DLG can hold are refused with a message, instead of loading truncated data or exhausting memory.
 
 ### Other editors
 
