@@ -264,8 +264,9 @@ that package's README is the reference for usage and flags.
 
 ### SSL and TSSL CLIs
 
-`ssl` in `@bgforge/ssl` and `tssl` in `@bgforge/tssl` - see [compilers/README.md](../compilers/README.md). `ssl` is
-internal and unpublished; `tssl` is published.
+`ssl` in `@bgforge/ssl` and `tssl` in `@bgforge/tssl` - see [compilers/README.md](../compilers/README.md). Both are
+published; `tssl` bundles the SSL compiler rather than depending on the published package, so the two release in
+any order.
 
 ## Grammars and Data
 

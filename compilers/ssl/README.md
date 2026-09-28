@@ -5,8 +5,16 @@ front end, as well as INT decompiler. It is a library rather than a program: no 
 no process to start, which is what lets the extension compile in places neither of the other two can be
 run.
 
-Internal to this repository and not published. The extension's language server uses it as a library; the
-CLI exists so the same compiler can be driven from a build script or checked by hand.
+The extension's language server uses it as a library; the CLI exists so the same compiler can be driven from
+a build script or checked by hand.
+
+## Install
+
+```bash
+pnpm add -g @bgforge/ssl
+```
+
+Requires Node 20 or newer.
 
 ## Output
 
@@ -18,8 +26,9 @@ without reissuing anything it has already shipped.
 ## CLI
 
 ```bash
-pnpm build:ssl                 # produces compilers/ssl/out/cli.js
-pnpm ssl script.ssl            # or: node compilers/ssl/out/cli.js
+ssl script.ssl                 # installed
+pnpm build:ssl                 # from a clone: produces compilers/ssl/out/cli.js
+pnpm ssl script.ssl            # from a clone, or: node compilers/ssl/out/cli.js
 ```
 
 The switches are the reference compiler's, so a build script written for it can call this instead:

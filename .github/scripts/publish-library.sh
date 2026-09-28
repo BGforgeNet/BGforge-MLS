@@ -50,8 +50,17 @@ case "$prefix" in
         script="scripts/publish-tssl.sh"
         testcfg="compilers/tssl/vitest.config.ts"
         ;;
+    ssl)
+        pkgname="@bgforge/ssl"
+        pkgjson="compilers/ssl/package.json"
+        script="scripts/publish-ssl.sh"
+        testcfg="compilers/ssl/vitest.config.ts"
+        # Its suite parses SSL through the grammar WASM that build:grammar links into shared/parsers, and its
+        # build copies that WASM beside the CLI.
+        needs_grammar=1
+        ;;
     *)
-        echo "::error::unrecognized library tag prefix '$prefix' (expected binary, format, transpile, or tssl)." >&2
+        echo "::error::unrecognized library tag prefix '$prefix' (expected binary, format, transpile, tssl, or ssl)." >&2
         exit 1
         ;;
 esac

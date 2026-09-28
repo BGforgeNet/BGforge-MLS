@@ -45,8 +45,8 @@ this list, is what actually holds.
 
 ## What ships in the npm tarballs
 
-The published packages - `@bgforge/mls-server`, `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile` and
-`@bgforge/tssl` - take the opposite shape: each `package.json` `files` field is an **allowlist**, so a tarball carries
+The published packages - `@bgforge/mls-server` and the libraries under _Releasing a library_ in
+[releasing.md](releasing.md) - take the opposite shape: each `package.json` `files` field is an **allowlist**, so a tarball carries
 only what that field names plus the files npm always includes. Neither `.gitignore` nor `.vscodeignore` affects them.
 
 ## Formatting exclusions
