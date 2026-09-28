@@ -1,12 +1,14 @@
 {
     "name": "bgforge-mls-client",
-    "version": "3.7.0",
+    "version": "0.0.0",
+    "private": true,
     "description": "BGforge MLS client",
     "license": "SEE LICENSE IN LICENSE.txt",
     "author": "BGforge",
     "repository": {
         "type": "git",
-        "url": "https://github.com/BGforgeNet/BGforge-MLS/client"
+        "url": "https://github.com/BGforgeNet/BGforge-MLS",
+        "directory": "client"
     },
     "publisher": "BGforge",
     "scripts": {
