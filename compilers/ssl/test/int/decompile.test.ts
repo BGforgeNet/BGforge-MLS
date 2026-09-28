@@ -919,6 +919,41 @@ describe("printing", () => {
         expect(text).toContain("for (; i; i = i + 1)");
     });
 
+    /** The source a lone float constant prints as. */
+    function printFloat(value: number): string {
+        const text = printProgram({
+            declarations: [
+                {
+                    kind: "procedure",
+                    procedure: {
+                        name: "start",
+                        args: [],
+                        locals: [],
+                        body: [{ kind: "expr", expr: { kind: "float", value } }],
+                    },
+                },
+            ],
+        });
+        const line = text.split("\n").find((l) => /^\s+[-\d]/.test(l));
+        if (line === undefined) throw new Error(`no constant line in:\n${text}`);
+        return line.trim().replace(/;$/, "");
+    }
+
+    it("spells every finite float in plain decimal that reads back as the same 32-bit float", () => {
+        // The grammar reads digits, a point and digits: no exponent, no NaN. A float operand is 32 bits wide.
+        const values = [1e21, 3.4028234663852886e38, 1e-7, 1e-40, 0.5, 0.1].map((v) => Math.fround(v));
+        for (const value of values) {
+            const spelled = printFloat(value);
+            expect(spelled).toMatch(/^\d+\.\d+$/);
+            expect(Math.fround(Number(spelled))).toBe(value);
+        }
+    });
+
+    it("refuses a float constant no literal can spell", () => {
+        expect(() => printFloat(Number.NaN)).toThrow(DecompileError);
+        expect(() => printFloat(Number.POSITIVE_INFINITY)).toThrow(/Infinity/);
+    });
+
     it("renders every expression kind", () => {
         const text = printProgram({
             declarations: [
