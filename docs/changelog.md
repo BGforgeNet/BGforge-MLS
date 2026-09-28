@@ -25,6 +25,18 @@
 - The Fallout SSL formatter keeps tabs inside string literals, and no longer takes `//` inside a `#define`'s string
   (`"http://..."`) for a comment.
 
+### Fallout SSL
+
+- The built-in compiler folds integer constants with 32-bit wraparound and float constants in 32-bit precision, as
+  the reference compiler does, so a constant such as `2147483647 + 1` compiles to the same value in both.
+- The built-in compiler compiles non-ASCII text in the editor to the same bytes as the reference compiler reading
+  the saved file, in UTF-8 and windows-1252 files alike. A character the file's encoding cannot hold is reported
+  where it stands instead of compiling as another one.
+- TSSL refuses a string holding a character wider than one byte, such as a Chinese letter, instead of compiling
+  it as a different character.
+- Decompiling a script prints every float constant as a plain decimal the compiler reads back, and refuses NaN
+  and infinity by name instead of printing text that does not compile.
+
 ### Language features
 
 - Go to definition on an `#include` or file path written in a different letter case than the file on disk works
