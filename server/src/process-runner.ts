@@ -26,10 +26,42 @@ export function expandHome(filePath: string): string {
 /** Known wrapper commands that may prefix executable paths in user settings. */
 const KNOWN_WRAPPERS = new Set(["wine", "wine64", "mono", "dotnet", "flatpak"]);
 
-/** Windows .cmd/.bat files require shell: true for cp.execFile to work. */
+/** Windows .cmd/.bat files cannot be executed directly: cmd.exe runs them. */
 export function needsShell(executablePath: string): boolean {
     const ext = path.extname(executablePath).toLowerCase();
     return ext === ".cmd" || ext === ".bat";
+}
+
+/** cmd.exe metacharacters; each is escaped with a caret so the shell reads it as text. */
+const CMD_META = /([()\][%!^"`<>&|;, *?])/g;
+
+/**
+ * One argument for a batch file run behind `cmd.exe /d /s /c`: quoted by the Windows argv rules (a quote inside
+ * escaped, backslashes before a quote or the end doubled), then its metacharacters caret-escaped twice - once
+ * for cmd.exe reading the line, once more for the batch file re-reading it.
+ */
+export function quoteForBatch(arg: string): string {
+    const quoted = `"${arg.replaceAll(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, "$1$1")}"`;
+    return quoted.replaceAll(CMD_META, "^$1").replaceAll(CMD_META, "^$1");
+}
+
+/**
+ * A .cmd/.bat invocation as cmd.exe runs it: one command line, every argument quoted, passed verbatim. Not
+ * `shell: true`, which joins an argv array with spaces and no quoting, so a path with a space or an `&` in it
+ * split apart or ran as a command (Node reports it as DEP0190).
+ */
+export function batchInvocation(executable: string, args: readonly string[]): { file: string; args: string[] } {
+    const line = [executable.replaceAll(CMD_META, "^$1"), ...args.map((arg) => quoteForBatch(arg))].join(" ");
+    return { file: process.env.comspec ?? "cmd.exe", args: ["/d", "/s", "/c", `"${line}"`] };
+}
+
+/** How to launch `executable` with `args`: directly, or through cmd.exe for a batch file. */
+export function launchOf(
+    executable: string,
+    args: readonly string[],
+): { file: string; args: string[]; windowsVerbatimArguments: boolean } {
+    if (!needsShell(executable)) return { file: executable, args: [...args], windowsVerbatimArguments: false };
+    return { ...batchInvocation(executable, args), windowsVerbatimArguments: true };
 }
 
 /**
@@ -74,14 +106,14 @@ export function runProcess(
     signal?: AbortSignal,
     timeoutMs = 60000,
 ): Promise<{ err: cp.ExecFileException | null; stdout: string }> {
-    const shell = needsShell(executable);
+    const launch = launchOf(executable, args);
     conlog(`${executable} ${args.join(" ")}`, "debug");
 
     return new Promise((resolve) => {
         cp.execFile(
-            executable,
-            [...args],
-            { cwd, shell, signal, timeout: timeoutMs },
+            launch.file,
+            launch.args,
+            { cwd, signal, timeout: timeoutMs, windowsVerbatimArguments: launch.windowsVerbatimArguments },
             (err, stdout: string, stderr: string) => {
                 conlog("stdout: " + stdout, "debug");
                 if (stderr) {

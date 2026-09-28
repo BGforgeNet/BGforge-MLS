@@ -13,7 +13,9 @@ const { runProcess } = await import("../src/process-runner");
 const levelsOf = (): string[] => conlogMock.mock.calls.map(([, level]) => level ?? "info");
 
 describe("runProcess logging", () => {
-    beforeEach(() => conlogMock.mockClear());
+    beforeEach(() => {
+        conlogMock.mockClear();
+    });
 
     it("keeps a run that exits non-zero - a script with errors - at debug", async () => {
         const { err } = await runProcess(process.execPath, ["-e", "process.exit(1)"], process.cwd());

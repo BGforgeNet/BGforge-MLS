@@ -72,6 +72,8 @@
   non-ASCII text appears earlier in the file, instead of mixing up which of the two the cursor is on.
 - When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
   does not exist.
+- A WeiDU or SSL compiler set up as a `.cmd` or `.bat` file is run through `cmd.exe` with every argument quoted,
+  so a path containing a space or `&` reaches it whole. Arguments used to be joined with spaces, unquoted.
 
 ### Binary editor
 

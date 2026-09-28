@@ -26,7 +26,7 @@ import {
 } from "../diagnostics";
 import { conlog } from "../logger";
 import { pathToUri, uriToPath } from "../uri-utils";
-import { needsShell, parseCommandPath, runProcess } from "../process-runner";
+import { launchOf, parseCommandPath, runProcess } from "../process-runner";
 import { abortAllCompiles, withCompileLifecycle, writeTmpSource } from "../core/compile-with-tmp-file";
 import { withDirectoryGate } from "../core/directory-gate";
 import { intOutputPath } from "../core/int-output-path";
@@ -299,8 +299,9 @@ async function checkExternalCompiler(compilePath: string) {
 
     return new Promise<boolean>((resolve) => {
         const { executable, prefixArgs } = parseCommandPath(compilePath);
-        const shell = needsShell(executable);
-        cp.execFile(executable, [...prefixArgs, "--version"], { shell }, (err) => {
+        const launch = launchOf(executable, [...prefixArgs, "--version"]);
+        const options = { windowsVerbatimArguments: launch.windowsVerbatimArguments };
+        cp.execFile(launch.file, launch.args, options, (err) => {
             conlog(`Compiler check '${compilePath} --version' err=${err}`);
             if (err) {
                 resolve(false);
