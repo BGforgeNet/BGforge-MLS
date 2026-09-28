@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { GALLERY_TABS, resolveTab, showTabStrip, tabLabel, viewerMounted } from "../src/gallery/webview/tabs";
+import {
+    GALLERY_TABS,
+    filesPane,
+    resolveTab,
+    showTabStrip,
+    tabLabel,
+    viewerMounted,
+} from "../src/gallery/webview/tabs";
 
 /**
  * The sets tab IS the animation surface, so it draws its whole self from the moment it opens rather than
@@ -51,5 +58,22 @@ describe("the tab strip", () => {
 
     it("labels every tab it can show", () => {
         expect(GALLERY_TABS.map((tab) => tabLabel(tab))).toEqual(["Files", "Animation sets"]);
+    });
+});
+
+describe("the files pane", () => {
+    // A host that never answers left an empty grid, which reads as an install with nothing in it.
+    it("says the host did not answer once the wait for it runs out", () => {
+        expect(filesPane(false, true, 0)).toBe("no-response");
+    });
+
+    it("keeps the grid up while the answer may still come", () => {
+        expect(filesPane(false, false, 0)).toBe("grid");
+    });
+
+    it("tells an empty answer from a missing one", () => {
+        expect(filesPane(true, false, 0)).toBe("empty");
+        expect(filesPane(true, true, 0)).toBe("empty");
+        expect(filesPane(true, false, 3)).toBe("grid");
     });
 });

@@ -45,3 +45,12 @@ export function showTabStrip(hasSets: boolean): boolean {
 export function viewerMounted(tab: GalleryTab, showing: boolean): boolean {
     return showing || tab === "sets";
 }
+
+/**
+ * What the files tab shows. An install with nothing drawable says so; a host that never answered says that
+ * instead, since an empty grid would read as the same empty install.
+ */
+export function filesPane(loaded: boolean, timedOut: boolean, itemCount: number): "grid" | "empty" | "no-response" {
+    if (!loaded) return timedOut ? "no-response" : "grid";
+    return itemCount === 0 ? "empty" : "grid";
+}
