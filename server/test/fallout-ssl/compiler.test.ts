@@ -839,6 +839,37 @@ describe("fallout-ssl compiler", () => {
             expect(mockSendParseResult).not.toHaveBeenCalled();
         });
 
+        // Validation compiles on every keystroke, and each one spawned the missing compiler again to learn the same.
+        it("does not probe a compiler again on the next background compile once it failed", async () => {
+            mockExecFile.mockImplementation((...args: unknown[]) => {
+                const lastArg = args[args.length - 1];
+                if (typeof lastArg === "function") (lastArg as (err: Error) => void)(new Error("not found"));
+            });
+            const probes = (): number =>
+                mockExecFile.mock.calls.filter((call) => (call[1] as string[]).includes("--version")).length;
+
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
+            expect(probes()).toBe(1);
+
+            // An explicit compile asks again: the compiler may have been installed since.
+            mockShowErrorWithActions.mockResolvedValue({ id: "cancel" });
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
+            expect(probes()).toBe(2);
+        });
+
+        it("bounds the probe, so a compiler that hangs on --version cannot hold every compile", async () => {
+            mockExecFile.mockImplementation((...args: unknown[]) => {
+                const lastArg = args[args.length - 1];
+                if (typeof lastArg === "function") (lastArg as (err: null) => void)(null);
+            });
+
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
+
+            const probe = mockExecFile.mock.calls.find((call) => (call[1] as string[]).includes("--version"))!;
+            expect(probe[2]).toMatchObject({ timeout: expect.any(Number) });
+        });
+
         it("skips version check when compiler path was already verified (cached path)", async () => {
             // First call verifies the compiler
             mockExecFile.mockImplementation((...args: unknown[]) => {

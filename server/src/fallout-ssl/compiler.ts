@@ -270,6 +270,16 @@ const compilerPathCache: { path: string | null } = { path: null };
  */
 const disabledExternalPaths = new Set<string>();
 
+/**
+ * External compiler paths whose `--version` probe failed. Validation compiles on every keystroke, and without
+ * this each one spawned the missing compiler again to learn the same thing; an interactive compile probes anew,
+ * since the compiler may have been installed since.
+ */
+const failedProbes = new Set<string>();
+
+/** A hang detector for `--version`, which answers at once from any working compiler. */
+const PROBE_TIMEOUT_MS = 10_000;
+
 /** Track in-flight compilations per URI so we can cancel stale ones. */
 const activeCompiles = new Map<NormalizedUri, AbortController>();
 
@@ -290,22 +300,28 @@ export function abortInFlightSSLCompiles(): void {
 export function _resetCompilerCache() {
     compilerPathCache.path = null;
     disabledExternalPaths.clear();
+    failedProbes.clear();
 }
 
-async function checkExternalCompiler(compilePath: string) {
+async function checkExternalCompiler(compilePath: string, interactive: boolean) {
     if (compilePath === compilerPathCache.path) {
         return true;
+    }
+    if (!interactive && failedProbes.has(compilePath)) {
+        return false;
     }
 
     return new Promise<boolean>((resolve) => {
         const { executable, prefixArgs } = parseCommandPath(compilePath);
         const launch = launchOf(executable, [...prefixArgs, "--version"]);
-        const options = { windowsVerbatimArguments: launch.windowsVerbatimArguments };
+        const options = { windowsVerbatimArguments: launch.windowsVerbatimArguments, timeout: PROBE_TIMEOUT_MS };
         cp.execFile(launch.file, launch.args, options, (err) => {
-            conlog(`Compiler check '${compilePath} --version' err=${err}`);
+            conlog(`Compiler check '${compilePath} --version' err=${err}`, err ? "warn" : "debug");
             if (err) {
+                failedProbes.add(compilePath);
                 resolve(false);
             } else {
+                failedProbes.delete(compilePath);
                 compilerPathCache.path = compilePath;
                 resolve(true);
             }
@@ -390,7 +406,7 @@ export async function compile(
 
             let useOwnCompiler = !sslSettings.compilePath || disabledExternalPaths.has(sslSettings.compilePath);
 
-            if (!useOwnCompiler && !(await checkExternalCompiler(sslSettings.compilePath))) {
+            if (!useOwnCompiler && !(await checkExternalCompiler(sslSettings.compilePath, interactive))) {
                 if (!interactive) {
                     useOwnCompiler = true;
                 } else {

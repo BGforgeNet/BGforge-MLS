@@ -35,6 +35,8 @@
 - TSSL refuses a string holding a character wider than one byte, such as a Chinese letter, instead of compiling
   it as a different character.
 - The built-in compiler reports every procedure that is declared but never defined, not only the first.
+- With `bgforge.falloutSSL.compilePath` pointing at a compiler that does not run, validation stops trying to start
+  it on every keystroke; an explicit compile still checks it again.
 - When the built-in SSL compiler, the TSSL compiler or the transpiler stops answering, it is restarted, so the
   next compile runs instead of timing out behind the stuck one.
 - Decompiling a script prints every float constant as a plain decimal the compiler reads back, and refuses NaN
