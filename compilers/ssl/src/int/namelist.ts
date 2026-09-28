@@ -14,6 +14,14 @@
  * Interning is by exact bytes: a name used twice yields one record and one offset.
  */
 
+import { EmitError } from "./emit-error";
+
+/**
+ * A character the tables cannot store: each holds one byte per character, and `latin1` encoding keeps
+ * only the low byte of anything wider, which would compile a different string than the source shows.
+ */
+export const WIDE_CHARACTER = /[\u0100-\u{10FFFF}]/u;
+
 /** Records are padded so every entry begins on an even boundary. */
 function paddedLength(byteLength: number): number {
     const withTerminator = byteLength + 1;
@@ -31,6 +39,12 @@ export class NameTable {
         const existing = this.offsets.get(name);
         if (existing !== undefined) return existing;
 
+        const wide = WIDE_CHARACTER.exec(name);
+        if (wide !== null) {
+            throw new EmitError(
+                `${JSON.stringify(name)} holds ${JSON.stringify(wide[0])}, which is not a byte; strings are stored one byte per character`,
+            );
+        }
         const text = Buffer.from(name, "latin1");
         const length = paddedLength(text.length);
         const record = new Uint8Array(2 + length);

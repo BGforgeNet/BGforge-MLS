@@ -96,9 +96,9 @@ export async function withCompileLifecycle(params: {
  * attacker raced a symlink in, the open fails rather than redirecting the write to the symlink target.
  * Mode 0o600 keeps the file owner-only. (CodeQL js/insecure-temporary-file.)
  */
-export async function writeTmpSource(tmpPath: string, text: string): Promise<void> {
+export async function writeTmpSource(tmpPath: string, source: string | Uint8Array): Promise<void> {
     await fs.promises.unlink(tmpPath).catch(() => {});
-    await fs.promises.writeFile(tmpPath, text, { flag: "wx", mode: 0o600 });
+    await fs.promises.writeFile(tmpPath, source, { flag: "wx", mode: 0o600 });
 }
 
 export async function compileWithTmpFile(params: CompileWithTmpFileParams): Promise<void> {

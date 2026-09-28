@@ -26,6 +26,7 @@ import {
     P_TIMED,
 } from "./opcodes";
 import { EngineOp } from "./opcodes-engine";
+import { EmitError } from "./emit-error";
 import { NameTable } from "./namelist";
 import { IntWriter } from "./writer";
 import {
@@ -85,12 +86,7 @@ const COMPOUND_OPCODES: Partial<Record<AssignOp, number>> = {
     "/=": Op.DIV,
 };
 
-export class EmitError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = "EmitError";
-    }
-}
+export { EmitError } from "./emit-error";
 
 export interface EmitOptions {
     /**

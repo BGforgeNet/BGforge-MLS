@@ -36,6 +36,7 @@ import { getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo } from "../user-messages";
 import type { SSLsettings } from "../settings";
 import { ssl_compile as ssl_wasm_compiler } from "../sslc/ssl_compiler";
+import { encodeLikeFileOnDisk, UnsupportedEncodingCharacterError } from "../translation/encoding";
 
 const sslExt = ".ssl";
 
@@ -229,6 +230,28 @@ async function compileWithOwnCompiler(text: string, filepath: string, dstPath: s
     }
 }
 
+/** A document the file's encoding cannot hold, reported at the first character it cannot. */
+function unencodableCharacterResult(text: string, error: UnsupportedEncodingCharacterError, filepath: string) {
+    const offset = text.indexOf(error.character);
+    const lineStart = text.lastIndexOf("\n", offset - 1) + 1;
+    const line = text.slice(0, offset).split("\n").length;
+    const columnStart = offset - lineStart;
+    return {
+        errors: [
+            {
+                uri: pathToUri(filepath),
+                line,
+                columnStart,
+                columnEnd: columnStart + error.character.length,
+                message:
+                    `${JSON.stringify(error.character)} cannot be compiled: the file is saved as ${error.encoding}, ` +
+                    "which has no such character. Reopen the file in the encoding it is saved in, or save it as UTF-8.",
+            },
+        ],
+        warnings: [],
+    };
+}
+
 function sendDiagnostics(uri: string, outputText: string, tmpUri: string) {
     const parseResult = parseCompileOutput(outputText, uri);
     sendParseResult(parseResult, uri, tmpUri);
@@ -348,6 +371,22 @@ export async function compile(
         // the real output dir.
         cleanupPaths: shouldWriteOutput ? [tmpPath] : [tmpPath, dstPath],
         run: async (signal) => {
+            // Every back end compiles the bytes saving the document would write, which is what the CLI
+            // reads from that file. Encoding them once here is the one place a character the file's
+            // encoding cannot hold is refused, rather than each back end mangling it its own way.
+            let source: Buffer;
+            try {
+                source = encodeLikeFileOnDisk(text, filepath);
+            } catch (error) {
+                if (!(error instanceof UnsupportedEncodingCharacterError)) {
+                    throw error;
+                }
+                const result = unencodableCharacterResult(text, error, filepath);
+                reportCompileResult(result, interactive, `Compiled ${baseName}.`, `Failed to compile ${baseName}!`);
+                sendParseResult(result, uri, pathToUri(filepath));
+                return;
+            }
+
             let useOwnCompiler = !sslSettings.compilePath || disabledExternalPaths.has(sslSettings.compilePath);
 
             if (!useOwnCompiler && !(await checkExternalCompiler(sslSettings.compilePath))) {
@@ -374,7 +413,8 @@ export async function compile(
             // The extension's own compiler is a library: it takes the document's text directly, so
             // nothing is written beside the user's source.
             if (useOwnCompiler && sslSettings.compiler === "built-in") {
-                const result = await compileWithOwnCompiler(text, filepath, dstPath, sslSettings);
+                // One character per byte, as the CLI reads a file.
+                const result = await compileWithOwnCompiler(source.toString("latin1"), filepath, dstPath, sslSettings);
                 if (signal.aborted) {
                     return;
                 }
@@ -398,7 +438,7 @@ export async function compile(
                     return;
                 }
 
-                await writeTmpSource(tmpPath, text);
+                await writeTmpSource(tmpPath, source);
 
                 if (useOwnCompiler) {
                     const { stdout, returnCode } = await ssl_wasm_compiler({

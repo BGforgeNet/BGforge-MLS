@@ -21,7 +21,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { emitInt } from "../../src/int/emit.ts";
+import { EmitError, emitInt } from "../../src/int/emit.ts";
 import { EngineOp } from "../../src/int/opcodes-engine.ts";
 import type { Expr, Program, Stmt, VariableDecl } from "../../src/int/ir.ts";
 import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
@@ -413,4 +413,19 @@ describe.skipIf(compiler === null)("INT emitter matches the reference compiler",
             expect([...actual], describeMismatch(expected, actual)).toEqual([...expected]);
         });
     }
+});
+
+describe("INT emitter", () => {
+    // A front end that builds the program itself - the TSSL lowering - hands over its strings as they
+    // were written, and a character wider than a byte would otherwise lose its high byte in the table.
+    it("refuses a string character wider than a byte rather than truncating it", () => {
+        const program = startProc([
+            { kind: "libStmt", opcode: EngineOp.DISPLAY_MSG, args: [{ kind: "string", value: "don\u2019t" }] },
+        ]);
+        expect(() => emitInt(program)).toThrow(
+            new EmitError(
+                '"don\u2019t" holds "\u2019", which is not a byte; strings are stored one byte per character',
+            ),
+        );
+    });
 });

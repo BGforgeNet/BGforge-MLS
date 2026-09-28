@@ -1,12 +1,14 @@
 /**
  * File encoding: UTF-8-first read with a windows-1252 fallback, encoding-preserving write, and an
  * atomic (temp-file + rename) write-back. Shared by the loader (reading `.tra`/`.msg` and
- * consumer files) and the write-back path (persisting edited translation text).
+ * consumer files), the write-back path (persisting edited translation text), and the SSL compile
+ * (compiling the bytes a save would write).
  */
 
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
+import { getErrnoCode } from "../diagnostics";
 
 /** Which decoder successfully read a `.tra`/`.msg` file's bytes. */
 export type ResolvedEncoding = "utf-8" | "windows-1252";
@@ -83,6 +85,23 @@ export function encodeToResolvedEncoding(text: string, encoding: ResolvedEncodin
         bytes.push(byte);
     }
     return Buffer.from(bytes);
+}
+
+/**
+ * Encode an open document's text as the bytes saving it would write: in the encoding its file on disk
+ * decodes as, or UTF-8 for a file not saved yet. Throws `UnsupportedEncodingCharacterError` as
+ * `encodeToResolvedEncoding` does.
+ */
+export function encodeLikeFileOnDisk(text: string, absPath: string): Buffer {
+    let encoding: ResolvedEncoding = "utf-8";
+    try {
+        encoding = decodeFileBytes(fs.readFileSync(absPath)).encoding;
+    } catch (error) {
+        if (getErrnoCode(error) !== "ENOENT") {
+            throw error;
+        }
+    }
+    return encodeToResolvedEncoding(text, encoding);
 }
 
 /**

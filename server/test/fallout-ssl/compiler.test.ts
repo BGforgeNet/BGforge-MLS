@@ -13,13 +13,21 @@ vi.mock("child_process", () => ({
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
 const mockUnlink = vi.fn().mockResolvedValue(undefined);
 const mockWriteFileSync = vi.fn();
+/** The saved file's bytes, which decide the encoding the document's text is compiled in. */
+const mockReadFileSync = vi.fn();
 vi.mock("fs", () => ({
     promises: {
         writeFile: (...args: unknown[]) => mockWriteFile(...args),
         unlink: (...args: unknown[]) => mockUnlink(...args),
     },
     writeFileSync: (...args: unknown[]) => mockWriteFileSync(...args),
+    readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
 }));
+
+/** No saved file yet: the document compiles as UTF-8, what a new file is saved as. */
+function noSavedFile(): never {
+    throw Object.assign(new Error("ENOENT: no such file"), { code: "ENOENT" });
+}
 
 const mockShowInfo = vi.fn();
 const mockShowError = vi.fn();
@@ -104,6 +112,7 @@ describe("fallout-ssl compiler", () => {
         mockCompileOnWorker.mockResolvedValue({ errors: [], warnings: [] });
         mockGetParser.mockReturnValue({});
         mockSendRequest.mockResolvedValue(true);
+        mockReadFileSync.mockImplementation(noSavedFile);
         setMockDocument("line one\nline two\nline three\n");
     });
 
@@ -142,10 +151,19 @@ describe("fallout-ssl compiler", () => {
         it("writes text to .tmp.ssl using async fs.promises.writeFile", async () => {
             await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "script code");
 
-            expect(mockWriteFile).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME), "script code", {
-                flag: "wx",
-                mode: 0o600,
-            });
+            expect(mockWriteFile).toHaveBeenCalledWith(
+                expect.stringContaining(TMP_SSL_NAME),
+                Buffer.from("script code"),
+                { flag: "wx", mode: 0o600 },
+            );
+        });
+
+        it("writes the bytes the saved windows-1252 file holds, not the text's UTF-8", async () => {
+            mockReadFileSync.mockReturnValue(Buffer.from([0x92]));
+
+            await compile(normalizeUri("file:///project/test.ssl"), baseSettings, false, "x := \u2019;");
+
+            expect(mockWriteFile.mock.calls[0]![1]).toStrictEqual(Buffer.from([...Buffer.from("x := "), 0x92, 0x3b]));
         });
 
         it("writes tmp file in the same directory as source (for include resolution)", async () => {
@@ -399,6 +417,35 @@ describe("fallout-ssl compiler", () => {
                 noWarnings: false,
             });
             expect(mockWriteFile).not.toHaveBeenCalled();
+        });
+
+        // The compiler reads one byte per character, as the CLI does reading a file as latin1; what it is
+        // handed are the bytes the saved file holds, in whichever encoding that file is in.
+        it("hands the compiler a windows-1252 file's bytes", async () => {
+            mockReadFileSync.mockReturnValue(Buffer.from([0x92]));
+
+            await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "\u2019");
+
+            expect(mockCompileOnWorker).toHaveBeenCalledWith(expect.objectContaining({ text: "\u0092" }));
+        });
+
+        it("hands the compiler a UTF-8 file's bytes", async () => {
+            mockReadFileSync.mockReturnValue(Buffer.from("\u00E9", "utf8"));
+
+            await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "\u00E9");
+
+            expect(mockCompileOnWorker).toHaveBeenCalledWith(expect.objectContaining({ text: "\u00C3\u00A9" }));
+        });
+
+        it("refuses a character the file's encoding cannot hold, naming it", async () => {
+            mockReadFileSync.mockReturnValue(Buffer.from([0x92]));
+
+            await compile(normalizeUri("file:///project/test.ssl"), ownSettings, true, "x := 1;\ny := \u4E2D;");
+
+            expect(mockCompileOnWorker).not.toHaveBeenCalled();
+            const error = mockSendParseResult.mock.calls[0]![0].errors[0];
+            expect(error).toMatchObject({ line: 2, columnStart: 5, columnEnd: 6 });
+            expect(error.message).toContain("\u4E2D");
         });
 
         it("passes the compileOptions setting through, since it is a command line for this compiler too", async () => {

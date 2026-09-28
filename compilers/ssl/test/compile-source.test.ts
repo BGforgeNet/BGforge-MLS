@@ -76,6 +76,15 @@ describe.skipIf(!wasmPresent)("compileSource", () => {
         expect(result.warnings).toMatchObject([{ line: 2 }]);
     });
 
+    // The compiled file holds one byte per character, as the reference reads its input; a wider one would
+    // lose its high byte and compile a different string than the source shows.
+    it("refuses a character wider than a byte, where it stands", () => {
+        const { result } = compileWith('procedure start begin\n display_msg("\u4E2D");\nend\n');
+        expect(result.bytes).toBeUndefined();
+        expect(result.problems).toMatchObject([{ line: 2, column: 15 }]);
+        expect(result.problems[0]?.message).toContain("\u4E2D");
+    });
+
     it("reports an unlocatable failure at the top of the file rather than throwing", () => {
         // A parser with no language loaded fails outside every refusal shape the compiler owns.
         const { result } = compileWith("procedure start begin end\n", {}, {});
