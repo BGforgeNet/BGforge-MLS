@@ -76,6 +76,14 @@ export function createWorkerClient<Req extends Identified, Res extends Identifie
         pending.clear();
     }
 
+    /** Drops the current worker, failing what it holds; the next request starts a fresh one. */
+    async function drop(reason: string): Promise<void> {
+        const instance = worker.instance;
+        worker.instance = null;
+        failAllPending(reason);
+        if (instance) await instance.terminate();
+    }
+
     function getWorker(): Worker {
         if (worker.instance) return worker.instance;
 
@@ -90,13 +98,15 @@ export function createWorkerClient<Req extends Identified, Res extends Identifie
             entry.resolve(response);
         });
         // A worker that dies takes every request in flight with it. They are rejected rather than left
-        // hanging, and the reference is dropped so the next request starts a fresh one.
+        // hanging, and the reference is dropped so the next request starts a fresh one. Only while it is
+        // still the current worker: one already dropped reports its end late, when the requests in flight
+        // belong to its replacement.
         instance.on("error", (error: Error) => {
             conlog(`${label} worker error: ${error.message}`, "error");
-            worker.instance = null;
-            failAllPending(`The ${label} failed to run: ${error.message}`);
+            if (worker.instance === instance) void drop(`The ${label} failed to run: ${error.message}`);
         });
         instance.on("exit", (code) => {
+            if (worker.instance !== instance) return;
             worker.instance = null;
             if (pending.size > 0) failAllPending(`The ${label} stopped unexpectedly (exit ${code}).`);
         });
@@ -119,7 +129,12 @@ export function createWorkerClient<Req extends Identified, Res extends Identifie
             const timer = setTimeout(() => {
                 pending.delete(id);
                 signal?.removeEventListener("abort", onAbort);
-                reject(new Error(`The ${label} did not answer within ${timeoutMs / 1000}s.`));
+                const reason = `The ${label} did not answer within ${timeoutMs / 1000}s.`;
+                reject(new Error(reason));
+                // Presumed wedged, so replaced: it reads requests in order, and every later one would wait
+                // behind this one and time out in turn.
+                conlog(`${reason} Restarting it.`, "error");
+                void drop(reason);
             }, timeoutMs);
             // The worker is idle between requests and must not hold the process open; neither may this.
             timer.unref?.();
@@ -153,11 +168,6 @@ export function createWorkerClient<Req extends Identified, Res extends Identifie
         start: () => {
             getWorker();
         },
-        stop: async () => {
-            const instance = worker.instance;
-            worker.instance = null;
-            failAllPending(`The ${label} was shut down.`);
-            if (instance) await instance.terminate();
-        },
+        stop: () => drop(`The ${label} was shut down.`),
     };
 }
