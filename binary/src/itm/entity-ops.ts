@@ -99,6 +99,8 @@ const ops = createIeStructureOps<ItmCanonicalDocument, ItmAbility>({
 // re-export the ITM-bound instance so that import has a stable home after that module is deleted.
 export const { validateEffectPartition } = createEffectPartition(ITM_FIELDS);
 
+/** The bound ops whole, for the format adapter; the named exports below serve the tests and resolvers. */
+export const itmStructureOps = ops;
 export const itmAbilitiesCollection = ops.abilitiesCollection;
 export const itmEffectsCollection = ops.effectsCollection;
 export const relinkAbilityEffectIndices = ops.relinkAbilityEffectIndices;
@@ -118,4 +120,3 @@ export const buildItmAddEffectToAbilityBytes = ops.buildAddEffectToAbilityBytes;
 export const isItmListSection = ops.isListSection;
 export const isItmModifiableArray = ops.isModifiableArray;
 export const isItmAddableArray = ops.isAddableArray;
-export const isItmRemovableEntry = ops.isRemovableEntry;

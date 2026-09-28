@@ -89,6 +89,8 @@ const ops = createIeStructureOps<SplCanonicalDocument, SplAbility>({
     defaultEffect: defaultIeEffect,
 });
 
+/** The bound ops whole, for the format adapter; the named exports below serve the tests and resolvers. */
+export const splStructureOps = ops;
 export const splAbilitiesCollection = ops.abilitiesCollection;
 export const splEffectsCollection = ops.effectsCollection;
 
@@ -107,7 +109,6 @@ export const buildSplAddEffectToAbilityBytes = ops.buildAddEffectToAbilityBytes;
 export const isSplListSection = ops.isListSection;
 export const isSplModifiableArray = ops.isModifiableArray;
 export const isSplAddableArray = ops.isAddableArray;
-export const isSplRemovableEntry = ops.isRemovableEntry;
 
 // Re-export the section constants so the format-adapter routes by the same strings the resolvers expect.
 export { ABILITIES_SECTION, EFFECTS_SECTION } from "../ie-common/structure-ops";
