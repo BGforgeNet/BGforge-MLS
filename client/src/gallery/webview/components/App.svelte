@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { SvelteMap, SvelteSet } from "svelte/reactivity";
     import { matchesTag, resourceTags } from "../../resource-tags";
     import { filterTiles } from "../grid-window";
     import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
@@ -74,9 +75,9 @@
      * VALUE rather than an absent key. A plain "is it missing" check would re-request an item that has
      * already been tried and failed, once per scroll past it.
      */
-    let thumbnails: Map<string, string | undefined> = $state(new Map());
+    const thumbnails = new SvelteMap<string, string | undefined>();
     /** Which answered items are creature animations, so a tile can say why its picture holds one frame. */
-    let directional: Set<string> = $state(new Set());
+    const directional = new SvelteSet<string>();
     /** The animation this panel was opened on, if any - kept for the note when the install has no such id. */
     let focusSet: number | undefined = $state();
     let loaded = $state(false);
@@ -136,10 +137,10 @@
             deliverToViewer?.(message.message);
             return;
         }
-        // Replaced, not mutated: mutating a Map in place does not go through the reactive proxy, so the tile
-        // waiting on this picture would never re-render - a bug that only shows up in the live panel.
-        thumbnails = new Map([...thumbnails, [message.id, message.dataUri]]);
-        if (message.directional === true) directional = new Set([...directional, message.id]);
+        // Set in place on a SvelteMap, which tracks each key: only the tile reading this id re-renders. Copying
+        // a plain Map per message instead cost O(n) each, quadratic over an install's five-figure list.
+        thumbnails.set(message.id, message.dataUri);
+        if (message.directional === true) directional.add(message.id);
     }
 
     $effect(() => {
