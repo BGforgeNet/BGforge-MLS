@@ -276,6 +276,8 @@ interface RunOptions {
      * pays that warmup once over a contiguous run instead of once per chunk.
      */
     chunksPerJob?: number;
+    /** How long one child may run before it is stopped as wedged; the default suits every real CLI. */
+    childTimeoutMs?: number;
 }
 
 interface ChildCounts {
@@ -305,9 +307,16 @@ function stripJobsFlag(argv: string[]): string[] {
     return out;
 }
 
+/**
+ * How long one child may run before it is presumed wedged: a hang detector rather than a budget. A child
+ * handles one chunk of the list - several per job - so minutes of it mean a stuck file, not a slow run.
+ */
+const CHILD_TIMEOUT_MS = 10 * 60_000;
+
 function runChild(
     childArgs: string[],
     stdoutSpool: string,
+    timeoutMs: number,
 ): Promise<{ code: number; stderr: string; counts?: ChildCounts }> {
     return new Promise((resolve) => {
         // stdout is spooled to a temp file rather than buffered in memory:
@@ -322,16 +331,30 @@ function runChild(
         });
         let stderr = "";
         let counts: ChildCounts | undefined;
+        let settled = false;
+        // Once: a child that fails to spawn may report `error` with or without a `close` after it.
+        const settle = (code: number): void => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            fs.closeSync(out);
+            resolve({ code, stderr, counts });
+        };
+        const timer = setTimeout(() => {
+            stderr += `Error: a child process did not finish within ${timeoutMs / 1000}s and was stopped\n`;
+            child.kill("SIGKILL");
+        }, timeoutMs);
         child.stderr!.on("data", (d: Buffer) => {
             stderr += d;
         });
         child.on("message", (m) => {
             counts = readChildCounts(m) ?? counts;
         });
-        child.on("close", (code) => {
-            fs.closeSync(out);
-            resolve({ code: code ?? 1, stderr, counts });
+        child.on("error", (error) => {
+            stderr += `Error: a child process failed: ${error.message}\n`;
+            settle(1);
         });
+        child.on("close", (code) => settle(code ?? 1));
     });
 }
 
@@ -342,7 +365,12 @@ function runChild(
  * each child's spooled output is replayed in chunk order so the combined
  * output matches the sequential walk. Counts come back over the IPC channel.
  */
-async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: number): Promise<void> {
+async function runParallelJobs(
+    files: string[],
+    args: CliArgs,
+    chunksPerJob: number,
+    childTimeoutMs: number,
+): Promise<void> {
     const jobs = Math.min(args.jobs, files.length);
     // Many more chunks than workers: per-file cost is highly skewed (one big
     // record can cost 1000x a small one), and with one contiguous chunk per
@@ -369,7 +397,11 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
                 const listFile = path.join(tmpDir, `chunk-${i}.txt`);
                 fs.writeFileSync(listFile, chunks[i]!.join("\n") + "\n");
                 // oxlint-disable-next-line no-await-in-loop
-                results[i] = await runChild([...baseArgs, "--files-from", listFile], path.join(tmpDir, `stdout-${i}`));
+                results[i] = await runChild(
+                    [...baseArgs, "--files-from", listFile],
+                    path.join(tmpDir, `stdout-${i}`),
+                    childTimeoutMs,
+                );
             }
         };
         await Promise.all(Array.from({ length: jobs }, runWorker));
@@ -429,7 +461,15 @@ export function reportFatal(error: unknown): void {
 }
 
 export async function runCli(options: RunOptions): Promise<void> {
-    const { args, extensions, description, init, processFile, chunksPerJob = 8 } = options;
+    const {
+        args,
+        extensions,
+        description,
+        init,
+        processFile,
+        chunksPerJob = 8,
+        childTimeoutMs = CHILD_TIMEOUT_MS,
+    } = options;
 
     // Child mode (spawned by runParallelJobs): process the handed list with
     // the normal sequential loop and report counts back over IPC. No summary
@@ -473,7 +513,7 @@ export async function runCli(options: RunOptions): Promise<void> {
         if (!args.quiet) console.log(`Found ${files.length} ${description} files`);
         // init() is skipped here: the parent only orchestrates, each child
         // initializes its own parsers.
-        await runParallelJobs(files, args, chunksPerJob);
+        await runParallelJobs(files, args, chunksPerJob, childTimeoutMs);
         return;
     }
 

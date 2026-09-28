@@ -730,6 +730,23 @@ describe("runCli --jobs fan-out", () => {
         expect(jobsTmpDirs()).toEqual(before);
     });
 
+    // A child that never exits would hold the whole run open with nothing said.
+    it("fails a child that runs past its bound, naming the timeout, and cleans up", async () => {
+        fs.writeFileSync(path.join(tmpDir, "b.txt"), "hang");
+        const before = jobsTmpDirs();
+        await runCli({
+            args: { target: tmpDir, mode: "save", recursive: true, quiet: true, jobs: 2 },
+            extensions: [".txt"],
+            description: "test",
+            processFile: unusedProcessFile,
+            childTimeoutMs: 1000,
+        });
+        expect(process.exitCode).toBe(1);
+        const forwarded = stderrSpy.mock.calls.map((c: unknown[]) => String(c[0])).join("");
+        expect(forwarded).toContain("did not finish within 1s");
+        expect(jobsTmpDirs()).toEqual(before);
+    });
+
     it("check mode: exits 1 when children report changes", async () => {
         // The fixture reports every file as changed; check mode must aggregate
         // to a failing exit even though every child exited 0.
