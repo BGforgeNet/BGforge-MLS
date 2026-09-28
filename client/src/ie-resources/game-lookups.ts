@@ -2,8 +2,7 @@ import type * as vscode from "vscode";
 import { engineForFlavour, type IeScriptStyle, type TwoDaTable } from "@bgforge/binary";
 import { parseGradientTable, type Rgba } from "@bgforge/image";
 import type { BcsNaming } from "../bcs-editor/document";
-import { bcsEngineForScriptStyle } from "../../../shared/bcs-engine";
-import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
+import { bcsEngineForScriptStyle, compileSymbolsFrom } from "../../../compilers/bcs/src/index";
 import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
 import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
 

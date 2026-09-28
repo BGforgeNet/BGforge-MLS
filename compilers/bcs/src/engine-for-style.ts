@@ -3,8 +3,8 @@
  * (compiling a `.baf` with the built-in compiler) so both agree on which engine a configured install is.
  */
 
-import type { IeScriptStyle } from "../binary/src/index";
-import type { BcsEngine } from "../compilers/bcs/src/index";
+import type { IeScriptStyle } from "../../../binary/src/archive/game-type";
+import type { BcsEngine } from "./signature";
 
 /**
  * The BCS engine a detected script style names.
