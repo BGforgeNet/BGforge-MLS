@@ -53,6 +53,7 @@ import {
     type WorkspaceSymbolCapability,
     type CallHierarchyCapability,
 } from "../language-provider";
+import { initializedContext } from "../core/capabilities";
 import { formatWithValidation } from "../shared/provider-helpers";
 import { getJsdocCompletions } from "../shared/jsdoc-completions";
 import { FALLOUT_JSDOC_TYPES } from "../shared/fallout-types";
@@ -416,7 +417,7 @@ class FalloutSslProvider
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, token) ?? [];
     }
 
     onDocumentClosed(uri: NormalizedUri): void {
@@ -424,17 +425,8 @@ class FalloutSslProvider
     }
 
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
-        if (!this.storedContext) {
-            conlog("Fallout SSL provider not initialized, cannot compile");
-            return;
-        }
-        await falloutCompile(
-            uri,
-            this.storedContext.settings.falloutSSL,
-            interactive,
-            text,
-            this.storedContext.settings.debug,
-        );
+        const { settings } = initializedContext(this.storedContext, "Fallout SSL");
+        await falloutCompile(uri, settings.falloutSSL, interactive, text, settings.debug);
     }
 }
 

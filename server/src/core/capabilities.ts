@@ -66,6 +66,15 @@ export interface FormatResult {
 }
 
 /**
+ * A provider's stored context. The registry inits every provider before it serves a request, so a missing one
+ * is a wiring bug, refused by name rather than logged over while the request quietly does nothing.
+ */
+export function initializedContext(context: ProviderContext | undefined, provider: string): ProviderContext {
+    if (!context) throw new Error(`${provider} provider was used before its init`);
+    return context;
+}
+
+/**
  * Context passed to providers during initialization.
  * Contains everything a provider needs to set up.
  */

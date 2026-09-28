@@ -86,13 +86,13 @@ describe("Symbols.searchWorkspaceSymbols - cancellation", () => {
 
     it("returns empty array when token is pre-cancelled", () => {
         const token = cancelledToken();
-        const results = index.searchWorkspaceSymbols("", 500, token);
+        const results = index.searchWorkspaceSymbols("", token);
         expect(results).toEqual([]);
     });
 
     it("returns results when token is not cancelled", () => {
         const src = new CancellationTokenSource();
-        const results = index.searchWorkspaceSymbols("proc_", 500, src.token);
+        const results = index.searchWorkspaceSymbols("proc_", src.token);
         expect(results.length).toBeGreaterThan(0);
     });
 });

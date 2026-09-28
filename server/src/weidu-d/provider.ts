@@ -41,6 +41,7 @@ import {
     type WorkspaceSymbolCapability,
     HoverResult,
 } from "../language-provider";
+import { initializedContext } from "../core/capabilities";
 import {
     detectEmbeddedBaf,
     resolveEmbeddedBafSymbol,
@@ -216,7 +217,7 @@ class WeiduDProvider
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, token) ?? [];
     }
 
     reloadFileData(uri: NormalizedUri, text: string): void {
@@ -231,11 +232,7 @@ class WeiduDProvider
     }
 
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
-        if (!this.storedContext) {
-            conlog("WeiDU D provider not initialized, cannot compile");
-            return;
-        }
-        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
+        await weiduCompile(uri, initializedContext(this.storedContext, "WeiDU D").settings.weidu, interactive, text);
     }
 }
 

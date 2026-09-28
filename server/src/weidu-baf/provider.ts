@@ -27,6 +27,7 @@ import {
     type CompilationCapability,
     type StrRefCapability,
 } from "../language-provider";
+import { initializedContext } from "../core/capabilities";
 import { createIsInsideComment } from "../shared/comment-check";
 import { stripCommentsWeidu, formatWeiduBaf as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
@@ -129,11 +130,7 @@ class WeiduBafProvider
     }
 
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
-        if (!this.storedContext) {
-            conlog("WeiDU BAF provider not initialized, cannot compile");
-            return;
-        }
-        await runBafDiagnostics(uri, text, this.storedContext.settings, interactive);
+        await runBafDiagnostics(uri, text, initializedContext(this.storedContext, "WeiDU BAF").settings, interactive);
     }
 }
 

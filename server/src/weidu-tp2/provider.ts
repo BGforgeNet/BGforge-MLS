@@ -60,6 +60,7 @@ import {
     type SemanticTokenCapability,
     type WorkspaceSymbolCapability,
 } from "../language-provider";
+import { initializedContext } from "../core/capabilities";
 import { getFormatOptions } from "../shared/format-options";
 import { stripCommentsWeidu, formatWeiduTp2 as formatAst } from "@bgforge/format";
 import { resolveSymbolWithLocal, formatWithValidation } from "../shared/provider-helpers";
@@ -472,7 +473,7 @@ class WeiduTp2Provider
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, token) ?? [];
     }
 
     onDocumentClosed(uri: NormalizedUri): void {
@@ -480,11 +481,7 @@ class WeiduTp2Provider
     }
 
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
-        if (!this.storedContext) {
-            conlog("WeiDU TP2 provider not initialized, cannot compile");
-            return;
-        }
-        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
+        await weiduCompile(uri, initializedContext(this.storedContext, "WeiDU TP2").settings.weidu, interactive, text);
     }
 
     format(text: string, uri: NormalizedUri): FormatResult {
