@@ -6,7 +6,7 @@
  * already-`@N` text) so both mint ids the same way and persist via the same `.tra`/`.msg` side-write.
  */
 
-import { nextIdSeed } from "./dialog-edit-common";
+import { bareMsgKey, nextIdSeed } from "./dialog-edit-common";
 import type { DialogModel } from "./dialog-model";
 
 /**
@@ -16,7 +16,7 @@ import type { DialogModel } from "./dialog-model";
  */
 function isNewText(text: string | undefined): boolean {
     const t = (text ?? "").trim();
-    return t !== "" && !/^@\d+$/.test(t);
+    return t !== "" && bareMsgKey(t) === undefined;
 }
 
 /**

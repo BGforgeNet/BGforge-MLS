@@ -11,6 +11,7 @@
  * depend on and should not start to; `@bgforge/binary`'s `Dlg` satisfies it, pinned by a test.
  */
 
+import { bareMsgId } from "./dialog-edit-common";
 import type { DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget } from "./dialog-model";
 
 export interface DlgModelState {
@@ -66,8 +67,7 @@ export function strrefText(strref: number): string {
  * render text it then refuses to save.
  */
 export function strrefValue(text: string): number | null {
-    const match = /^@(\d+)$/.exec(text.trim());
-    return match ? Number(match[1]) : null;
+    return bareMsgId(text) ?? null;
 }
 
 /** A state's id across the whole tree: its dialog and its number, since numbers repeat between files. */

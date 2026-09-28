@@ -1,4 +1,4 @@
-import { nextIdSeed } from "./dialog-edit-common";
+import { bareMsgKey, nextIdSeed } from "./dialog-edit-common";
 import type { DialogModel } from "./dialog-model";
 import type { NodeMsgIds } from "./dialog-ssl-serialize";
 
@@ -10,7 +10,7 @@ import type { NodeMsgIds } from "./dialog-ssl-serialize";
  */
 function isNewOption(choice: { callRange?: unknown; text?: string }): boolean {
     const t = (choice.text ?? "").trim();
-    return choice.callRange === undefined && t !== "" && !/^@\d+$/.test(t);
+    return choice.callRange === undefined && t !== "" && bareMsgKey(t) === undefined;
 }
 
 /** A new node: no source `procRange` (it never existed in the .ssl). */
@@ -68,7 +68,7 @@ export function allocateNodeIds(
     const newMessages: Record<string, string> = {};
     for (const root of model.roots) {
         for (const state of root.states) {
-            const literalReply = state.text.trim() !== "" && !/^@\d+$/.test(state.text.trim());
+            const literalReply = state.text.trim() !== "" && bareMsgKey(state.text) === undefined;
             if (!isNewNode(state)) {
                 if (literalReply && !state.textKind && !state.derivedFrom && replylessInSource?.has(state.id)) {
                     const id = next++;

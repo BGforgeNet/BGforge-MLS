@@ -19,7 +19,7 @@ import {
     renderFamily,
     rewriteSameFileExternRef,
 } from "./dialog-model";
-import { allChoices, allStates } from "./dialog-edit-common";
+import { allChoices, allStates, bareMsgKey } from "./dialog-edit-common";
 import { sslNameKey } from "./fallout-ssl-names";
 
 /** Every state id across the model - a thin projection over the shared `allStates` flatten. */
@@ -38,9 +38,8 @@ function rootOf(model: DialogModel, state: DialogState): DialogModel["roots"][nu
  * `@N` inside a literal is left alone. Used by `duplicateState` so a copy never aliases the source's string.
  */
 function detachRef(text: string | undefined, messages: DialogModel["messages"]): string | undefined {
-    const t = (text ?? "").trim();
-    const m = /^@(\d+)$/.exec(t);
-    const resolved = m ? messages?.[m[1]!] : undefined;
+    const key = bareMsgKey(text);
+    const resolved = key === undefined ? undefined : messages?.[key];
     // Preserve `undefined` (a textless "continue" option) rather than coercing it to "".
     return resolved ?? text;
 }

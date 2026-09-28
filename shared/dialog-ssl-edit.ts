@@ -49,7 +49,7 @@ import {
     serializeSupportProcedure,
     sslOptionMacro,
 } from "./dialog-ssl-serialize";
-import { allStates, bareMsgId, isAllocatedNewOption } from "./dialog-edit-common";
+import { allStates, bareMsgId, bareMsgKey, isAllocatedNewOption } from "./dialog-edit-common";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
@@ -322,9 +322,7 @@ export function nodeOps(
             const lineStart = text.lastIndexOf("\n", o.stmtRange.start - 1) + 1;
             const indent = /^[ \t]*/.exec(text.slice(lineStart, o.stmtRange.start))?.[0] ?? "    ";
             const msgId = Number(
-                /^@(\d+)$/.exec((e.text ?? "").trim())?.[1] ??
-                    /\(\s*(\d+)/.exec(text.slice(o.callRange!.start, o.callRange!.end))?.[1] ??
-                    NaN,
+                bareMsgKey(e.text) ?? /\(\s*(\d+)/.exec(text.slice(o.callRange!.start, o.callRange!.end))?.[1] ?? NaN,
             );
             if (Number.isFinite(msgId)) {
                 const wrapped = serializeConditionalOption(e, msgId, e.condition!, indent);
@@ -338,9 +336,7 @@ export function nodeOps(
             // existing indent before the `if` is preserved in place - the replacement is the bare call
             // with no leading indent added.
             const msgId = Number(
-                /^@(\d+)$/.exec((e.text ?? "").trim())?.[1] ??
-                    /\(\s*(\d+)/.exec(text.slice(o.callRange!.start, o.callRange!.end))?.[1] ??
-                    NaN,
+                bareMsgKey(e.text) ?? /\(\s*(\d+)/.exec(text.slice(o.callRange!.start, o.callRange!.end))?.[1] ?? NaN,
             );
             if (Number.isFinite(msgId)) {
                 ops.push({ start: o.ifRange.start, end: o.ifRange.end, replacement: serializeSSLOption(e, msgId) });

@@ -9,6 +9,7 @@
  * string the server parsed: UTF-16 code units, the unit of an LSP position and of `text.slice`.
  */
 
+import { bareMsgKey } from "./dialog-edit-common";
 import { sslNameKey } from "./fallout-ssl-names";
 import type {
     DDialogData,
@@ -494,8 +495,8 @@ export function resolveText(text: string | undefined, messages?: Record<string, 
 export function stateHeadLabel(state: DialogState, sourceName?: string): string {
     const speaker = state.speaker ?? sourceName;
     if (!state.derivedFrom) return speaker ? `${speaker} - ${state.id}` : state.id;
-    const m = /^@(\d+)$/.exec((state.text ?? "").trim());
-    const ref = m ? `@${m[1]}` : state.id;
+    const key = bareMsgKey(state.text);
+    const ref = key === undefined ? state.id : `@${key}`;
     return speaker ? `${speaker} ${ref}` : ref;
 }
 

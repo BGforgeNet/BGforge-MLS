@@ -4,12 +4,12 @@
  * has no unit-test seam).
  */
 
+import { bareMsgKey } from "../../../../shared/dialog-edit-common";
 import type { DialogChoice, DialogMessages, DialogState } from "../../../../shared/dialog-model";
 
 /** Parse a bare `@N` line to its numeric id, or null for a literal / non-`@N` text. */
 export function msgRef(text: string | undefined): string | null {
-    const m = /^@(\d+)$/.exec((text ?? "").trim());
-    return m ? m[1]! : null;
+    return bareMsgKey(text) ?? null;
 }
 
 /**

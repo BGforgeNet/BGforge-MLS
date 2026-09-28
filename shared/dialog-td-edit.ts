@@ -10,7 +10,7 @@
  */
 
 import { applySplices, type SpliceOp } from "./dialog-splice";
-import { allChoices, allStates, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
+import { allChoices, allStates, bareMsgKey, lineIndentAt, removeLineSplice } from "./dialog-edit-common";
 import { serializeTDState, serializeTDTarget, serializeTDTransition } from "./dialog-td-serialize";
 import type { DialogChoice, DialogModel } from "./dialog-model";
 
@@ -20,7 +20,7 @@ import type { DialogChoice, DialogModel } from "./dialog-model";
  * sibling of the shared SSL-family `isNewOption` - keyed on the D-family `sourceRange` marker, not `callRange`.
  */
 function isNewTDOption(c: DialogChoice): boolean {
-    return c.sourceRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
+    return c.sourceRange === undefined && bareMsgKey(c.text) !== undefined;
 }
 
 /** Splice a whole state function out, plus the blank line separating it from the next (up to two trailing
