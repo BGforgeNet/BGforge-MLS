@@ -7,7 +7,7 @@
 {
     "extends": "../tsconfig.base.json",
     "compilerOptions": {
-        "lib": ["es2023"],
+        "lib": ["es2024", "es2025.collection"],
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "allowImportingTsExtensions": true,

@@ -63,10 +63,10 @@ So, per bump:
   is released in April and enters LTS the following October, and `curl -s https://nodejs.org/dist/index.json` reports
   each release's `lts` field.
 - The extension's own code - the client, the language server it starts, and every library bundled into either - runs
-  on the Node inside the oldest VS Code that `engines.vscode` admits, not on `engines.node`, and VS Code 1.91 carries
-  Node 20. So every tsconfig keeps `lib` at `es2023`, which keeps the compiler refusing the built-ins that Node lacks
-  (`Promise.withResolvers`, the Set methods, `zlib.crc32`), until `engines.vscode` rises to a release whose Node has
-  them.
+  on the Node inside the oldest VS Code that `engines.vscode` admits, not on `engines.node`; VS Code 1.101 carries
+  Node 22.15 (its `cgmanifest.json` names the version). So every tsconfig sets `lib` to `es2024` plus
+  `es2025.collection` (the Set methods) rather than all of `es2025`, whose `Float16Array`, `RegExp.escape` and
+  `Promise.try` that Node lacks. Raise `lib` only with `engines.vscode`, against the Node its oldest release carries.
 - `ini` (runtime dep of `@bgforge/format`) is held at `^6.x`; `7.0.0` is a major with potential parse/stringify
   behavior changes that need a changelog review before adoption. It also carries a second, independent hold reason:
   ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) sits above both `engines.node` `>=22` and the Node inside the

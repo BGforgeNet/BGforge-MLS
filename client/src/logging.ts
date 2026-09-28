@@ -8,7 +8,7 @@ let outputChannel: vscode.LogOutputChannel | undefined;
 /** Create the extension's output channel and register it for disposal. */
 export function initOutputChannel(context: ExtensionContext): vscode.LogOutputChannel {
     // vscode-languageclient 10.x requires a LogOutputChannel for `outputChannel`; the `{ log: true }`
-    // overload (VS Code 1.74+, under our 1.91 engine floor) returns one.
+    // overload (VS Code 1.74+, below the engines.vscode floor) returns one.
     const channel = vscode.window.createOutputChannel("BGforge MLS", { log: true });
     context.subscriptions.push(channel);
     outputChannel = channel;

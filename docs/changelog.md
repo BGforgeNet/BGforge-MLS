@@ -113,6 +113,10 @@
 - Saving a dialog's text into a `.tra` or `.msg` file that exists but cannot be read says so, naming the file,
   instead of reporting nothing to save.
 
+### Requirements
+
+- Minimum supported VS Code is now 1.101 (was 1.91).
+
 ## 3.16.2
 
 ### Transpilers

@@ -1,7 +1,7 @@
 {
     "extends": "../tsconfig.base.json",
     "compilerOptions": {
-        "lib": ["es2023", "DOM", "DOM.Iterable"],
+        "lib": ["es2024", "es2025.collection", "DOM", "DOM.Iterable"],
         "outDir": "out",
         // Stated rather than inferred: `include` reaches ../shared and ../binary/src, so the source
         // root is the repo, not this directory. Inert under the base config's `noEmit` (esbuild does

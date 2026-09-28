@@ -111,7 +111,7 @@
         // on every run.
         "unicorn/number-literal-case": "off",
 
-        // Off for what the rule reaches, not for availability (`lib` is es2023 everywhere, so
+        // Off for what the rule reaches, not for availability (`lib` is es2024 everywhere, so
         // `.toSorted()` compiles and `--fix-suggestions` rewrites it). Of its 189 sites, 89 already
         // spread-copy the receiver, where the rewrite adds a second copy; the one shape that would be
         // a defect - a bare `xs.sort()` in statement position on a possibly caller-owned array - is
