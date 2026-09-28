@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Transpilers
+
+- TBAF and TD leave string literals alone when substituting a loop variable or an inlined parameter: `"step i"`
+  inside a loop over `i` is no longer rewritten to `"step 1"`, `"step 2"`.
+
 ### Formatter
 
 - The TP2 and D formatters leave `//` inside a string alone. A URL in `~...~` was taken for a comment and had spaces

@@ -302,10 +302,10 @@ describe("replaceOutsideStrings", () => {
         expect(result).toBe('var x = "ba\\"r" + baz;');
     });
 
-    it("preserves template expressions while skipping template text", () => {
-        // The identifier inside ${} is part of the template literal and is preserved as-is
-        const result = replaceOutsideStrings("bar + `text ${bar}` + bar", /\bbar\b/g, () => "baz");
-        expect(result).toBe("baz + `text ${bar}` + baz");
+    it("replaces inside a template's ${...} expressions but not in its text", () => {
+        // An expression inside ${} is code; the template's own text is a string.
+        const result = replaceOutsideStrings("bar + `text bar ${bar} ${'bar'}` + bar", /\bbar\b/g, () => "baz");
+        expect(result).toBe("baz + `text bar ${baz} ${'bar'}` + baz");
     });
 
     it("handles empty input", () => {

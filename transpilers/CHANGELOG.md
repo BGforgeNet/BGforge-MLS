@@ -2,6 +2,13 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
+## Unreleased
+
+### Fixed
+
+- TBAF and TD leave string literals alone when substituting a loop variable or an inlined parameter: `"step i"`
+  inside a loop over `i` is no longer rewritten to `"step 1"`, `"step 2"`.
+
 ## 0.4.1
 
 ### Fixed
