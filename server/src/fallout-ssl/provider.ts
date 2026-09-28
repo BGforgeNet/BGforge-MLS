@@ -8,8 +8,6 @@
  * in local-symbols.ts, following the same pattern as TP2.
  */
 
-import { promises as fsPromises, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import {
     type CallHierarchyIncomingCall,
     type CallHierarchyItem,
@@ -28,7 +26,7 @@ import {
 import type { NormalizedUri } from "../core/normalized-uri";
 import { type IndexedSymbol, SourceType, SymbolKind } from "../core/symbol";
 import { getLinePrefix } from "../cursor-utils";
-import { errorMessage } from "../diagnostics";
+import { readWorkspaceText, readWorkspaceTextSync } from "../core/workspace-text";
 import { conlog } from "../logger";
 import { EXT_FALLOUT_SSL_ALL, LANG_FALLOUT_SSL } from "../core/languages";
 import { isHeaderFile } from "../core/location-utils";
@@ -147,23 +145,8 @@ class FalloutSslProvider
         conlog(`Fallout SSL provider initialized with ${staticSymbols.length} static symbols`);
     }
 
-    /**
-     * Read file text, preferring open document buffers over disk.
-     * Returns null if the file cannot be read.
-     */
-    private async readFileText(uri: string): Promise<string | null> {
-        // Try open document buffer first
-        const bufferText = this.storedContext?.getDocumentText?.(uri);
-        if (bufferText !== undefined) {
-            return bufferText;
-        }
-
-        try {
-            return await fsPromises.readFile(fileURLToPath(uri), "utf-8");
-        } catch (error) {
-            conlog(`readFileText: failed to read ${uri}: ${errorMessage(error)}`, "warn");
-            return null;
-        }
+    private readFileText(uri: string): Promise<string | null> {
+        return readWorkspaceText(uri, this.storedContext?.getDocumentText);
     }
 
     resolveSymbol(name: string, text: string, uri: NormalizedUri): IndexedSymbol | undefined {
@@ -247,21 +230,9 @@ class FalloutSslProvider
         return sym?.location ? { uri: sym.location.uri, range: sym.location.range } : null;
     }
 
-    /**
-     * Read a file's text synchronously (the call-hierarchy capability is sync), preferring open-document
-     * buffers over disk. Returns null if the file cannot be read.
-     */
+    /** Synchronous, because the call-hierarchy capability is. */
     private readTextSync(uri: string): string | null {
-        const buffer = this.storedContext?.getDocumentText?.(uri);
-        if (buffer !== undefined) {
-            return buffer;
-        }
-        try {
-            return readFileSync(fileURLToPath(uri), "utf-8");
-        } catch (error) {
-            conlog(`call-hierarchy readTextSync: failed to read ${uri}: ${errorMessage(error)}`, "warn");
-            return null;
-        }
+        return readWorkspaceTextSync(uri, this.storedContext?.getDocumentText);
     }
 
     prepareCallHierarchy(text: string, position: Position, uri: NormalizedUri): CallHierarchyItem[] | null {

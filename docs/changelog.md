@@ -40,6 +40,8 @@
 
 ### Language features
 
+- TP2 call hierarchy reads other files as they are open in the editor, unsaved changes included, and places a
+  call correctly when accented or other non-ASCII text comes before it on its line.
 - Go to definition on an `#include` or file path written in a different letter case than the file on disk works
   when a folder above the workspace can be entered but not listed, as on shared hosts with private home folders.
 

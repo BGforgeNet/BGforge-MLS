@@ -22,10 +22,9 @@ import {
     type WorkspaceEdit,
     InsertTextFormat,
 } from "vscode-languageserver/node";
-import { readFileSync } from "fs";
 import { extname } from "path";
 import { fileURLToPath } from "url";
-import { uriToPath } from "../uri-utils";
+import { readWorkspaceTextSync } from "../core/workspace-text";
 import {
     prepareCallHierarchy as computePrepareCallHierarchy,
     incomingCalls as computeIncomingCalls,
@@ -535,17 +534,9 @@ class WeiduTp2Provider
         return this.fileIndex?.symbols.lookupDefinition(name) ?? null;
     }
 
-    /**
-     * Read a workspace file for re-parsing during a call-hierarchy query. Reads from disk in latin1
-     * (TP2's legacy encoding), so an unsaved editor buffer is not reflected - acceptable for an
-     * on-demand action where the graph is over the saved installer.
-     */
+    /** Read a workspace file for re-parsing during a call-hierarchy query. */
     private readFileText(fileUri: string): string | null {
-        try {
-            return readFileSync(uriToPath(fileUri), "latin1");
-        } catch {
-            return null;
-        }
+        return readWorkspaceTextSync(fileUri, this.storedContext?.getDocumentText);
     }
 
     references(

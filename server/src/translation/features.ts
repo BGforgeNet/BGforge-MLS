@@ -4,7 +4,7 @@
  * never mutates it, except for `resolveEntry`'s callers which may trigger a reload elsewhere.
  */
 
-import * as fs from "fs";
+import { pathToFileURL } from "url";
 import * as path from "path";
 import pLimit from "p-limit";
 import { type Hover, type InlayHint, type Location, type Range, MarkupKind } from "vscode-languageserver/node";
@@ -25,7 +25,7 @@ import {
 } from "../core/patterns";
 import { pathToUri } from "../uri-utils";
 import { WORKSPACE_SCAN_CONCURRENCY } from "../path-utils";
-import { decodeFileBytes } from "./encoding";
+import { readWorkspaceText } from "../core/workspace-text";
 import { getLineKey, type TraEntries, type TraEntry, type TraExt } from "./entries";
 import { resolveAbsolutePath } from "./loader";
 import type { TranslationState } from "./state";
@@ -460,8 +460,7 @@ function scanFileForReferences(
 
 /**
  * Find all references to a specific entry number across consumer files.
- * Consumer files are read concurrently via fs.promises.readFile to avoid
- * blocking the event loop on large mod projects.
+ * Consumer files are read concurrently, bounded, to avoid blocking the event loop on large mod projects.
  */
 export async function findReferencesInConsumers(
     state: TranslationState,
@@ -497,14 +496,8 @@ export async function findReferencesInConsumers(
     const reads = await Promise.all(
         [...consumerFiles].map((absPath) =>
             limit(async () => {
-                try {
-                    const raw = await fs.promises.readFile(absPath);
-                    const { text } = decodeFileBytes(raw);
-                    return { absPath, text };
-                } catch {
-                    // eslint-disable-next-line unicorn/no-useless-undefined -- TS noImplicitReturns flags the implicit-undefined path
-                    return undefined;
-                }
+                const text = await readWorkspaceText(pathToFileURL(absPath).toString());
+                return text === null ? undefined : { absPath, text };
             }),
         ),
     );
