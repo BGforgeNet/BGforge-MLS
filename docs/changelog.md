@@ -9,6 +9,8 @@
 - The D formatter keeps a multi-line SAY, REPLY or JOURNAL string exactly as written. It used to re-indent the
   string's later lines, which changed the text the game shows. Multi-line trigger and action code is still
   indented.
+- The `.msg` formatter keeps what follows an entry on its line, such as a note or a second entry, instead of
+  deleting it, and keeps CRLF line endings instead of converting the file to LF.
 - The Fallout SSL formatter keeps tabs inside string literals, and no longer takes `//` inside a `#define`'s string
   (`"http://..."`) for a comment.
 
