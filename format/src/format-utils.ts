@@ -218,6 +218,19 @@ export interface WeiduToken {
  * Properly handles // inside strings (e.g., URLs).
  */
 export function tokenizeWeidu(text: string): WeiduToken[] {
+    return tokenizeCode(text, true);
+}
+
+/**
+ * Tokenize Fallout SSL text into code, `"..."` strings and comments. SSL has no tilde strings, and its `%` is the
+ * modulo operator rather than a variable delimiter.
+ */
+export function tokenizeFalloutSsl(text: string): WeiduToken[] {
+    return tokenizeCode(text, false);
+}
+
+/** The one string/comment scanner behind both dialects; `weidu` adds tilde and percent strings. */
+function tokenizeCode(text: string, weidu: boolean): WeiduToken[] {
     const tokens: WeiduToken[] = [];
     let i = 0;
     let lastCodeStart = 0;
@@ -237,7 +250,7 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
 
     while (i < text.length) {
         // Tilde strings: WeiDU uses 1 tilde or 5 tildes as delimiters
-        if (text[i] === "~") {
+        if (weidu && text[i] === "~") {
             const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
             if (closerStart !== -1) {
                 flushCode(i);
@@ -270,7 +283,7 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
             continue;
         }
         // Percent strings/variables
-        if (text[i] === "%") {
+        if (weidu && text[i] === "%") {
             const start = i++;
             const end = text.indexOf("%", i);
             if (end !== -1) {
@@ -320,8 +333,17 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
  * or inside a block comment is not one, so a line is scanned token by token rather than for the substring.
  */
 export function weiduLineCommentStart(line: string): number {
+    return lineCommentStart(tokenizeWeidu(line));
+}
+
+/** {@link weiduLineCommentStart} for Fallout SSL, whose only strings are `"..."`. */
+export function falloutSslLineCommentStart(line: string): number {
+    return lineCommentStart(tokenizeFalloutSsl(line));
+}
+
+function lineCommentStart(tokens: readonly WeiduToken[]): number {
     let offset = 0;
-    for (const token of tokenizeWeidu(line)) {
+    for (const token of tokens) {
         if (token.type === WeiduTokenType.Comment && token.text.startsWith("//")) return offset;
         offset += token.text.length;
     }

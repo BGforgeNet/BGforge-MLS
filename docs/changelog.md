@@ -9,6 +9,8 @@
 - The D formatter keeps a multi-line SAY, REPLY or JOURNAL string exactly as written. It used to re-indent the
   string's later lines, which changed the text the game shows. Multi-line trigger and action code is still
   indented.
+- The Fallout SSL formatter keeps tabs inside string literals, and no longer takes `//` inside a `#define`'s string
+  (`"http://..."`) for a comment.
 
 ### Language features
 
