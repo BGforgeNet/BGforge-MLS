@@ -33,10 +33,7 @@ export interface GrammarSource {
 
 const grammars = new Map<TmLang, IGrammar>();
 
-let markReady: () => void;
-const ready = new Promise<void>((resolve) => {
-    markReady = resolve;
-});
+const { promise: ready, resolve: markReady } = Promise.withResolvers<void>();
 
 /**
  * Resolves once the tokenizer can colour. Purely a reactivity trigger for the renderer: the webview mounts

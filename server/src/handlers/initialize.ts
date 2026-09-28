@@ -56,10 +56,7 @@ let translationLoad: Promise<void> = Promise.resolve();
 
 // Resolved by the client's `initialized`, before which LSP allows the server no requests - the scan's progress
 // indicator is one, and waits on this.
-let markClientInitialized: () => void = () => {};
-const clientInitialized = new Promise<void>((resolve) => {
-    markClientInitialized = resolve;
-});
+const { promise: clientInitialized, resolve: markClientInitialized } = Promise.withResolvers<void>();
 
 export function register(ctx: HandlerContext): void {
     ctx.connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {

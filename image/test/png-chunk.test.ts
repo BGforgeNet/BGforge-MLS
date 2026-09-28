@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { emptyPalette } from "@bgforge/image";
-import { crc32 } from "../src/png/crc.ts";
 import { PNG_SIGNATURE, readChunks, writeChunk } from "../src/png/chunk.ts";
 import { encodeIndexedPng } from "../src/png/encode.ts";
 
 describe("png chunk primitives", () => {
-    it("crc32 matches the known PNG IEND CRC", () => {
-        // The IEND chunk's CRC over the type "IEND" with empty data is 0xAE426082.
-        // `>>> 0` re-asserts the unsigned coercion crc32 already applies; Math.trunc is not equivalent.
-        expect(crc32(new TextEncoder().encode("IEND")) >>> 0).toBe(0xae426082);
+    it("writes an empty IEND chunk with its known CRC", () => {
+        // Every PNG ends in these 12 bytes: zero length, "IEND", and the CRC 0xAE426082 over the type.
+        expect([...writeChunk("IEND", new Uint8Array())]).toEqual([
+            0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+        ]);
     });
     it("round-trips a chunk through write then read", () => {
         const data = new Uint8Array([1, 2, 3, 4]);

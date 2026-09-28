@@ -148,12 +148,6 @@ function nextNonWs(toks: readonly Tok[], from: number): number {
     return i;
 }
 
-function intersect(a: ReadonlySet<string>, b: ReadonlySet<string>): Set<string> {
-    const out = new Set<string>();
-    for (const x of a) if (b.has(x)) out.add(x);
-    return out;
-}
-
 function withHide(toks: readonly Tok[], hide: ReadonlySet<string>): Tok[] {
     return toks.map((t) => ({ t: t.t, ws: t.ws, hide: new Set([...t.hide, ...hide]) }));
 }
@@ -325,7 +319,7 @@ class Expander {
                 !macro.variadic &&
                 call.args.length === 1 &&
                 trimToks(call.args[0] ?? []).length === 0;
-            const hide = new Set([...intersect(tok.hide, call.rparenHide), tok.t]);
+            const hide = tok.hide.intersection(call.rparenHide).add(tok.t);
             work.splice(i, call.end - i, ...this.subst(macro, empty ? [] : call.args, hide));
         }
 
