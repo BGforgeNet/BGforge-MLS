@@ -63,6 +63,12 @@ function isPure(expr: Expr): boolean {
     }
 }
 
+/** A value wrapped to a signed 32-bit int, the width of the engine's integers. */
+function wrapInt32(value: number): number {
+    // oxlint-disable-next-line unicorn/prefer-math-trunc -- the int32 wrap is the point; Math.trunc does not wrap
+    return value | 0;
+}
+
 /**
  * Evaluates what is already known. Applied bottom-up, so nested constants collapse in one pass.
  *
@@ -79,7 +85,10 @@ function foldConstants(expr: Expr): Expr {
             case "bwnot":
                 return { kind: "int", value: ~operand.value };
             case "negate":
-                return { ...operand, value: -operand.value };
+                // An int negation wraps like the engine's: negating the most negative int leaves it.
+                return operand.kind === "int"
+                    ? { kind: "int", value: wrapInt32(-operand.value) }
+                    : { ...operand, value: -operand.value };
             default:
                 // `floor` is not in the reference's unary fold set.
                 return expr;
@@ -90,13 +99,16 @@ function foldConstants(expr: Expr): Expr {
     const right = expr.right;
     if ((left.kind !== "int" && left.kind !== "float") || (right.kind !== "int" && right.kind !== "float")) return expr;
 
-    const int = (value: number): Expr => ({ kind: "int", value });
+    // Integers wrap at 32 bits, as the engine's and the reference's do; an unwrapped intermediate would only
+    // show once a further fold read it, since the emitter writes the low 32 bits of a lone constant anyway.
+    const int = (value: number): Expr => ({ kind: "int", value: wrapInt32(value) });
     const bool = (value: boolean): Expr => int(value ? 1 : 0);
     // A float operand makes an ARITHMETIC result float; comparisons, logicals and bitwise stay integer.
-    // The arithmetic is done in 32-bit, which is the width the engine and the reference both use.
+    // Either way a float operation reads both operands as 32-bit floats, an int one included, and rounding the
+    // double result once to 32-bit float then gives the float32 result exactly for + - * /.
     const isFloat = left.kind === "float" || right.kind === "float";
-    const a = left.value;
-    const b = right.value;
+    const a = isFloat ? Math.fround(left.value) : left.value;
+    const b = isFloat ? Math.fround(right.value) : right.value;
     const arith = (value: number): Expr => (isFloat ? { kind: "float", value: Math.fround(value) } : int(value));
 
     switch (expr.op) {
@@ -105,7 +117,8 @@ function foldConstants(expr: Expr): Expr {
         case "-":
             return arith(a - b);
         case "*":
-            return arith(a * b);
+            // Math.imul: a double product of two large ints loses its low bits before any wrap could keep them.
+            return isFloat ? arith(a * b) : int(Math.imul(a, b));
         case "/":
         case "div":
             if (b === 0) return expr; // Left for the engine rather than decided here.

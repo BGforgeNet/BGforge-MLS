@@ -219,6 +219,20 @@ describe.skipIf(!wasmPresent)("level 2 constant folding", () => {
         expect(foldedValue("10 - 4")).toEqual(int(6));
     });
 
+    // Values read off the reference compiler at -O2 (pnpm ssl-diff).
+    it("wraps integer folds at 32 bits before a further operation reads them", () => {
+        expect(foldedValue("(2147483647 + 1) / 2")).toEqual(int(-1073741824));
+        expect(foldedValue("46341 * 46341 / 2")).toEqual(int(-1073739507));
+        expect(foldedValue("2147483647 * 2147483647 / 2")).toEqual(int(0));
+        expect(foldedValue("-(-2147483647 - 1) / 2")).toEqual(int(-1073741824));
+        expect(foldedValue("(2147483647 + 1) > 0")).toEqual(int(0));
+    });
+
+    it("converts an int operand to 32-bit float before a float fold", () => {
+        expect(foldedValue("16777217 + 0.5")).toEqual({ kind: "float", value: 16777216 });
+        expect(foldedValue("(16777217 == 16777216.0) + 10")).toEqual(int(11));
+    });
+
     it("truncates an integer division toward zero", () => {
         expect(foldedValue("7 / 2")).toEqual(int(3));
         expect(foldedValue("-7 / 2")).toEqual(int(-3));

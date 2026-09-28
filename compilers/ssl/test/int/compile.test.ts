@@ -333,6 +333,15 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
  */
 const OPTIMIZED_CASES: Case[] = [
     {
+        // A fold that overflows only shows once its result feeds another operation: a lone push writes the low
+        // 32 bits either way. A float fold converts its int operand to 32-bit float first.
+        name: "constant folds wrap at 32 bits",
+        source:
+            "variable g;\nprocedure start begin\n g := (2147483647 + 1) / 2;\n g := 46341 * 46341 / 2;\n" +
+            " g := -(-2147483647 - 1) / 2;\n g := 2147483647 * 2147483647 / 2;\n g := (2147483647 + 1) > 0;\n" +
+            " g := 16777217 + 0.5;\nend\n",
+    },
+    {
         // `cancel` names a procedure, and that name is the only thing keeping it alive: without counting
         // the reference, the optimiser removes the procedure and cancels something that is no longer there.
         name: "cancel keeps the procedure it names",
