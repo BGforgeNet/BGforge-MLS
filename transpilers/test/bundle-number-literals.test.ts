@@ -64,3 +64,32 @@ describe("round numbers in a bundled file", () => {
         });
     });
 });
+
+/** Transpile inline source with no imports, so nothing is bundled. */
+async function emitUnbundled(file: string, src: string): Promise<string> {
+    const result = await transpile(file, src);
+    return result.output as string;
+}
+
+describe("an exponent literal the author wrote, in a file without imports", () => {
+    it("reaches BAF in decimal", async () => {
+        const src = `if (GlobalGT("x", "GLOBAL", 1e3)) {\n    SetGlobal("y", "GLOBAL", 15e5);\n}\n`;
+        const out = await emitUnbundled("/virtual/unbundled.tbaf", src);
+        expect(out).toContain('GlobalGT("x", "GLOBAL", 1000)');
+        expect(setsGlobalTo(out, "y", "1500000")).toBe(true);
+    });
+
+    it("reaches D in decimal", async () => {
+        const src = [
+            "function start() {",
+            "    say(tra(1));",
+            '    action(SetGlobal("y", "GLOBAL", 1e3));',
+            "    exit();",
+            "}",
+            'export default begin("MYDLG", [start]);',
+            "",
+        ].join("\n");
+        const out = await emitUnbundled("/virtual/unbundled.td", src);
+        expect(setsGlobalTo(out, "y", "1000")).toBe(true);
+    });
+});
