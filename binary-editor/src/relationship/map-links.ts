@@ -11,7 +11,8 @@
  * of the wrong type), whereas the object<->script `sid` reference is authored and reliable.
  *
  * Indices are built once per model and memoized (a heavily-scripted map has thousands of records, so rebuilding
- * per field would be quadratic). A mutation produces a fresh Model, which misses the WeakMap and rebuilds.
+ * per field would be quadratic). A structural edit produces a fresh Model, which misses the WeakMap; a field edit
+ * keeps the Model and bumps its `revision`, which the memo is checked against.
  */
 
 import type { ParsedField } from "@bgforge/binary";
@@ -43,7 +44,7 @@ interface MapLinkIndex {
     objectEntries: Set<NodeId>;
 }
 
-const cache = new WeakMap<Model, MapLinkIndex>();
+const cache = new WeakMap<Model, { revision: number; index: MapLinkIndex }>();
 
 /** The numeric value of a named direct-child field of `entry`, or undefined. */
 function childFieldValue(model: Model, entry: FlatNode, fieldName: string): number | undefined {
@@ -88,12 +89,11 @@ function buildIndex(model: Model): MapLinkIndex {
 }
 
 function getIndex(model: Model): MapLinkIndex {
-    let idx = cache.get(model);
-    if (idx === undefined) {
-        idx = buildIndex(model);
-        cache.set(model, idx);
-    }
-    return idx;
+    const cached = cache.get(model);
+    if (cached?.revision === model.revision) return cached.index;
+    const index = buildIndex(model);
+    cache.set(model, { revision: model.revision, index });
+    return index;
 }
 
 /** Resolve a MAP cross-record jump for the SID field of a script (-> its object) or an object (-> its script). */

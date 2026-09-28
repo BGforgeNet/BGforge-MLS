@@ -60,6 +60,11 @@
 - When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
   does not exist.
 
+### Binary editor
+
+- In a `.map`, a script's SID link follows an edit to an object's SID, instead of still jumping to the object that
+  no longer runs that script.
+
 ### Translations
 
 - A `.tra` or `.msg` file with an upper-case extension (`SETUP.TRA`) is re-read when saved, like a lower-case one.

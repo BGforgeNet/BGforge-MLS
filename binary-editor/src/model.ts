@@ -41,6 +41,11 @@ export interface Model {
     expanded: Set<NodeId>;
     /** Direct-children indices into `nodes`, keyed by parent NodeId; "" holds the depth-0 roots. */
     childrenByParent: Map<NodeId | "", number[]>;
+    /**
+     * Counts field values rewritten in place, which keep this model: an index derived from those values and
+     * memoized on the model is stale once this has moved. Every such write goes through `writeFieldValue`.
+     */
+    revision: number;
 }
 
 /** Recursively project one raw entry, applying the adapter's hide predicates.
@@ -116,7 +121,19 @@ export function buildModel(parseResult: ParseResult): Model {
     };
 
     walk(projectRoot(parseResult), 0, undefined, [], false);
-    return { parseResult, nodes, byId, expanded, childrenByParent };
+    return { parseResult, nodes, byId, expanded, childrenByParent, revision: 0 };
+}
+
+/**
+ * Rewrites a field's value in place: `rawValue` too, so an enum or flag field carries its numeric code and
+ * serialize encodes it.
+ */
+export function writeFieldValue(model: Model, node: FlatNode, value: number | string): void {
+    // A field node's source is a ParsedField by construction in `buildModel`.
+    const field = node.source as ParsedField;
+    field.value = value;
+    field.rawValue = value;
+    model.revision++;
 }
 
 export function setExpanded(model: Model, id: NodeId, value: boolean): void {

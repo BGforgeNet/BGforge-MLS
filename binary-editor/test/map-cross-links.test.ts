@@ -17,6 +17,8 @@ import { mapParser, buildFileDerivedParseOptions } from "@bgforge/binary";
 import { buildModel, type Model } from "../src/model";
 import { projectRow } from "../src/window";
 import { getRelationshipModel } from "../src/relationship/registry";
+import { closeSession, openSession, sessionStore } from "../src/session";
+import { editField } from "../src/edit";
 
 const FIXTURE = path.resolve(__dirname, "../../client/testFixture/maps/denbus1.map");
 const rel = getRelationshipModel("map")!;
@@ -79,6 +81,30 @@ describe("MAP cross-record jump links", () => {
         expect(entrySectionName(m, target)?.endsWith("Objects")).toBe(true);
         // The owning object's SID equals this script's sid.
         expect(childRawValue(m, target.id, "SID")).toBe(row.rawValue);
+    });
+
+    // The link index is memoized per model, and a field edit rewrites the value in place without a new model.
+    // The object side cannot go stale - it looks up its live value among script sids the edit left alone - so
+    // the script side, indexed by the object sids the edit changed, is the one to watch.
+    it("stops linking a script to an object whose SID was edited away from it", () => {
+        const { sessionId } = openSession("file:///denbus1.map", new Uint8Array(fs.readFileSync(FIXTURE)), {
+            ...buildFileDerivedParseOptions(FIXTURE),
+            skipMapTiles: true,
+        });
+        const session = sessionStore.get(sessionId)!;
+        try {
+            const m = session.model;
+            const objectSid = sidNodeIn(m, "Objects")!;
+            const script = m.nodes[m.byId.get(projectRow(m, objectSid, rel).link!.targetNodeId)!]!;
+            const scriptSid = m.nodes.find((n) => n.name === "SID" && n.parentId === script.id)!;
+            expect(projectRow(m, scriptSid, rel).link?.targetNodeId).toBe(objectSid.parentId);
+
+            editField(session, objectSid.id, -1);
+
+            expect(projectRow(session.model, scriptSid, rel).link).toBeUndefined();
+        } finally {
+            closeSession(sessionId);
+        }
     });
 
     it("does not link a script's Owner ID (engine runtime state, not the authored binding)", () => {
