@@ -232,8 +232,9 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             let reResult: FormatResult;
             try {
                 reResult = parseAndFormat(result.text, fileType, opts);
-            } catch {
-                console.error(`Error: Failed to re-parse ${filePath}`);
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : String(error);
+                console.error(`Error: ${filePath}: failed to re-parse the formatted text: ${msg}`);
                 return "error";
             }
             if (reResult.text !== result.text) {
