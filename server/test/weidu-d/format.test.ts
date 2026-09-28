@@ -83,6 +83,18 @@ describe("weidu-d/format/core", () => {
             expect(output).toContain('~Global("x",  "y")~');
         });
 
+        it("keeps a multi-line SAY string's lines exactly as written, indentation included", () => {
+            const say = "~first line\n     indented second\nlast~";
+            const output = format(`BEGIN ~dlg~\nIF ~~ THEN BEGIN a\n  SAY ${say}\n  IF ~~ THEN EXIT\nEND\n`);
+            expect(output).toContain(`SAY ${say}\n`);
+        });
+
+        it("keeps a multi-line REPLY string's lines exactly as written in an EXTEND", () => {
+            const reply = "~one\n   two\nthree~";
+            const output = format(`EXTEND_BOTTOM dlg 5\n  IF ~~ THEN REPLY ${reply}\n  EXIT\nEND\n`);
+            expect(output).toContain(`REPLY ${reply}`);
+        });
+
         it("leaves // inside a SAY string alone on a one-line state", () => {
             const output = format(`BEGIN ~dlg~\nIF ~~ THEN BEGIN a SAY ~see http://x.y/z~ IF ~~ THEN EXIT END\n`);
             expect(output).toContain("SAY ~see http://x.y/z~ IF ~~ THEN EXIT");

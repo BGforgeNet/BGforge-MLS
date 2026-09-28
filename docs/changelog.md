@@ -6,6 +6,9 @@
 
 - The TP2 and D formatters leave `//` inside a string alone. A URL in `~...~` was taken for a comment and had spaces
   inserted into it, and a real comment after such a string was moved to its own line.
+- The D formatter keeps a multi-line SAY, REPLY or JOURNAL string exactly as written. It used to re-indent the
+  string's later lines, which changed the text the game shows. Multi-line trigger and action code is still
+  indented.
 
 ### Language features
 
