@@ -404,22 +404,34 @@ describe("openBif (compressed)", () => {
 
     /**
      * The BIFC header's uncompressed total is a `u32` read straight from the file, so it must not size an
-     * allocation: a corrupt or hostile value reserves that much before a single block is inflated, and the
-     * inflated archive keeps a view on it for its whole lifetime. Asserting the extracted bytes alone would
-     * not catch this - the archive reads back correctly either way, just off a buffer sized by the file's
-     * claim. So the assertion is on the BACKING store, which is the only place the difference shows.
+     * allocation: a corrupt or hostile value would reserve that much before a single block is inflated. It is
+     * checked against what did inflate instead, so a claim the blocks do not bear out is refused - after the
+     * inflate, with nothing reserved for it.
      */
-    it("sizes a BIFC V1.0 archive by what inflates, not by its declared uncompressed size", () => {
+    it("refuses a BIFC V1.0 archive whose blocks fall short of its declared size, allocating nothing for it", () => {
         const bytes = buildBifcBlocks(sampleBif());
         const declared = 0x1000_0000; // 256 MB, against an archive of a few dozen bytes
         new DataView(bytes.buffer).setUint32(8, declared, true);
-        const bif = openBif(bufferSource(bytes));
-        try {
-            expect(arr(bif.readFile(0))).toEqual(arr(ITEM_DATA));
-            expect(bif.readFile(0).buffer.byteLength).toBeLessThan(declared);
-        } finally {
-            bif.close();
-        }
+        expect(() => openBif(bufferSource(bytes))).toThrow(`of the ${declared} it declares`);
+    });
+
+    // Crafted headers, not archives seen in the wild.
+    it("refuses a crafted BIFC V1.0 archive cut off before its last block", () => {
+        const bytes = buildBifcBlocks(sampleBif());
+        expect(() => openBif(bufferSource(bytes.subarray(0, bytes.byteLength - 4)))).toThrow(/runs past the end/);
+    });
+
+    it("refuses a crafted BIF V1.0 header whose filename length runs past the file", () => {
+        const bytes = buildBifcWhole(sampleBif());
+        new DataView(bytes.buffer).setUint32(8, 0xffff_0000, true);
+        expect(() => openBif(bufferSource(bytes))).toThrow(/filename of 4294901760 bytes/);
+    });
+
+    it("refuses a crafted BIF V1.0 archive whose stream inflates short of its declared size", () => {
+        const bytes = buildBifcWhole(sampleBif());
+        const dv = new DataView(bytes.buffer);
+        dv.setUint32(12 + "test.bif".length, dv.getUint32(12 + "test.bif".length, true) + 100, true);
+        expect(() => openBif(bufferSource(bytes))).toThrow(/of the \d+ it declares/);
     });
 
     it("inflates a BIFC V1.0 block-compressed archive to the same files", () => {

@@ -174,7 +174,20 @@ function inflateWhole(source: ByteSource): Uint8Array {
     const all = source.read(0, source.size);
     const dv = new DataView(all.buffer, all.byteOffset, all.byteLength);
     const filenameLen = dv.getUint32(8, true);
-    return inflateBounded(all.subarray(12 + filenameLen + 8));
+    const streamStart = 12 + filenameLen + 8;
+    if (streamStart > all.byteLength) {
+        throw new Error(`BIF V1.0 header claims a filename of ${filenameLen} bytes, past the end of the file`);
+    }
+    const declared = dv.getUint32(12 + filenameLen, true);
+    return checkedLength(inflateBounded(all.subarray(streamStart)), declared);
+}
+
+/** The inflated archive, refused when it is not the size the header declares: a stream that ended early. */
+function checkedLength(inflated: Uint8Array, declared: number): Uint8Array {
+    if (inflated.byteLength !== declared) {
+        throw new Error(`BIF stream inflates to ${inflated.byteLength} bytes, not all of the ${declared} it declares`);
+    }
+    return inflated;
 }
 
 // BIFC V1.0 ('BIFC'): header is sig(4)+version(4)+uncompressedSize(4), then blocks of
@@ -192,10 +205,15 @@ function inflateBlocks(source: ByteSource): Uint8Array {
     while (pos + 8 <= all.byteLength && written < total) {
         const compressedSize = dv.getUint32(pos + 4, true);
         pos += 8;
+        if (pos + compressedSize > all.byteLength) {
+            throw new Error(
+                `BIFC block at ${pos - 8} claims ${compressedSize} bytes and runs past the end of the file`,
+            );
+        }
         const inflated = inflateBounded(all.subarray(pos, pos + compressedSize));
         blocks.push(inflated);
         written += inflated.byteLength;
         pos += compressedSize;
     }
-    return Buffer.concat(blocks);
+    return checkedLength(Buffer.concat(blocks), total);
 }
