@@ -54,6 +54,12 @@ export function runInput(input: SslInput, args: TaskArgs): TaskResult {
     }
     out(`${args.decompile ? "Decompiling" : args.listing ? "Listing" : "Compiling"} ${file}`);
     const target = input.output ?? defaultOutput(file, outputSuffix(args));
+    // Every other default output is derived and rebuilt over freely; a decompile's is source, and the file
+    // already at that name is most often the one the script was compiled from.
+    if (args.decompile && input.output === undefined && fs.existsSync(target)) {
+        err(`Error: ${target} already exists; name another output with -o`);
+        return { ok: false, lines };
+    }
     const started = Date.now();
     let rendered: Rendered;
     try {

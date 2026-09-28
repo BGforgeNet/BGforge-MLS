@@ -68,6 +68,17 @@ describe("ssl CLI", () => {
             expect(fs.readFileSync(path.join(tmpDir, "built.ssl"), "utf-8")).toContain("procedure start begin");
         });
 
+        it("refuses to write over a source already beside the compiled script, and names -o", () => {
+            const original = source("kept.ssl", HELLO);
+            expect(run(original).code).toBe(0);
+
+            const { code, stderr } = run("-x", path.join(tmpDir, "kept.int"));
+
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${original} already exists; name another output with -o`);
+            expect(fs.readFileSync(original, "utf-8")).toBe(HELLO);
+        });
+
         it("recovers source that compiles back to the bytes it came from", () => {
             const target = compiled("round");
             const before = fs.readFileSync(target);
