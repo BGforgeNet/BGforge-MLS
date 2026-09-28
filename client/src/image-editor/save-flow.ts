@@ -62,13 +62,7 @@ import {
 import { type ConversionRequest, convertOpenSet, defaultPrefix } from "./conversion";
 import { parseAnimationSetUri } from "../ie-resources/uri";
 import { ieGroupOptionText, offeredGroups } from "./webview/render/cycle-grouping";
-import {
-    type HostToWebview,
-    type SavePlanView,
-    type SaveRequestView,
-    type SaveAsTarget,
-    saveRequestKey,
-} from "./webview/messages";
+import { type SavePlanView, type SaveRequestView, type SaveAsTarget, saveRequestKey } from "./webview/messages";
 
 /**
  * The creature whose colours a document is currently shown in. A VIEW state, deliberately not a document
@@ -92,9 +86,6 @@ export interface SaveContext {
     /** The creature each document is being shown as, if any. Per document, so every panel of one agrees. */
     readonly activeCreature: WeakMap<ImageEditorDocument, ActiveCreature>;
 }
-
-/** The channel's `post`, narrowed to the one direction a running save needs. */
-type PostMessage = (message: HostToWebview) => void;
 
 /**
  * File names the save plan lists before it says "and N more".
@@ -760,11 +751,10 @@ export async function runSave(
     context: SaveContext,
     document: ImageEditorDocument,
     request: SaveRequestView,
-    post: PostMessage,
 ): Promise<void> {
-    // No try/catch here: the channel's own dispatcher already turns a throw into an error posted back
-    // to the webview, and catching it a second time here swallowed exactly the write failures whose
-    // whole point is to reach the reader with the member they stopped on.
+    // No try/catch here: the channel's own dispatcher already reports a throw from the host, and catching
+    // it a second time here swallowed exactly the write failures whose whole point is to reach the reader
+    // with the member they stopped on.
     if (!isRetarget(context, document, request)) {
         await saveSetAs(context, document, saveTargetOf(request), {
             destination: request.destination,
@@ -773,30 +763,24 @@ export async function runSave(
         });
         return;
     }
-    await runRetarget(context, document, request, post);
+    await runRetarget(context, document, request);
 }
 
 async function runRetarget(
     context: SaveContext,
     document: ImageEditorDocument,
     request: SaveRequestView,
-    post: PostMessage,
 ): Promise<void> {
     const found = lookupSet(context, document);
     if (found === undefined) return;
     // The plan disables Save on this, but the check is here too: a run reaching the converter with a
     // container it cannot write would produce files that are not what was asked for and say nothing.
     const unsupported = retargetRefusal(request, true);
-    if (unsupported !== undefined) {
-        post({ type: "error", message: unsupported });
-        return;
-    }
+    // Thrown, like a failed write, for the host to report: the webview's `error` is the could-not-open screen.
+    if (unsupported !== undefined) throw new Error(unsupported);
     const converted = conversionRequestOf(request, defaultPrefix(found.set));
     const result = convertOpenSet(found.set, found.io, found.flavour, converted);
-    if (result.outcome === "refused") {
-        post({ type: "error", message: result.reason ?? "This set cannot be converted." });
-        return;
-    }
+    if (result.outcome === "refused") throw new Error(result.reason ?? "This set cannot be converted.");
     // Chosen in the dialog, where the reader saw the file names that will fill it. Asked here only for
     // a request that reached this with no dialog behind it.
     const chosen = request.folder ?? (await pickSetFolder(setTitle(found.set)));

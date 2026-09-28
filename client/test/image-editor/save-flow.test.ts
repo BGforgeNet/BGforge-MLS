@@ -22,7 +22,6 @@ import {
 import { bandedPair } from "../../../image/test/bam-fixtures.ts";
 import type { AnimationSetLookup, AnimationSetSource } from "../../src/image-editor/set-document";
 import type { ActiveCreature, SaveContext } from "../../src/image-editor/save-flow";
-import type { HostToWebview } from "../../src/image-editor/webview/messages";
 import { makeIeBamBase, makeMiniBam, makeMiniFrm, makeMultiFrameBam } from "./fixtures";
 
 const GAME_DIR = "/games/bgee";
@@ -649,23 +648,18 @@ describe("running a set save", () => {
     /** The plan disables Save on this, but a run reaching the converter must not write v1 files as v2. */
     it("refuses a reshape into BAM v2 without writing or asking anything", async () => {
         const document = await openSet();
-        const posted: HostToWebview[] = [];
 
-        await flow.runSave(
-            saveContext(setSource()).context,
-            document,
-            { ...AS_IT_STANDS, prefix: "NEWB", bamVersion: 2 },
-            (message) => void posted.push(message),
+        // Thrown, for the host to report: posted as the webview's `error`, it would replace the whole view.
+        await expect(
+            flow.runSave(saveContext(setSource()).context, document, {
+                ...AS_IT_STANDS,
+                prefix: "NEWB",
+                bamVersion: 2,
+            }),
+        ).rejects.toThrow(
+            "A reshaped set is written as BAM v1 - nothing here writes BAM v2 into a new layout. " +
+                "Pick BAM v1, or write the set as it stands to get v2 files.",
         );
-
-        expect(posted).toEqual([
-            {
-                type: "error",
-                message:
-                    "A reshaped set is written as BAM v1 - nothing here writes BAM v2 into a new layout. " +
-                    "Pick BAM v1, or write the set as it stands to get v2 files.",
-            },
-        ]);
         expect(vsc.showOpenDialog).not.toHaveBeenCalled();
         expect(vsc.writeFile).not.toHaveBeenCalled();
     });
@@ -674,12 +668,13 @@ describe("running a set save", () => {
     it("writes a reshaped set as compressed BAMs when the request asks for them", async () => {
         const document = await openSet();
 
-        await flow.runSave(
-            saveContext(setSource()).context,
-            document,
-            { ...AS_IT_STANDS, prefix: "NEWB", compressed: true, notes: false, folder: "/out" },
-            () => {},
-        );
+        await flow.runSave(saveContext(setSource()).context, document, {
+            ...AS_IT_STANDS,
+            prefix: "NEWB",
+            compressed: true,
+            notes: false,
+            folder: "/out",
+        });
 
         const art = writtenPaths().filter((p) => !p.endsWith(".ini"));
         expect(art.length).toBeGreaterThan(0);
@@ -689,20 +684,11 @@ describe("running a set save", () => {
 });
 
 describe("writing a set as it stands", () => {
-    const post = (): void => {
-        throw new Error("a save written as it stands posts nothing");
-    };
-
     /** The override folder is where a plain Save already writes, so it takes no picker. */
     it("writes each member into the install's override folder without asking where", async () => {
         const document = await openSet();
 
-        await flow.runSave(
-            saveContext(setSource()).context,
-            document,
-            { ...AS_IT_STANDS, destination: "override" },
-            post,
-        );
+        await flow.runSave(saveContext(setSource()).context, document, { ...AS_IT_STANDS, destination: "override" });
 
         expect(vsc.showOpenDialog).not.toHaveBeenCalled();
         expect(writtenPaths().sort()).toEqual(["/games/bgee/override/TSTBSD.bam", "/games/bgee/override/TSTBWK.bam"]);
@@ -712,12 +698,12 @@ describe("writing a set as it stands", () => {
     it("writes a BAM v2 set from the folder and page the dialog carried, asking nothing", async () => {
         const document = await openSet();
 
-        await flow.runSave(
-            saveContext(setSource()).context,
-            document,
-            { ...AS_IT_STANDS, bamVersion: 2, folder: "/out", basePage: 4200 },
-            post,
-        );
+        await flow.runSave(saveContext(setSource()).context, document, {
+            ...AS_IT_STANDS,
+            bamVersion: 2,
+            folder: "/out",
+            basePage: 4200,
+        });
 
         expect(vsc.showOpenDialog).not.toHaveBeenCalled();
         expect(vsc.showInputBox).not.toHaveBeenCalled();

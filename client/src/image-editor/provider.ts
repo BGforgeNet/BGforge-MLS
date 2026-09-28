@@ -274,7 +274,18 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             try {
                 await this.handleWebviewMessage(document, channel, message, surface);
             } catch (error) {
-                this.post(channel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+                const reason = error instanceof Error ? error.message : String(error);
+                // The webview's `error` replaces the whole view with the could-not-open screen, so it answers
+                // only the request that opens the file. Anything later failed under a view that is still
+                // right, and is reported by the host as the other editors' failures are.
+                if (message.type === "ready") this.post(channel, { type: "error", message: reason });
+                else {
+                    surfaceWebviewRuntimeError({
+                        editor: "Animation editor",
+                        file: path.basename(document.uri.fsPath),
+                        message: reason,
+                    });
+                }
             }
         });
         return new vscode.Disposable(() => {
@@ -423,7 +434,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 break;
             }
             case "runSave":
-                await runSave(this.saveContext, document, message.request, (reply) => this.post(channel, reply));
+                await runSave(this.saveContext, document, message.request);
                 break;
             case "save":
                 await surface.save(document);

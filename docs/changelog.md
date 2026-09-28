@@ -78,6 +78,8 @@
 
 - In the animation viewer, picking a stance or armour level of a set that cannot be drawn shows a warning and
   keeps the animation on screen, instead of replacing the whole view with "Could not open file".
+- In the animation viewer, a save or conversion that is refused or fails says why in a notification and keeps
+  the animation on screen, instead of replacing the view with "Could not open file".
 - The image gallery says why an item or animation it could not open failed, instead of ignoring the click.
 - The image gallery says so when the extension does not answer it, as the animation viewer does, instead of
   showing an empty grid.

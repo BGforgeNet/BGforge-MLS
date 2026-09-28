@@ -321,6 +321,20 @@ describe("a message outside the webview protocol", () => {
     });
 });
 
+describe("a request that fails once the animation is showing", () => {
+    // The webview's `error` is the could-not-open screen in place of the whole view: right for a file that never
+    // opened, wrong for a save that failed under an animation the reader is still looking at.
+    it("is reported by the host and leaves the view up", async () => {
+        const { posted, send, surface } = await openSet();
+        vi.mocked(surface.save).mockRejectedValueOnce(new Error("disk full"));
+
+        await send({ type: "save" });
+
+        expect(posted.filter((message) => message.type === "error")).toEqual([]);
+        expect(showErrorMock).toHaveBeenCalledWith("Animation editor failed for TEST_ANIM.animset: disk full");
+    });
+});
+
 describe("picking a stance the set cannot draw", () => {
     // The webview's `error` is the "could not open file" screen in place of the whole view, so a refused
     // pick said that way took down an editor whose other stances still draw.
@@ -740,7 +754,8 @@ describe("running a conversion", () => {
 
         await send({ type: "runSave", request: REQUEST });
 
-        expect(posted).toEqual([{ type: "error", message: REFUSAL }]);
+        expect(posted.filter((message) => message.type === "error")).toEqual([]);
+        expect(showErrorMock).toHaveBeenCalledWith(`Animation editor failed for TEST_ANIM.animset: ${REFUSAL}`);
         expect(showOpenDialogMock).not.toHaveBeenCalled();
         expect(writeFileMock).not.toHaveBeenCalled();
     });
@@ -761,14 +776,10 @@ describe("running a conversion", () => {
 
         await send({ type: "runSave", request: REQUEST });
 
-        expect(posted).toEqual([
-            {
-                type: "error",
-                message:
-                    "NEWBWK.BAM could not be written: EACCES: permission denied. /out now holds 2 of 6 " +
-                    "files (NEWBSD.BAM, NEWBSDE.BAM); the rest were not written.",
-            },
-        ]);
+        expect(posted.filter((message) => message.type === "error")).toEqual([]);
+        expect(showErrorMock).toHaveBeenCalledWith(
+            `Animation editor failed for TEST_ANIM.animset: NEWBWK.BAM could not be written: EACCES: permission denied. /out now holds 2 of 6 files (NEWBSD.BAM, NEWBSDE.BAM); the rest were not written.`,
+        );
         // The run stops there rather than carrying on into the declaration and the notes, which would
         // describe a set that is not in the folder.
         expect(writtenPaths()).toEqual(["file:/out/NEWBSD.BAM", "file:/out/NEWBSDE.BAM", "file:/out/NEWBWK.BAM"]);
@@ -786,14 +797,10 @@ describe("running a conversion", () => {
 
         await send({ type: "runSave", request: REQUEST });
 
-        expect(posted).toEqual([
-            {
-                type: "error",
-                message:
-                    "NEWB-notes.md could not be written: ENOSPC: no space left on device. /out now holds 5 of 6 " +
-                    "files (NEWBSD.BAM, NEWBSDE.BAM, NEWBWK.BAM, NEWBWKE.BAM, 9000.ini); the rest were not written.",
-            },
-        ]);
+        expect(posted.filter((message) => message.type === "error")).toEqual([]);
+        expect(showErrorMock).toHaveBeenCalledWith(
+            `Animation editor failed for TEST_ANIM.animset: NEWB-notes.md could not be written: ENOSPC: no space left on device. /out now holds 5 of 6 files (NEWBSD.BAM, NEWBSDE.BAM, NEWBWK.BAM, NEWBWKE.BAM, 9000.ini); the rest were not written.`,
+        );
         // No success notice: the run did not finish, whatever landed in the folder.
         expect(showInformationMock).not.toHaveBeenCalled();
     });
@@ -805,14 +812,10 @@ describe("running a conversion", () => {
 
         await send({ type: "runSave", request: REQUEST });
 
-        expect(posted).toEqual([
-            {
-                type: "error",
-                message:
-                    "NEWBSD.BAM could not be written: EROFS: read-only file system. /out now holds 0 of 6 " +
-                    "files; the rest were not written.",
-            },
-        ]);
+        expect(posted.filter((message) => message.type === "error")).toEqual([]);
+        expect(showErrorMock).toHaveBeenCalledWith(
+            `Animation editor failed for TEST_ANIM.animset: NEWBSD.BAM could not be written: EROFS: read-only file system. /out now holds 0 of 6 files; the rest were not written.`,
+        );
     });
 });
 
