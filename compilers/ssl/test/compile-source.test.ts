@@ -52,6 +52,15 @@ describe.skipIf(!wasmPresent)("compileSource", () => {
         expect(result.problems[0]?.message).toMatch(/unknown identifier/);
     });
 
+    it("names every procedure declared but never defined, not only the first", () => {
+        const { result } = compileWith("procedure a;\nprocedure b;\nprocedure start begin\n call a;\n call b;\nend\n");
+        expect(result.bytes).toBeUndefined();
+        expect(result.problems.map((p) => [p.line, p.message])).toEqual([
+            [1, "procedure 'a' is declared but never defined"],
+            [2, "procedure 'b' is declared but never defined"],
+        ]);
+    });
+
     it("names the header a preprocessor refusal came from", () => {
         const { result, dir } = compileWith('#include "hdr.h"\nprocedure start begin end\n', {
             "hdr.h": "#bogus\n",

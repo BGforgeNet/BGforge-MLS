@@ -34,6 +34,7 @@
   where it stands instead of compiling as another one.
 - TSSL refuses a string holding a character wider than one byte, such as a Chinese letter, instead of compiling
   it as a different character.
+- The built-in compiler reports every procedure that is declared but never defined, not only the first.
 - Decompiling a script prints every float constant as a plain decimal the compiler reads back, and refuses NaN
   and infinity by name instead of printing text that does not compile.
 
