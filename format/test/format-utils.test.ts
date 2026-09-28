@@ -17,9 +17,30 @@ import {
     normalizeComment,
     normalizeLineComment,
     normalizeBlockComment,
+    weiduLineCommentStart,
 } from "@bgforge/format/internal";
 
 describe("shared/format-utils", () => {
+    describe("weiduLineCommentStart()", () => {
+        it("finds a line comment after code", () => {
+            expect(weiduLineCommentStart("COPY ~a~ ~b~ // note")).toBe(13);
+        });
+
+        it("ignores // inside a tilde, quote or five-tilde string", () => {
+            expect(weiduLineCommentStart("PRINT ~http://a.b~")).toBe(-1);
+            expect(weiduLineCommentStart('PRINT "http://a.b"')).toBe(-1);
+            expect(weiduLineCommentStart("PRINT ~~~~~http://a.b~~~~~")).toBe(-1);
+        });
+
+        it("finds the comment that follows a string holding //", () => {
+            expect(weiduLineCommentStart("PRINT ~http://a.b~ // note")).toBe(19);
+        });
+
+        it("ignores // inside a block comment", () => {
+            expect(weiduLineCommentStart("/* see http://a.b */ PRINT ~x~")).toBe(-1);
+        });
+    });
+
     describe("normalizeLineComment()", () => {
         it("adds one space after // when missing", () => {
             expect(normalizeLineComment("//foo")).toBe("// foo");

@@ -82,6 +82,18 @@ describe("weidu-d/format/core", () => {
             const output = format(input);
             expect(output).toContain('~Global("x",  "y")~');
         });
+
+        it("leaves // inside a SAY string alone on a one-line state", () => {
+            const output = format(`BEGIN ~dlg~\nIF ~~ THEN BEGIN a SAY ~see http://x.y/z~ IF ~~ THEN EXIT END\n`);
+            expect(output).toContain("SAY ~see http://x.y/z~ IF ~~ THEN EXIT");
+        });
+
+        it("leaves // inside a SAY string alone on a multi-line state", () => {
+            const output = format(
+                `BEGIN ~dlg~\nIF ~~ THEN BEGIN a\n  SAY ~see http://x.y/z~\n  IF ~~ THEN EXIT\nEND\n`,
+            );
+            expect(output).toContain("SAY ~see http://x.y/z~\n");
+        });
     });
 
     describe("separator preservation before literals", () => {

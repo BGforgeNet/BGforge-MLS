@@ -14,6 +14,7 @@ import {
     tokenizeWeidu,
     WeiduTokenType,
     normalizeComment,
+    weiduLineCommentStart,
 } from "../format-utils";
 import { withNormalizedComment } from "../weidu-tp2/utils";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
@@ -64,7 +65,7 @@ function normalizeDelimitedString(text: string): string {
     const inner = text.slice(1, -1);
 
     // If has // comments, can't collapse
-    if (inner.includes("//")) {
+    if (weiduLineCommentStart(inner) !== -1) {
         return text;
     }
 
@@ -110,7 +111,7 @@ function normalizeTransitionText(text: string): string {
 
 // Get line length excluding comment
 function codeLengthOf(line: string): number {
-    const idx = line.indexOf("//");
+    const idx = weiduLineCommentStart(line);
     return idx !== -1 ? line.slice(0, idx).trimEnd().length : line.length;
 }
 

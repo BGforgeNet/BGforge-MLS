@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Formatter
+
+- The TP2 and D formatters leave `//` inside a string alone. A URL in `~...~` was taken for a comment and had spaces
+  inserted into it, and a real comment after such a string was moved to its own line.
+
 ### Language features
 
 - Go to definition on an `#include` or file path written in a different letter case than the file on disk works

@@ -41,8 +41,9 @@ const PUBLIC_EXPORTS = [
 ] as const;
 
 const INTERNAL_EXPORTS = [
-    // Tilde-delimited string scanning
+    // String-aware scanning
     "scanTildeDelimiter",
+    "weiduLineCommentStart",
     // Comment normalizers
     "normalizeLineComment",
     "normalizeBlockComment",

@@ -29,6 +29,7 @@ import {
     isAssociativeArrayDef,
     isBodyContent,
     normalizeComment,
+    hasWeiduLineComment,
     normalizeWhitespace,
     handleComment,
     tryAppendInlineComment,
@@ -321,11 +322,11 @@ function outputBeginAndEnterBody(
     }
 
     // Output collected header parts
-    const hasMultipleLines = state.headerParts.some((p) => p.includes("//"));
+    const hasMultipleLines = state.headerParts.some(hasWeiduLineComment);
     outputHeaderLines([state.headerParts], state.lines, indent, contIndent);
 
     const lastLine = lastElement(state.lines) ?? "";
-    const endsWithComment = lastLine.includes("//");
+    const endsWithComment = hasWeiduLineComment(lastLine);
 
     if (hasMultipleLines || state.headerParts.length === 0 || endsWithComment) {
         state.lines.push(indent + KW_BEGIN);
@@ -615,7 +616,7 @@ export function formatMatchCase(
     for (const child of node.children) {
         if (isKeyword(child, KW_BEGIN)) {
             const header = normalizeWhitespace(headerParts.join(" "));
-            if (header.includes("//")) {
+            if (hasWeiduLineComment(header)) {
                 lines.push(indent + header, indent + KW_BEGIN);
             } else {
                 lines.push(indent + header + " " + KW_BEGIN);

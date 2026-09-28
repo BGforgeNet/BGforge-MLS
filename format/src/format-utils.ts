@@ -316,6 +316,24 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
 }
 
 /**
+ * Index of the `//` that opens a line comment in WeiDU `line`, or -1. A `//` inside a string (a URL in `~...~`)
+ * or inside a block comment is not one, so a line is scanned token by token rather than for the substring.
+ */
+export function weiduLineCommentStart(line: string): number {
+    let offset = 0;
+    for (const token of tokenizeWeidu(line)) {
+        if (token.type === WeiduTokenType.Comment && token.text.startsWith("//")) return offset;
+        offset += token.text.length;
+    }
+    return -1;
+}
+
+/** Whether WeiDU `line` already carries a line comment, so another cannot be appended to it. */
+export function hasWeiduLineComment(line: string): boolean {
+    return weiduLineCommentStart(line) !== -1;
+}
+
+/**
  * Normalizes whitespace in WeiDU text while preserving strings and comments.
  * Collapses multiple spaces into one, trims outer whitespace.
  *

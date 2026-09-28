@@ -51,6 +51,19 @@ describe("weidu-tp2 format string literal preservation", () => {
         expect(result.text).toBe(input);
     });
 
+    it("leaves // inside a string alone - a URL is not a comment", () => {
+        const input = "PRINT ~see http://example.com/page~\n";
+        const root = getParser().parse(input)!.rootNode;
+        expect(formatDocument(root).text).toBe(input);
+    });
+
+    it("still normalizes a real comment that follows a string holding //", () => {
+        const input = "PRINT ~http://example.com/page~ //note\n";
+        const root = getParser().parse(input)!.rootNode;
+        // Two spaces before an inline comment: INLINE_COMMENT_SPACING.
+        expect(formatDocument(root).text).toBe("PRINT ~http://example.com/page~  // note\n");
+    });
+
     it("should NOT add space between two strings if none existed", () => {
         const input = "COPY ~src~~dst~\n";
         const root = getParser().parse(input)!.rootNode;

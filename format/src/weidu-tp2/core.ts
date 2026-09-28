@@ -43,6 +43,7 @@ import {
     isFunctionCall,
     isBodyContent,
     normalizeComment,
+    hasWeiduLineComment,
     normalizeWhitespace,
     withNormalizedComment,
     handleComment,
@@ -529,7 +530,7 @@ function tryAppendTopLevelInlineComment(result: string[], child: SyntaxNode, las
     const lastResultLines = lastResult.split("\n");
     const lastLine = lastResultLines[lastResultLines.length - 1];
 
-    if (!lastLine || lastLine.includes("//")) {
+    if (!lastLine || hasWeiduLineComment(lastLine)) {
         return false;
     }
 
