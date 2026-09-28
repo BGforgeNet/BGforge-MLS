@@ -18,9 +18,10 @@ const BACKUP_URI = "file:///storage/backups/sw1h01.itm.bak";
 const DISK_BYTES = new Uint8Array([1, 1, 1]);
 const BACKUP_BYTES = new Uint8Array([2, 2, 2]);
 
-const { readFileMock, showWarningMock, workerRequests, CHANGE_SET } = vi.hoisted(() => ({
+const { readFileMock, showWarningMock, showErrorMock, workerRequests, CHANGE_SET } = vi.hoisted(() => ({
     readFileMock: vi.fn(),
     showWarningMock: vi.fn(),
+    showErrorMock: vi.fn(),
     workerRequests: [] as { type: string; uri?: string; bytes?: Uint8Array; engine?: string }[],
     // One row is enough to tell a re-projection apart from an empty refresh.
     CHANGE_SET: { changed: [{ id: "root/0", kind: "field", label: "Name" }], diagnostics: [], dirty: false },
@@ -28,8 +29,14 @@ const { readFileMock, showWarningMock, workerRequests, CHANGE_SET } = vi.hoisted
 
 vi.mock("vscode", () => {
     class EventEmitter {
-        readonly event = (): { dispose: () => void } => ({ dispose: () => {} });
-        fire(): void {}
+        private readonly listeners: ((event: unknown) => void)[] = [];
+        readonly event = (listener: (event: unknown) => void): { dispose: () => void } => {
+            this.listeners.push(listener);
+            return { dispose: () => {} };
+        };
+        fire(event: unknown): void {
+            for (const listener of this.listeners) listener(event);
+        }
         dispose(): void {}
     }
     return {
@@ -38,7 +45,7 @@ vi.mock("vscode", () => {
             parse: (value: string) => ({ toString: () => value }),
             joinPath: (...parts: unknown[]) => ({ toString: () => parts.join("/") }),
         },
-        window: { showWarningMessage: showWarningMock },
+        window: { showWarningMessage: showWarningMock, showErrorMessage: showErrorMock },
         workspace: { fs: { readFile: readFileMock } },
     };
 });
@@ -63,18 +70,20 @@ vi.mock("node:worker_threads", () => {
             const response =
                 msg.request.type === "reproject"
                     ? { type: "structure", result: { changeSet: CHANGE_SET } }
-                    : {
-                          type: "opened",
-                          result: {
-                              sessionId: "session-1",
-                              format: "itm",
-                              formatName: "ITM",
-                              layout: { blocks: [] },
-                              warnings: [],
-                              errors: [],
-                              rootWindow: [],
-                          },
-                      };
+                    : msg.request.type === "undo"
+                      ? { type: "error", message: "nothing to undo" }
+                      : {
+                            type: "opened",
+                            result: {
+                                sessionId: "session-1",
+                                format: "itm",
+                                formatName: "ITM",
+                                layout: { blocks: [] },
+                                warnings: [],
+                                errors: [],
+                                rootWindow: [],
+                            },
+                        };
             queueMicrotask(() => this.onMessage?.({ id: msg.id, response }));
         }
 
@@ -250,6 +259,23 @@ describe("binary editor request failures", () => {
         await send({ type: "requestChildren", requestId: 7, nodeId: null, start: 0, end: 10 });
 
         expect(posted).toContainEqual({ type: "error", requestId: 7, message: "worker is gone" });
+    });
+
+    // VS Code's undo stack and the worker's history have parted on this step: say which step and why, then
+    // re-sync the view to whatever the session now holds.
+    it("says why an undo the worker refused failed, and still refreshes the view", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const edits: vscode.CustomDocumentEditEvent[] = [];
+        document.onDidChange((edit) => edits.push(edit));
+        const refreshes: unknown[] = [];
+        document.onDidRefresh((changeSet) => refreshes.push(changeSet));
+        document.pushEdit("Edit Name");
+
+        await edits[0]!.undo();
+
+        expect(showErrorMock).toHaveBeenCalledWith('Could not undo "Edit Name": nothing to undo');
+        expect(refreshes).toEqual([undefined]);
     });
 });
 

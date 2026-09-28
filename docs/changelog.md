@@ -66,6 +66,7 @@
   no longer runs that script.
 - When the editor's background worker fails a request, such as loading a list's rows, the view stops waiting
   for it and shows the error, instead of loading forever.
+- An undo or redo the editor cannot apply says so and why, instead of quietly redrawing the view.
 
 ### Translations
 
