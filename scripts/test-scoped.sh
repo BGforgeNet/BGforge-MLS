@@ -51,7 +51,7 @@ fi
 
 # Suite id -> config/script path used to verify the mapping hasn't gone stale, the command run
 # from the repo root, and the space-separated path prefixes that trigger it.
-suite_ids=(server animation binary binary-editor bcs client client-unit format image ssl tssl transpilers scripts tssl-plugin td-plugin)
+suite_ids=(server animation binary binary-editor bcs client client-unit format image shared ssl tssl transpilers scripts tssl-plugin td-plugin)
 declare -A suite_label=(
     [server]="server unit tests"
     [animation]="animation unit tests"
@@ -62,6 +62,7 @@ declare -A suite_label=(
     ["client-unit"]="client unit tests"
     [format]="format unit tests"
     [image]="image unit tests"
+    [shared]="shared unit tests"
     [ssl]="ssl unit tests + corpus canary"
     [tssl]="tssl unit tests"
     [transpilers]="transpilers unit tests"
@@ -79,6 +80,7 @@ declare -A suite_check=(
     ["client-unit"]="client/vitest.config.mts"
     [format]="format/vitest.config.ts"
     [image]="image/vitest.config.ts"
+    [shared]="shared/vitest.config.ts"
     [ssl]="compilers/ssl/vitest.config.ts"
     [tssl]="compilers/tssl/vitest.config.ts"
     [transpilers]="transpilers/vitest.config.ts"
@@ -96,6 +98,7 @@ declare -A suite_cmd=(
     ["client-unit"]="pnpm exec vitest run --config client/vitest.config.mts"
     [format]="pnpm exec vitest run --config format/vitest.config.ts"
     [image]="pnpm exec vitest run --config image/vitest.config.ts"
+    [shared]="pnpm exec vitest run --config shared/vitest.config.ts"
     # The only suite that runs two configs: the compiler's unit tests never touch a real script, so an
     # ssl change gets the corpus canary too - the same probe `pnpm test` runs one tier up.
     [ssl]="pnpm exec vitest run --config compilers/ssl/vitest.config.ts && pnpm exec vitest run --config compilers/ssl/vitest.integration.config.ts corpus-smoke"
@@ -119,6 +122,7 @@ declare -A suite_prefixes=(
     ["client-unit"]="client/ server/ shared/ binary-editor/ binary/ image/ animation/ compilers/bcs/ compilers/ssl/ package.json scripts/esbuild-"
     [format]="format/ shared/"
     [image]="image/"
+    [shared]="shared/"
     [ssl]="compilers/ssl/ shared/"
     # The front end builds the IR the ssl back end emits, and both routes share `desugar.ts`, so a
     # change under compilers/ssl reaches tssl too.
