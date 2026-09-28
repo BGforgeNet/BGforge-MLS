@@ -9,6 +9,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, afterEach } from "vitest";
+import { MessageType } from "vscode-languageserver/node";
 import { LSP_COMMAND_PARSE_DIALOG } from "@bgforge/shared/protocol";
 
 const SERVER_PATH = join(__dirname, "..", "out", "server.js");
@@ -598,14 +599,20 @@ begin("DIALOG", [start]);
                 params: { settings: { bgforge: { debug: true } } },
             });
 
-            const logLines = () =>
+            // The level travels as the message type, not as a prefix on the text.
+            const logEntries = () =>
                 messages.flatMap((m) => {
-                    const message = (m.params as { message?: unknown } | undefined)?.message;
-                    return m.method === "window/logMessage" && typeof message === "string" ? [message] : [];
+                    const params = m.params as { type?: unknown; message?: unknown } | undefined;
+                    return m.method === "window/logMessage" && typeof params?.message === "string"
+                        ? [{ type: params.type, message: params.message }]
+                        : [];
                 });
             await expect
-                .poll(() => logLines().find((line) => line.includes("LSP client:")), { timeout: 10000 })
-                .toBe(`[debug] LSP client: Smoke Editor 9.9; capabilities: ${JSON.stringify(capabilities, null, 2)}`);
+                .poll(() => logEntries().find((entry) => entry.message.includes("LSP client:")), { timeout: 10000 })
+                .toEqual({
+                    type: MessageType.Debug,
+                    message: `LSP client: Smoke Editor 9.9; capabilities: ${JSON.stringify(capabilities, null, 2)}`,
+                });
         },
     );
 });
