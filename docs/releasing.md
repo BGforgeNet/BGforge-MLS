@@ -100,8 +100,8 @@ publish:
 - The token must be allowed to CREATE a package. A granular access token restricted to an explicit package
   allowlist publishes the existing packages happily and still fails on a new name; scope it to the `@bgforge`
   scope, or use an automation token, before tagging.
-- The package must be published public. `scripts/publish-lib.sh` passes `--access public` and each manifest
-  sets `publishConfig.access`; a scoped package would otherwise be rejected as private.
+- The package must be published public. `scripts/publish-lib.sh` passes `--access public`, and the library
+  manifests also set `publishConfig.access`; a scoped package would otherwise be rejected as private.
 
 ### Migrating a package to trusted publishing
 

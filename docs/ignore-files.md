@@ -74,7 +74,7 @@ The reach of that promise stops at `.gitignore`, which oxlint honours when it wa
 tree-sitter declarations (`server/src/*/tree-sitter.d.ts`, `grammars/*/src/`) are gitignored build output, so no
 full-tree run ever reaches them however the lint config is written - linting them takes an explicit path argument.
 The asymmetry therefore covers generated source that is **tracked** (the `shared/syntax-types/` modules), not
-gitignored build output. The tracked `server/out/` data JSONs are outside it too: oxlint ignores `**/out/**` and does
+gitignored build output. The tracked data JSONs in `server/out/` and `shared/data/` are outside it too: oxlint does
 not read JSON, so the well-formedness guard above is their only check.
 
 ## Lint rule policy

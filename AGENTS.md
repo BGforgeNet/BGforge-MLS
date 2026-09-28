@@ -33,10 +33,11 @@ Pick the cheapest tool that answers the actual question.
   uses, so its answer and the panel's cannot disagree - which a throwaway script re-deriving the naming rules can.
   Not a substitute for a gallery drive.
 - **"Run one package's tests"** -> `pnpm test:project <name> [file filter]` from the repo root. Never
-  `--config <pkg>/vitest.config...`: the extension varies per package (`.mts` under `client/` and `server/`, `.ts`
-  everywhere else) and a wrong guess fails as an unresolved-entry error that reads like a broken config. The root
-  `vitest.config.ts` names every project, so `--project` cannot be spelled wrong without saying so. Project names are
-  in each package's own config (`rg -n 'name:' */vitest.config.*`), and they carry a suffix the directory does not -
+  `--config <pkg>/vitest.config...`: the extension varies per package (`.mts` under `client/`, `server/` and
+  `plugins/*`, `.ts` everywhere else) and a wrong guess fails as an unresolved-entry error that reads like a broken
+  config. The root `vitest.config.ts` names every project, so `--project` cannot be spelled wrong without saying so.
+  Project names are in each package's own config (`rg -n '^\s+name: "' -g 'vitest*.config.*'`), and they carry a
+  suffix the directory does not -
   `animation-lib`, not `animation`. **Pass the file filter while iterating**: a package's whole suite over a real
   install runs for minutes, and one file answers in seconds - keep the unfiltered run for close-out.
 - **Any visual/CSS/layout change to the binary editor** -> render it, do not reason about the cascade blind. Run
@@ -92,8 +93,8 @@ gate and the sibling to copy: `docs/development.md`.
 - **Sort `server/data/*.yml`** with `pnpm exec tsx scripts/utils/src/sort-yaml-stanzas-and-items.ts <file>`. Never
   hand-roll sorting.
 - Both of the above are enforced by `scripts/utils/test/syntaxes-generated.test.ts`, which regenerates the JSON into
-  a temp dir and re-runs the sorter in memory. It exempts the generator-owned data files, and
-  `server/data/fallout-worldmap-txt.yml`, which is committed in a different order.
+  a temp dir and re-runs the sorter in memory. It exempts the generator-owned data files, which carry the
+  auto-generated marker.
 
 ## Traps
 

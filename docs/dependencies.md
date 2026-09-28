@@ -71,8 +71,8 @@ So, per bump:
   `playwright install`, and a caret drift to a version whose browser revision is not cached would break the harness
   run until a re-download. Bump the pin and re-run `playwright install` together. A plain `pnpm install` never
   downloads a browser - the harness paths install Chromium explicitly.
-- `bits-ui` (client devDep, bundled into the binary-editor and animation-editor webviews) is exact-pinned (no caret).
-  Its primitives (Tabs, Combobox, Checkbox, the flag-group controls) render user-visible chrome, so version moves are
+- `bits-ui` (client devDep, reached only through the primitive wrappers in `client/src/webview-ui/`) is exact-pinned
+  (no caret). Those primitives render user-visible chrome in every webview that uses them, so version moves are
   deliberate: bump the pin and verify via the render harness drivers that exercise those primitives
   (`render-primitives.mts`, `render-resource-picker.mts`, `render-creature-palette.mts`) - never let a caret drift
   change webview rendering as a side effect of an unrelated install.
@@ -129,7 +129,7 @@ So, per bump:
   makes the set of enabled rules a property of whenever the lockfile was last refreshed, so the same commit lints
   clean on one machine and red on another; `.oxlintrc.json` records rules that began firing on a minor bump, each
   needing a decision. `@oxlint/plugins` must move in the same change as `oxlint` and to the same version - it
-  supplies the plugin API that `.oxlint/oxlint-plugin-no-showmessage.mjs` is written against. Bumping means reading
+  supplies the plugin API the plugins in `.oxlint/` are written against. Bumping means reading
   the release notes for newly-enabled rules, running `pnpm exec oxlint` on a clean tree, and deciding each new
   finding rather than mass-disabling.
 - `oxlint-tsgolint` (the type-aware backend behind `pnpm lint:types`) is caret-ranged, but its version tracks the
@@ -142,8 +142,8 @@ So, per bump:
   run still reports zero `tsconfig-error` lines. This is also the one place a TS 7 constraint already binds while the
   workspace `typescript` pin sits on 6.x.
 - The lint binaries are pinned and checksum-verified the same way WeiDU is, in the scripts that fetch them rather
-  than in a manifest: `actionlint` and `zizmor` in `scripts/lint-workflows.sh`, `shellcheck` and `shfmt` in
-  `scripts/lint-shell.sh`. `shellcheck` is the one that is fetched even when the host already has it, because
+  than in a manifest: `actionlint` and `zizmor` in `scripts/lint-workflows.sh`, `shfmt` in `scripts/lint-shell.sh`,
+  `shellcheck` in `scripts/tool-download-lib.sh`, which both of them source. `shellcheck` is the one that is fetched even when the host already has it, because
   GitHub-hosted runners preinstall it and the runner image decides the version otherwise. Each records one sha256 per
   published asset, so bump the version and replace every hash together - a tag is mutable, the asset hash is what is
   actually verified. These are not covered by `pnpm outdated`; check them against upstream releases whenever the npm
