@@ -106,7 +106,8 @@ function parseBundled(bundled: string, text: string, filePath: string, traTag: s
 
 /**
  * Compile a TD file to D, writing the output to disk.
- * Used by the LSP compile handler.
+ * @deprecated `transpile` plus a write to `outputPathFor(path)` does the same. Removed in the next major
+ * version.
  */
 export async function compile(uri: string, text: string): Promise<TDCompileResult> {
     const { outPath, result, events } = await td.compile(uri, text);

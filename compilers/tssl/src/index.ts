@@ -82,7 +82,11 @@ export interface TSSLCompileResult {
     sourceMap: ReadonlyArray<SourcePosition | undefined>;
 }
 
-/** Convert TSSL to SSL, writing the output to disk. */
+/**
+ * Convert TSSL to SSL, writing the output to disk.
+ * @deprecated `transpile` plus a write of the result beside the source does the same. Removed in the next
+ * major version.
+ */
 export async function compile(uri: string, text: string): Promise<TSSLCompileResult> {
     // One file, so no batch state to reuse a project across.
     const { outPath, events, result } = await tsslFor().compile(uri, text);

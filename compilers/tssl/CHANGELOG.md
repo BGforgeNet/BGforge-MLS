@@ -4,6 +4,11 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
 ## Unreleased
 
+### Deprecated
+
+- `compile()`, which writes the `.ssl` itself: `transpile()` plus a write of the result does the same. It will
+  be removed in the next major version.
+
 ### Fixed
 
 - `tssl` refuses `--save-and-check` and `--check-idempotency` with an error. Both used to write the outputs

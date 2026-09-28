@@ -83,7 +83,8 @@ export interface TBAFCompileResult {
 
 /**
  * Compile a TBAF file to BAF, writing the output to disk.
- * Used by the LSP compile handler.
+ * @deprecated `transpile` plus a write to `outputPathFor(path)` does the same. Removed in the next major
+ * version.
  */
 export async function compile(uri: string, text: string): Promise<TBAFCompileResult> {
     const { outPath, events, result } = await tbaf.compile(uri, text);
