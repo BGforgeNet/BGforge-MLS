@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { relativeImportTargets, resolveModulePath, runtimeImportSpecifiers } from "./import-graph.ts";
+import { localImportTargets, resolveModulePath, runtimeImportSpecifiers } from "./import-graph.ts";
 
 // Anchored to this file, not cwd: vitest runs this config from the repo root and from scripts/.
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
@@ -55,7 +55,7 @@ function reach(configPath: string): string[] {
         seen.add(file);
         if (!/\.(m?ts|svelte)$/.test(file)) continue;
         const source = fs.readFileSync(file, "utf8");
-        queue.push(...relativeImportTargets(file, source));
+        queue.push(...localImportTargets(file, source));
         for (const specifier of runtimeImportSpecifiers(source)) {
             const alias = aliases.find(([key]) => specifier === key || specifier.startsWith(`${key}/`));
             if (!alias) continue;

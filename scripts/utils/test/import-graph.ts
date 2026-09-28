@@ -57,12 +57,21 @@ export function runtimeImportSpecifiers(source: string): string[] {
     return specifiers;
 }
 
-/** The files `file` imports at runtime by relative path. */
-export function relativeImportTargets(file: string, source: string): string[] {
+// Anchored to this file, not cwd: vitest runs these guards from the repo root and from scripts/.
+const sharedDir = path.resolve(__dirname, "..", "..", "..", "shared");
+/** The workspace package whose exports are its own source, so its specifiers are as local as a relative path. */
+const sharedName = (JSON.parse(fs.readFileSync(path.join(sharedDir, "package.json"), "utf8")) as { name: string }).name;
+
+/** The files `file` imports at runtime by relative path or through the shared source package. */
+export function localImportTargets(file: string, source: string): string[] {
     const targets = new Set<string>();
     for (const specifier of runtimeImportSpecifiers(source)) {
-        if (!specifier.startsWith(".")) continue;
-        const resolved = resolveModulePath(path.resolve(path.dirname(file), specifier));
+        let target: string;
+        if (specifier.startsWith(".")) target = path.resolve(path.dirname(file), specifier);
+        else if (specifier.startsWith(`${sharedName}/`))
+            target = path.join(sharedDir, specifier.slice(sharedName.length));
+        else continue;
+        const resolved = resolveModulePath(target);
         if (resolved !== undefined) targets.add(resolved);
     }
     return [...targets];

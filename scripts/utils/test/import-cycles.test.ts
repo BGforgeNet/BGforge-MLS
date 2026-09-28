@@ -16,7 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
-import { relativeImportTargets } from "./import-graph.ts";
+import { localImportTargets } from "./import-graph.ts";
 
 // Anchored to this file, not cwd: vitest runs this config from the repo root and from scripts/.
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
@@ -51,7 +51,7 @@ const files = execSync("git ls-files -- '*.ts' '*.mts' '*.cts' '*.tsx'", {
 
 const graph = new Map<string, string[]>();
 for (const file of files) {
-    graph.set(file, relativeImportTargets(file, fs.readFileSync(file, "utf8")));
+    graph.set(file, localImportTargets(file, fs.readFileSync(file, "utf8")));
 }
 
 /** Tarjan's strongly connected components; components of size 1 are not cycles here. */
