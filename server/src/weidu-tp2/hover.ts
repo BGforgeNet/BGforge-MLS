@@ -8,7 +8,8 @@ import { type Hover, type Position, MarkupKind } from "vscode-languageserver/nod
 import { isCallableSymbol, type CallableInfo } from "../core/symbol";
 import { buildParamInfoMap } from "../shared/jsdoc";
 import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
-import { type FunctionInfo, parseHeader } from "./header-parser";
+import type { FunctionInfo } from "./header-parser";
+import { localFunctions as documentFunctions } from "./request-caches";
 import { buildRetsMap } from "./hover-content";
 import type { Symbols } from "../core/symbol-index";
 import { SyntaxType } from "./syntax-type";
@@ -25,6 +26,8 @@ export function getFunctionParamHover(
     symbol: string,
     position: Position,
     symbols?: Symbols,
+    uri = "",
+    version?: number,
 ): Hover | null {
     if (!isInitialized()) {
         return null;
@@ -36,7 +39,7 @@ export function getFunctionParamHover(
     }
 
     // Parse local function definitions as fallback for functions not in the global index
-    const localFunctions = parseHeader(text, "");
+    const localFunctions = documentFunctions(uri, version, text);
 
     // Find function calls and check if symbol is a parameter name
     const result = findParamInFunctionCalls(tree.rootNode, symbol, position, localFunctions, symbols);

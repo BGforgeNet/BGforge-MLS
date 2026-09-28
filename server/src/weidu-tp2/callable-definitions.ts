@@ -1,6 +1,12 @@
-import { parseHeader, type FunctionInfo } from "./header-parser";
+import type { FunctionInfo } from "./header-parser";
+import { localFunctions } from "./request-caches";
 
-export function findLocalCallableDefinition(text: string, uri: string, name: string): FunctionInfo | null {
-    const functions = parseHeader(text, uri);
-    return functions.find((func) => func.name === name) ?? null;
+/** A function or macro the document defines, by name; `version` lets a repeat ask reuse the last walk. */
+export function findLocalCallableDefinition(
+    text: string,
+    uri: string,
+    name: string,
+    version?: number,
+): FunctionInfo | null {
+    return localFunctions(uri, version, text).find((func) => func.name === name) ?? null;
 }

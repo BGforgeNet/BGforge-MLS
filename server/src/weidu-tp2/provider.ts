@@ -79,7 +79,8 @@ import { findReferences } from "./references";
 import { renameSymbol, prepareRenameSymbol } from "./rename";
 import { buildFunctionCallSnippet, getKeywordSnippet } from "./snippets";
 import { getFunctionParamHover } from "./hover";
-import { localCompletion, isInsideComment, isInsideString, isOnLoopVariableBinding } from "./ast-utils";
+import { isInsideComment, isInsideString, isOnLoopVariableBinding } from "./ast-utils";
+import { clearRequestCaches, localVariables } from "./request-caches";
 import {
     getLocalSymbols as extractLocalSymbols,
     getLocalSymbolsData,
@@ -263,7 +264,7 @@ function getSnippetPrefixFromSymbol(
  */
 function collectLocalCompletions(
     local: LocalSymbolsData,
-    text: string,
+    document: { text: string; uri: string; version: number | undefined },
     options?: { variablesOnly?: boolean; excludeWord?: string },
 ): Tp2CompletionItem[] {
     const { variablesOnly = false, excludeWord } = options ?? {};
@@ -279,7 +280,7 @@ function collectLocalCompletions(
     }
 
     // Deep-scoped variables (inside function bodies, loops) not covered by file-scope
-    for (const v of localCompletion(text)) {
+    for (const v of localVariables(document.uri, document.version, document.text)) {
         const label = v.label;
         if (seen.has(label)) continue;
         if (excludeWord && label === excludeWord) continue;
@@ -403,10 +404,14 @@ class WeiduTp2Provider
         const local = getLocalSymbolsData(text, version, uri);
 
         if (declSite === "assignment") {
-            return collectLocalCompletions(local, text, { variablesOnly: true, excludeWord: currentWord });
+            return collectLocalCompletions(
+                local,
+                { text, uri, version },
+                { variablesOnly: true, excludeWord: currentWord },
+            );
         }
 
-        const localCompletions = collectLocalCompletions(local, text, { excludeWord: currentWord });
+        const localCompletions = collectLocalCompletions(local, { text, uri, version }, { excludeWord: currentWord });
         const baseItems: Tp2CompletionItem[] = [...items, ...localCompletions];
 
         // Inside a string the only thing that resolves is a `%var%` interpolation, so keep the variables and
@@ -431,8 +436,9 @@ class WeiduTp2Provider
         return isInsideString(text, position);
     }
 
-    hover(text: string, symbol: string, _uri: NormalizedUri, position: Position): HoverResult {
-        const paramHover = getFunctionParamHover(text, symbol, position, this.fileIndex?.symbols);
+    hover(text: string, symbol: string, uri: NormalizedUri, position: Position): HoverResult {
+        const version = this.storedContext?.getDocumentVersion?.(uri);
+        const paramHover = getFunctionParamHover(text, symbol, position, this.fileIndex?.symbols, uri, version);
         if (paramHover) {
             return HoverResult.found(paramHover);
         }
@@ -458,7 +464,14 @@ class WeiduTp2Provider
     }
 
     definition(text: string, position: Position, uri: NormalizedUri): Location | null {
-        return getDefinition(text, uri, position, this.fileIndex?.symbols, this.storedContext?.getTranslationDir?.());
+        return getDefinition(
+            text,
+            uri,
+            position,
+            this.fileIndex?.symbols,
+            this.storedContext?.getTranslationDir?.(),
+            this.storedContext?.getDocumentVersion?.(uri),
+        );
     }
 
     reloadFileData(uri: NormalizedUri, text: string): void {
@@ -479,6 +492,7 @@ class WeiduTp2Provider
 
     onDocumentClosed(uri: NormalizedUri): void {
         clearLocalSymbolsCache(uri);
+        clearRequestCaches(uri);
     }
 
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
