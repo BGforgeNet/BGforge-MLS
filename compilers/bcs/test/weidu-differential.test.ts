@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import type { Parser } from "web-tree-sitter";
 import { compileBaf, decompileBcs, readBcs, writeBcs } from "@bgforge/bcs";
 import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
-import { resolveWeidu, WEIDU_HOOK_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
+import { resolveWeidu, runWeiduBatch, WEIDU_HOOK_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
 import { COMPILE_SYMBOLS, FIXTURE_DIR, IDS_DIR, SYMBOLS } from "./fixture-symbols";
 
 /**
@@ -51,11 +50,7 @@ let decompiled = "";
 /** Runs WeiDU over every file of one extension in `dir`, writing its output beside them. */
 function runWeidu(dir: string, extension: string): void {
     const inputs = fs.readdirSync(dir).filter((name) => name.endsWith(extension));
-    execFileSync(weidu, ["--nogame", "--search-ids", IDS_DIR, "--out", ".", ...inputs], {
-        cwd: dir,
-        timeout: WEIDU_TIMEOUT_MS,
-        stdio: ["ignore", "pipe", "pipe"],
-    });
+    runWeiduBatch(weidu, ["--nogame", "--search-ids", IDS_DIR, "--out", ".", ...inputs], dir, WEIDU_TIMEOUT_MS);
 }
 
 let parser: Parser;

@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { buildDlg, dlgParser, readDlg } from "../src/dlg";
 import type { DlgCanonicalDocument } from "../src/dlg/canonical-schemas";
 import { createCanonicalDlgJsonSnapshot, loadCanonicalDlgJsonSnapshot } from "../src/dlg/json-snapshot";
-import { resolveWeidu, WEIDU_HOOK_TIMEOUT_MS } from "../../scripts/utils/src/weidu-binary.ts";
+import { resolveWeidu, runWeiduBatch, WEIDU_HOOK_TIMEOUT_MS } from "../../scripts/utils/src/weidu-binary.ts";
 import { REPO_ROOT } from "./repo-root";
 
 /**
@@ -213,11 +212,7 @@ describe(`dlgParser (${COMPILED.length} fixtures)`, () => {
             .filter((f) => f.endsWith(".d"))
             .sort();
         for (const src of sources) fs.copyFileSync(path.join(FIXTURE_DIR, src), path.join(workDir, src));
-        execFileSync(weidu, ["--nogame", "--out", ".", ...sources], {
-            cwd: workDir,
-            timeout: WEIDU_TIMEOUT_MS,
-            stdio: "ignore",
-        });
+        runWeiduBatch(weidu, ["--nogame", "--out", ".", ...sources], workDir, WEIDU_TIMEOUT_MS);
     }, WEIDU_HOOK_TIMEOUT_MS);
 
     afterAll(() => {
