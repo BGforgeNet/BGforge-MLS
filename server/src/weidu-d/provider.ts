@@ -221,7 +221,7 @@ class WeiduDProvider
 
     reloadFileData(uri: NormalizedUri, text: string): void {
         if (isInitialized() && this.fileIndex) {
-            const result = parseFile(uri, text, this.storedContext?.workspaceRoot);
+            const result = parseFile(uri, text, { workspaceRoot: this.storedContext?.workspaceRoot });
             this.fileIndex.updateFile(uri, result);
         }
     }

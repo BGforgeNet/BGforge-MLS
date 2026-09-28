@@ -1479,7 +1479,7 @@ end
             // headers get SourceType.Workspace, .ssl files get SourceType.Navigation
             for (const { uri, text } of Object.values(files)) {
                 const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
-                const result = parseFile(uri, text, fixtureBase, st);
+                const result = parseFile(uri, text, { workspaceRoot: fixtureBase, sourceType: st });
                 fileIndex.updateFile(normalizeUri(uri), result);
             }
 
@@ -1549,7 +1549,7 @@ end
             const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
             for (const { uri, text } of Object.values(files)) {
                 const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
-                const result = parseFile(uri, text, fixtureBase, st);
+                const result = parseFile(uri, text, { workspaceRoot: fixtureBase, sourceType: st });
                 fileIndex.updateFile(normalizeUri(uri), result);
             }
 
@@ -1606,10 +1606,13 @@ end
         it("does not rewrite a differently-spelled occurrence in another file", async () => {
             const files: Record<string, string> = { [HEADER_URI]: HEADER, [CALLER_URI]: CALLER };
             const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
-            fileIndex.updateFile(normalizeUri(HEADER_URI), parseFile(HEADER_URI, HEADER, "/mod", SourceType.Workspace));
+            fileIndex.updateFile(
+                normalizeUri(HEADER_URI),
+                parseFile(HEADER_URI, HEADER, { workspaceRoot: "/mod", sourceType: SourceType.Workspace }),
+            );
             fileIndex.updateFile(
                 normalizeUri(CALLER_URI),
-                parseFile(CALLER_URI, CALLER, "/mod", SourceType.Navigation),
+                parseFile(CALLER_URI, CALLER, { workspaceRoot: "/mod", sourceType: SourceType.Navigation }),
             );
 
             const result = await renameSymbolWorkspace(

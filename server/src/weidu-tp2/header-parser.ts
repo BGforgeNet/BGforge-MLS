@@ -15,7 +15,7 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { type Location, CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
 import { computeDisplayPath, extractFilename } from "../core/location-utils";
-import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
+import { type ParseFileOptions, type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
@@ -574,13 +574,9 @@ function variableInfoToSymbol(varInfo: VariableInfo, displayPath?: string | null
 }
 
 /** Options for parseFile */
-interface ParseSymbolsOptions {
-    /** Workspace root path for computing relative displayPath */
-    workspaceRoot?: string;
+interface ParseSymbolsOptions extends ParseFileOptions {
     /** Skip path in hover (for local symbols where path is redundant) */
     skipPath?: boolean;
-    /** Override source type (default: Workspace). Use Navigation for non-header files. */
-    sourceType?: SourceType;
 }
 
 /**

@@ -109,8 +109,8 @@ end
 
         it("does not report a differently-spelled occurrence as a reference", () => {
             const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
-            fileIndex.updateFile(normalizeUri(HEADER_URI), parseFile(HEADER_URI, HEADER, "/mod"));
-            fileIndex.updateFile(normalizeUri(CALLER_URI), parseFile(CALLER_URI, CALLER, "/mod"));
+            fileIndex.updateFile(normalizeUri(HEADER_URI), parseFile(HEADER_URI, HEADER, { workspaceRoot: "/mod" }));
+            fileIndex.updateFile(normalizeUri(CALLER_URI), parseFile(CALLER_URI, CALLER, { workspaceRoot: "/mod" }));
 
             const refs = findReferences(
                 CALLER,

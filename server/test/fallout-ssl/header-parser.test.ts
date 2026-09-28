@@ -20,7 +20,9 @@ vi.mock("../../src/path-utils", () => ({
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 
 /** Extract symbols only (convenience wrapper). */
-const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
+const parseHeaderToSymbols = (uri: string, text: string, workspaceRoot?: string) => [
+    ...parseFile(uri, text, { workspaceRoot }).symbols,
+];
 import { initParser } from "../../../shared/parsers/fallout-ssl";
 import { SymbolKind, ScopeLevel, SourceType, isCallableSymbol, isVariableSymbol } from "../../src/core/symbol";
 import type { MarkupContent } from "vscode-languageserver/node";

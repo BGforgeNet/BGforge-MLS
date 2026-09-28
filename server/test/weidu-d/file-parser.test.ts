@@ -158,7 +158,7 @@ IF ~~ THEN BEGIN s1
     IF ~~ THEN EXIT
 END
 `;
-        const result = parseFile("file:///workspace/npcs/npc.d", text, "/workspace");
+        const result = parseFile("file:///workspace/npcs/npc.d", text, { workspaceRoot: "/workspace" });
 
         expect(result.symbols).toHaveLength(1);
         // symbol.source.displayPath should be workspace-relative

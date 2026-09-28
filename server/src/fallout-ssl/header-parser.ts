@@ -12,7 +12,7 @@
 import type { Location } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
 import { computeDisplayPath } from "../core/location-utils";
-import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
+import { type ParseFileOptions, type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange as makeRangeFromNode } from "../core/position-utils";
 import { type IndexedSymbol, type SourceType, remapSourceType } from "../core/symbol";
 import * as jsdoc from "../shared/jsdoc";
@@ -44,7 +44,8 @@ import { SyntaxType } from "./syntax-type";
  * @param workspaceRoot Workspace root for computing relative displayPath
  * @param sourceType Override source type (default: Workspace). Use Navigation for non-header files.
  */
-export function parseFile(uri: string, text: string, workspaceRoot?: string, sourceType?: SourceType): ParseResult {
+export function parseFile(uri: string, text: string, options: ParseFileOptions = {}): ParseResult {
+    const { workspaceRoot, sourceType } = options;
     if (!isInitialized()) {
         return EMPTY_PARSE_RESULT;
     }

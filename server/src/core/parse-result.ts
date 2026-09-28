@@ -6,7 +6,7 @@
  */
 
 import type { Location } from "vscode-languageserver/node";
-import type { IndexedSymbol } from "./symbol";
+import type { IndexedSymbol, SourceType } from "./symbol";
 
 /** Result of parsing a file for both symbols and references. */
 export interface ParseResult {
@@ -14,6 +14,14 @@ export interface ParseResult {
     readonly symbols: readonly IndexedSymbol[];
     /** Cross-file reference locations: symbolName/compositeKey -> Location[]. */
     readonly refs: ReadonlyMap<string, readonly Location[]>;
+}
+
+/** What every language's `parseFile` takes beside the file itself. */
+export interface ParseFileOptions {
+    /** Workspace root, for the relative path a symbol's hover shows. */
+    readonly workspaceRoot?: string;
+    /** Where the file's symbols come from (default: Workspace); Navigation for a file that is not a header. */
+    readonly sourceType?: SourceType;
 }
 
 /** Empty parse result constant, avoids allocating new objects. */

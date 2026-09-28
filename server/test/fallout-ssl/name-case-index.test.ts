@@ -32,7 +32,7 @@ const workspaceRoot = "/mymod";
 /** Index a header through the same parse the server runs on it. */
 function indexHeader(text: string): FileIndex {
     const index = new FileIndex(LANG_FALLOUT_SSL);
-    index.updateFile(normalizeUri(testUri), parseFile(testUri, text, workspaceRoot));
+    index.updateFile(normalizeUri(testUri), parseFile(testUri, text, { workspaceRoot }));
     return index;
 }
 

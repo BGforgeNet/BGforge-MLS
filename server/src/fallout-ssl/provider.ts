@@ -406,7 +406,7 @@ class FalloutSslProvider
     reloadFileData(uri: NormalizedUri, text: string): void {
         if (isInitialized() && this.fileIndex) {
             const st = isHeaderFile(uri) ? SourceType.Workspace : SourceType.Navigation;
-            const result = parseFile(uri, text, this.storedContext?.workspaceRoot, st);
+            const result = parseFile(uri, text, { workspaceRoot: this.storedContext?.workspaceRoot, sourceType: st });
             this.fileIndex.updateFile(uri, result);
         }
     }
