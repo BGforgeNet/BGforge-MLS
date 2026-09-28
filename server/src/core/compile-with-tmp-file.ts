@@ -6,7 +6,8 @@
  *  - activeCompiles: stale in-flight compilations for the same URI are aborted
  *    before a new one starts; the AbortController is registered and removed.
  *  - The tmp file is written before `run` starts and deleted in a finally block,
- *    regardless of whether `run` resolves, rejects, or is aborted.
+ *    whether `run` resolves, rejects, or is aborted - except by a run a newer
+ *    compile of the same URI displaced, which leaves the shared path to that one.
  *  - Additional cleanup paths (e.g., a throwaway validation .int output) are
  *    deleted in the same finally block.
  *
@@ -49,6 +50,9 @@ export function abortAllCompiles(activeCompiles: Map<NormalizedUri, AbortControl
     activeCompiles.clear();
 }
 
+/** Runs a newer compile of the same URI replaced. A shutdown abort is not a displacement: it still cleans up. */
+const displaced = new WeakSet<AbortController>();
+
 /**
  * The abort bookkeeping and cleanup every compile needs, without the tmp source file.
  *
@@ -64,15 +68,21 @@ export async function withCompileLifecycle(params: {
 }): Promise<void> {
     const { uri, activeCompiles, cleanupPaths, run } = params;
 
-    activeCompiles.get(uri)?.abort();
+    const previous = activeCompiles.get(uri);
+    if (previous) {
+        displaced.add(previous);
+        previous.abort();
+    }
     const controller = new AbortController();
     activeCompiles.set(uri, controller);
 
     try {
         await run(controller.signal);
     } finally {
-        activeCompiles.delete(uri);
-        if (cleanupPaths) {
+        // A displaced run finishing late leaves both the map entry and the per-URI paths to the run that
+        // displaced it: deleting either would un-track that run or pull its tmp file out from under its compiler.
+        if (activeCompiles.get(uri) === controller) activeCompiles.delete(uri);
+        if (cleanupPaths && !displaced.has(controller)) {
             await Promise.all(cleanupPaths.map((extra) => removeTmpFile(extra)));
         }
     }
