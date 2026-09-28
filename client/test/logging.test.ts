@@ -6,15 +6,9 @@
 
 import { vi, describe, expect, it, beforeEach } from "vitest";
 
-const { createOutputChannelMock, appendLineMock } = vi.hoisted(() => {
-    const inner = vi.fn();
-    return {
-        appendLineMock: inner,
-        createOutputChannelMock: vi.fn(() => ({
-            appendLine: inner,
-            dispose: vi.fn(),
-        })),
-    };
+const { createOutputChannelMock, levelMocks } = vi.hoisted(() => {
+    const levels = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), dispose: vi.fn() };
+    return { levelMocks: levels, createOutputChannelMock: vi.fn(() => levels) };
 });
 
 vi.mock("vscode", () => ({
@@ -24,11 +18,11 @@ vi.mock("vscode", () => ({
 }));
 
 // Imported after the mock so the module sees the fake `vscode`.
-import { conlog, initOutputChannel, setDebugLogging } from "../src/logging";
+import { conlog, initOutputChannel } from "../src/logging";
 
 describe("logging", () => {
     beforeEach(() => {
-        appendLineMock.mockReset();
+        for (const level of [levelMocks.debug, levelMocks.info, levelMocks.warn, levelMocks.error]) level.mockReset();
         createOutputChannelMock.mockClear();
     });
 
@@ -65,47 +59,22 @@ describe("logging", () => {
         });
     });
 
+    // Written at its own level, so the channel's "Set Log Level" decides what shows - a level spelled into
+    // the text of an info line is one no filter can see.
     describe("conlog after initOutputChannel", () => {
         beforeEach(() => {
             const subscriptions: { dispose: () => void }[] = [];
             initOutputChannel({ subscriptions } as unknown as Parameters<typeof initOutputChannel>[0]);
-            appendLineMock.mockReset();
         });
 
-        it("tags info messages with [client] only", () => {
-            conlog("hello", "info");
-            expect(appendLineMock).toHaveBeenCalledWith("[client] hello");
+        it.each(["debug", "info", "warn", "error"] as const)("writes a %s line at that level", (level) => {
+            conlog("hello", level);
+            expect(levelMocks[level]).toHaveBeenCalledWith("[client] hello");
         });
 
         it("defaults the level to info", () => {
             conlog("default level");
-            expect(appendLineMock).toHaveBeenCalledWith("[client] default level");
-        });
-
-        it("tags warn messages with [client] [warn]", () => {
-            conlog("careful", "warn");
-            expect(appendLineMock).toHaveBeenCalledWith("[client] [warn] careful");
-        });
-
-        it("tags error messages with [client] [error]", () => {
-            conlog("kaboom", "error");
-            expect(appendLineMock).toHaveBeenCalledWith("[client] [error] kaboom");
-        });
-
-        it("drops debug messages when debug logging is off (default)", () => {
-            // Default state: setDebugLogging(true) hasn't been called.
-            conlog("noisy", "debug");
-            expect(appendLineMock).not.toHaveBeenCalled();
-        });
-
-        it("emits debug messages when debug logging is on", () => {
-            setDebugLogging(true);
-            try {
-                conlog("noisy", "debug");
-                expect(appendLineMock).toHaveBeenCalledWith("[client] [debug] noisy");
-            } finally {
-                setDebugLogging(false);
-            }
+            expect(levelMocks.info).toHaveBeenCalledWith("[client] default level");
         });
     });
 });

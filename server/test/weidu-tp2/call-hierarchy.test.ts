@@ -8,7 +8,10 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
 import { SymbolKind, type Location, type Position } from "vscode-languageserver/node";
 
 vi.mock("../../src/server", () => ({
-    connection: { console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() }, sendDiagnostics: vi.fn() },
+    connection: {
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        sendDiagnostics: vi.fn(),
+    },
 }));
 
 import {

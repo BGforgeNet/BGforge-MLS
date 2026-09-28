@@ -21,24 +21,14 @@ export function setDebugLogging(enabled: boolean): void {
 }
 
 /**
- * Log a message through the LSP connection's console at the given level.
- * Debug-level messages are dropped unless {@link setDebugLogging} was called with true.
+ * Log a message through the LSP connection's console at the given level, which the client's output channel
+ * files it under - so its "Set Log Level" decides what shows. Not `console.log`: a message of that type
+ * carries no level, and the client appends it unfiltered.
+ *
+ * Debug-level messages are also dropped at the source unless {@link setDebugLogging} was called with true,
+ * since some of them cost real work to build.
  */
 export function conlog(message: string, level: LogLevel = "info"): void {
     if (level === "debug" && !debugEnabled) return;
-    const console = getConnection().console;
-    switch (level) {
-        case "debug":
-            console.log(`[debug] ${message}`);
-            break;
-        case "info":
-            console.log(message);
-            break;
-        case "warn":
-            console.warn(message);
-            break;
-        case "error":
-            console.error(message);
-            break;
-    }
+    getConnection().console[level](message);
 }

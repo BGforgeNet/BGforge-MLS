@@ -38,6 +38,12 @@
 - Decompiling a script prints every float constant as a plain decimal the compiler reads back, and refuses NaN
   and infinity by name instead of printing text that does not compile.
 
+### Output channel
+
+- The BGforge MLS channel's Set Log Level now filters both the extension's and the language server's lines,
+  which are written at their real levels. With `bgforge.debug` on, debug lines appear once the channel's level
+  is Debug.
+
 ### Language features
 
 - TP2 call hierarchy reads other files as they are open in the editor, unsaved changes included, and places a

@@ -17,7 +17,7 @@ import { SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 // Mock the LSP connection to avoid initialization issues in tests
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),

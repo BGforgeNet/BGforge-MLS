@@ -837,7 +837,7 @@
                 "bgforge.debug": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable debug logging in the Output panel (BGforge MLS channel). Useful for troubleshooting rename, include resolution, and other issues. On switching on, also logs the editor's name and the LSP capabilities its client announced, to check which features a given editor supports."
+                    "description": "Enable the language server's debug logging. It is written to the BGforge MLS output channel at Debug level, so set that channel's log level to Debug (Output panel, Set Log Level) to see it. Useful for troubleshooting rename, include resolution, and other issues. On switching on, also logs the editor's name and the LSP capabilities its client announced, to check which features a given editor supports."
                 },
                 "bgforge.binaryEditor.autoDumpJson": {
                     "type": "boolean",

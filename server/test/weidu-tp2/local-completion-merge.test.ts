@@ -10,7 +10,7 @@ import { type Position, CompletionItemKind } from "vscode-languageserver/node";
 // Mock LSP connection before importing provider
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     })),
     initLspConnection: vi.fn(),

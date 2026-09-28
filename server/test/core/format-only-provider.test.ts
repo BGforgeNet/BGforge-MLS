@@ -11,7 +11,7 @@ import { normalizeUri } from "../../src/core/normalized-uri";
 // Mock the LSP connection module so conlog() (called from init()) has a connection to log through.
 // getConnection must return the SAME object on every call (matching the real singleton-holder
 // semantics of lsp-connection.ts) so a test can inspect calls recorded during provider.init().
-const mockConsole = { log: vi.fn(), warn: vi.fn(), error: vi.fn() };
+const mockConsole = { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({ console: mockConsole })),
     initLspConnection: vi.fn(),
@@ -36,7 +36,7 @@ describe("createFormatOnlyProvider", () => {
     it("init() logs an initialization message through the LSP connection and resolves", async () => {
         const provider = createFormatOnlyProvider("weidu-tra", () => ({ text: "x" }));
         await expect(provider.init(emptyContext)).resolves.toBeUndefined();
-        const logFn = getConnection().console.log;
+        const logFn = getConnection().console.info;
         expect(logFn).toHaveBeenCalledWith("weidu-tra provider initialized");
     });
 

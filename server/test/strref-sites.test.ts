@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/lsp-connection", () => ({
-    getConnection: () => ({ console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() } }),
+    getConnection: () => ({ console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() } }),
     getDocuments: () => ({ get: vi.fn() }),
     initLspConnection: vi.fn(),
 }));
