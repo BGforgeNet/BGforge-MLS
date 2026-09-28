@@ -5,6 +5,10 @@
  * A state label's identity is (dialogFile, labelName).
  * Rename collects ALL references with matching pair across the entire source_file.
  *
+ * This implementation renames within single file only - a reference in another .d file (an EXTEND_TOP,
+ * EXTEND_BOTTOM or EXTERN naming this label, which find-references reaches through the workspace index) is
+ * not updated.
+ *
  * Public API: prepareRenameSymbol, renameSymbol.
  */
 
