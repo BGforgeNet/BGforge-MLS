@@ -92,6 +92,18 @@ describe("serializeDlg - a document that does not fit its bytes", () => {
         expect(() => loadCanonicalDlgJsonSnapshot(JSON.stringify(snapshot))).toThrow(/does not fit|out of range/i);
     });
 
+    // A crafted snapshot, not one written by the editor: the text block's recorded offset sizes the buffer
+    // before anything else reads it. The shared range schema stops at 16 MiB, sized for MAP; a DLG is 1 MiB.
+    test("refuses a crafted text block placed past the DLG size budget, before allocating for it", () => {
+        const snapshot = snapshotOf(source()) as Record<string, any>;
+        const text = snapshot.opaqueRanges.find((r: { label: string }) => r.label === "text");
+        text.offset = 8 * 1024 * 1024;
+
+        expect(() => loadCanonicalDlgJsonSnapshot(JSON.stringify(snapshot))).toThrow(
+            /exceeding the format's 1048576 byte budget/,
+        );
+    });
+
     test("accepts the document it was given untouched", () => {
         // The negative control: the same path with nothing corrupted has to stay silent, or the guard is
         // refusing correct input.

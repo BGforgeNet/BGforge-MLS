@@ -7,6 +7,7 @@
  * snapshot a complete description of the file rather than a lossy view of it.
  */
 
+import { MAX_FILE_SIZES } from "../max-file-sizes";
 import { decodeOpaqueRange } from "../opaque-range";
 import { parseWithSchemaValidation } from "../schema-validation";
 import {
@@ -74,7 +75,15 @@ function rebuildBytes(document: DlgCanonicalDocument, ranges: ParseOpaqueRange[]
     const text = ranges?.find((r) => r.label === "text");
     // A dialog with no triggers and no actions has no text block, so its absence is legitimate; the file is
     // then exactly its tables.
-    const out = new Uint8Array(text ? text.offset + text.size : sectionsEnd(document));
+    // Bounded before the allocation it sizes: the recorded offset is the snapshot's to claim - see max-file-sizes.ts.
+    const size = text ? text.offset + text.size : sectionsEnd(document);
+    const budget = MAX_FILE_SIZES.dlg;
+    if (budget !== undefined && size > budget) {
+        throw new Error(
+            `dlg snapshot would expand to ${size} bytes, exceeding the format's ${budget} byte budget; refusing to allocate`,
+        );
+    }
+    const out = new Uint8Array(size);
     if (text) out.set(decodeOpaqueRange(text), text.offset);
     return serializeDlg({
         format: "dlg",
