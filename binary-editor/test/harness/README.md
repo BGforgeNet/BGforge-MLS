@@ -95,8 +95,8 @@ It is type-checked via `test/harness/tsconfig.json`, which includes the DOM lib 
 
 - **`tsx`** - available via the repo's dev dependencies (`pnpm exec tsx ...`).
 
-- **`esbuild` and `esbuild-svelte`** - present in `client/package.json`; the workspace root `node_modules`
-  resolves them for `build.mts`.
+- **`esbuild`, `esbuild-svelte`, `svelte` and `playwright`** - devDependencies of this package, installed by
+  `pnpm install`.
 
 ## How to run
 
