@@ -70,8 +70,9 @@ So, per bump:
 - `ini` (runtime dep of `@bgforge/format`) is held at `^6.x`; `7.0.0` is a major with potential parse/stringify
   behavior changes that need a changelog review before adoption. It also carries a second, independent hold reason:
   ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) sits above both `engines.node` `>=22` and the Node inside the
-  oldest supported VS Code, which runs `@bgforge/format` inside the language server. Both reasons must clear before the
-  bump.
+  oldest supported VS Code, which runs `@bgforge/format` inside the language server. No VS Code release shipped Node
+  22.22.2: 1.122 carries 22.22.1 and 1.123 moved to 24.15.0, so `engines.vscode` must reach `^1.123.0` (and
+  `engines.node` match ini's range) for this reason to clear. Both reasons must clear before the bump.
 - `playwright` (devDep) is pinned to an EXACT version (no caret) because the webview harnesses launch a browser from
   Playwright's version-keyed cache: a development machine and the `Harness` CI job download that browser via
   `playwright install`, and a caret drift to a version whose browser revision is not cached would break the harness
