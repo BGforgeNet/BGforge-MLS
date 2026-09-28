@@ -133,70 +133,33 @@ export function scanTildeDelimiter(text: string, pos: number): TildeDelimiter {
 }
 
 /**
- * Options for stripCommentsCommon.
- * When handleTildeStrings is true, tilde-delimited WeiDU string literals are
- * preserved before the shared double-quote / comment handling runs.
+ * A string's contents in a form validateFormatting's whitespace strip leaves alone: each whitespace character
+ * becomes a visible `\u{..}` escape, so a space or tab changed inside a string reads as changed content. A `\r` is
+ * dropped, since line endings are the formatter's to normalize.
  */
-interface StripCommentsOptions {
-    readonly handleTildeStrings: boolean;
+function protectStringWhitespace(s: string): string {
+    return s.replaceAll("\r", "").replaceAll(/\s/g, (c) => `\\u{${c.codePointAt(0)!.toString(16)}}`);
 }
 
 /**
- * Shared comment-stripping implementation for Fallout SSL and WeiDU.
- * Preserves double-quoted string literals and optionally tilde-delimited
- * WeiDU string literals (~...~ and ~~~~~...~~~~~).
- * Removes line comments (//) and block comments.
+ * Shared comment-stripping implementation for Fallout SSL and WeiDU: drops comments, keeps string literals with
+ * their whitespace protected (see protectStringWhitespace).
  */
-function stripCommentsCommon(text: string, options: StripCommentsOptions): string {
-    let result = "";
-    let i = 0;
-    while (i < text.length) {
-        // Tilde strings: WeiDU uses 1 tilde or 5 tildes as delimiters
-        // ~content~ or ~~~~~content~~~~~. Preserve delimiters and content verbatim.
-        if (options.handleTildeStrings && text[i] === "~") {
-            const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
-            result += text.slice(i, contentStart); // opening delimiter
-            if (closerStart !== -1) {
-                result += text.slice(contentStart, closerStart + delimLen); // content + closer
-                i = closerStart + delimLen;
-            } else {
-                // Unclosed: keep scanning the remainder for comments/quotes.
-                i = contentStart;
-            }
-            continue;
-        }
-        // Double-quoted strings
-        if (text[i] === '"') {
-            const start = i++;
-            while (i < text.length && text[i] !== '"') {
-                if (text[i] === "\\") i++; // Skip escaped char
-                i++;
-            }
-            result += text.slice(start, ++i);
-            continue;
-        }
-        // Block comments
-        if (text[i] === "/" && text[i + 1] === "*") {
-            const end = text.indexOf("*/", i + 2);
-            i = end !== -1 ? end + 2 : text.length;
-            continue;
-        }
-        // Line comments
-        if (text[i] === "/" && text[i + 1] === "/") {
-            while (i < text.length && text[i] !== "\n") i++;
-            continue;
-        }
-        result += text[i++];
-    }
-    return result;
+function stripCommentsCommon(text: string, weidu: boolean): string {
+    return tokenizeCode(text, weidu)
+        .map((token) => {
+            if (token.type === WeiduTokenType.Comment) return "";
+            return token.type === WeiduTokenType.String ? protectStringWhitespace(token.text) : token.text;
+        })
+        .join("");
 }
 
 /**
  * Strip comments from WeiDU text, respecting string literals.
- * Handles: ~string~, "string", ~~~~~string~~~~~
+ * Handles: ~string~, "string", ~~~~~string~~~~~, %string%
  */
 export function stripCommentsWeidu(text: string): string {
-    return stripCommentsCommon(text, { handleTildeStrings: true });
+    return stripCommentsCommon(text, true);
 }
 
 /** WeiDU token types for formatting. */
@@ -385,7 +348,7 @@ export function normalizeWhitespaceWeidu(text: string): string {
  * Handles: "string" only
  */
 export function stripCommentsFalloutSsl(text: string): string {
-    return stripCommentsCommon(text, { handleTildeStrings: false });
+    return stripCommentsCommon(text, false);
 }
 
 /**
@@ -417,25 +380,17 @@ export function stripCommentsTra(text: string): string {
             const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
             const contentEnd = closerStart !== -1 ? closerStart : text.length;
             // Emit the content without delimiters
-            result += text.slice(contentStart, contentEnd);
+            result += protectStringWhitespace(text.slice(contentStart, contentEnd));
             i = closerStart !== -1 ? closerStart + delimLen : text.length;
             continue;
         }
-        // Double-quoted strings: strip delimiters, keep content (handle escapes)
+        // Double-quoted strings: strip delimiters, keep content (escape sequences verbatim)
         if (text[i] === '"') {
-            i++; // skip opening "
+            const contentStart = ++i; // skip opening "
             while (i < text.length && text[i] !== '"') {
-                if (text[i] === "\\") {
-                    // Emit the escape sequence verbatim
-                    result += text[i];
-                    i++;
-                    if (i < text.length) {
-                        result += text[i++];
-                    }
-                    continue;
-                }
-                result += text[i++];
+                i += text[i] === "\\" ? 2 : 1;
             }
+            result += protectStringWhitespace(text.slice(contentStart, Math.min(i, text.length)));
             if (i < text.length) i++; // skip closing "
             continue;
         }
@@ -493,12 +448,14 @@ export function stripCommentsFalloutMsg(text: string): string {
                 const textStart = i;
                 while (i < text.length && text[i] !== "}") i++;
                 result += " ";
-                result += text.slice(textStart, i);
+                result += protectStringWhitespace(text.slice(textStart, i));
                 if (i < text.length) i++; // skip }
             }
 
-            // Advance past remainder of line
+            // The rest of the line (a note, another entry) is kept, so a formatter dropping it is caught.
+            const lineStart = i;
             while (i < text.length && text[i] !== "\n") i++;
+            result += text.slice(lineStart, i);
             if (i < text.length) {
                 result += "\n";
                 i++; // skip \n

@@ -2,6 +2,22 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## Unreleased
+
+### Changed
+
+- `validateFormatting` catches whitespace changed inside a string, not only outside one: the `stripComments*`
+  normalizers now keep each string's whitespace as visible `\u{..}` escapes (dropping `\r`), so their output
+  differs from 0.7.0 for any text holding a string with whitespace in it.
+
+### Fixed
+
+- WeiDU TP2 and D: `//` inside a string, such as a URL in `~...~`, is no longer taken for a comment.
+- WeiDU D: a multi-line SAY, REPLY or JOURNAL string is kept exactly as written; only trigger and action code is
+  re-indented.
+- Fallout SSL: tabs inside string literals are kept, and `//` inside a `#define`'s string is not a comment.
+- Fallout `.msg`: what follows an entry on its line is kept, and CRLF line endings stay CRLF.
+
 ## 0.7.0
 
 ### Added

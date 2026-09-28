@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
     stripCommentsWeidu,
     stripCommentsFalloutSsl,
+    stripCommentsForCompareFalloutSsl,
     stripCommentsTra,
     stripCommentsFalloutMsg,
     stripComments2da,
@@ -156,6 +157,8 @@ describe("shared/format-utils", () => {
         });
     });
 
+    // The strippers keep each string's whitespace as visible `\\u{..}` escapes (dropping `\\r`), so
+    // validateFormatting, which deletes all whitespace, still sees whitespace changed inside a string.
     describe("stripCommentsWeidu()", () => {
         it("should remove line comments", () => {
             const input = "code // comment\nmore";
@@ -182,28 +185,28 @@ describe("shared/format-utils", () => {
             const input = "~string with // comment~";
             const result = stripCommentsWeidu(input);
 
-            expect(result).toBe("~string with // comment~");
+            expect(result).toBe("~string\\u{20}with\\u{20}//\\u{20}comment~");
         });
 
         it("should preserve double-quoted strings", () => {
             const input = '"string with // comment"';
             const result = stripCommentsWeidu(input);
 
-            expect(result).toBe('"string with // comment"');
+            expect(result).toBe('"string\\u{20}with\\u{20}//\\u{20}comment"');
         });
 
         it("should handle escaped characters in strings", () => {
             const input = '"string with \\" quote"';
             const result = stripCommentsWeidu(input);
 
-            expect(result).toBe('"string with \\" quote"');
+            expect(result).toBe('"string\\u{20}with\\u{20}\\"\\u{20}quote"');
         });
 
         it("should handle five-tilde strings", () => {
             const input = "~~~~~string with ~ tilde~~~~~";
             const result = stripCommentsWeidu(input);
 
-            expect(result).toBe("~~~~~string with ~ tilde~~~~~");
+            expect(result).toBe("~~~~~string\\u{20}with\\u{20}~\\u{20}tilde~~~~~");
         });
 
         it("should handle unclosed block comments", () => {
@@ -240,14 +243,14 @@ describe("shared/format-utils", () => {
             const input = '"string with // comment"';
             const result = stripCommentsFalloutSsl(input);
 
-            expect(result).toBe('"string with // comment"');
+            expect(result).toBe('"string\\u{20}with\\u{20}//\\u{20}comment"');
         });
 
         it("should handle escaped characters in strings", () => {
             const input = '"string with \\" quote"';
             const result = stripCommentsFalloutSsl(input);
 
-            expect(result).toBe('"string with \\" quote"');
+            expect(result).toBe('"string\\u{20}with\\u{20}\\"\\u{20}quote"');
         });
 
         it("should handle unclosed block comments", () => {
@@ -262,6 +265,40 @@ describe("shared/format-utils", () => {
             const result = stripCommentsFalloutSsl(input);
 
             expect(result).toBe("procedure my_proc begin end");
+        });
+    });
+
+    describe("validateFormatting() on whitespace inside strings", () => {
+        // Whitespace between tokens is the formatter's to change; whitespace inside a string is content.
+        it("catches changed whitespace inside a WeiDU string", () => {
+            expect(validateFormatting("PRINT ~a  b~", "PRINT ~a b~", stripCommentsWeidu)).not.toBeNull();
+        });
+
+        it("catches a tab in a Fallout SSL string turned into spaces", () => {
+            expect(
+                validateFormatting('x := "a\tb";', 'x := "a    b";', stripCommentsForCompareFalloutSsl),
+            ).not.toBeNull();
+        });
+
+        it("catches changed whitespace inside a .tra string", () => {
+            expect(validateFormatting("@1 = ~a  b~", "@1 = ~a b~", stripCommentsTra)).not.toBeNull();
+        });
+
+        it("catches changed whitespace inside a .msg text field", () => {
+            expect(validateFormatting("{1}{}{a  b}", "{1}{}{a b}", stripCommentsFalloutMsg)).not.toBeNull();
+        });
+
+        it("catches a .msg entry dropped from the end of a line", () => {
+            expect(validateFormatting("{1}{}{a}{2}{}{b}\n", "{1}{}{a}\n", stripCommentsFalloutMsg)).not.toBeNull();
+        });
+
+        it("still lets whitespace between tokens change", () => {
+            expect(validateFormatting("COPY   ~a b~  ~c~", "COPY ~a b~ ~c~", stripCommentsWeidu)).toBeNull();
+            expect(validateFormatting("{ 1 }{ }{a b}", "{1}{}{a b}", stripCommentsFalloutMsg)).toBeNull();
+        });
+
+        it("treats a CRLF inside a string as the same line break as LF", () => {
+            expect(validateFormatting("PRINT ~a\r\nb~", "PRINT ~a\nb~", stripCommentsWeidu)).toBeNull();
         });
     });
 
@@ -357,25 +394,25 @@ describe("shared/format-utils", () => {
         it("should strip single tilde delimiters, keeping content", () => {
             const result = stripCommentsTra("@1 = ~hello world~");
             expect(result).not.toContain("~");
-            expect(result).toContain("hello world");
+            expect(result).toContain("hello\\u{20}world");
         });
 
         it("should strip multi-tilde delimiters, keeping content", () => {
             const result = stripCommentsTra("@1 = ~~~~~text with ~ tildes~~~~~");
             expect(result).not.toContain("~~~~~");
-            expect(result).toContain("text with ~ tildes");
+            expect(result).toContain("text\\u{20}with\\u{20}~\\u{20}tildes");
         });
 
         it("should strip double-quote delimiters, keeping content", () => {
             const result = stripCommentsTra('@1 = "double quoted"');
             expect(result).not.toContain('"');
-            expect(result).toContain("double quoted");
+            expect(result).toContain("double\\u{20}quoted");
         });
 
         it("should handle backslash escapes in double-quoted strings", () => {
             const result = stripCommentsTra('@1 = "line one\\nnew"');
             expect(result).not.toContain('"');
-            expect(result).toContain("line one\\nnew");
+            expect(result).toContain("line\\u{20}one\\nnew");
         });
 
         it("should remove [SOUNDFILE] sound references", () => {
@@ -414,7 +451,7 @@ describe("shared/format-utils", () => {
         it("should keep entry numbers and text content", () => {
             const result = stripCommentsFalloutMsg("{100}{audio}{Hello world}");
             expect(result).toContain("100");
-            expect(result).toContain("Hello world");
+            expect(result).toContain("Hello\\u{20}world");
         });
 
         it("should remove braces from entries", () => {
@@ -433,8 +470,7 @@ describe("shared/format-utils", () => {
         it("should handle multiline text fields", () => {
             const result = stripCommentsFalloutMsg("{100}{}{line one\nline two}");
             expect(result).toContain("100");
-            expect(result).toContain("line one");
-            expect(result).toContain("line two");
+            expect(result).toContain("line\\u{20}one\\u{a}line\\u{20}two");
         });
 
         it("should handle empty input", () => {
