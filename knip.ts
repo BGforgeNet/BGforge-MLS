@@ -111,6 +111,8 @@ const config: KnipConfig = {
                 "out/**",
                 // Bench files invoked explicitly; not reachable from server.ts entry
                 "test/perf/**",
+                // Started as a worker thread by path from the worker-client tests, never imported.
+                "test/worker/fixtures/**",
                 // In production mode test files are not entries, so any non-.test.ts helper under test/
                 // (assertion helpers, fixtures) would be reported as an unused file - the whole test tree
                 // is irrelevant to production analysis.
