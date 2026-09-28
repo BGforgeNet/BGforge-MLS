@@ -92,7 +92,7 @@ export function createWorkerClient<Req extends Identified, Res extends Identifie
         // A worker that dies takes every request in flight with it. They are rejected rather than left
         // hanging, and the reference is dropped so the next request starts a fresh one.
         instance.on("error", (error: Error) => {
-            conlog(`${label} worker error: ${error.message}`);
+            conlog(`${label} worker error: ${error.message}`, "error");
             worker.instance = null;
             failAllPending(`The ${label} failed to run: ${error.message}`);
         });

@@ -168,7 +168,8 @@ export async function compile(uri: string, langId: string, interactive: boolean,
         return;
     }
 
-    conlog(`Don't know how to compile ${langId} - ${uri}`);
+    // Every save of a file with nothing to compile it passes through here, so this is not news.
+    conlog(`Don't know how to compile ${langId} - ${uri}`, "debug");
     if (interactive) {
         showInfo(`Don't know how to compile ${langId} - ${uri}`);
     }

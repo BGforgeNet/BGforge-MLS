@@ -361,6 +361,7 @@ class WeiduTp2Provider
 
         conlog(
             `[tp2] Completion contexts: [${contexts.join(", ")}] at ${position.line}:${position.character} in ${ext}`,
+            "debug",
         );
 
         if (contexts.includes(CompletionContext.Comment)) {

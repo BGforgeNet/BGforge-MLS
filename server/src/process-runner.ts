@@ -75,7 +75,7 @@ export function runProcess(
     timeoutMs = 60000,
 ): Promise<{ err: cp.ExecFileException | null; stdout: string }> {
     const shell = needsShell(executable);
-    conlog(`${executable} ${args.join(" ")}`);
+    conlog(`${executable} ${args.join(" ")}`, "debug");
 
     return new Promise((resolve) => {
         cp.execFile(
@@ -83,12 +83,15 @@ export function runProcess(
             [...args],
             { cwd, shell, signal, timeout: timeoutMs },
             (err, stdout: string, stderr: string) => {
-                conlog("stdout: " + stdout);
+                conlog("stdout: " + stdout, "debug");
                 if (stderr) {
-                    conlog("stderr: " + stderr);
+                    conlog("stderr: " + stderr, "debug");
                 }
                 if (err) {
-                    conlog("error: " + err.message);
+                    // A compiler that ran and exited non-zero has reported the script's errors, which the
+                    // diagnostics show; one that could not start, or was killed at the timeout, has failed.
+                    const failed = typeof err.code === "string" || err.killed === true;
+                    conlog(`error: ${err.message}`, failed ? "error" : "debug");
                 }
                 resolve({ err, stdout });
             },
