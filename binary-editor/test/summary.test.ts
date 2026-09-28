@@ -154,6 +154,20 @@ describe("summaryComposerFor spl - effects", () => {
     it("returns undefined for an unknown format", () => {
         expect(summaryComposerFor("unknown-format-xyz")).toBeUndefined();
     });
+
+    // A miss is an empty summary; a fault in the lookup behind it is not, and reads as a missing value if kept.
+    it("lets a fault in the field's projection through rather than showing no summary", () => {
+        const { model, rel } = openItmEffectsSession();
+        const effectEntry = firstEntryIn(model, "Effects")!;
+        const failing: RelationshipModel = {
+            ...rel!,
+            fieldOverride: () => {
+                throw new Error("OPCODE table unreadable");
+            },
+        };
+
+        expect(() => summaryComposerFor("itm")!(effectEntry, model, failing)).toThrow("OPCODE table unreadable");
+    });
 });
 
 // ---------------------------------------------------------------------------
