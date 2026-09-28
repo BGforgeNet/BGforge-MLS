@@ -20,6 +20,7 @@ import {
     getEditorconfigSettings,
     validateFormatting,
     stripCommentsWeidu,
+    stripCommentsWeiduD,
     stripCommentsForCompareFalloutSsl,
     stripCommentsTra,
     stripCommentsFalloutMsg,
@@ -204,6 +205,9 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
                 break;
             case "scripts-lst":
                 normalizeForCompare = stripCommentsFalloutScriptsLst;
+                break;
+            case "d":
+                normalizeForCompare = stripCommentsWeiduD;
                 break;
             default:
                 normalizeForCompare = stripCommentsWeidu;

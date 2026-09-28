@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import {
     stripCommentsWeidu,
+    stripCommentsWeiduD,
     stripCommentsFalloutSsl,
     stripCommentsForCompareFalloutSsl,
     stripCommentsTra,
@@ -299,6 +300,24 @@ describe("shared/format-utils", () => {
 
         it("treats a CRLF inside a string as the same line break as LF", () => {
             expect(validateFormatting("PRINT ~a\r\nb~", "PRINT ~a\nb~", stripCommentsWeidu)).toBeNull();
+        });
+
+        // A D trigger or action string is code the D formatter reformats, so D compares strings as code.
+        it("lets the D formatter re-indent a trigger's continuation lines", () => {
+            const source = 'IF ~Global("A","LOCALS",1)\nGlobal("B","LOCALS",0)~ THEN GOTO x';
+            const formatted = 'IF ~Global("A","LOCALS",1)\n    Global("B","LOCALS",0)~ THEN GOTO x';
+            expect(validateFormatting(source, formatted, stripCommentsWeiduD)).toBeNull();
+            expect(validateFormatting(source, formatted, stripCommentsWeidu)).not.toBeNull();
+        });
+
+        it("lets the D formatter space a comment inside an action", () => {
+            const source = 'DO ~CreateItem("POTN10",Myself) // Potion~';
+            const formatted = 'DO ~CreateItem("POTN10",Myself)  // Potion~';
+            expect(validateFormatting(source, formatted, stripCommentsWeiduD)).toBeNull();
+        });
+
+        it("still catches D content changed inside a string", () => {
+            expect(validateFormatting("SAY ~ab~", "SAY ~a~", stripCommentsWeiduD)).not.toBeNull();
         });
     });
 

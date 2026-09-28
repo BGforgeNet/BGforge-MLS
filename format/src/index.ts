@@ -24,6 +24,7 @@ export type { CompareNormalizer, FormatOutput } from "./format-utils";
 // Per-language normalizers for validateFormatting's content guard
 export {
     stripCommentsWeidu,
+    stripCommentsWeiduD,
     stripCommentsFalloutSsl,
     stripCommentsTra,
     stripCommentsFalloutMsg,

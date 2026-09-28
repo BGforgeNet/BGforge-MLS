@@ -48,7 +48,7 @@ import {
     initEmbeddedBaf,
     getEmbeddedBafCompletions,
 } from "./embedded-baf";
-import { stripCommentsWeidu, formatWeiduD as formatAst } from "@bgforge/format";
+import { stripCommentsWeiduD, formatWeiduD as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
 import { isInsideComment, isInsideString } from "./ast-utils";
@@ -136,7 +136,7 @@ class WeiduDProvider
             parse: parseWithCache,
             formatAst: (rootNode, options) => formatAst(rootNode, options),
             getFormatOptions,
-            normalizeForCompare: stripCommentsWeidu,
+            normalizeForCompare: stripCommentsWeiduD,
         });
     }
 

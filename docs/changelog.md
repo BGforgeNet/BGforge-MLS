@@ -19,7 +19,8 @@
   string's later lines, which changed the text the game shows. Multi-line trigger and action code is still
   indented.
 - The formatters' safety check also catches whitespace changed inside a string, and then leaves the file unchanged
-  instead of saving the change.
+  instead of saving the change. WeiDU D is exempt, since its formatter reformats the code in trigger and action
+  strings.
 - The `.msg` formatter keeps what follows an entry on its line, such as a note or a second entry, instead of
   deleting it, and keeps CRLF line endings instead of converting the file to LF.
 - The Fallout SSL formatter keeps tabs inside string literals, and no longer takes `//` inside a `#define`'s string

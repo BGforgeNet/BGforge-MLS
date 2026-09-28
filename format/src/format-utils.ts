@@ -142,14 +142,16 @@ function protectStringWhitespace(s: string): string {
 }
 
 /**
- * Shared comment-stripping implementation for Fallout SSL and WeiDU: drops comments, keeps string literals with
- * their whitespace protected (see protectStringWhitespace).
+ * Shared comment-stripping implementation for Fallout SSL and WeiDU: drops comments, keeps string literals - with
+ * their whitespace protected (see protectStringWhitespace) unless `protectStrings` is false.
  */
-function stripCommentsCommon(text: string, weidu: boolean): string {
+function stripCommentsCommon(text: string, weidu: boolean, protectStrings = true): string {
     return tokenizeCode(text, weidu)
         .map((token) => {
             if (token.type === WeiduTokenType.Comment) return "";
-            return token.type === WeiduTokenType.String ? protectStringWhitespace(token.text) : token.text;
+            return token.type === WeiduTokenType.String && protectStrings
+                ? protectStringWhitespace(token.text)
+                : token.text;
         })
         .join("");
 }
@@ -160,6 +162,15 @@ function stripCommentsCommon(text: string, weidu: boolean): string {
  */
 export function stripCommentsWeidu(text: string): string {
     return stripCommentsCommon(text, true);
+}
+
+/**
+ * As stripCommentsWeidu, for WeiDU D, leaving whitespace inside strings to validateFormatting's strip. A D string is
+ * content in a SAY or REPLY and code in a trigger or action, which the D formatter reformats - indenting continuation
+ * lines, spacing a `//` comment - and nothing lexical tells the two apart.
+ */
+export function stripCommentsWeiduD(text: string): string {
+    return stripCommentsCommon(text, true, false);
 }
 
 /** WeiDU token types for formatting. */

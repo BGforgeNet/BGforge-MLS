@@ -30,6 +30,7 @@ const PUBLIC_EXPORTS = [
     "validateFormatting",
     // Per-language normalizers for the content guard
     "stripCommentsWeidu",
+    "stripCommentsWeiduD",
     "stripCommentsFalloutSsl",
     "stripCommentsForCompareFalloutSsl",
     "stripCommentsTra",
