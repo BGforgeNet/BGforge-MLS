@@ -90,6 +90,22 @@ export async function initTextmate(
 }
 
 /**
+ * Starts the tokenizer without gating first paint: fields render flat until it is up. A failure goes to
+ * `onFailure` rather than becoming an unhandled rejection, which the webview's fatal-error handler would turn
+ * into a blank panel over what is only its colouring.
+ */
+export function startTextmate(
+    onigWasm: Uint8Array,
+    sources: GrammarSource[],
+    roots: Record<TmLang, string>,
+    onFailure: (reason: string) => void,
+): void {
+    initTextmate(onigWasm, sources, roots).catch((error: unknown) => {
+        onFailure(error instanceof Error ? error.message : String(error));
+    });
+}
+
+/**
  * Map a TextMate scope stack to a highlight role, deepest (most specific) scope first - a theme resolves a
  * token by its longest matching scope, so the deepest scope is the one that decides the colour. Keyed to the
  * standard scope FAMILIES all three grammars emit; anything unmatched stays plain (a bare variable in a
