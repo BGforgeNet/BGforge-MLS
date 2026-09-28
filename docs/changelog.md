@@ -71,6 +71,8 @@
 ### Translations
 
 - A `.tra` or `.msg` file with an upper-case extension (`SETUP.TRA`) is re-read when saved, like a lower-case one.
+- Saving a dialog's text into a `.tra` or `.msg` file that exists but cannot be read says so, naming the file,
+  instead of reporting nothing to save.
 
 ## 3.16.2
 

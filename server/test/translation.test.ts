@@ -116,6 +116,19 @@ describe("Translation", () => {
             expect(onDisk).toContain("{101}{}{ Message 101 }");
         });
 
+        // Writing over a file that could not be read might clobber it, so nothing is written - and the edit is
+        // then lost unless the caller is told, which a quiet "nothing changed" does not do.
+        it("refuses, naming the file, when the .msg exists but cannot be read", async () => {
+            fs.mkdirSync(path.join(tempDir, "blocked.msg"));
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra blocked.msg */\nconst x = mstr(100);`;
+
+            expect(() => translation.writeMessages(uri, text, "typescript", { "100": "Edited msg!" })).toThrow(
+                `Cannot read ${path.join(tempDir, "blocked.msg")} to update it: EISDIR`,
+            );
+        });
+
         it("appends a new .msg id while rewriting an existing one", async () => {
             await translation.init();
             const uri = `file://${tempDir}/test.tssl`;

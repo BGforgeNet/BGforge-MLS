@@ -12,6 +12,7 @@ import {
     rewriteTraEntries,
     siblingTraCandidates,
 } from "../../../shared/dialog-tra-edit";
+import { errorMessage, getErrnoCode } from "../diagnostics";
 import { conlog } from "../logger";
 import { type ResolvedEncoding, atomicWriteFileSync, decodeFileBytes, encodeToResolvedEncoding } from "./encoding";
 import { parseEntries } from "./entries";
@@ -119,8 +120,12 @@ export function writeMessages(
     } catch (error) {
         // ENOENT -> the file does not exist yet, so create it (the from-scratch case: an SSL dialog's text
         // has nowhere to land until its `.msg` is written). Any OTHER read error (permissions, a directory
-        // in the way) must NOT proceed to a write that could clobber an existing-but-unreadable file.
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") return NO_WRITE;
+        // in the way) must NOT proceed to a write that could clobber an existing-but-unreadable file, and is
+        // refused rather than reported as "nothing changed", which would drop the edit without a word.
+        const code = getErrnoCode(error);
+        if (code !== "ENOENT") {
+            throw new Error(`Cannot read ${absPath} to update it: ${code ?? errorMessage(error)}`, { cause: error });
+        }
         original = "";
     }
     // Each format needs its own rewriter: a .tra is `@N = ~text~`, a .msg is
