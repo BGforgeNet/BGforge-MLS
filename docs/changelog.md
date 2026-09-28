@@ -14,6 +14,8 @@
 
 ### WeiDU
 
+- TP2 completion inside a function call offers parameter names or values correctly when accented or other
+  non-ASCII text appears earlier in the file, instead of mixing up which of the two the cursor is on.
 - When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
   does not exist.
 
