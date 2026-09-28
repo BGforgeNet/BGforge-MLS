@@ -53,7 +53,7 @@ jobs:
         run: pnpm build:grammar
 
       - name: Install libxml2-utils (xmllint, for the data-generation XSD tests)
-        run: sudo apt-get install -y libxml2-utils
+        run: sudo apt-get update -qq && sudo apt-get install -y libxml2-utils
 
       - name: Test
         run: pnpm test:all
