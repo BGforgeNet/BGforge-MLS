@@ -38,7 +38,7 @@ import {
     isControlFlowBodyContent,
     pushBlankIfGap,
 } from "./utils";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 import { formatForLoopHeader, formatForLoop, formatForEach, formatAssociativeArray } from "./format-loops";
 
 // ============================================

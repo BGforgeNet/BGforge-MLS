@@ -10,7 +10,7 @@
 
 import type { IndexedSymbol } from "../core/symbol";
 import { TextCache } from "../shared/text-cache";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
 import {
     extractProcedures,
     extractMacros,

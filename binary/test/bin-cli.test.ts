@@ -21,7 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { buildDlg, parserRegistry } from "../src/index";
 import { REPO_ROOT } from "./repo-root";
-import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout";
 
 const CLI = path.join(REPO_ROOT, "binary/out/cli.js");
 const NODE = process.execPath;

@@ -3,7 +3,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { findParseError } from "../../shared/parse-errors";
+import { findParseError } from "@bgforge/shared/parse-errors";
 
 /** Library-shape formatter output. Wrappers convert to LSP TextEdit[] at the LSP boundary. */
 export interface FormatOutput {

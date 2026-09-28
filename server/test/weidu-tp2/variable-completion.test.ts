@@ -34,7 +34,7 @@ function hoverText(contents: unknown): string {
 }
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";

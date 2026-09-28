@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { shardSetProblems } from "../../../../shared/cli/test/shard.ts";
+import { shardSetProblems } from "@bgforge/shared/cli/test/shard.ts";
 
 describe("sharded sweeps", () => {
     it("has every shard each sweep declares", () => {

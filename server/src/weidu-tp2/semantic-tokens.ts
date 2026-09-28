@@ -18,7 +18,7 @@
 
 import { SemanticTokenTypes } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
-import { isInitialized, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { SyntaxType } from "./syntax-type";
 import {
     collectLoopVarNames,

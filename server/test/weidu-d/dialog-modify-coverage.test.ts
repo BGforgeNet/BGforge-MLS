@@ -18,7 +18,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { parseDDialog } from "../../src/weidu-d/dialog";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

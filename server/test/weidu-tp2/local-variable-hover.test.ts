@@ -19,7 +19,7 @@ vi.mock("../../src/logger", () => ({
 }));
 
 import { lookupLocalSymbol, clearAllLocalSymbolsCache } from "../../src/weidu-tp2/local-symbols";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 
 describe("local variable hover", () => {
     beforeAll(async () => {

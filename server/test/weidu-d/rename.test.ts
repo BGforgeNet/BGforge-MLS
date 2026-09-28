@@ -13,7 +13,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { prepareRenameSymbol, renameSymbol } from "../../src/weidu-d/rename";
-import { initParser, parseWithCache } from "../../../shared/parsers/weidu-d";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

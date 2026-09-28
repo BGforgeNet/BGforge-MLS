@@ -106,6 +106,7 @@
         "bench": "pnpm --filter @bgforge/mls-server bench && pnpm --filter @bgforge/tssl bench"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "@oxlint/plugins": "1.80.0",
         "@stryker-mutator/core": "^9.6.1",
         "@stryker-mutator/typescript-checker": "^9.6.1",
@@ -115,8 +116,6 @@
         "@vitest/coverage-v8": "catalog:",
         "@vscode/codicons": "^0.0.45",
         "@vscode/vsce": "^3.9.2",
-        "cac": "catalog:",
-        "diff": "catalog:",
         "esbuild": "catalog:",
         "esbuild-svelte": "catalog:",
         "jsonc-parser": "^3.3.1",
@@ -125,7 +124,6 @@
         "oxlint": "1.80.0",
         "oxlint-tsgolint": "^7.0.2001",
         "playwright": "catalog:",
-        "quick-lru": "catalog:",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
         "svelte": "catalog:",
@@ -135,7 +133,6 @@
         "typescript": "catalog:",
         "vite": "^8.2.2",
         "vitest": "catalog:",
-        "web-tree-sitter": "catalog:",
         "yaml": "catalog:"
     },
     "contributes": {

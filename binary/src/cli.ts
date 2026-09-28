@@ -26,7 +26,7 @@ import {
     safeProcess,
     reportDiff,
     reportFatal,
-} from "../../shared/cli/cli-utils";
+} from "@bgforge/shared/cli/cli-utils";
 import { MAX_FILE_SIZES } from "./max-file-sizes";
 
 const EXTENSIONS = parserRegistry.getExtensions().map((ext) => `.${ext}`);

@@ -8,7 +8,7 @@
 import { vi, describe, expect, it, beforeEach } from "vitest";
 import type * as vscode from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
-import type { DialogModel } from "../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 const { applyEditMock, computeDialogSourceEditMock, showErrorMessageMock, showTextDocumentMock } = vi.hoisted(() => ({
     applyEditMock: vi.fn(async () => true),

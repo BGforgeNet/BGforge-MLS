@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
-import { modelFromSSL, stateBadges } from "../../shared/dialog-model";
-import type { SSLDialogGroup } from "../../shared/dialog-types";
+import { modelFromSSL, stateBadges } from "@bgforge/shared/dialog-model";
+import type { SSLDialogGroup } from "@bgforge/shared/dialog-types";
 
 // A node whose body mixes nested `if`s (a group inside a group), an `else` branch with its own reply line,
 // an opaque side-effect, and a top-level unconditional option - the shape of Fallout2 RP's absamuel.ssl

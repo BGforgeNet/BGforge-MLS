@@ -2,7 +2,7 @@ import type { Row } from "@bgforge/binary-editor";
 // Import the pure label helpers from `shared/` directly, NOT through the @bgforge/binary-editor barrel: the
 // barrel re-exports the core (openSession etc.), which transitively pulls Node built-ins (fs/path) and breaks
 // the browser webview bundle. The webview must only ever import the package's TYPES, never its runtime.
-import { enumValueLabel, enumSelectedLabel, enumHexDigits } from "../../../../../shared/enum-label";
+import { enumValueLabel, enumSelectedLabel, enumHexDigits } from "@bgforge/shared/enum-label";
 
 export type ControlKind = "number" | "string" | "enum" | "flags" | "resource";
 

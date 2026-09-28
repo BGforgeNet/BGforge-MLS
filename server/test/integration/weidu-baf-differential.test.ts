@@ -27,7 +27,7 @@ import * as fg from "fast-glob";
 import { openGame } from "@bgforge/binary/archive";
 import { compileBafText } from "../../src/weidu-baf/compiler";
 import { bcsEngineForScriptStyle, compileSymbolsFrom } from "../../../compilers/bcs/src/index";
-import { initParser, getParser } from "../../../shared/parsers/weidu-baf";
+import { initParser, getParser } from "@bgforge/shared/parsers/weidu-baf";
 import {
     exitStatus,
     resolveWeidu,

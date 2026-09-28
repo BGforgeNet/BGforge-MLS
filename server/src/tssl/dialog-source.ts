@@ -25,7 +25,7 @@ import {
     type SSLDialogReply,
     isSslMessageFn,
     isSslOptionFn,
-} from "../../../shared/dialog-types";
+} from "@bgforge/shared/dialog-types";
 
 const TALK_PROC = "talk_p_proc";
 

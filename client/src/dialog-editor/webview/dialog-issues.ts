@@ -4,7 +4,7 @@
  * Kept pure (a model in, a string list out) so it is unit-tested without the Svelte runtime - the
  * derived-state and per-root scoping below are exactly the parts that regress into false positives.
  */
-import type { DialogModel } from "../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 /**
  * Two error classes matter for a saved .d/.ssl:

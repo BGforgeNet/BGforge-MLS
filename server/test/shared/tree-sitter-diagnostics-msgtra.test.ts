@@ -10,8 +10,8 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import { DiagnosticSeverity } from "vscode-languageserver/node";
-import * as msg from "../../../shared/parsers/fallout-msg";
-import * as tra from "../../../shared/parsers/weidu-tra";
+import * as msg from "@bgforge/shared/parsers/fallout-msg";
+import * as tra from "@bgforge/shared/parsers/weidu-tra";
 import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
 
 const SYNTAX_SOURCE = "BGforge MLS (syntax)";

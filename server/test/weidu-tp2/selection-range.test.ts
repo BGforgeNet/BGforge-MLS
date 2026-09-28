@@ -13,7 +13,7 @@ vi.mock("../../src/lsp-connection", () => ({
     }),
 }));
 
-import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { createSelectionRangesProvider } from "../../src/shared/selection-ranges";
 import { expectWellFormedChain } from "../shared/selection-range-assertions";
 

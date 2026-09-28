@@ -24,12 +24,12 @@ import type { Parser } from "web-tree-sitter";
 import * as fg from "fast-glob";
 import { beforeAll, describe, expect, it } from "vitest";
 import { FALLOUT_FIXTURES, IE_FIXTURES } from "./test-helpers";
-import * as falloutSsl from "../../../shared/parsers/fallout-ssl";
-import * as falloutMsg from "../../../shared/parsers/fallout-msg";
-import * as weiduBaf from "../../../shared/parsers/weidu-baf";
-import * as weiduD from "../../../shared/parsers/weidu-d";
-import * as weiduTp2 from "../../../shared/parsers/weidu-tp2";
-import * as weiduTra from "../../../shared/parsers/weidu-tra";
+import * as falloutSsl from "@bgforge/shared/parsers/fallout-ssl";
+import * as falloutMsg from "@bgforge/shared/parsers/fallout-msg";
+import * as weiduBaf from "@bgforge/shared/parsers/weidu-baf";
+import * as weiduD from "@bgforge/shared/parsers/weidu-d";
+import * as weiduTp2 from "@bgforge/shared/parsers/weidu-tp2";
+import * as weiduTra from "@bgforge/shared/parsers/weidu-tra";
 
 interface ParserModule {
     initParser: () => Promise<void>;

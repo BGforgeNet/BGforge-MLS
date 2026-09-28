@@ -47,6 +47,7 @@
     },
     "devDependencies": {
         "@bgforge/binary": "workspace:*",
+        "@bgforge/shared": "workspace:*",
         "@types/node": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"

@@ -16,7 +16,7 @@
 
 import { type Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { collectParseErrors } from "../../../shared/parse-errors";
+import { collectParseErrors } from "@bgforge/shared/parse-errors";
 
 /**
  * Diagnostic source label - distinct from the compiler's "BGforge MLS" so hovers say which engine

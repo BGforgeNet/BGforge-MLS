@@ -10,7 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import tsslPackage from "../package.json";
 import { REPO_ROOT } from "../../../transpilers/test/repo-root";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout";
 
 const CLI = path.join(REPO_ROOT, "compilers/tssl", tsslPackage.bin.tssl);
 const NODE = process.execPath;

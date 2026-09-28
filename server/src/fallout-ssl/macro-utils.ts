@@ -11,10 +11,10 @@ import {
     MarkupKind,
 } from "vscode-languageserver/node";
 import type * as jsdoc from "../shared/jsdoc";
-import { formatSignature } from "../../../shared/signature-format";
+import { formatSignature } from "@bgforge/shared/signature-format";
 import type * as signature from "../shared/signature";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
-import { buildSignatureBlock } from "../../../shared/tooltip-format";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
 import { buildTooltipBase } from "./jsdoc-format";
 
 /**

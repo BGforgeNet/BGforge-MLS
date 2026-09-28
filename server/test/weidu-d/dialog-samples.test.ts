@@ -16,9 +16,9 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import type { DDialogData } from "../../../shared/dialog-types";
+import type { DDialogData } from "@bgforge/shared/dialog-types";
 import { parseDDialog } from "../../src/weidu-d/dialog";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 
 const SAMPLES_DIR = path.resolve(__dirname, "../../../grammars/weidu-d/test/samples");
 

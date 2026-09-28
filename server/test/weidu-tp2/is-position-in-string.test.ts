@@ -15,7 +15,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { isInsideString } from "../../src/weidu-tp2/ast-utils";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();

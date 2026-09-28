@@ -7,9 +7,9 @@
 
 import { join, resolve } from "node:path";
 import * as fg from "fast-glob";
-import { modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
+import { modelFromSSL, type DialogModel } from "@bgforge/shared/dialog-model";
 import { parseTSSLSource } from "../../src/tssl/dialog-source";
-import { applyTSSLDialogEdits } from "../../../shared/dialog-tssl-edit";
+import { applyTSSLDialogEdits } from "@bgforge/shared/dialog-tssl-edit";
 import { defineWritebackCorpus } from "./dialog-writeback-corpus";
 import { FALLOUT_FIXTURES } from "./test-helpers";
 

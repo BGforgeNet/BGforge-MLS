@@ -11,8 +11,8 @@ import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 const CLI = path.join(REPO_ROOT, "compilers/ssl/out/cli.js");
 const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-ssl");

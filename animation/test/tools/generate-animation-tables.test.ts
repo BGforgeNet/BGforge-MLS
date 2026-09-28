@@ -14,8 +14,8 @@ import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { openGame } from "@bgforge/binary";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
-import { tsxCommand } from "../../../shared/tsx-command.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { tsxCommand } from "@bgforge/shared/tsx-command.ts";
 
 const EE_GAME = process.env.BGFORGE_IE_GAME;
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");

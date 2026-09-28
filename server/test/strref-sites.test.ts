@@ -6,7 +6,7 @@ vi.mock("../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser, parseWithCache } from "../../shared/parsers/weidu-baf";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-baf";
 import { findStrRefSites } from "../src/ie-resources/strref-sites";
 
 /**

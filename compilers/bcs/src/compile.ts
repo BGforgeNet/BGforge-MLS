@@ -21,8 +21,8 @@
  * - `OR(n)` is itself a stored trigger record, whose first integer is the count.
  */
 
-import { collectParseErrors } from "../../../shared/parse-errors";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-baf";
+import { collectParseErrors } from "@bgforge/shared/parse-errors";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-baf";
 import type { Node as SyntaxNode, Parser } from "web-tree-sitter";
 import {
     ANYONE,

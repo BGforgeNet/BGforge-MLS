@@ -17,7 +17,7 @@
  * and its measurements live in `shared/parse-scheduling.ts`; this module is unconditional either way.
  */
 
-import { parserManager } from "../../shared/parsers/parser-manager";
+import { parserManager } from "@bgforge/shared/parsers/parser-manager";
 import { setDiagnostics } from "./diagnostic-store";
 import { collectParseDiagnostics } from "./shared/tree-sitter-diagnostics";
 

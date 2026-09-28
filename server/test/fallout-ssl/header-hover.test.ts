@@ -25,7 +25,7 @@ import { parseFile } from "../../src/fallout-ssl/header-parser";
 const parseHeaderToSymbols = (uri: string, text: string, workspaceRoot?: string) => [
     ...parseFile(uri, text, { workspaceRoot }).symbols,
 ];
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { falloutSslProvider } from "../../src/fallout-ssl/provider";
 import type { ProviderContext } from "../../src/language-provider";
 import type { MLSsettings } from "../../src/settings";

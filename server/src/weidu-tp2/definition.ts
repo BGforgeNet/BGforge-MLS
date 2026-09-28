@@ -8,7 +8,7 @@
 
 import type { Location, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { SyntaxType } from "./syntax-type";
 import { FUNCTION_CALL_TYPES, getCallableSymbolAtPosition } from "./callable-symbols";
 import { findLocalCallableDefinition } from "./callable-definitions";

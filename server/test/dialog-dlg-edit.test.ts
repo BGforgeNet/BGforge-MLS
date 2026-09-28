@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { modelFromDlg, type DlgModelInput } from "../../shared/dialog-model-dlg";
-import { detachDlgState, dlgAddress, setDlgLineText } from "../../shared/dialog-dlg-edit";
-import type { DialogModel } from "../../shared/dialog-model";
+import { modelFromDlg, type DlgModelInput } from "@bgforge/shared/dialog-model-dlg";
+import { detachDlgState, dlgAddress, setDlgLineText } from "@bgforge/shared/dialog-dlg-edit";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 /** Two states: the first says @10 and offers two replies, the second says @11 and ends. */
 function sample(): DlgModelInput {

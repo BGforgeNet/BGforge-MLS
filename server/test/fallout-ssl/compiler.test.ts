@@ -94,7 +94,7 @@ vi.mock("../../src/fallout-ssl/compile-worker-client", () => ({
 }));
 
 const mockGetParser = vi.fn();
-vi.mock("../../../shared/parsers/fallout-ssl", () => ({
+vi.mock("@bgforge/shared/parsers/fallout-ssl", () => ({
     getParser: () => mockGetParser(),
 }));
 

@@ -7,7 +7,7 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import { DiagnosticSeverity } from "vscode-languageserver/node";
-import * as baf from "../../../shared/parsers/weidu-baf";
+import * as baf from "@bgforge/shared/parsers/weidu-baf";
 import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
 
 const SYNTAX_SOURCE = "BGforge MLS (syntax)";

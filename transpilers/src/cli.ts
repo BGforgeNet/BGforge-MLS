@@ -21,7 +21,7 @@ import {
     safeProcess,
     reportDiff,
     reportFatal,
-} from "../../shared/cli/cli-utils";
+} from "@bgforge/shared/cli/cli-utils";
 type TranspileType = "td" | "tbaf";
 
 const EXTENSIONS = [EXT_TD, EXT_TBAF];

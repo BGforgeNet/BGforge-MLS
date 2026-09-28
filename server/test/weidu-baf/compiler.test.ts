@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { compileBafText } from "../../src/weidu-baf/compiler";
 import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
-import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
+import { getParser, initParser } from "@bgforge/shared/parsers/weidu-baf";
 import type { Parser } from "web-tree-sitter";
 
 // One parser for the whole file: loading a grammar is the expensive part and no case mutates it. This is

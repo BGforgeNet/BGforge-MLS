@@ -30,6 +30,7 @@
         "web-tree-sitter": "catalog:"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "vitest": "catalog:"
     },
     "engines": {

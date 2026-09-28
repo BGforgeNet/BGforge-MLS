@@ -22,9 +22,9 @@ import { FALLOUT_FIXTURES, IE_FIXTURES } from "./test-helpers";
 import * as codeAction from "../../src/handlers/code-action";
 import type { HandlerContext } from "../../src/handlers/context";
 import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
-import * as falloutSsl from "../../../shared/parsers/fallout-ssl";
-import * as weiduBaf from "../../../shared/parsers/weidu-baf";
-import * as weiduD from "../../../shared/parsers/weidu-d";
+import * as falloutSsl from "@bgforge/shared/parsers/fallout-ssl";
+import * as weiduBaf from "@bgforge/shared/parsers/weidu-baf";
+import * as weiduD from "@bgforge/shared/parsers/weidu-d";
 
 interface ParserModule {
     initParser: () => Promise<void>;

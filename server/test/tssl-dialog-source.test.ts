@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseTSSLSource } from "../src/tssl/dialog-source";
-import { modelFromSSL } from "../../shared/dialog-model";
+import { modelFromSSL } from "@bgforge/shared/dialog-model";
 
 // The syntax-error degrade logs through the LSP connection, which unit tests never initialize.
 vi.mock("../src/logger", () => ({ conlog: vi.fn() }));

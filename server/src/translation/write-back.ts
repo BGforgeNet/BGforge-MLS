@@ -11,7 +11,7 @@ import {
     rewriteMsgEntries,
     rewriteTraEntries,
     siblingTraCandidates,
-} from "../../../shared/dialog-tra-edit";
+} from "@bgforge/shared/dialog-tra-edit";
 import { errorMessage, getErrnoCode } from "../diagnostics";
 import { conlog } from "../logger";
 import { type ResolvedEncoding, atomicWriteFileSync, decodeFileBytes, encodeToResolvedEncoding } from "./encoding";

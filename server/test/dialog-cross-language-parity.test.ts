@@ -24,7 +24,7 @@ import {
     type DialogModel,
     type DialogState,
     type SourceLang,
-} from "../../shared/dialog-model";
+} from "@bgforge/shared/dialog-model";
 import {
     addBranch,
     addReply,
@@ -36,9 +36,9 @@ import {
     setChoiceLowIq,
     setChoiceReaction,
     setChoiceTarget,
-} from "../../shared/dialog-edit-ops";
+} from "@bgforge/shared/dialog-edit-ops";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
-import { serializeCond } from "../../shared/dialog-ssl-serialize";
+import { serializeCond } from "@bgforge/shared/dialog-ssl-serialize";
 
 // --- Projection: the language-agnostic logical shape we assert parity on ---------------------------------------
 

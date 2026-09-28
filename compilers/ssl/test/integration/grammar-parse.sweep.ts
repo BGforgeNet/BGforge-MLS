@@ -21,10 +21,10 @@ import * as path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser, type Node } from "web-tree-sitter";
 import { preprocess } from "../../src/preprocess.ts";
-import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
-import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
-import { shardScripts } from "../../../../shared/cli/test/shard.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
+import { shardScripts } from "@bgforge/shared/cli/test/shard.ts";
 
 // The sfall headers the corpus needs are linked in by this project's globalSetup.
 const RP_SCRIPTS = path.join(REPO_ROOT, "external/fallout/Fallout2_Restoration_Project/scripts_src");

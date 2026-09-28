@@ -15,11 +15,11 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { readDlg } from "@bgforge/binary";
-import { modelFromDlgs, resrefName, type DlgModelInput, type DlgNeighbour } from "../../../shared/dialog-model-dlg";
-import { detachDlgState, setDlgLineText } from "../../../shared/dialog-dlg-edit";
+import { modelFromDlgs, resrefName, type DlgModelInput, type DlgNeighbour } from "@bgforge/shared/dialog-model-dlg";
+import { detachDlgState, setDlgLineText } from "@bgforge/shared/dialog-dlg-edit";
 import { detachConfirmMessage, detachResultMessage } from "./dlg-detach";
 import { neighbourStates, type InboundRef } from "./dlg-references";
-import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
+import type { DialogMessages, DialogModel } from "@bgforge/shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { isWebviewToHost } from "./webview/messages";
 import { handleSharedDialogMessage } from "./shared-host-messages";

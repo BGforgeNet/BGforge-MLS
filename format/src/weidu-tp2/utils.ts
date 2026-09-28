@@ -15,7 +15,7 @@ import {
     type CollectedItem,
     CollectedItemType,
 } from "./types";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 import {
     type WeiduToken,
     tokenizeWeidu,

@@ -10,7 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const OXLINT = path.join(REPO_ROOT, "node_modules", ".bin", "oxlint");

@@ -24,7 +24,7 @@ import {
     LANG_WEIDU_SSL,
     LANG_WEIDU_TP2,
     LANG_WEIDU_TRA,
-} from "../../shared/languages";
+} from "@bgforge/shared/languages";
 import { GAME_RESOURCE_SCHEME } from "./ie-resources/uri";
 import { SCRIPT_FORMATS, SCRIPT_VIEW_SCHEME } from "./script-view/formats";
 

@@ -16,7 +16,7 @@ import { DiagnosticSeverity } from "vscode-languageserver/node";
 import { Translation } from "../../src/translation";
 import type { ProjectTraSettings } from "../../src/settings";
 import { findFilesByExtensions } from "../../src/path-utils";
-import { CONSUMER_EXTENSIONS_TRA, CONSUMER_EXTENSIONS_MSG } from "../../../shared/languages";
+import { CONSUMER_EXTENSIONS_TRA, CONSUMER_EXTENSIONS_MSG } from "@bgforge/shared/languages";
 import { IE_FIXTURES, FALLOUT_FIXTURES } from "./test-helpers";
 
 const BGT_ROOT = join(IE_FIXTURES, "BGT-WeiDU");

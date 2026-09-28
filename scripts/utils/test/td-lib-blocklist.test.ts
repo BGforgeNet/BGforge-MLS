@@ -11,8 +11,8 @@
 
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
-import { tsxCommand } from "../../../shared/tsx-command.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { tsxCommand } from "@bgforge/shared/tsx-command.ts";
 
 describe("ES_LIB_BLOCKLIST", () => {
     it("matches the current TypeScript lib (run pnpm regen:td-blocklist if this fails)", () => {

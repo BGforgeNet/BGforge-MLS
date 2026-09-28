@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 import { remapChoiceId } from "../src/dialog-editor/webview/state-lookup";
-import type { DialogChoice, DialogState } from "../../shared/dialog-model";
+import type { DialogChoice, DialogState } from "@bgforge/shared/dialog-model";
 
 function choice(id: string, text?: string): DialogChoice {
     return { id, text, target: { kind: "exit" } };

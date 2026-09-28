@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { formatWeiduTp2 as formatDocument } from "@bgforge/format";
-import { initParser, getParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser, getParser } from "@bgforge/shared/parsers/weidu-tp2";
 
 describe("weidu-tp2 format string literal preservation", () => {
     beforeAll(async () => {

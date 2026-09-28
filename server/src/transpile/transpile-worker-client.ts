@@ -14,7 +14,7 @@
 
 import { TranspileError } from "../../../transpilers/common/transpile-error";
 import { createWorkerClient } from "../worker/worker-client";
-import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
+import type { DDialogData, SSLDialogData } from "@bgforge/shared/dialog-types";
 import type { TranspileRequest, TranspileResponse, TranspileWorkerResult } from "./transpile-worker-protocol";
 
 /**

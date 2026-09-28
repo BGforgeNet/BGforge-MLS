@@ -14,7 +14,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
+import { initParser, isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import { createSelectionRangesProvider } from "../../src/shared/selection-ranges";
 import { expectWellFormedChain } from "../shared/selection-range-assertions";
 

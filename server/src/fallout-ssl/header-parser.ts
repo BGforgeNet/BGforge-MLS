@@ -25,7 +25,7 @@ import {
     extractProcedures,
     makeRange,
 } from "./utils";
-import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import { SyntaxType } from "./syntax-type";
 

@@ -16,7 +16,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
-import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts";
 
 const ROOT = path.resolve(__dirname, "../../..");
 const nodeTypesPath = (id: string) => path.join(ROOT, "grammars", id, "src", "node-types.json");

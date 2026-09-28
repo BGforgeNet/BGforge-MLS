@@ -20,7 +20,7 @@ import type {
     DDialogTransition,
     TDStateRef,
     TDWiring,
-} from "../../../shared/dialog-types";
+} from "@bgforge/shared/dialog-types";
 
 const span = (n: Node): { start: number; end: number } => ({ start: n.getStart(), end: n.getEnd() });
 const stripQuotes = (s: string): string => s.replaceAll(/^["'`]|["'`]$/g, "");

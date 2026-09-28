@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { generateStrRefParams, loadData, renderStrRefParamsModule } from "../src/generate-data.ts";
-import { strRefParamIndexes } from "../../../shared/strref-params.ts";
+import { strRefParamIndexes } from "@bgforge/shared/strref-params.ts";
 
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const BAF_DATA = path.join(repoRoot, "server", "data", "weidu-baf-iesdp.yml");

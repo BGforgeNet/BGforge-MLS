@@ -9,7 +9,7 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { resolveIdentifierDefinitionNode, isParameterDefinitionNode } from "../../src/fallout-ssl/symbol-definitions";
 
 beforeAll(async () => {

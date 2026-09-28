@@ -15,7 +15,7 @@ vi.mock("../src/lsp-connection", () => ({
     }),
 }));
 
-import { initParser } from "../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { updateTreeSitterDiagnostics } from "../src/tree-sitter-validation";
 import { clearAllDiagnostics } from "../src/diagnostic-store";
 

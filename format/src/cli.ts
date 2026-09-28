@@ -26,10 +26,10 @@ import {
     stripComments2da,
     stripCommentsFalloutScriptsLst,
 } from "./index";
-import { initParser as initSslParser, getParser as getSslParser } from "../../shared/parsers/fallout-ssl";
-import { initParser as initBafParser, getParser as getBafParser } from "../../shared/parsers/weidu-baf";
-import { initParser as initDParser, getParser as getDParser } from "../../shared/parsers/weidu-d";
-import { initParser as initTp2Parser, getParser as getTp2Parser } from "../../shared/parsers/weidu-tp2";
+import { initParser as initSslParser, getParser as getSslParser } from "@bgforge/shared/parsers/fallout-ssl";
+import { initParser as initBafParser, getParser as getBafParser } from "@bgforge/shared/parsers/weidu-baf";
+import { initParser as initDParser, getParser as getDParser } from "@bgforge/shared/parsers/weidu-d";
+import { initParser as initTp2Parser, getParser as getTp2Parser } from "@bgforge/shared/parsers/weidu-tp2";
 import {
     EXT_FALLOUT_SSL,
     EXT_WEIDU_BAF,
@@ -39,7 +39,7 @@ import {
     EXT_FALLOUT_MSG,
     EXT_INFINITY_2DA,
     FILENAME_FALLOUT_SCRIPTS_LST,
-} from "../../shared/languages";
+} from "@bgforge/shared/languages";
 import {
     type FileResult,
     type OutputMode,
@@ -49,7 +49,7 @@ import {
     safeProcess,
     reportDiff,
     reportFatal,
-} from "../../shared/cli/cli-utils";
+} from "@bgforge/shared/cli/cli-utils";
 
 // Per-extension input-size cap. Real-world source files stay well below
 // these (the largest checked-in TP2s in the WeiDU corpus are ~100 KB; SSL

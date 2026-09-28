@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import type { Parser } from "web-tree-sitter";
 import { compileBaf, decompileBcs, readBcs, writeBcs } from "@bgforge/bcs";
-import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
+import { getParser, initParser } from "@bgforge/shared/parsers/weidu-baf";
 import { resolveWeidu, runWeiduBatch, WEIDU_HOOK_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
 import { COMPILE_SYMBOLS, FIXTURE_DIR, IDS_DIR, SYMBOLS } from "./fixture-symbols";
 

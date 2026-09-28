@@ -17,9 +17,9 @@ import { computeDisplayPath, extractFilename } from "../core/location-utils";
 import { type ParseFileOptions, type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
 import { ScopeLevel, type StateSymbol, SourceType, SymbolKind } from "../core/symbol";
-import { buildSignatureBlock } from "../../../shared/tooltip-format";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { forEachDialogLabelRef } from "./label-refs";
 
 /** Build the composite key for dialog-scoped labels. */

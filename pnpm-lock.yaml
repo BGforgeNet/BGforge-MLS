@@ -195,6 +195,9 @@ importers:
 
   .:
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:shared
       '@oxlint/plugins':
         specifier: 1.80.0
         version: 1.80.0
@@ -222,12 +225,6 @@ importers:
       '@vscode/vsce':
         specifier: ^3.9.2
         version: 3.9.2(supports-color@8.1.1)
-      cac:
-        specifier: 'catalog:'
-        version: 7.0.0
-      diff:
-        specifier: 'catalog:'
-        version: 9.0.0
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
@@ -252,9 +249,6 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.63.0
-      quick-lru:
-        specifier: 'catalog:'
-        version: 7.3.0
       remark-cli:
         specifier: ^12.0.1
         version: 12.0.1(supports-color@8.1.1)
@@ -282,9 +276,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
-      web-tree-sitter:
-        specifier: 'catalog:'
-        version: 0.27.0
       yaml:
         specifier: 'catalog:'
         version: 2.9.0
@@ -298,6 +289,9 @@ importers:
       '@bgforge/binary':
         specifier: workspace:*
         version: link:../binary
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -323,6 +317,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       fast-check:
         specifier: 'catalog:'
         version: 4.9.0
@@ -339,6 +336,9 @@ importers:
         specifier: workspace:*
         version: link:../binary
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
@@ -400,6 +400,9 @@ importers:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -434,6 +437,9 @@ importers:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
@@ -444,6 +450,9 @@ importers:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
@@ -463,6 +472,9 @@ importers:
         specifier: 'catalog:'
         version: 28.0.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
@@ -488,6 +500,9 @@ importers:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/ini':
         specifier: ^4.1.1
         version: 4.1.1
@@ -577,6 +592,9 @@ importers:
       '@bgforge/format':
         specifier: workspace:*
         version: link:../format
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -620,6 +638,25 @@ importers:
         specifier: 'catalog:'
         version: 2.9.0
 
+  shared:
+    dependencies:
+      cac:
+        specifier: 'catalog:'
+        version: 7.0.0
+      diff:
+        specifier: 'catalog:'
+        version: 9.0.0
+      quick-lru:
+        specifier: 'catalog:'
+        version: 7.3.0
+      web-tree-sitter:
+        specifier: 'catalog:'
+        version: 0.27.0
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
+
   transpilers:
     dependencies:
       cac:
@@ -632,6 +669,9 @@ importers:
         specifier: 'catalog:'
         version: 0.28.2
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       fast-check:
         specifier: 'catalog:'
         version: 4.9.0
@@ -648,6 +688,9 @@ importers:
         specifier: 'catalog:'
         version: 7.3.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       esbuild-wasm:
         specifier: 'catalog:'
         version: 0.28.2

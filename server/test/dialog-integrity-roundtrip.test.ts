@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
-import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
+import { modelFromSSL, type DialogModel } from "@bgforge/shared/dialog-model";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
-import { addReply, addState, duplicateState, removeReply, setChoiceTarget } from "../../shared/dialog-edit-ops";
+import { addReply, addState, duplicateState, removeReply, setChoiceTarget } from "@bgforge/shared/dialog-edit-ops";
 import { writeText } from "../../client/src/dialog-editor/webview/inspector-edit";
 
 // End-to-end "what I see is what's saved" integrity guards for the dialogue editor: each scenario drives the

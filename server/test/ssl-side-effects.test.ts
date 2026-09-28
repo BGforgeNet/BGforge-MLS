@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sslSideEffectFunctions } from "../src/fallout-ssl/side-effects";
-import { buildSignatureBlock } from "../../shared/tooltip-format";
-import { LANG_FALLOUT_SSL_TOOLTIP } from "../../shared/languages";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
+import { LANG_FALLOUT_SSL_TOOLTIP } from "@bgforge/shared/languages";
 
 // The side-effect function set is derived from the SSL builtin data: a function whose
 // signature returns `void` is called for its effect, not its value, so it mutates game

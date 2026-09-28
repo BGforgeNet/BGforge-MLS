@@ -54,7 +54,7 @@ import { formatCopyAction } from "./copy";
 import { formatFunctionDef, formatFunctionCall } from "./functions";
 import { formatInnerAction, formatInnerPatch, formatReplaceBcsBlock } from "./inner";
 import { formatPredicateAction } from "./predicate";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 import { throwOnParseError } from "../format-utils";
 
 // ============================================

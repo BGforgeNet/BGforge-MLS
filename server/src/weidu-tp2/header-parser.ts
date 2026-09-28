@@ -19,7 +19,7 @@ import { type ParseFileOptions, type ParseResult, EMPTY_PARSE_RESULT } from "../
 import { makeRange } from "../core/position-utils";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { SyntaxType } from "./syntax-type";
 import { isPhantomAssignment, looksLikeConstant, stripStringDelimiters } from "./tree-utils";
 import { FUNCTION_CALL_TYPES } from "./callable-symbols";

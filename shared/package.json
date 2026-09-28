@@ -1,0 +1,28 @@
+{
+    "name": "@bgforge/shared",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Source shared by the extension's packages: parser management, the dialog model, protocol ids, syntax-type enums and the CLI helpers.",
+    "license": "SEE LICENSE IN ../LICENSE.txt",
+    "author": "BGforge",
+    "type": "module",
+    "exports": {
+        "./*.ts": "./*.ts",
+        "./*": "./*.ts"
+    },
+    "scripts": {
+        "test": "vitest run --config vitest.config.ts"
+    },
+    "dependencies": {
+        "cac": "catalog:",
+        "diff": "catalog:",
+        "quick-lru": "catalog:",
+        "web-tree-sitter": "catalog:"
+    },
+    "devDependencies": {
+        "vitest": "catalog:"
+    },
+    "engines": {
+        "node": ">=20"
+    }
+}

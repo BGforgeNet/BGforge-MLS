@@ -12,7 +12,7 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
-import { getParser, initParser } from "../../../shared/parsers/weidu-tp2";
+import { getParser, initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { detectContextFromNode } from "../../src/weidu-tp2/completion/context/detectors";
 import { CompletionContext } from "../../src/weidu-tp2/completion/types";
 

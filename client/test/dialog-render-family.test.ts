@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { renderFamily } from "../../shared/dialog-model";
+import { renderFamily } from "@bgforge/shared/dialog-model";
 
 // renderFamily derives the target render family from the single source-language discriminant, so TD renders
 // as WeiDU D and TSSL as Fallout SSL without a second stored field that could drift out of sync.

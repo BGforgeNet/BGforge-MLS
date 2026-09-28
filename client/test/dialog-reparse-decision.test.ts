@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 import { decideReparse } from "../src/dialog-editor/webview/reparse-decision";
-import type { DialogModel } from "../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 const MODEL = { sourceLang: "d", editable: true, roots: [] } as DialogModel;
 const ALLOC = { "opt-1": "@42" };

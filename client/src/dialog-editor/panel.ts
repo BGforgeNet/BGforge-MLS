@@ -19,9 +19,9 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
-import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../../../shared/languages";
-import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
-import type { DialogMessages } from "../../../shared/dialog-model";
+import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "@bgforge/shared/languages";
+import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "@bgforge/shared/protocol";
+import type { DialogMessages } from "@bgforge/shared/dialog-model";
 import { buildDialogHostHtml } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
 import { handleSharedDialogMessage } from "./shared-host-messages";

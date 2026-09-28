@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseTSSLSource } from "../src/tssl/dialog-source";
-import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
-import { applyTSSLDialogEdits } from "../../shared/dialog-tssl-edit";
-import * as ops from "../../shared/dialog-edit-ops";
+import { modelFromSSL, type DialogModel } from "@bgforge/shared/dialog-model";
+import { applyTSSLDialogEdits } from "@bgforge/shared/dialog-tssl-edit";
+import * as ops from "@bgforge/shared/dialog-edit-ops";
 
 const flat = readFileSync(fileURLToPath(new URL("tssl/samples/flat.tssl", import.meta.url)), "utf8");
 const multi = readFileSync(fileURLToPath(new URL("tssl/samples/multi.tssl", import.meta.url)), "utf8");

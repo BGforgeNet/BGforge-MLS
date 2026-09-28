@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeDialogSourceEdit } from "../src/dialog-editor/dialog-source-edit";
-import { modelFromSSL, type DialogModel, type DialogState } from "../../shared/dialog-model";
-import type { SSLDialogData } from "../../shared/dialog-types";
+import { modelFromSSL, type DialogModel, type DialogState } from "@bgforge/shared/dialog-model";
+import type { SSLDialogData } from "@bgforge/shared/dialog-types";
 
 // A minimal WeiDU D document with two states; retargeting the transition changes the source text.
 const D_SRC = [

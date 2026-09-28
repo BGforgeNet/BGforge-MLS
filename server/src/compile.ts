@@ -28,7 +28,7 @@ import { compileTsslToInt } from "./tssl/compile-int";
 import { relocateGeneratedDiagnostics } from "./core/generated-diagnostics";
 import * as weidu from "./weidu-compile";
 import { runBafDiagnostics } from "./weidu-baf/diagnostics";
-export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
+export { LSP_COMMAND_COMPILE as COMMAND_compile } from "@bgforge/shared/protocol";
 
 /**
  * Reports a failed transpile as a diagnostic on the source being edited; the popup stays for the compile

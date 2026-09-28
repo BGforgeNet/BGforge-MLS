@@ -24,7 +24,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import * as codeAction from "../../src/handlers/code-action";
 import type { HandlerContext } from "../../src/handlers/context";
 import { DIAG_SOURCE, collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
-import { getParser, initParser } from "../../../shared/parsers/fallout-ssl";
+import { getParser, initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 type CodeActionHandler = (params: {
     textDocument: { uri: string };

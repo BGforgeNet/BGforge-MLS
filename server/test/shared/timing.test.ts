@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { timed } from "../../../shared/timing";
+import { timed } from "@bgforge/shared/timing";
 
 const sink = (warn: (message: string) => void, thresholdMs = 50) => ({ warn, thresholdMs, tag: "test-timing" });
 

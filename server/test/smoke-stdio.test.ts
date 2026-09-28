@@ -9,7 +9,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, afterEach } from "vitest";
-import { LSP_COMMAND_PARSE_DIALOG } from "../../shared/protocol";
+import { LSP_COMMAND_PARSE_DIALOG } from "@bgforge/shared/protocol";
 
 const SERVER_PATH = join(__dirname, "..", "out", "server.js");
 

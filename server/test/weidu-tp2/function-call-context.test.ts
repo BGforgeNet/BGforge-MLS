@@ -10,7 +10,7 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { getContextAtPosition, getFuncParamsContext } from "../../src/weidu-tp2/completion/context";
 import { CompletionContext, ParamSection } from "../../src/weidu-tp2/completion/types";
 

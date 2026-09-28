@@ -15,7 +15,7 @@
 import type { CompletionItem, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { classifyAtCursorBoundary } from "./comment-check";
-import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
+import { WEIDU_TP2_STANZAS } from "@bgforge/shared/stanza-names";
 
 /**
  * Valid completion item categories for WeiDU TP2.

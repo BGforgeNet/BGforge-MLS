@@ -30,6 +30,7 @@
         "web-tree-sitter": "catalog:"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "@types/node": "catalog:",
         "@types/vscode": "~1.91.0",
         "@vscode/test-electron": "^3.1.0",

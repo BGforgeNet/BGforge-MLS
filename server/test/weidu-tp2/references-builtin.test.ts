@@ -13,7 +13,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { findReferences } from "../../src/weidu-tp2/references";
 import { getSymbolAtPosition } from "../../src/weidu-tp2/symbol-discovery";
 

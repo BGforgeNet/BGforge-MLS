@@ -25,7 +25,7 @@
  */
 
 import { chromium } from "playwright";
-import type { DialogModel } from "../../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 import { SLOW_FRAME_MS } from "../../../webview-utils";
 import { harnessPaths, makeChecker } from "./driver-util";
 

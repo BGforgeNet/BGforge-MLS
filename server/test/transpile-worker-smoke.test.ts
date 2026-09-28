@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { DDialogData } from "../../shared/dialog-types";
+import type { DDialogData } from "@bgforge/shared/dialog-types";
 import type { TranspileRequest, TranspileResponse } from "../src/transpile/transpile-worker-protocol";
 
 const WORKER_PATH = join(__dirname, "..", "out", "ts-morph-worker.js");

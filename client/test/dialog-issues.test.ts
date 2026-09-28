@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { dialogIssues } from "../src/dialog-editor/webview/dialog-issues";
-import type { DialogModel, DialogState } from "../../shared/dialog-model";
+import type { DialogModel, DialogState } from "@bgforge/shared/dialog-model";
 
 const st = (over: Partial<DialogState> & { id: string }): DialogState => ({ text: "", choices: [], ...over });
 

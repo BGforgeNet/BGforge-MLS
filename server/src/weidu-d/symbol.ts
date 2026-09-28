@@ -3,7 +3,7 @@
  */
 
 import { type DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { SyntaxType } from "./syntax-type";
 
 export function getDocumentSymbols(text: string): DocumentSymbol[] {

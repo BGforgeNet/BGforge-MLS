@@ -23,7 +23,7 @@ import {
     type DialogReaction,
     type DialogRoot,
     type DialogState,
-} from "../../../../shared/dialog-model";
+} from "@bgforge/shared/dialog-model";
 import { isUnsavedDraftChoice, isUnsavedDraftState, textEditability } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 

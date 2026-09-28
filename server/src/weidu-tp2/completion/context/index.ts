@@ -12,7 +12,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { SyntaxType } from "../../syntax-type";
 import { CommentKind, detectCommentKind } from "../../../shared/completion-context";
 import { getLinePrefix } from "../../../cursor-utils";
-import { isInitialized, parseWithCache } from "../../../../../shared/parsers/weidu-tp2";
+import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { CompletionContext } from "../types";
 import { ASSIGNMENT_SITE_PATTERN, DEFINITION_SITE_PATTERN, FUNC_CALL_KEYWORDS, FUNC_PARAM_KEYWORDS } from "./constants";
 import { detectContextFromNode } from "./detectors";

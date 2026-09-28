@@ -14,7 +14,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { getDocumentSymbols } from "../../src/weidu-d/symbol";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

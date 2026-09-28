@@ -10,7 +10,7 @@
  * `translationHint` supplying the family-specific words - Fallout SSL `.msg` vs WeiDU D `.tra`).
  */
 import { msgRef } from "./inspector-edit";
-import type { DialogModel } from "../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 /**
  * How many `@N` refs (NPC lines and option text) the model could not resolve to real message text.

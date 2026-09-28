@@ -7,14 +7,14 @@
 import { type Hover, type Position, MarkupKind } from "vscode-languageserver/node";
 import { isCallableSymbol, type CallableInfo } from "../core/symbol";
 import { buildParamInfoMap } from "../shared/jsdoc";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import type { FunctionInfo } from "./header-parser";
 import { localFunctions as documentFunctions } from "./request-caches";
 import { buildRetsMap } from "./hover-content";
 import type { Symbols } from "../core/symbol-index";
 import { SyntaxType } from "./syntax-type";
 import { stripStringDelimiters } from "./tree-utils";
-import { buildSignatureBlock } from "../../../shared/tooltip-format";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
 import { LANG_WEIDU_TP2_TOOLTIP } from "../core/languages";
 
 /**

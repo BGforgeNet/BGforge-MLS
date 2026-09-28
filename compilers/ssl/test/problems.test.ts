@@ -14,8 +14,8 @@ import { Language, Parser } from "web-tree-sitter";
 import { CompileError, compileText } from "../src/compile.ts";
 import { problemsOf } from "../src/problems.ts";
 import { preprocessText } from "../src/preprocess.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");

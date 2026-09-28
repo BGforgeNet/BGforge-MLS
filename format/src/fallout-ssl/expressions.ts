@@ -7,7 +7,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { getCtx, isComment, throwFormatError } from "./core";
 import { canonicalKeyword, canonicalOp } from "./canonical-keyword";
-import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
+import { SyntaxType } from "@bgforge/shared/syntax-types/fallout-ssl";
 
 /** Format an expression node to a string, with optional column tracking for line-breaking. */
 export function formatExpression(

@@ -18,7 +18,7 @@ vi.mock("../../src/lsp-connection", () => ({
 }));
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { CompletionCategory, type Tp2CompletionItem } from "../../src/weidu-tp2/completion/types";
 import { defaultSettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";

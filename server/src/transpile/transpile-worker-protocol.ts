@@ -9,7 +9,7 @@
  * sourceMap: ReadonlyArray<SourcePosition | undefined>}`), so they cross unchanged.
  */
 
-import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
+import type { DDialogData, SSLDialogData } from "@bgforge/shared/dialog-types";
 import type { SourcePosition } from "../../../transpilers/common/line-map";
 import type { TDWarning } from "../../../transpilers/td/src/types";
 

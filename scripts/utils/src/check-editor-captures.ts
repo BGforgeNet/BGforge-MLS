@@ -15,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { HELIX_SCOPES, NEOVIM_CAPTURES, ZED_THEME_KEYS } from "./editor-captures.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 const NEOVIM_DOC = "https://raw.githubusercontent.com/neovim/neovim/master/runtime/doc/treesitter.txt";
 const HELIX_DOC = "https://raw.githubusercontent.com/helix-editor/helix/master/book/src/themes.md";

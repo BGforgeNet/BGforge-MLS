@@ -1,4 +1,4 @@
-import { FALLOUT_SSL_STANZAS } from "../../../../shared/stanza-names.ts";
+import { FALLOUT_SSL_STANZAS } from "@bgforge/shared/stanza-names.ts";
 
 /**
  * Type definitions for Fallout sfall data structures.

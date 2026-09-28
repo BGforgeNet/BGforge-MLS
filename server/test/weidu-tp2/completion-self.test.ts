@@ -31,7 +31,7 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { localCompletion } from "../../src/weidu-tp2/ast-utils";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 import { isPhantomAssignment } from "../../src/weidu-tp2/tree-utils";

@@ -5,7 +5,7 @@
  * prop) cannot drift - they previously each carried their own structurally-matching inline type literal.
  */
 
-import type { DialogReaction, DialogTarget } from "../../../../shared/dialog-model";
+import type { DialogReaction, DialogTarget } from "@bgforge/shared/dialog-model";
 
 export interface DialogActions {
     /**

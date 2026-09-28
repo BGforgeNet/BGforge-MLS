@@ -14,7 +14,7 @@
 import { parseArgs, type SslArgs } from "./args";
 import { runPool, workerCount } from "./cli-pool";
 import { runInput, type OutputLine, type TaskArgs } from "./cli-task";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 const USAGE = `Usage: ssl {switches} filename [-o outputname] [filename [..]]
   -q    accepted and ignored (this compiler never waits for input)

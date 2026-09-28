@@ -4,8 +4,8 @@
  * has no unit-test seam).
  */
 
-import { bareMsgKey } from "../../../../shared/dialog-edit-common";
-import type { DialogChoice, DialogMessages, DialogState } from "../../../../shared/dialog-model";
+import { bareMsgKey } from "@bgforge/shared/dialog-edit-common";
+import type { DialogChoice, DialogMessages, DialogState } from "@bgforge/shared/dialog-model";
 
 /** Parse a bare `@N` line to its numeric id, or null for a literal / non-`@N` text. */
 export function msgRef(text: string | undefined): string | null {

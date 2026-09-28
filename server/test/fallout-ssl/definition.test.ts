@@ -18,7 +18,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { getLocalDefinition } from "../../src/fallout-ssl/definition";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
     await initParser();

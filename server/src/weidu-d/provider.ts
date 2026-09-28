@@ -57,7 +57,7 @@ import { getDefinition } from "./definition";
 import { getStateLabelHover } from "./hover";
 import { findReferences } from "./references";
 import { prepareRenameSymbol, renameSymbol } from "./rename";
-import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { initParser, parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { getDocumentSymbols } from "./symbol";
 import { compile as weiduCompile } from "../weidu-compile";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";

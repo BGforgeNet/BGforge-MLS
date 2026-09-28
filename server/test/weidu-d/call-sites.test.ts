@@ -12,7 +12,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseFile } from "../../src/weidu-d/file-parser";
 
 const TEST_URI = "file:///test.d";

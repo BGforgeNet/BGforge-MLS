@@ -9,7 +9,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "../src/dialog-editor/host-core";
-import type { DialogMessages, DialogModel } from "../../shared/dialog-model";
+import type { DialogMessages, DialogModel } from "@bgforge/shared/dialog-model";
 
 /** An empty-but-valid D parse payload: toModel keys off `blocks`, yielding an empty (non-null) model. */
 const EMPTY_D = { blocks: [], states: [] };

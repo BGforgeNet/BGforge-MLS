@@ -10,7 +10,7 @@
  * machinery around them - the same reason `ie-resources/editor-routing.ts` is its own module.
  */
 
-import { LANG_FALLOUT_SSL, LANG_WEIDU_BAF } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL, LANG_WEIDU_BAF } from "@bgforge/shared/languages";
 
 /** The custom URI scheme every compiled script is served on, whatever it decompiles into. */
 export const SCRIPT_VIEW_SCHEME = "bgforge-script";

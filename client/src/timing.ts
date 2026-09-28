@@ -10,7 +10,7 @@
  * use and names the operation when it does not.
  */
 
-import { timed } from "../../shared/timing";
+import { timed } from "@bgforge/shared/timing";
 import { conlog } from "./logging";
 
 /**

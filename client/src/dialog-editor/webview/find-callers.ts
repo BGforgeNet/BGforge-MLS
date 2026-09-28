@@ -11,7 +11,7 @@
  * Scope: the whole parsed model (all roots) - for Fallout SSL that is the entire file. Cross-FILE callers
  * (another `.ssl`/`.d`) are not represented in a single-file model and are out of scope here.
  */
-import type { DialogModel } from "../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 export interface Caller {
     /** option: a player option targeting the node; call: a bare `call` transition; entry: talk_p_proc;

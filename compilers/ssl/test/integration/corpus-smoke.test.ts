@@ -23,10 +23,10 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
-import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
 import { corpusKey, listScripts, RP_SCRIPTS } from "./corpus.ts";
 import { currentPins, loadManifest, sha256, staleness } from "./oracle-manifest.ts";
-import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 

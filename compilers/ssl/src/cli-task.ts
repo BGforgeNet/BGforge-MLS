@@ -16,7 +16,7 @@ import { formatDisassembly } from "./int/disasm";
 import { printProgram } from "./int/print";
 import { readInt } from "./int/read";
 import { preprocess, preprocessWithOrigins, PreprocessError } from "./preprocess";
-import { getParser } from "../../../shared/parsers/fallout-ssl";
+import { getParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 /** A line to print, and which stream it belongs on. */
 export interface OutputLine {

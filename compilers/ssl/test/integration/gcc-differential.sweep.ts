@@ -25,10 +25,10 @@ import { execFileSync } from "node:child_process";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
 import { preprocess } from "../../src/preprocess.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 // The sfall headers both gcc and our preprocessor need are linked in by this project's globalSetup.
 import { CORPUS_SIZE, RP_SCRIPTS, listScripts } from "./corpus.ts";
-import { shardScripts } from "../../../../shared/cli/test/shard.ts";
+import { shardScripts } from "@bgforge/shared/cli/test/shard.ts";
 
 function hasGcc(): boolean {
     try {

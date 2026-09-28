@@ -6,6 +6,7 @@ packages:
   - format
   - image
   - server
+  - shared
   - compilers/bcs
   - compilers/ssl
   - compilers/tssl

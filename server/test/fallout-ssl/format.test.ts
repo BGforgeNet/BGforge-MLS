@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it, beforeAll } from "vitest";
-import { initParser, getParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser, getParser } from "@bgforge/shared/parsers/fallout-ssl";
 import {
     formatFalloutSsl as formatDocument,
     validateFormatting,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { translationHint, unresolvedRefCount } from "../src/dialog-editor/webview/translation-status";
-import type { DialogModel, DialogState } from "../../shared/dialog-model";
+import type { DialogModel, DialogState } from "@bgforge/shared/dialog-model";
 
 const span = { start: 0, end: 1 };
 // WeiDU D states carry NO procRange (that span is SSL-only). The count must still include them - a

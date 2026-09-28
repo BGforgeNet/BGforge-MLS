@@ -11,6 +11,11 @@ import type { KnipConfig } from "knip";
 
 const isProductionKnip = process.argv.includes("--production");
 
+// The published CLIs bundle @bgforge/shared's source, and tsdown leaves its imports of these packages external
+// because the bundling package declares them - so that package must keep declaring them, though none of its own
+// files import them, and knip reads each workspace's own imports only.
+const sharedCliDependencies = ["cac", "diff"];
+
 const config: KnipConfig = {
     rules: {
         types: "error",
@@ -134,10 +139,7 @@ const config: KnipConfig = {
             entry: ["test/*.test.ts"],
             // Bench files invoked explicitly; not reachable from any declared entry point.
             ignore: ["test/perf/**"],
-            // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any workspace;
-            // knip's per-workspace dep tracing doesn't reach across that boundary. Same note as binary
-            // and format, which use the same shared CLI helpers.
-            ignoreDependencies: ["cac", "diff"],
+            ignoreDependencies: sharedCliDependencies,
         },
         "transpilers/tbaf": {
             entry: ["src/index.ts"],
@@ -155,23 +157,15 @@ const config: KnipConfig = {
             // Knip sees no TS import within this workspace because the import lives in
             // transpilers/common (a separate workspace); ignoreDependencies suppresses the
             // false-positive "unused dependency" report.
-            // cac and diff are imported via shared/cli/cli-utils.ts, which is not part of
-            // any workspace; knip's per-workspace dep tracing doesn't reach across that
-            // non-workspace boundary, so suppress the false positive.
-            ignoreDependencies: ["esbuild-wasm", "cac", "diff"],
+            ignoreDependencies: ["esbuild-wasm", ...sharedCliDependencies],
             // test/fixtures holds bundler inputs, which the tests hand to esbuild as file PATHS rather
             // than importing - so no TS import reaches them and knip reads them as unused files.
             ignore: ["test/fixtures/**"],
         },
         format: {
             entry: ["test/**/*.test.ts"],
-            // quick-lru is reached transitively: format/src/cli.ts imports from
-            // ../../shared/parsers/*, and shared/parsers/parser-factory.ts imports
-            // quick-lru. Knip's per-workspace dep tracing can't follow imports
-            // across the non-workspace shared/ boundary.
-            // cac and diff are imported via shared/cli/cli-utils.ts, which is outside any
-            // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
-            ignoreDependencies: ["quick-lru", "cac", "diff"],
+            // quick-lru on the same terms, through the shared parser factory.
+            ignoreDependencies: [...sharedCliDependencies, "quick-lru"],
         },
         binary: {
             // vitest.mutation.config.ts is referenced from stryker.conf.json (vitest.configFile);
@@ -179,12 +173,15 @@ const config: KnipConfig = {
             // paths, so list it explicitly - same treatment the server's copy had while the mutation
             // scope lived there.
             entry: ["vitest.mutation.config.ts", "test/**/*.test.ts"],
-            // cac and diff are imported via shared/cli/cli-utils.ts, which lives outside any
-            // workspace; knip's per-workspace dep tracing doesn't reach across that boundary.
-            ignoreDependencies: ["cac", "diff"],
+            ignoreDependencies: sharedCliDependencies,
         },
         image: {
             entry: ["test/**/*.test.ts"],
+        },
+        shared: {
+            entry: ["**/test/**/*.test.ts"],
+            // Spawned as a child process by the --jobs fan-out tests, never imported.
+            ignore: ["cli/test/fixtures/**"],
         },
         animation: {
             // The table generator is run by hand via `pnpm exec tsx` against a real install; nothing
@@ -225,8 +222,6 @@ const config: KnipConfig = {
         "external/**",
         // ambient declarations for the sibling esbuild plugin .mjs files, read by tsc only
         "scripts/*.d.mts",
-        // spawned as a child process by the --jobs fan-out tests, never imported
-        "shared/cli/test/fixtures/**",
     ],
     // Host binaries the scripts and their tests spawn: xmllint validates the generated Geany and
     // Notepad++ editor definitions, strings reads capture names out of a Zed binary. Both are

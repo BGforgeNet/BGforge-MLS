@@ -11,7 +11,7 @@
  *   pnpm exec tsx client/src/dialog-editor/test/harness/edit-roundtrip.mts
  */
 import { chromium } from "playwright";
-import type { DialogModel } from "../../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 import { createFakeHost, currentModel } from "./fake-host";
 import { harnessPaths, makeChecker, pollUntil } from "./driver-util";
 

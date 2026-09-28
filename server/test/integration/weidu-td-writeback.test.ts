@@ -6,9 +6,9 @@
 
 import { join, resolve } from "node:path";
 import * as fg from "fast-glob";
-import { modelFromD, type DialogModel } from "../../../shared/dialog-model";
+import { modelFromD, type DialogModel } from "@bgforge/shared/dialog-model";
 import { parseTDSource } from "../../src/td/dialog-source";
-import { applyTDDialogEdits } from "../../../shared/dialog-td-edit";
+import { applyTDDialogEdits } from "@bgforge/shared/dialog-td-edit";
 import { defineWritebackCorpus } from "./dialog-writeback-corpus";
 import { IE_FIXTURES } from "./test-helpers";
 

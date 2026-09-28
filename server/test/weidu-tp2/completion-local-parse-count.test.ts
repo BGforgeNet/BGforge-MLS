@@ -39,7 +39,7 @@ vi.mock("../../src/weidu-tp2/header-parser", async (importOriginal) => {
     };
 });
 
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 

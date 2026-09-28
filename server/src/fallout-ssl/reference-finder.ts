@@ -12,7 +12,7 @@ import { ScopeKind, assertNeverScope } from "./scope-kinds";
 import type { SslSymbolScope } from "./symbol-scope";
 import { isLocalToProc, resolveIdentifierDefinitionNode } from "./symbol-definitions";
 import { parseMacroParams } from "./macro-utils";
-import { sslNamesEqual } from "../../../shared/fallout-ssl-names";
+import { sslNamesEqual } from "@bgforge/shared/fallout-ssl-names";
 import { SyntaxType } from "./syntax-type";
 
 /**

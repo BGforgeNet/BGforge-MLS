@@ -34,7 +34,7 @@ import {
     isFunctionCall,
     isBodyContent,
 } from "@bgforge/format/internal";
-import { initParser, getParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser, getParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). Accepts an optional workspaceRoot

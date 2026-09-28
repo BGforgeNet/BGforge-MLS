@@ -14,7 +14,7 @@ vi.mock("../../src/lsp-connection", () => ({
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { getSemanticTokenSpans } from "../../src/fallout-ssl/semantic-tokens";
 
 beforeAll(async () => {

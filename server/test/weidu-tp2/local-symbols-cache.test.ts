@@ -14,7 +14,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import {
     clearAllLocalSymbolsCache,
     clearLocalSymbolsCache,

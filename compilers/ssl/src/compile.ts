@@ -9,7 +9,7 @@
 
 import * as path from "node:path";
 import type { Parser } from "web-tree-sitter";
-import { collectParseErrors } from "../../../shared/parse-errors";
+import { collectParseErrors } from "@bgforge/shared/parse-errors";
 import { CompileError } from "./compile-error";
 import { EmitError, emitInt, type EmitOptions } from "./int/emit";
 import { WIDE_CHARACTER } from "./int/namelist";

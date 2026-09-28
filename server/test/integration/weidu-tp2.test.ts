@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { FoldingRangeKind } from "vscode-languageserver/node";
 import { describe, expect, it, beforeAll } from "vitest";
-import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { getDocumentSymbols } from "../../src/weidu-tp2/symbol";
 import { getDefinition } from "../../src/weidu-tp2/definition";
 import { findReferences } from "../../src/weidu-tp2/references";
@@ -20,7 +20,7 @@ import { formatWeiduTp2 as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-tp2/syntax-type";
 import { FileIndex } from "../../src/core/file-index";
-import { LANG_WEIDU_TP2 } from "../../../shared/languages";
+import { LANG_WEIDU_TP2 } from "@bgforge/shared/languages";
 import { loadFixture, loadFixtures, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";
 

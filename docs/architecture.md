@@ -121,7 +121,7 @@ modules.
 | `animation/`                         | `@bgforge/animation`: IE animation-set resolution and conversion - see [animation/README.md](../animation/README.md)                       |
 | `compilers/`                         | `ssl`, `tssl`, `bcs` - see [compilers/README.md](../compilers/README.md)                                                                   |
 | `transpilers/`                       | `@bgforge/transpile` + `fgtp`, over the private `tbaf`, `td` and `common` packages - see [transpilers/README.md](../transpilers/README.md) |
-| `shared/`                            | Pure TypeScript used by several packages: parser management, the dialog model, protocol ids, syntax-type enums, CLI helpers                |
+| `shared/`                            | `@bgforge/shared` (private): parser management, the dialog model, protocol ids, syntax-type enums, CLI helpers                             |
 | `plugins/`                           | TypeScript Language Service plugins (`tssl-plugin`, `td-plugin`)                                                                           |
 | `grammars/`                          | Tree-sitter grammars - see [grammars/README.md](../grammars/README.md)                                                                     |
 | `syntaxes/`                          | TextMate grammars - see [syntaxes/README.md](../syntaxes/README.md)                                                                        |
@@ -157,17 +157,18 @@ transpilers ----> transpilers/tbaf, transpilers/td, transpilers/common
 plugins/tssl-plugin --> server/out/*.json                (generated data)
 plugins/td-plugin ....> server/out/td-runtime.d.ts       (read at run time)
 
-nearly every package --> shared/
+nearly every package --> shared                          (workspace dependency)
 ```
 
 Packages reach each other three ways, and none of them goes through another package's bundle:
 
 - **tsconfig `paths` to the sibling's `src/`**, which esbuild honours: `client/tsconfig.json` maps `@bgforge/binary`,
   `@bgforge/image` and `@bgforge/animation`; `server/tsconfig.json` maps `@bgforge/format` and
-  `@bgforge/binary/archive`. `@bgforge/binary-editor` is a workspace dependency whose `main` is its source.
+  `@bgforge/binary/archive`. `@bgforge/binary-editor` and `@bgforge/shared` are workspace dependencies whose entry
+  points are their source, so they need no `paths` entry.
 - **Relative source imports** across the tree, whether or not the target package has an entry of its own - the
   server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/ssl/src/`, the client reaching
-  `compilers/ssl/src/` and `compilers/bcs/src/`, everything reaching `shared/`.
+  `compilers/ssl/src/` and `compilers/bcs/src/`.
 - **Build outputs as inputs**: the TS plugins and `compilers/tssl` import JSON that `scripts/generate-data.sh` writes
   into `server/out/`, and `td-plugin` finds `td-runtime.d.ts`, which the server build copies there, by path at run
   time. The data generation has to run before those builds.

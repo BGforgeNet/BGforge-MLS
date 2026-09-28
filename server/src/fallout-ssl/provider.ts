@@ -60,7 +60,7 @@ import { FALLOUT_JSDOC_TYPES } from "../shared/fallout-types";
 import { stripCommentsForCompareFalloutSsl, formatFalloutSsl as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import * as signature from "../shared/signature";
-import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { initParser, isInitialized, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { getDocumentSymbols } from "./symbol";

@@ -38,7 +38,7 @@ vi.mock("../../src/weidu-tp2/ast-utils", async (importOriginal) => {
     };
 });
 
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import { defaultSettings } from "../../src/settings";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";

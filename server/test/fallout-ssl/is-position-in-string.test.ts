@@ -15,7 +15,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { isInsideString } from "../../src/fallout-ssl/completion-context";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
     await initParser();

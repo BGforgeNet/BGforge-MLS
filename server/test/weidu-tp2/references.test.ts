@@ -14,7 +14,7 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { findReferences } from "../../src/weidu-tp2/references";
 import { normalizeUri } from "../../src/core/normalized-uri";
 

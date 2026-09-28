@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
+import { initParser as initWeiduD } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { parseDialog as parseSSL } from "../src/dialog";
-import { modelFromD, modelFromSSL, resolveText, stateHeadLabel, type DialogState } from "../../shared/dialog-model";
+import { modelFromD, modelFromSSL, resolveText, stateHeadLabel, type DialogState } from "@bgforge/shared/dialog-model";
 
 describe("DialogModel adapters (real producer -> IR)", () => {
     beforeAll(async () => {

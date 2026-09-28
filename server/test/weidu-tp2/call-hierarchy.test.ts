@@ -21,7 +21,7 @@ import {
     type DefLookup,
     type TextLookup,
 } from "../../src/weidu-tp2/call-hierarchy";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();

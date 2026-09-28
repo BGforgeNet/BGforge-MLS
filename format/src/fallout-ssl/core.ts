@@ -16,7 +16,7 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 // its format context.
 import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, formatSwitchStmt } from "./control-flow";
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
-import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
+import { SyntaxType } from "@bgforge/shared/syntax-types/fallout-ssl";
 
 import {
     throwOnParseError,

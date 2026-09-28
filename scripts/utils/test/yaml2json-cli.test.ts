@@ -6,8 +6,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
-import { tsxCommand } from "../../../shared/tsx-command.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { tsxCommand } from "@bgforge/shared/tsx-command.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));

@@ -11,9 +11,9 @@ import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import * as fg from "fast-glob";
 import { parseDialog } from "../../src/dialog";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
-import { modelFromSSL, type DialogModel } from "../../../shared/dialog-model";
-import { applySSLDialogEdits } from "../../../shared/dialog-ssl-edit";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
+import { modelFromSSL, type DialogModel } from "@bgforge/shared/dialog-model";
+import { applySSLDialogEdits } from "@bgforge/shared/dialog-ssl-edit";
 import { defineWritebackCorpus } from "./dialog-writeback-corpus";
 import { FALLOUT_FIXTURES } from "./test-helpers";
 

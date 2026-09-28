@@ -24,7 +24,7 @@ import {
     extractMacros,
     extractParams,
 } from "../../src/fallout-ssl/utils";
-import { initParser, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
     await initParser();

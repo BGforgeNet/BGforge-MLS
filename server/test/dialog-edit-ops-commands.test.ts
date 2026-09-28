@@ -16,11 +16,11 @@
 import * as fc from "fast-check";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { initParser } from "../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD, type DialogModel, type DialogState, type DialogTarget } from "../../shared/dialog-model";
-import { applyDDialogEdits } from "../../shared/dialog-d-edit";
-import * as ops from "../../shared/dialog-edit-ops";
+import { modelFromD, type DialogModel, type DialogState, type DialogTarget } from "@bgforge/shared/dialog-model";
+import { applyDDialogEdits } from "@bgforge/shared/dialog-d-edit";
+import * as ops from "@bgforge/shared/dialog-edit-ops";
 
 const SRC = `APPEND ~coranj~
 IF ~~ THEN BEGIN hello SAY ~Hi.~ IF ~~ THEN REPLY ~more~ GOTO more IF ~~ THEN REPLY ~bye~ EXIT END

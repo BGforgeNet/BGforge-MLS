@@ -54,6 +54,7 @@
         "ts-morph": "catalog:"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },

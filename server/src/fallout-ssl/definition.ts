@@ -9,7 +9,7 @@ import * as path from "path";
 import type { Node } from "web-tree-sitter";
 import type { Location, Position } from "vscode-languageserver/node";
 import { uriToPath } from "../uri-utils";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
 import { SyntaxType } from "./syntax-type";
 import { makeRange, findIdentifierNodeAtPosition } from "./utils";
 import { resolveIdentifierDefinitionNode } from "./symbol-definitions";

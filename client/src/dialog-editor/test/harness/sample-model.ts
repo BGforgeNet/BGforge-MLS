@@ -1,4 +1,4 @@
-import type { DialogModel } from "../../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 // Representative model exercising the render: a hub with a back-edge (cycle), a
 // conditional choice, an exit terminal, a weighted state, and an unresolved

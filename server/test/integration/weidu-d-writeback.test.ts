@@ -8,10 +8,10 @@
  */
 
 import * as fg from "fast-glob";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../../src/weidu-d/dialog";
-import { modelFromD, type DialogModel } from "../../../shared/dialog-model";
-import { applyDDialogEdits } from "../../../shared/dialog-d-edit";
+import { modelFromD, type DialogModel } from "@bgforge/shared/dialog-model";
+import { applyDDialogEdits } from "@bgforge/shared/dialog-d-edit";
 import { defineWritebackCorpus } from "./dialog-writeback-corpus";
 import { IE_FIXTURES } from "./test-helpers";
 

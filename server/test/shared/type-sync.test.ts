@@ -16,7 +16,7 @@ import {
     JSDOC_RETURN_TAGS,
     WEIDU_JSDOC_TYPE_NAMES,
 } from "../../src/shared/jsdoc-types";
-import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
+import { WEIDU_JSDOC_TYPES } from "@bgforge/shared/weidu-types";
 import { FALLOUT_JSDOC_TYPES } from "../../src/shared/fallout-types";
 
 const SYNTAXES_DIR = path.resolve(__dirname, "../../../syntaxes");

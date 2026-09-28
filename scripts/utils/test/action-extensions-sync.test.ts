@@ -27,8 +27,8 @@ import {
     EXT_WEIDU_TP2,
     EXT_WEIDU_TRA,
     FILENAME_FALLOUT_SCRIPTS_LST,
-} from "../../../shared/languages.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+} from "@bgforge/shared/languages.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 // Anchored to this file, not cwd: vitest runs this config from the repo root and from scripts/.
 const repoRoot = path.resolve(__dirname, "..", "..", "..");

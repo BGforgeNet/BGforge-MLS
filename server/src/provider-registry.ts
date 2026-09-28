@@ -42,7 +42,7 @@ import type { StrRefSite } from "./ie-resources/strref-sites";
 import { encodeSemanticTokens } from "./shared/semantic-tokens";
 import { FileWatcherManager } from "./core/file-watcher-manager";
 import { scanWorkspaceFiles } from "./core/workspace-scanner";
-import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "../../shared/protocol";
+import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "@bgforge/shared/protocol";
 
 class ProviderRegistry {
     private providers: Map<string, LanguageProvider> = new Map();

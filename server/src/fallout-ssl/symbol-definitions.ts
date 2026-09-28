@@ -1,7 +1,7 @@
 import type { Node } from "web-tree-sitter";
 import type { Symbols } from "../core/symbol-index";
 import { extractProcedures, findMacroDefinition } from "./utils";
-import { sslMapGet, sslNamesEqual } from "../../../shared/fallout-ssl-names";
+import { sslMapGet, sslNamesEqual } from "@bgforge/shared/fallout-ssl-names";
 import { SyntaxType } from "./syntax-type";
 
 /**

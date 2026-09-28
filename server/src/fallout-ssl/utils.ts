@@ -21,8 +21,8 @@ import {
 } from "../core/symbol";
 import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
-import { buildSignatureBlock } from "../../../shared/tooltip-format";
-import { sslMapGet, sslNameKey, sslNamesEqual } from "../../../shared/fallout-ssl-names";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
+import { sslMapGet, sslNameKey, sslNamesEqual } from "@bgforge/shared/fallout-ssl-names";
 import { buildTooltipBase } from "./jsdoc-format";
 import {
     type MacroData,
@@ -104,7 +104,7 @@ export function extractParams(procNode: Node): ParamInfo[] {
     return result;
 }
 
-import { type SignatureParam, formatSignature } from "../../../shared/signature-format";
+import { type SignatureParam, formatSignature } from "@bgforge/shared/signature-format";
 
 /**
  * Build procedure signature string from AST params, enriched with optional JSDoc.

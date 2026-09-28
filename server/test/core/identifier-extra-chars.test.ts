@@ -11,12 +11,12 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
-import * as baf from "../../../shared/parsers/weidu-baf";
-import * as d from "../../../shared/parsers/weidu-d";
-import * as ssl from "../../../shared/parsers/fallout-ssl";
-import * as tp2 from "../../../shared/parsers/weidu-tp2";
+import * as baf from "@bgforge/shared/parsers/weidu-baf";
+import * as d from "@bgforge/shared/parsers/weidu-d";
+import * as ssl from "@bgforge/shared/parsers/fallout-ssl";
+import * as tp2 from "@bgforge/shared/parsers/weidu-tp2";
 import { IDENTIFIER_EXTRA_CHARS } from "../../src/core/languages";
-import { LANG_FALLOUT_SSL, LANG_WEIDU_BAF, LANG_WEIDU_D, LANG_WEIDU_TP2 } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL, LANG_WEIDU_BAF, LANG_WEIDU_D, LANG_WEIDU_TP2 } from "@bgforge/shared/languages";
 
 /** Every ASCII punctuation character a grammar could plausibly admit inside a name. */
 const CANDIDATES = [..."-#$@!?.:;,'\"`~^&*+=/\\|<>%()[]{}"];

@@ -6,7 +6,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "./syntax-type";
-import type { DDialogTarget } from "../../../shared/dialog-types";
+import type { DDialogTarget } from "@bgforge/shared/dialog-types";
 
 // ---------------------------------------------------------------------------
 // Text extraction helpers

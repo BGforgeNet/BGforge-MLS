@@ -20,12 +20,12 @@
 import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import * as fg from "fast-glob";
-import { shardScripts } from "../../../shared/cli/test/shard.ts";
+import { shardScripts } from "@bgforge/shared/cli/test/shard.ts";
 import { CompletionItemKind, type CompletionItem, type Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import * as dParser from "../../../shared/parsers/weidu-d";
-import * as sslParser from "../../../shared/parsers/fallout-ssl";
-import * as tp2Parser from "../../../shared/parsers/weidu-tp2";
+import * as dParser from "@bgforge/shared/parsers/weidu-d";
+import * as sslParser from "@bgforge/shared/parsers/fallout-ssl";
+import * as tp2Parser from "@bgforge/shared/parsers/weidu-tp2";
 import { weiduDProvider } from "../../src/weidu-d/provider";
 import { falloutSslProvider } from "../../src/fallout-ssl/provider";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";

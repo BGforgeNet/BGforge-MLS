@@ -16,7 +16,7 @@ import {
     WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
     type WorkspaceSymbolScopedLanguage,
     lspWorkspaceSymbolsCommand,
-} from "../../shared/protocol";
+} from "@bgforge/shared/protocol";
 import { registerBinaryEditor } from "./binary-editor/register";
 import { registerDialogEditor } from "./dialog-editor/panel";
 import { registerDlgDialogEditor } from "./dialog-editor/dlg-panel";

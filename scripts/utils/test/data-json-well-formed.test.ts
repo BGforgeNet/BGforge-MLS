@@ -23,7 +23,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser";
 import { describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 function lsFiles(...patterns: string[]): string[] {
     const spec = patterns.map((p) => `'${p}'`).join(" ");

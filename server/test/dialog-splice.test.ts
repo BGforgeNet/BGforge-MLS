@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applySplices, type SpliceOp } from "../../shared/dialog-splice";
+import { applySplices, type SpliceOp } from "@bgforge/shared/dialog-splice";
 
 describe("applySplices", () => {
     it("applies non-overlapping replacements regardless of op order", () => {

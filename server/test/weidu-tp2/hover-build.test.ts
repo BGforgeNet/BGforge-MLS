@@ -22,7 +22,7 @@ vi.mock("../../src/logger", () => ({
 }));
 
 import { buildVariableHover, buildFunctionHover } from "../../src/weidu-tp2/hover-content";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import type { VariableInfo, FunctionInfo } from "../../src/weidu-tp2/header-parser";
 
 function makeVarInfo(overrides: Partial<VariableInfo> = {}): VariableInfo {

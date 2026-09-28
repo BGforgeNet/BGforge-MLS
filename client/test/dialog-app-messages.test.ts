@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 import { reduceDialogView, shouldTimeOut, type DialogView } from "../src/dialog-editor/webview/app-messages";
-import type { DialogModel } from "../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 const MODEL = { sourceLang: "d", editable: true, roots: [] } as DialogModel;
 const EMPTY: DialogView = { model: null, error: null };

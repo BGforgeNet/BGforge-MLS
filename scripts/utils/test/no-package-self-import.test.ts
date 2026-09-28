@@ -16,7 +16,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 // Anchored to this file, not cwd: vitest runs this config from the repo root and from scripts/.
 const repoRoot = path.resolve(__dirname, "..", "..", "..");

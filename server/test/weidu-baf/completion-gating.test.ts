@@ -8,7 +8,7 @@ vi.mock("../../src/logger", () => ({
 }));
 
 import { weiduBafProvider } from "../../src/weidu-baf/provider";
-import { initParser } from "../../../shared/parsers/weidu-baf";
+import { initParser } from "@bgforge/shared/parsers/weidu-baf";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import type { CompletionItem, Position } from "vscode-languageserver/node";
 

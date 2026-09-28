@@ -14,7 +14,7 @@ import { openSession, sessionStore } from "../src/session";
 import { projectRow } from "../src/window";
 import { getRelationshipModel } from "../src/relationship/registry";
 import { summaryComposerFor } from "../src/summary";
-import { enumSelectedLabel } from "../../shared/enum-label";
+import { enumSelectedLabel } from "@bgforge/shared/enum-label";
 import type { FlatNode, Model } from "../src/model";
 import type { RelationshipModel } from "../src/relationship/types";
 import type { Row } from "../src/types";

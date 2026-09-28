@@ -16,12 +16,12 @@
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 import YAML from "yaml";
-import { formatSignature } from "../../../shared/signature-format.ts";
-import { buildSignatureBlock, buildWeiduHoverContent, formatDeprecation } from "../../../shared/tooltip-format.ts";
-import { buildFalloutArgsTable, buildWeiduTable, type VarRow, type VarSection } from "../../../shared/tooltip-table.ts";
-import { WEIDU_TP2_CALLABLE_PREFIX } from "../../../shared/stanza-names.ts";
-import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types.ts";
-import { strRefParamIndexes } from "../../../shared/strref-params.ts";
+import { formatSignature } from "@bgforge/shared/signature-format.ts";
+import { buildSignatureBlock, buildWeiduHoverContent, formatDeprecation } from "@bgforge/shared/tooltip-format.ts";
+import { buildFalloutArgsTable, buildWeiduTable, type VarRow, type VarSection } from "@bgforge/shared/tooltip-table.ts";
+import { WEIDU_TP2_CALLABLE_PREFIX } from "@bgforge/shared/stanza-names.ts";
+import { WEIDU_JSDOC_TYPES } from "@bgforge/shared/weidu-types.ts";
+import { strRefParamIndexes } from "@bgforge/shared/strref-params.ts";
 import { cmpStr } from "./yaml-helpers.ts";
 
 // -- Types --

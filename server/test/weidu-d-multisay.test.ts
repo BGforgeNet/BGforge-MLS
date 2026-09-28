@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll } from "vitest";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { initParser, isInitialized } from "../../shared/parsers/weidu-d";
+import { initParser, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 
 // A single-state dialog whose SAY is a multisay (`@a = @b = @c`). The model must keep every text,
 // not just the first - the pre-existing truncation this test pins.

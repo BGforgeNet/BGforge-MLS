@@ -9,7 +9,7 @@
 import { parentPort, workerData } from "node:worker_threads";
 import type { SslInput } from "./args";
 import { runInput, type TaskArgs } from "./cli-task";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 interface Task {
     index: number;

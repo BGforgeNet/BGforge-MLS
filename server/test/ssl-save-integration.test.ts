@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
-import { modelFromSSL } from "../../shared/dialog-model";
-import { applySSLDialogEdits } from "../../shared/dialog-ssl-edit";
-import { allocateNodeIds, allocateOptionIds } from "../../shared/dialog-ssl-ids";
-import { appendMsgEntries, rewriteMsgEntries } from "../../shared/dialog-tra-edit";
+import { modelFromSSL } from "@bgforge/shared/dialog-model";
+import { applySSLDialogEdits } from "@bgforge/shared/dialog-ssl-edit";
+import { allocateNodeIds, allocateOptionIds } from "@bgforge/shared/dialog-ssl-ids";
+import { appendMsgEntries, rewriteMsgEntries } from "@bgforge/shared/dialog-tra-edit";
 
 // Exercises the full add-option save composition the panel runs (parse -> allocate ids -> splice .ssl
 // -> rewrite+append .msg), end to end through the REAL parser, minus only vscode's WorkspaceEdit write.

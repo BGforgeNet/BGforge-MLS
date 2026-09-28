@@ -30,7 +30,7 @@ import {
     renameSymbolWorkspace,
     prepareRenameSymbolWorkspace,
 } from "../../src/fallout-ssl/rename";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 
@@ -38,7 +38,7 @@ import { parseFile } from "../../src/fallout-ssl/header-parser";
 const extractCallSites = (text: string, uri: string) => parseFile(uri, text).refs;
 import { Symbols } from "../../src/core/symbol-index";
 import { FileIndex } from "../../src/core/file-index";
-import { LANG_FALLOUT_SSL } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL } from "@bgforge/shared/languages";
 import { pathToUri } from "../../src/uri-utils";
 import { isHeaderFile } from "../../src/core/location-utils";
 import { normalizeUri } from "../../src/core/normalized-uri";

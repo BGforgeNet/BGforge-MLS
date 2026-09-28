@@ -11,7 +11,7 @@
  */
 
 import { readDlg } from "@bgforge/binary";
-import { resrefName } from "../../../shared/dialog-model-dlg";
+import { resrefName } from "@bgforge/shared/dialog-model-dlg";
 
 /** One reply that leads somewhere: which dialog holds it, which state offers it, and its position there. */
 export interface InboundRef {

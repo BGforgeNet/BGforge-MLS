@@ -15,7 +15,7 @@
 
 import type { FlatNode, Model } from "./model";
 import type { RelationshipModel } from "./relationship/types";
-import { enumSelectedLabel, enumHexDigits } from "../../shared/enum-label";
+import { enumSelectedLabel, enumHexDigits } from "@bgforge/shared/enum-label";
 import { projectRow } from "./window";
 
 /** Computes a one-line display summary for a list-section group entry. */

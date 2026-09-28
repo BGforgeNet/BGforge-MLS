@@ -12,7 +12,7 @@ import { fireRefresh } from "../shared/lsp-refresh";
 import { handleCompileError } from "./compile-error";
 import { prewarmTsslCompileWorker } from "../tssl/compile-worker-client";
 import { prewarmTranspileWorker } from "../transpile/transpile-worker-client";
-import { EXT_TBAF, EXT_TD, EXT_TSSL } from "../../../shared/languages";
+import { EXT_TBAF, EXT_TD, EXT_TSSL } from "@bgforge/shared/languages";
 import {
     type MLSsettings,
     defaultSettings,

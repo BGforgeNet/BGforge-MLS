@@ -13,7 +13,7 @@
 import * as fs from "fs";
 import { parentPort } from "worker_threads";
 import { compileSource } from "../../../compilers/ssl/src/compile";
-import { getParser as getSSLParser, initParser as initSSLParser } from "../../../shared/parsers/fallout-ssl";
+import { getParser as getSSLParser, initParser as initSSLParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { pathToUri } from "../uri-utils";
 import { problemDiagnostics } from "./compile-diagnostics";
 import type { CompileRequest, CompileResponse, Diagnostic } from "./compile-worker-protocol";

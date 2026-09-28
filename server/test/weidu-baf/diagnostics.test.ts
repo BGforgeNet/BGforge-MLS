@@ -18,7 +18,7 @@ vi.mock("../../src/user-messages", () => ({
 
 // A parser that reports itself initialized, and a game that opens but yields neither table, so the
 // tables/style-undefined arm is reachable without a real grammar or install on disk.
-vi.mock("../../../shared/parsers/parser-manager", () => ({
+vi.mock("@bgforge/shared/parsers/parser-manager", () => ({
     parserManager: { isInitialized: () => true },
 }));
 

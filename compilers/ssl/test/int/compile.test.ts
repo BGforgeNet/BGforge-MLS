@@ -18,9 +18,9 @@ import * as path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileFile } from "../../src/compile.ts";
-import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
-import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 

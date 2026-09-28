@@ -15,7 +15,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { EXT_TSSL } from "../../../shared/languages";
+import { EXT_TSSL } from "@bgforge/shared/languages";
 import { emitProgram } from "../../ssl/src/compile";
 import { optimize } from "../../ssl/src/optimize";
 import { createBatchState, transpile, type TranspileBatchState } from "./index";
@@ -29,7 +29,7 @@ import {
     safeProcess,
     reportDiff,
     reportFatal,
-} from "../../../shared/cli/cli-utils";
+} from "@bgforge/shared/cli/cli-utils";
 
 // A TSSL source is a TypeScript module; the largest in real mod corpora stay well under 200 KB. The cap
 // is a defence against an oversized or truncated input triggering a large allocation before the parser

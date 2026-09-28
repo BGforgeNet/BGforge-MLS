@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Handle, Position } from "@xyflow/svelte";
-    import { choiceBadges, resolveText, stateBadges, stateHeadLabel, type DialogState } from "../../../../shared/dialog-model";
-    import type { Reachability } from "../../../../shared/dialog-reachability";
+    import { choiceBadges, resolveText, stateBadges, stateHeadLabel, type DialogState } from "@bgforge/shared/dialog-model";
+    import type { Reachability } from "@bgforge/shared/dialog-reachability";
     import Badge from "./Badge.svelte";
     import LowIntChip from "./LowIntChip.svelte";
     import { isUnsavedDraftState } from "./inspector-edit";

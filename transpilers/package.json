@@ -50,6 +50,7 @@
         "esbuild-wasm": "catalog:"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "fast-check": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"

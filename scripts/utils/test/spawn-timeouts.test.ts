@@ -14,7 +14,7 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 const SYNC_SPAWN = /\b(execFileSync|execSync|spawnSync)\s*\(/g;
 

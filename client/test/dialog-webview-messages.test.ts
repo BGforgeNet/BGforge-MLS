@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type WebviewToHost, isWebviewToHost } from "../src/dialog-editor/webview/messages";
-import type { DialogModel } from "../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 // The union must accept every message shape the webview actually posts (main.ts "ready",
 // DialogGraph "revealSource"/"edit"/"notify", installFatalErrorHandler "runtimeError").

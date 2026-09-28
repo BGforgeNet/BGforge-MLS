@@ -42,6 +42,7 @@
     "devDependencies": {
         "@bgforge/binary": "workspace:*",
         "@bgforge/format": "workspace:*",
+        "@bgforge/shared": "workspace:*",
         "@types/node": "catalog:",
         "fast-check": "catalog:",
         "fast-glob": "catalog:",

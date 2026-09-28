@@ -69,7 +69,7 @@ import { getContextAtPosition, getFuncParamsContext, isAtDeclarationSite } from 
 import { filterItemsByContext } from "./completion/filter";
 import { getParamCompletions } from "./completion/parameter";
 import { CompletionCategory, CompletionContext, type Tp2CompletionItem } from "./completion/types";
-import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { initParser, parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { getDocumentSymbols } from "./symbol";
 import { getDefinition, isOnFunctionCallParamName } from "./definition";
 import { parseFile } from "./header-parser";
@@ -88,7 +88,7 @@ import {
     clearLocalSymbolsCache,
     type LocalSymbolsData,
 } from "./local-symbols";
-import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
+import { WEIDU_JSDOC_TYPES } from "@bgforge/shared/weidu-types";
 import { getJsdocCompletions as getSharedJsdocCompletions } from "../shared/jsdoc-completions";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { createSelectionRangesProvider } from "../shared/selection-ranges";

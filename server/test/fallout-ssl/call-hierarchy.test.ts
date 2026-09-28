@@ -14,7 +14,7 @@ import {
     type DefLookup,
     type TextLookup,
 } from "../../src/fallout-ssl/call-hierarchy";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
     await initParser();

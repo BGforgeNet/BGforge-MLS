@@ -27,7 +27,7 @@
  * keeping a last-good model to fall back on.
  */
 
-import type { DialogModel } from "../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 export interface ReparseMessage {
     type?: string;

@@ -15,7 +15,7 @@ const mockParseWithCache = vi.fn();
 const mockGetParser = vi.fn();
 
 // Each call to createCachedParserModule returns a fresh mock module instance.
-vi.mock("../../../shared/parsers/parser-factory", () => ({
+vi.mock("@bgforge/shared/parsers/parser-factory", () => ({
     createCachedParserModule: vi.fn(() => ({
         init: mockInit,
         isInitialized: mockIsInitialized,
@@ -26,7 +26,7 @@ vi.mock("../../../shared/parsers/parser-factory", () => ({
 
 // Import after mocks are set up.  Use a fresh ParserManager instance for each
 // test by importing the class directly rather than the singleton.
-import { parserManager, setParserLogger } from "../../../shared/parsers/parser-manager";
+import { parserManager, setParserLogger } from "@bgforge/shared/parsers/parser-manager";
 
 const mockLogger = { info: vi.fn(), error: vi.fn() };
 setParserLogger(mockLogger);
@@ -46,7 +46,7 @@ describe("core/parser-manager", () => {
         });
 
         it("is a no-op when the same langId is registered a second time", async () => {
-            const { createCachedParserModule } = await import("../../../shared/parsers/parser-factory");
+            const { createCachedParserModule } = await import("@bgforge/shared/parsers/parser-factory");
             const callsBefore = vi.mocked(createCachedParserModule).mock.calls.length;
 
             parserManager.register("dup-lang", "dup.wasm", "Dup");

@@ -17,7 +17,7 @@ import {
     LANG_WEIDU_TRA,
     LANG_WEIDU_TP2,
 } from "../core/languages";
-import { parserManager, setParserLogger } from "../../../shared/parsers/parser-manager";
+import { parserManager, setParserLogger } from "@bgforge/shared/parsers/parser-manager";
 import { registry } from "../provider-registry";
 import * as settings from "../settings";
 import { defaultSettings, normalizeSettings } from "../settings";

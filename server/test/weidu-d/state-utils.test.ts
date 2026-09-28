@@ -11,7 +11,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { normalizeDialogFile, findLabelNodeAtPosition, findStateInDialog } from "../../src/weidu-d/state-utils";
-import { parseWithCache, initParser } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, initParser } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();
