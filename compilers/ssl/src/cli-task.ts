@@ -163,10 +163,12 @@ function defaultOutput(file: string, suffix: string): string {
     return path.join(path.dirname(file), stem + suffix === base ? `${stem}1${suffix}` : stem + suffix);
 }
 
-/** One line naming the file and, where the error knows it, the position inside it. */
+/** A line per problem, naming the file and, where the error knows it, the position inside it. */
 function describe(error: unknown, file: string): string {
     if (error instanceof PreprocessError) return `Error: ${error.message}`;
-    // A diagnostic naming its own file sits in an included header; the message's line belongs to it.
-    if (error instanceof CompileError) return `Error: ${error.diagnostics[0]?.file ?? file}:${error.message}`;
+    // A diagnostic naming its own file sits in an included header; its line belongs to that file.
+    if (error instanceof CompileError) {
+        return error.diagnostics.map((d) => `Error: ${d.file ?? file}:${d.line}:${d.column}: ${d.message}`).join("\n");
+    }
     return `Error: ${file}: ${error instanceof Error ? error.message : String(error)}`;
 }

@@ -260,6 +260,15 @@ describe("ssl CLI", () => {
             expect(fs.existsSync(path.join(tmpDir, "broken.int"))).toBe(false);
         });
 
+        // The compiler found both; printing only the first costs a compile per error to clean them up.
+        it("reports every error the compile found, one line each", () => {
+            const file = source("two.ssl", "procedure start begin\n a := nope1;\n b := nope2;\nend\n");
+            const { code, stderr } = run(file);
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${file}:2:`);
+            expect(stderr).toContain(`Error: ${file}:3:`);
+        });
+
         it("reports an error below directives on the line the author wrote", () => {
             // The compiler positions errors in the preprocessed text, where the two defines have
             // vanished - unmapped, this would say line 2.
