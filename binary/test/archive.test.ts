@@ -16,6 +16,7 @@ import {
     openGame,
     detectGameIdentity,
     bufferSource,
+    fileSource,
     resourceTypeExt,
     resourceTypeCode,
     type ByteSource,
@@ -436,6 +437,20 @@ describe("byte-source bounds", () => {
         expect(() => src.read(2, 5)).toThrow(/out of bounds/);
         expect(() => src.read(-1, 1)).toThrow(/Invalid read/);
     });
+
+    // Reads out of an archive happen long after it was opened, where nothing else knows which file it was.
+    it("names the file an out-of-bounds read was made on", () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "byte-source-"));
+        const file = path.join(dir, "three.bin");
+        fs.writeFileSync(file, Uint8Array.from([1, 2, 3]));
+        const src = fileSource(file);
+        try {
+            expect(() => src.read(2, 5)).toThrow(`${file}: Read out of bounds`);
+        } finally {
+            src.close();
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
+    });
 });
 
 describe("TLK (dialog.tlk)", () => {
@@ -800,6 +815,26 @@ describe("openGame (real filesystem)", () => {
         const dir = makeGameDir({ override: new Uint8Array([1]) });
         const game = openGame(dir);
         game.close();
+    });
+
+    // An install has hundreds of archives; an error that does not say which is one to search for.
+    it("names the KEY it could not read", () => {
+        const dir = makeGameDir();
+        fs.writeFileSync(path.join(dir, "chitin.key"), new Uint8Array(24));
+        expect(() => openGame(dir)).toThrow(`${path.join(dir, "chitin.key")}: Not a KEY V1 file`);
+    });
+
+    it("names the BIF it could not read", () => {
+        const dir = makeGameDir();
+        fs.writeFileSync(path.join(dir, "data", "test.bif"), new Uint8Array(24));
+        const game = openGame(dir);
+        try {
+            expect(() => game.read("item01", "itm")).toThrow(
+                `${path.join(dir, "data", "test.bif")}: Unrecognized BIF signature`,
+            );
+        } finally {
+            game.close();
+        }
     });
 
     it("reuses one open BIF across reads and reports missing resources", () => {

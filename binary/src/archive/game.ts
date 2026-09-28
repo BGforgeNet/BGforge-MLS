@@ -351,10 +351,20 @@ function bifSearchRelRoots(gameDir: string): string[] {
     return [...roots];
 }
 
+/** Opens an archive file, naming it in any refusal: an install has hundreds, and a parser is handed bytes alone. */
+function named<T>(file: string, open: () => T): T {
+    try {
+        return open();
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(reason.startsWith(file) ? reason : `${file}: ${reason}`, { cause: error });
+    }
+}
+
 export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const keyPath = resolveCaseInsensitive(gameDir, "chitin.key");
     if (!keyPath) throw new Error(`chitin.key not found in ${gameDir}`);
-    const key = parseKey(fs.readFileSync(keyPath));
+    const key = named(keyPath, () => parseKey(fs.readFileSync(keyPath)));
     const openBifs = new Map<number, BifArchive>();
     const bifRelRoots = bifSearchRelRoots(gameDir);
 
@@ -522,7 +532,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     : `BIF file not found: ${entry.name}`,
             );
         }
-        const archive = openBif(fileSource(bifPath));
+        const archive = named(bifPath, () => openBif(fileSource(bifPath)));
         openBifs.set(bifIndex, archive);
         return archive;
     }
@@ -716,7 +726,9 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     resolved = resolveGamePath(gameDir, candidate);
                     if (resolved) break;
                 }
-                entry = resolved ? openTlk(fileSource(resolved), { encoding: tlkEncoding }) : null;
+                entry = resolved
+                    ? named(resolved, () => openTlk(fileSource(resolved), { encoding: tlkEncoding }))
+                    : null;
                 tlkCache.set(variant, entry);
             }
             return entry ?? undefined;
