@@ -4,7 +4,7 @@
  * A DLG is the compiled form of what a `.d` file describes, so it produces the same model D does and renders
  * through the same graph rather than getting a parallel one of its own. The differences are all absences:
  * states have indices instead of labels, spoken text is a strref rather than inline, and there is no source
- * text - hence no byte ranges. A line is therefore changed by repointing its strref rather than by editing
+ * text - hence no ranges. A line is therefore changed by repointing its strref rather than by editing
  * text, and each state and reply carries its file position so the writer can rebuild the file from the model.
  *
  * The input is declared structurally rather than imported from `@bgforge/binary`, which `shared/` does not

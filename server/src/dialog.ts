@@ -64,7 +64,7 @@ export async function parseDialog(
               topLevel: boolean;
           }>
         | undefined;
-    // Byte offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement).
+    // Offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement).
     let entryCallAnchor: number | undefined;
     // Each `force_dialog_start(Node)` / `start_dialog_at_node(Node)` call reached from OUTSIDE talk_p_proc
     // (timers, map-enter handlers). Only the target-identifier span is captured (a call_expr target has no plain
@@ -260,7 +260,7 @@ function collectEntryCalls(talkProc: SyntaxNode): Array<{
     return result;
 }
 
-// The byte offset where a NEW entry call is spliced into talk_p_proc: end of its last body statement.
+// The offset where a NEW entry call is spliced into talk_p_proc: end of its last body statement.
 // Mirrors nodeInsertAnchor's `body.at(-1)` logic but returns only the offset (no indent needed here).
 function entryCallSpliceAnchor(talkProc: SyntaxNode): number | undefined {
     const body = talkProc.childrenForFieldName("body");
@@ -270,7 +270,7 @@ function entryCallSpliceAnchor(talkProc: SyntaxNode): number | undefined {
 
 // Returns true when `node` is a direct child in the `body` field of `proc`.
 // web-tree-sitter returns fresh wrapper objects on every access, so identity comparison (`===`) never works;
-// we match by byte span (startIndex + endIndex) instead.
+// we match by span (startIndex + endIndex) instead.
 function isDirectBodyChild(proc: SyntaxNode, node: SyntaxNode): boolean {
     return proc
         .childrenForFieldName("body")
@@ -286,7 +286,7 @@ function parseProcedure(
     const replies: SSLDialogReply[] = [];
     const options: SSLDialogOption[] = [];
     const callTargets: string[] = [];
-    // One entry per `call <target>;` statement (NOT deduped, unlike callTargets) carrying its byte span
+    // One entry per `call <target>;` statement (NOT deduped, unlike callTargets) carrying its span
     // (for delete), the target identifier span (for rename/delete-by-call), and whether the call is top-level.
     const callTransitions: Array<{
         name: string;
@@ -405,7 +405,7 @@ function parseProcedure(
                             ? { start: target.startIndex, end: target.endIndex }
                             : undefined;
                     // topLevel: this call_stmt is a direct body child of the procedure.
-                    // web-tree-sitter returns fresh wrapper objects, so compare by byte span, not reference.
+                    // web-tree-sitter returns fresh wrapper objects, so compare by span, not reference.
                     const topLevel = isDirectBodyChild(proc, node);
                     // Record EVERY call site (a node may `call X;` more than once, e.g. one call per
                     // if-branch). callTransitions carries one entry per site so rename rewrites all of
@@ -782,7 +782,7 @@ function classifyMsgId(node: SyntaxNode): "computed" | "random" | undefined {
  * each condition once at its own nesting level. For a single-level `if` (the faithful/bundle tiers) the result
  * is that one condition unchanged, so those tiers' round-trip is byte-identical.
  *
- * When `skip` is given, `if`s whose byte-span key is in it are omitted - used to scope an option's condition to
+ * When `skip` is given, `if`s whose span key is in it are omitted - used to scope an option's condition to
  * its own state by dropping the state-level gate (the enclosing `if`s the state's first Reply also sits under,
  * already shown as the state trigger), so that gate is not re-shown on every child option.
  */
@@ -797,7 +797,7 @@ function enclosingCondition(node: SyntaxNode, skip?: ReadonlySet<string>): strin
             const cond = cur.childForFieldName("cond")?.text;
             if (cond !== undefined) {
                 const elseBody = cur.childForFieldName("else");
-                // Compare by byte span, not reference: web-tree-sitter returns fresh wrapper objects for the
+                // Compare by span, not reference: web-tree-sitter returns fresh wrapper objects for the
                 // same node, so `prev === elseBody` is never true. SSL negation is `not (...)` (not the C/D `!`),
                 // and SSL conditions are already parenthesized (`if (X)`), so `not (X)` is well-formed.
                 const inElse =
@@ -814,7 +814,7 @@ function enclosingCondition(node: SyntaxNode, skip?: ReadonlySet<string>): strin
     return parts.length === 1 ? parts[0] : parts.join(" and ");
 }
 
-// Byte-span keys of every enclosing `if` statement of `node`, up to the procedure body. Identifies the exact
+// Span keys of every enclosing `if` statement of `node`, up to the procedure body. Identifies the exact
 // `if` nodes so a caller can subtract a state-level gate from an option's condition by node identity (robust
 // against two different `if`s sharing the same condition text - see `enclosingCondition`'s `skip`).
 function enclosingIfKeys(node: SyntaxNode): ReadonlySet<string> {
@@ -851,7 +851,7 @@ function enclosingIfSpans(
             const condNode = cur.childForFieldName("cond");
             const thenBody = cur.childForFieldName("then");
             if (!condNode || !thenBody) return undefined;
-            // Compare by byte span - web-tree-sitter returns fresh wrapper objects on each access
+            // Compare by span - web-tree-sitter returns fresh wrapper objects on each access
             const inThen = prev.startIndex === thenBody.startIndex && prev.endIndex === thenBody.endIndex;
             if (!inThen) return undefined; // else branch (or malformed) - not editable
             inner = {

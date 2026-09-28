@@ -273,7 +273,7 @@ export function lookupDefinition(
  * per-line ordering is positional for both consumers.
  *
  * Works because callers split by newline first, so each line is single-line. Multiline patterns would
- * need byte-offset-to-position conversion like in weidu-tp2/rename.ts.
+ * need an offset-to-position conversion.
  */
 interface LineRef {
     entryNum: string;

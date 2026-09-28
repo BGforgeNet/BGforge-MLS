@@ -10,10 +10,11 @@ import type * as vscode from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
 import type { DialogModel } from "../../shared/dialog-model";
 
-const { applyEditMock, computeDialogSourceEditMock, showErrorMessageMock } = vi.hoisted(() => ({
+const { applyEditMock, computeDialogSourceEditMock, showErrorMessageMock, showTextDocumentMock } = vi.hoisted(() => ({
     applyEditMock: vi.fn(async () => true),
     computeDialogSourceEditMock: vi.fn(() => ({ newText: null, messages: {}, allocations: {} })),
     showErrorMessageMock: vi.fn(),
+    showTextDocumentMock: vi.fn(async () => ({ revealRange: vi.fn() })),
 }));
 
 // A valid (empty) D parse payload: toModel keys off `blocks`/`nodes`, so this yields a non-null model - a normal
@@ -24,6 +25,8 @@ vi.mock("vscode", () => ({
     Uri: { joinPath: (...parts: unknown[]) => ({ path: parts.join("/") }) },
     Range: vi.fn(),
     Position: vi.fn(),
+    ViewColumn: { Active: -1 },
+    TextEditorRevealType: { InCenter: 2 },
     WorkspaceEdit: class {
         replace(): void {}
     },
@@ -36,6 +39,8 @@ vi.mock("vscode", () => ({
         showErrorMessage: showErrorMessageMock,
         showWarningMessage: vi.fn(),
         showInformationMessage: vi.fn(),
+        showTextDocument: showTextDocumentMock,
+        visibleTextEditors: [],
     },
 }));
 
@@ -188,5 +193,31 @@ describe("DialogEditorProvider - session wiring", () => {
         const toast = showErrorMessageMock.mock.calls[0]?.[0] as string;
         expect(toast).toContain("boom");
         expect(toast).toContain("x.d");
+    });
+});
+
+describe("DialogEditorProvider - go to source", () => {
+    it("reveals the offset it is given as a character offset, with accented text before it", async () => {
+        // The model's ranges are tree-sitter indices over the JS string the server parsed - UTF-16 code units,
+        // the same unit positionAt takes - so no conversion applies.
+        const text = "// ééééé\nIF ~~ first\n";
+        const target = text.indexOf("IF");
+        const positionAt = vi.fn((n: number) => ({ n }));
+        const doc = { ...document, getText: () => text, positionAt } as unknown as vscode.TextDocument;
+        const provider = new DialogEditorProvider(context, {
+            sendRequest: vi.fn().mockResolvedValue(OK_PARSE),
+        } as unknown as LanguageClient);
+        const h = makePanel();
+        await provider.resolveCustomTextEditor(
+            doc,
+            h.panel as unknown as vscode.WebviewPanel,
+            {} as vscode.CancellationToken,
+        );
+
+        h.fireMessage({ type: "revealSource", offset: target });
+        await flush();
+
+        expect(positionAt).toHaveBeenCalledWith(target);
+        expect(showTextDocumentMock).toHaveBeenCalledTimes(1);
     });
 });

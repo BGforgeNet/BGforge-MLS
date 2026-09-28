@@ -323,8 +323,8 @@
         for (const id of ids) if (next.delete(id)) changed = true;
         if (changed) treeCollapsed = next;
     }
-    // Go to source (F4): ask the host to open the .ssl/.d text editor at this byte offset. The host owns the
-    // document and the byte->position conversion (see panel.ts revealSource).
+    // Go to source (F4): ask the host to open the .ssl/.d text editor at this offset. The host owns the
+    // document and the offset->position conversion (see panel.ts revealSource).
     function goToSource(sourceOffset: number): void {
         postToHost({ type: "revealSource", offset: sourceOffset });
     }

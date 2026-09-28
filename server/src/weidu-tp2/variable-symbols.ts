@@ -199,8 +199,8 @@ export function collectLoopVarNames(loopNode: SyntaxNode): ReadonlySet<string> {
 function findVariableInStringContent(node: SyntaxNode, position: Position): string | null {
     const text = node.text;
 
-    // Convert cursor position to byte offset within the node's text
-    const cursorOffset = positionToByteOffset(text, position, node.startPosition);
+    // Convert cursor position to offset within the node's text
+    const cursorOffset = positionToOffset(text, position, node.startPosition);
     if (cursorOffset < 0 || cursorOffset > text.length) {
         return null;
     }
@@ -223,10 +223,10 @@ function findVariableInStringContent(node: SyntaxNode, position: Position): stri
 }
 
 /**
- * Convert a Position to a byte offset within text, given the text's base position.
+ * Convert a Position to an offset within text, given the text's base position.
  * Handles multiline strings correctly. Returns -1 if position is before base.
  */
-function positionToByteOffset(text: string, position: Position, basePosition: { row: number; column: number }): number {
+function positionToOffset(text: string, position: Position, basePosition: { row: number; column: number }): number {
     // If cursor is before the node, return -1
     if (position.line < basePosition.row) {
         return -1;

@@ -12,11 +12,11 @@ import { KW_BEGIN, KW_END } from "@bgforge/format/internal";
  * Used by function definitions and control flow constructs.
  */
 interface BlockBoundaries {
-    /** Byte offset where BEGIN keyword ends (after the BEGIN keyword) */
+    /** Offset where BEGIN keyword ends (after the BEGIN keyword) */
     beginEnd: number;
-    /** Byte offset where END keyword starts (before the END keyword) */
+    /** Offset where END keyword starts (before the END keyword) */
     endStart: number;
-    /** Optional: byte offset where function name ends (used for detecting funcParams context) */
+    /** Optional: offset where function name ends (used for detecting funcParams context) */
     functionNameEnd?: number;
 }
 

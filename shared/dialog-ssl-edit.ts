@@ -7,7 +7,7 @@
  * nested-if/assignment - see `SSLDialogNode.faithful`) are structurally editable; an edit to a
  * non-faithful node is ignored so we never corrupt control flow the graph never captured.
  *
- * Tier 1 (retarget + reorder) rearranges/rewrites existing option-call byte spans. Tier 2 adds
+ * Tier 1 (retarget + reorder) rearranges/rewrites existing option-call spans. Tier 2 adds
  * removal (delete a flat option's whole statement) and insertion (serialize a new `NOption`/
  * `NMessage` whose `.msg` id was allocated at save time - see dialog-ssl-ids.ts - and splice it in
  * after the last surviving option). `nodeOps` composes all four as non-overlapping splices per node.
@@ -532,7 +532,7 @@ export function branchStructureOps(
     edited: DialogState,
     orig: DialogState,
     // The branch serializer for the ADD paths - `serializeSSLBranch` for `.ssl` (`if (c) then begin...end`),
-    // `serializeTSSLBranch` for `.tssl` (`if (c) { ... }`). REMOVE is byte-range only and language-agnostic.
+    // `serializeTSSLBranch` for `.tssl` (`if (c) { ... }`). REMOVE is range only and language-agnostic.
     serializeBranch: typeof serializeSSLBranch = serializeSSLBranch,
 ): SpliceOp[] {
     const ops: SpliceOp[] = [];
@@ -599,7 +599,7 @@ export function branchStructureOps(
         if (b.kind === "if") {
             // Insert after the last SURVIVING original branch's stmtRange.end. Anchoring at a
             // removed branch's end would produce a splice that technically overlaps the removal
-            // (both touch the same byte range). Filter to originals whose stmtRange.start is in
+            // (both touch the same range). Filter to originals whose stmtRange.start is in
             // editedIfStarts (the survivor set the REMOVE pass already built above). If all
             // originals are removed alongside this add, fall back to the min original
             // stmtRange.start - a point that precedes any removal and remains inside the
@@ -720,7 +720,7 @@ export interface FalloutFamilyWriteVariant {
 
 /**
  * Write structural edits back to a fallout-ssl-family source (`.ssl` or `.tssl`), the ONE engine both variants
- * share. Diffs `edited` against `original` (matched by state id), builds byte splices from the captured ranges,
+ * share. Diffs `edited` against `original` (matched by state id), builds splices from the captured ranges,
  * and applies them; only faithful/bundle nodes are eligible and an edit to a non-faithful node is silently
  * skipped (its structure is read-only). Returns the original text unchanged when there is nothing to splice.
  * The `variant` supplies the target-syntax pieces; the callers (`applySSLDialogEdits`/`applyTSSLDialogEdits`)
@@ -871,7 +871,7 @@ export function applyFalloutFamilyEdits(
         if (blocks.length > 0) {
             // Guarantee the spliced procedure starts on its own line. `newProcAnchor` normally sits at the start
             // of `procedure talk_p_proc` (preceded by a newline), but the webview model can carry a STALE anchor
-            // between saves (its byte offsets are not re-projected until reconcile), so a length-changing prior
+            // between saves (its offsets are not re-projected until reconcile), so a length-changing prior
             // edit - e.g. a rename - can leave the char before the anchor mid-token (a preceding `end`). Inserting
             // there yields `endprocedure <name>`, which lexes as one identifier and drops the node on re-parse.
             // Prepend a newline whenever the preceding char is not already one.

@@ -9,6 +9,8 @@
 
 ### Dialog editor
 
+- Go to source (F4) opens the `.d` or `.ssl` file on the state's own line when accented or other non-ASCII text
+  appears earlier in the file, instead of a line too early.
 - In a `.dlg` dialog, an action the editor refuses (Del on a state that cannot be deleted) shows a message saying
   why, as it already did for `.d` and `.ssl` dialogs, instead of doing nothing.
 

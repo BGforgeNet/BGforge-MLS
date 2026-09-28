@@ -99,7 +99,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
                 case "ready":
                     core.handleReady();
                     break;
-                // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
+                // "Go to source" (F4 in the tree): open the text editor at the state's/option's offset.
                 case "revealSource":
                     void this.revealSource(document, raw.offset);
                     break;
@@ -132,14 +132,11 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
      * "Go to source" (F4 from the tree): reveal the .ssl/.d text editor with the caret on the state's/option's
      * source line. If the document is already open in a text editor, reveal THAT one in place (never spawn a
      * fresh tab each time); otherwise open it in the active column full-width, not split beside the dialog
-     * editor. Tree-sitter ranges are UTF-8 BYTE offsets while `positionAt` wants a UTF-16 CHAR offset, so
-     * convert through the document's own text (offsets land on token boundaries, so the byte prefix never
-     * splits a character).
+     * editor. The offset is a tree-sitter index over the JS string the server parsed: UTF-16 code units, the
+     * unit `positionAt` takes.
      */
-    private async revealSource(document: vscode.TextDocument, byteOffset: number): Promise<void> {
-        const text = document.getText();
-        const charOffset = Buffer.from(text, "utf8").subarray(0, byteOffset).toString("utf8").length;
-        const pos = document.positionAt(charOffset);
+    private async revealSource(document: vscode.TextDocument, offset: number): Promise<void> {
+        const pos = document.positionAt(offset);
         const range = new vscode.Range(pos, pos);
         const uri = document.uri.toString();
         // Prefer an existing text editor for this document (in whatever column it already lives); else the

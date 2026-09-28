@@ -3,8 +3,10 @@
  *
  * The dialog editor renders and edits this model; format-specific vocabulary
  * (WeiDU D `CHAIN`/`EXTERN`, Fallout SSL `NOption`/`Reply`) lives only in the
- * adapters that map a parser's output into it. See
- * `docs/superpowers/specs/2026-06-18-dialog-editor-design.md`.
+ * adapters that map a parser's output into it.
+ *
+ * Every range and offset into the source here and in `dialog-types.ts` is a tree-sitter index over the JS
+ * string the server parsed: UTF-16 code units, the unit of an LSP position and of `text.slice`.
  */
 
 import { sslNameKey } from "./fallout-ssl-names";
@@ -89,7 +91,7 @@ export interface DialogModel {
      */
     dlgUnresolvedStrrefs?: number;
     /**
-     * SSL only: byte offset just before `talk_p_proc`, where a newly-added node's procedure is spliced in.
+     * SSL only: offset just before `talk_p_proc`, where a newly-added node's procedure is spliced in.
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
      */
     newProcAnchor?: number;
@@ -110,7 +112,7 @@ export interface DialogModel {
         topLevel: boolean;
     }>;
     /**
-     * SSL only: byte offset where a new entry call is spliced into talk_p_proc (end of its last body statement).
+     * SSL only: offset where a new entry call is spliced into talk_p_proc (end of its last body statement).
      * Set by the SSL adapter; absent for D and when the source has no talk_p_proc.
      */
     entryCallAnchor?: number;
@@ -159,13 +161,13 @@ export interface DialogRoot {
 export interface DialogBranch {
     kind: "if" | "else";
     condition?: string;
-    /** SSL only: byte span of the `if` condition (parens included), for editing. Absent for `else`. Set by the adapter. */
+    /** SSL only: span of the `if` condition (parens included), for editing. Absent for `else`. Set by the adapter. */
     conditionRange?: { start: number; end: number };
     /** SSL only: splice point for a new option inside this branch body. Set by the adapter. */
     insertAnchor?: { offset: number; indent: string };
-    /** SSL only: byte span of the whole `if` statement (for deleting a sibling/sole if). Set on `if` branches by the adapter. */
+    /** SSL only: span of the whole `if` statement (for deleting a sibling/sole if). Set on `if` branches by the adapter. */
     stmtRange?: { start: number; end: number };
-    /** SSL only: byte span from the `else` keyword through the else-block `end` (for deleting just the else). Set on `else` branches by the adapter. */
+    /** SSL only: span from the `else` keyword through the else-block `end` (for deleting just the else). Set on `else` branches by the adapter. */
     elseClauseRange?: { start: number; end: number };
     /** SSL only: offset right after the then-block's closing `end`, where ` else begin...end` is appended. Set on `if` branches with a block then-body by the adapter. */
     thenBlockEnd?: number;
@@ -215,14 +217,14 @@ export interface DialogState {
     weight?: number;
     choices: DialogChoice[];
     /**
-     * Byte range of the corresponding state node in the original source text.
+     * Range of the corresponding state node in the original source text.
      * Set by the WeiDU D adapter; absent on synthetic states (e.g. CHAIN-flattened)
      * and on non-D formats. Edits (including id rename) must NOT modify this field -
      * it is the stable key that maps an edited state back to its original text span.
      */
     sourceRange?: { start: number; end: number };
     /**
-     * Byte ranges of the SAY value node and trigger node within the source, for per-field
+     * Ranges of the SAY value node and trigger node within the source, for per-field
      * surgical write-back (splice only the changed field). Set by the WeiDU D adapter;
      * absent on synthetic/derived states and non-D formats. Like `sourceRange`, edits must
      * not modify these - they key an edited field back to its original span.
@@ -276,32 +278,32 @@ export interface DialogState {
      */
     insertAnchor?: { offset: number; indent: string };
     /**
-     * SSL only: byte span of the whole `procedure <name> ... end` block (used to delete the node). Set by
+     * SSL only: span of the whole `procedure <name> ... end` block (used to delete the node). Set by
      * the SSL adapter; absent for D and for a NEW node (no source procedure - the "no procRange = pending
      * insert" marker, mirroring D's absent `sourceRange`).
      */
     procRange?: { start: number; end: number };
     /**
-     * SSL/TD: byte span of the node's name identifier token (SSL `procedure <name>`, TD `function <name>`), used
+     * SSL/TD: span of the node's name identifier token (SSL `procedure <name>`, TD `function <name>`), used
      * to rename the node. Set by the SSL adapter from `SSLDialogNode.nameRange` and by the WeiDU D adapter from a
      * TD state's `nameRange`; absent for tree-sitter `.d` and for new (not-yet-spliced) nodes.
      */
     nameRange?: { start: number; end: number };
     /**
-     * TD only: byte span of the entry `if (...)` that wraps this state function and holds nothing else (the
+     * TD only: span of the entry `if (...)` that wraps this state function and holds nothing else (the
      * state-gate pattern). A node DELETE splices this whole `if` out instead of just the function span, so the
      * removal does not leave a dead empty gate. Set by the WeiDU D adapter from a TD state's `enclosingIfRange`;
      * absent for tree-sitter `.d`, SSL, unwrapped states, and states sharing a gate with siblings.
      */
     enclosingIfRange?: { start: number; end: number };
     /**
-     * SSL only: byte span of the name token in this node's forward declaration (`procedure <name>;`), when
+     * SSL only: span of the name token in this node's forward declaration (`procedure <name>;`), when
      * one exists. Rename rewrites it alongside `nameRange`. Set by the SSL adapter from
      * `SSLDialogNode.forwardDeclRange`; absent for D, for new nodes, and for procedures with no forward decl.
      */
     forwardDeclRange?: { start: number; end: number };
     /**
-     * SSL/TD: byte span of the WHOLE forward-declaration statement (SSL `procedure <name>;`, TD
+     * SSL/TD: span of the WHOLE forward-declaration statement (SSL `procedure <name>;`, TD
      * `declare function <name>(): void;`). A node DELETE splices it out so the file is not left with an orphan
      * declaration. Set by the SSL adapter from `SSLDialogNode.forwardDeclStmtRange` and by the WeiDU D adapter
      * from a TD state's `forwardDeclStmtRange`; absent for tree-sitter `.d`, new nodes, and states with no forward decl.
@@ -318,9 +320,9 @@ export interface DialogState {
      * operation writes this field. Absent until a rename has occurred.
      */
     renamedFrom?: string;
-    /** SSL only: byte span of the first reply's enclosing `if` condition expression (for edit-text). Set by the SSL adapter. */
+    /** SSL only: span of the first reply's enclosing `if` condition expression (for edit-text). Set by the SSL adapter. */
     condRange?: { start: number; end: number };
-    /** SSL only: byte span of the first reply's enclosing `if` statement (for unwrap). Set by the SSL adapter. */
+    /** SSL only: span of the first reply's enclosing `if` statement (for unwrap). Set by the SSL adapter. */
     ifRange?: { start: number; end: number };
     /**
      * SSL only: whether this state's trigger condition may be edited/added/removed from the graph - true when
@@ -367,7 +369,7 @@ export interface DialogChoice {
     /** SSL skill/IQ gate level, when present. */
     skill?: number;
     /**
-     * Byte range of this transition's node in the original source. Set by the WeiDU D
+     * Range of this transition's node in the original source. Set by the WeiDU D
      * adapter; used by the per-field surgical edit to splice just this transition.
      */
     sourceRange?: { start: number; end: number };
@@ -379,23 +381,23 @@ export interface DialogChoice {
      */
     dlgTransition?: number;
     /**
-     * SSL only: byte span of the whole option call `NOption(...)` (used by reorder). Set by the SSL
+     * SSL only: span of the whole option call `NOption(...)` (used by reorder). Set by the SSL
      * adapter; absent for D, which uses `sourceRange` for its whole-transition span.
      */
     callRange?: { start: number; end: number };
     /**
-     * Byte span of the transition's target token, for a token-splice retarget: SSL's target-Node
+     * Span of the transition's target token, for a token-splice retarget: SSL's target-Node
      * argument, TD's `goTo(<id>)` argument, and plain D's `GOTO label` / `+ label` state label
      * (absent for EXIT/EXTERN/COPY_TRANS targets, whose retarget changes the clause shape).
      */
     targetRange?: { start: number; end: number };
     /**
-     * TD only: byte span of the transition's target-producing call `goTo(<id>)`/`exit()`/`extern(...)`, used to
+     * TD only: span of the transition's target-producing call `goTo(<id>)`/`exit()`/`extern(...)`, used to
      * flip an inbound option to `exit()` when its target node is deleted (the reply is kept). Set by the WeiDU D
      * adapter from `DDialogTransition.targetCallRange` for both statement and chain forms; absent for plain `.d` and SSL.
      */
     targetCallRange?: { start: number; end: number };
-    /** SSL only: byte span of the whole option statement `NOption(...);` incl. `;` (used by remove). */
+    /** SSL only: span of the whole option statement `NOption(...);` incl. `;` (used by remove). */
     stmtRange?: { start: number; end: number };
     /**
      * SSL only: every `call <target>;` statement this call-choice represents. callTargets is deduped to one
@@ -413,9 +415,9 @@ export interface DialogChoice {
         targetRange?: { start: number; end: number };
         topLevel: boolean;
     }>;
-    /** SSL only: byte span of the enclosing `if` condition expression (for edit-text). Set by the SSL adapter. */
+    /** SSL only: span of the enclosing `if` condition expression (for edit-text). Set by the SSL adapter. */
     condRange?: { start: number; end: number };
-    /** SSL only: byte span of the whole enclosing `if` statement (for unwrap). Set by the SSL adapter. */
+    /** SSL only: span of the whole enclosing `if` statement (for unwrap). Set by the SSL adapter. */
     ifRange?: { start: number; end: number };
     /**
      * SSL only: whether this option's condition may be edited/added/removed from the graph - true when the

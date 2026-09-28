@@ -41,7 +41,7 @@ export function extractSayTextContent(sayTextNode: SyntaxNode): string {
 }
 
 /**
- * Every text of a state's SAY, in source order, each with its byte range. A multisay
+ * Every text of a state's SAY, in source order, each with its range. A multisay
  * (`SAY @a = @b = @c`) yields one entry per text; a single SAY yields one entry.
  */
 export function extractSayTexts(stateNode: SyntaxNode): Array<{ text: string; range: { start: number; end: number } }> {
@@ -134,7 +134,7 @@ export function extractChainText(chainTextNode: SyntaxNode): string {
 }
 
 /**
- * Every text of a chain line's SAY, in source order with byte ranges - the multisay-aware analog of the
+ * Every text of a chain line's SAY, in source order with ranges - the multisay-aware analog of the
  * take-first `extractChainText`. A chain line's texts live in its `say_text` child (or, without one, directly
  * on the chain_text), so a `@a = @b = @c` chain entry yields one entry per text instead of dropping all but
  * the first. Mirrors `extractSayTexts` for the state case.
@@ -274,7 +274,7 @@ export function extractTarget(node: SyntaxNode): DDialogTarget | undefined {
 }
 
 /**
- * Byte span of a transition's target STATE label - the `label` of a `GOTO label` (goto_next) or
+ * Span of a transition's target STATE label - the `label` of a `GOTO label` (goto_next) or
  * `+ label` (short_goto) - for a token-splice retarget that leaves the rest of the transition
  * byte-identical (see dialog-d-edit's fieldEditOps). Only state targets are spliceable this way;
  * EXIT/EXTERN/COPY_TRANS retargets change the clause's shape, so they return undefined and the

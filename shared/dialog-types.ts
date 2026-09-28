@@ -63,9 +63,9 @@ export interface SSLDialogReply {
      * for a plain numeric id. Drives the computed/random honesty badges.
      */
     msgKind?: "computed" | "random";
-    /** Byte span of the enclosing `if` condition expression (the `cond` field, parens included). Set by the parser when conditional. */
+    /** Span of the enclosing `if` condition expression (the `cond` field, parens included). Set by the parser when conditional. */
     condRange?: { start: number; end: number };
-    /** Byte span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
+    /** Span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
     ifRange?: { start: number; end: number };
     /** True iff the enclosing `if` gates this reply ALONE - its then-branch holds exactly one statement (this
      * reply), so editing the condition affects nothing else. The only condition-editable shape. Set by the parser. */
@@ -89,15 +89,15 @@ export interface SSLDialogOption {
     scopedConditional?: string;
     /** See `SSLDialogReply.msgKind`: `computed`/`random` when the id is not a fixed literal. */
     msgKind?: "computed" | "random";
-    /** Byte span of the whole option call `NOption(...)` in the source (used by reorder). Set by the parser. */
+    /** Span of the whole option call `NOption(...)` in the source (used by reorder). Set by the parser. */
     callRange?: { start: number; end: number };
-    /** Byte span of the option's target-Node argument in the source (used by retarget). Set by the parser. */
+    /** Span of the option's target-Node argument in the source (used by retarget). Set by the parser. */
     targetRange?: { start: number; end: number };
-    /** Byte span of the whole option STATEMENT `NOption(...);` incl. the trailing `;` (used by remove). */
+    /** Span of the whole option STATEMENT `NOption(...);` incl. the trailing `;` (used by remove). */
     stmtRange?: { start: number; end: number };
-    /** Byte span of the enclosing `if` condition expression (the `cond` field, parens included). Set by the parser when conditional. */
+    /** Span of the enclosing `if` condition expression (the `cond` field, parens included). Set by the parser when conditional. */
     condRange?: { start: number; end: number };
-    /** Byte span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
+    /** Span of the whole enclosing `if` statement. Set by the parser when conditional. Drives unwrap. */
     ifRange?: { start: number; end: number };
     /** True iff the enclosing `if` gates this option ALONE - its then-branch holds exactly one statement (this
      * option), so editing the condition affects nothing else. The only condition-editable shape. Set by the parser. */
@@ -113,14 +113,14 @@ export interface SSLDialogOption {
 export interface SSLDialogBranch {
     kind: "if" | "else";
     condition?: string;
-    /** Byte span of the `if` condition expression (parens included), for editing. Absent for an `else` branch. */
+    /** Span of the `if` condition expression (parens included), for editing. Absent for an `else` branch. */
     conditionRange?: { start: number; end: number };
     /** Splice point for a NEW option inside this branch body: end of the branch's last statement + that
      * line's indent. For an empty branch, just inside the block. Set by the parser. */
     insertAnchor?: { offset: number; indent: string };
-    /** Byte span of the whole `if` statement (for deleting a sibling/sole if). Set on `if` branches. */
+    /** Span of the whole `if` statement (for deleting a sibling/sole if). Set on `if` branches. */
     stmtRange?: { start: number; end: number };
-    /** Byte span from the `else` keyword through the else-block `end` (for deleting just the else). Set on `else` branches. */
+    /** Span from the `else` keyword through the else-block `end` (for deleting just the else). Set on `else` branches. */
     elseClauseRange?: { start: number; end: number };
     /** Offset right after the then-block's closing `end` (thenBody.endIndex), where ` else begin...end` is appended.
      * Set on `if` branches with a block then-body. */
@@ -151,7 +151,7 @@ export interface SSLDialogGroup {
     kind: "group";
     /** The `if` condition text, parentheses included. */
     condition: string;
-    /** Byte span of the condition expression (parens included). Retained for parity with bundle branches; the
+    /** Span of the condition expression (parens included). Retained for parity with bundle branches; the
      * structured tier is display-only this slice, so it is informational rather than an edit anchor. */
     conditionRange?: { start: number; end: number };
     thenBlock: SSLDialogBlockItem[];
@@ -219,25 +219,25 @@ export interface SSLDialogNode {
      * Set by the parser for every node (the option count can be zero).
      */
     insertAnchor?: { offset: number; indent: string };
-    /** Byte span of the whole `procedure <name> ... end` block (used to delete the node). Set by the parser. */
+    /** Span of the whole `procedure <name> ... end` block (used to delete the node). Set by the parser. */
     procRange?: { start: number; end: number };
-    /** Byte span of the `procedure <name>` identifier token (used to rename the node). Set by the parser. */
+    /** Span of the `procedure <name>` identifier token (used to rename the node). Set by the parser. */
     nameRange?: { start: number; end: number };
     /**
-     * Byte span of the name token in this procedure's forward declaration (`procedure <name>;`), when one
+     * Span of the name token in this procedure's forward declaration (`procedure <name>;`), when one
      * exists. Rename rewrites it alongside `nameRange` so the file is not left with a stale forward decl.
      * Absent when the procedure has no forward declaration. Set by the parser.
      */
     forwardDeclRange?: { start: number; end: number };
     /**
-     * Byte span of the WHOLE forward-declaration statement (`procedure <name>;`), when one exists. A node
+     * Span of the WHOLE forward-declaration statement (`procedure <name>;`), when one exists. A node
      * DELETE splices this out so the file is not left with an orphan declaration for the removed procedure.
      * Distinct from `forwardDeclRange` (name token only, for rename). Set by the parser.
      */
     forwardDeclStmtRange?: { start: number; end: number };
     /**
      * One entry per `call <target>;` statement out of this node (NOT deduped - a node may call the same target
-     * more than once, e.g. one call per if-branch), carrying each statement's byte span (used to remove the call
+     * more than once, e.g. one call per if-branch), carrying each statement's span (used to remove the call
      * when its target node is deleted). `callTargets` holds the deduped names; this holds the per-site spans.
      * Set by the parser. `targetRange` is the span of the target identifier token (for rename/delete-by-call);
      * absent when the target is a call_expr rather than a plain identifier. `topLevel` is true when the call_stmt
@@ -257,7 +257,7 @@ export interface SSLDialogData {
     entryPoints: string[];
     /** Translation messages keyed by index. Populated by the client before rendering; not set by the server. */
     messages?: Record<string, string>;
-    /** Byte offset just before `talk_p_proc` (where a newly-added node's procedure is spliced in). Set by the parser. */
+    /** Offset just before `talk_p_proc` (where a newly-added node's procedure is spliced in). Set by the parser. */
     newProcAnchor?: number;
     /**
      * Each `call <entry>;` in talk_p_proc: its whole-statement span, target identifier span, and whether it is a
@@ -269,7 +269,7 @@ export interface SSLDialogData {
         targetRange: { start: number; end: number };
         topLevel: boolean;
     }>;
-    /** Byte offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement). Set by the parser. */
+    /** Offset where a NEW entry call is spliced into talk_p_proc (end of its last body statement). Set by the parser. */
     entryCallAnchor?: number;
     /**
      * Each `force_dialog_start(Node)` / `start_dialog_at_node(Node)` call reached from outside talk_p_proc (timers,
@@ -302,11 +302,11 @@ export interface DDialogTransition {
     trigger?: string;
     action?: string;
     target: DDialogTarget;
-    /** Byte span of the target identifier (the `goTo(<id>)` / `extern(file, <id>)` argument) in the source,
+    /** Span of the target identifier (the `goTo(<id>)` / `extern(file, <id>)` argument) in the source,
      * for a token-splice retarget without reflowing the transition. Set by the TD source parser. */
     targetRange?: { start: number; end: number };
     /**
-     * Byte range of this transition's node in the original source (the whole
+     * Range of this transition's node in the original source (the whole
      * `IF ... THEN ...` / `++ ... + ...` construct). Set by the parser; used by the
      * per-field surgical edit to splice just this transition without reflowing siblings.
      *
@@ -316,7 +316,7 @@ export interface DDialogTransition {
      */
     range?: { start: number; end: number };
     /**
-     * TD only: byte span of the transition's target-producing call itself - `goTo(<id>)` / `exit()` /
+     * TD only: span of the transition's target-producing call itself - `goTo(<id>)` / `exit()` /
      * `extern(...)`. A terminal-flip (an inbound option redirected to exit when its target node is deleted)
      * replaces this span with `exit()`, keeping the `reply(...)` intact. Set by the TD source parser for both
      * forms: a standalone statement-form call (`goTo(t);`) spans the whole call, and a chained `reply(m).goTo(t)`
@@ -341,19 +341,19 @@ export interface DDialogState {
      */
     blockFile?: string;
     /**
-     * Byte range of this state's node in the original source text (startIndex
+     * Range of this state's node in the original source text (startIndex
      * inclusive, endIndex exclusive). Set by the parser; absent on synthetic states
      * (e.g. CHAIN-flattened) that have no direct single-node representation.
      * Used by the surgical edit engine to splice changed states back in-place.
      */
     range?: { start: number; end: number };
     /**
-     * TD only: byte span of the state function's NAME identifier token (`function <name>`), for a rename that
+     * TD only: span of the state function's NAME identifier token (`function <name>`), for a rename that
      * rewrites the definition name. Set by the TD source parser; absent on tree-sitter-parsed `.d` states.
      */
     nameRange?: { start: number; end: number };
     /**
-     * TD only: byte span of the entry `if (...)` statement that wraps this state function AND holds nothing else
+     * TD only: span of the entry `if (...)` statement that wraps this state function AND holds nothing else
      * (the state-gate pattern, e.g. `if (Global(...)) { function stateNNN() {...} }`). A node DELETE splices this
      * whole `if` out instead of just the function span, so removing the state does not leave a dead empty gate.
      * Set by the TD source parser only when the function is the sole meaningful statement of the `if` then-block
@@ -361,13 +361,13 @@ export interface DDialogState {
      */
     enclosingIfRange?: { start: number; end: number };
     /**
-     * TD only: byte span of this state's ambient forward declaration statement (`declare function <name>(): void;`),
+     * TD only: span of this state's ambient forward declaration statement (`declare function <name>(): void;`),
      * when the file carries one. A node DELETE splices it out so no dangling declaration is left for the removed
      * state. Set by the TD source parser; absent when the state has no forward declaration.
      */
     forwardDeclStmtRange?: { start: number; end: number };
     /**
-     * Byte ranges of the state's SAY value node and trigger node, for per-field surgical
+     * Ranges of the state's SAY value node and trigger node, for per-field surgical
      * edits (splice just the changed field, leaving the rest of the state byte-identical).
      * `sayRange` covers the value after `SAY` (e.g. `@1`); `triggerRange` covers the
      * trigger string including its `~ ~` delimiters. Set by the parser; absent on synthetic
@@ -425,12 +425,12 @@ export interface DDialogBlock {
 export interface TDStateRef {
     /** The referenced state's identifier text. */
     name: string;
-    /** Byte span of the identifier token (rewritten on rename). */
+    /** Span of the identifier token (rewritten on rename). */
     range: { start: number; end: number };
     /** `list`: a state-list element (append/begin), removed wholesale with its separator on delete. `entry`: a
      *  `goTo(...)` target in an entry/extend block, redirected to `exit()` on delete. */
     kind: "list" | "entry";
-    /** Byte span of the enclosing `goTo(...)` call (for the `exit()` redirect). Set only for `kind: "entry"`. */
+    /** Span of the enclosing `goTo(...)` call (for the `exit()` redirect). Set only for `kind: "entry"`. */
     callRange?: { start: number; end: number };
 }
 
@@ -442,7 +442,7 @@ export interface TDWiring {
      *  `]`/`)`, plus the separator to prepend (", " when the list already has elements, else ""). Absent when
      *  the file declares no append/begin list. */
     listInsert?: { offset: number; separator: string };
-    /** Byte offset to insert a NEW `function` declaration: the start of the primary wiring statement. Absent when
+    /** Offset to insert a NEW `function` declaration: the start of the primary wiring statement. Absent when
      *  the file has no append/begin call. */
     newFnAnchor?: number;
 }

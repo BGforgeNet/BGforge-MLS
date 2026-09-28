@@ -65,7 +65,7 @@ function stateUnchanged(a: DialogState, b: DialogState): boolean {
 
 /**
  * Try to express a changed state as per-field `TextEdit`s - splicing only the changed
- * field's byte span, leaving the rest of the state (shorthand, comments, indentation,
+ * field's span, leaving the rest of the state (shorthand, comments, indentation,
  * untouched fields) byte-identical. Returns null when the change cannot be confined to a
  * field with a known range, in which case the caller re-serializes the whole state.
  *
@@ -197,7 +197,7 @@ function spliceableView(state: DialogState): DialogState {
  * The id fallback is scoped to the state's own root: D state labels are only unique per BEGIN block,
  * not per file (the same duplicate-label hazard `classifyReachability` guards against).
  *
- * Splices are applied from the highest byte offset to the lowest so that earlier
+ * Splices are applied from the highest offset to the lowest so that earlier
  * offsets remain valid while later ones are being substituted.
  *
  * @throws if `editedModel.sourceLang !== "d"`.

@@ -1,4 +1,4 @@
-/** A byte-range replacement: replace `text[start, end)` with `replacement`. */
+/** A range replacement: replace `text[start, end)` with `replacement`. */
 export interface SpliceOp {
     start: number;
     end: number;
@@ -9,7 +9,7 @@ export interface SpliceOp {
 /**
  * Apply non-overlapping splice ops to `text`. Ops are sorted by start descending and applied
  * right-to-left so earlier offsets stay valid as later spans are substituted. Shared by the D
- * and SSL surgical editors so both have one byte-splice core.
+ * and SSL surgical editors so both have one splice core.
  *
  * Throws on a malformed (`start > end`) or overlapping op rather than silently corrupting the
  * output: the right-to-left application is only correct when no op's range reaches into a span
