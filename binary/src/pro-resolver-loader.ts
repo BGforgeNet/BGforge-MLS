@@ -83,48 +83,76 @@ export function loadProDirResolver(protoBaseDir: string): ProResolverResult {
             const objectId = Number.parseInt(match[1]!, 10);
             const pid = (pidType << 24) | objectId;
 
-            try {
-                // Same stat-before-allocate budget the CLI parse path applies (max-file-sizes.ts):
-                // the parser's own 1 KB limit rejects oversized DATA, but only after the whole file
-                // has already been read into memory - cap the read itself. fstat and read go through
-                // ONE descriptor so the size check and the read see the same inode; a statSync ->
-                // readFileSync pair on the path leaves a TOCTOU window (CodeQL js/file-system-race)
-                // where a file swapped after the check could bypass the cap.
-                const proCap = MAX_FILE_SIZES.pro;
-                let data: Buffer;
-                const fd = fs.openSync(filePath, "r");
-                try {
-                    const size = fs.fstatSync(fd).size;
-                    if (proCap !== undefined && size > proCap) {
-                        errors.push(`Skipped ${filePath}: ${size} bytes exceeds the ${proCap}-byte PRO cap`);
-                        continue;
-                    }
-                    data = fs.readFileSync(fd);
-                } finally {
-                    fs.closeSync(fd);
-                }
-                const parsed = proParser.parse(new Uint8Array(data));
-                if (!parsed.document) {
-                    errors.push(`Failed to parse ${filePath}: no canonical document`);
-                    continue;
-                }
-                const sections = (parsed.document as { sections?: Record<string, { subType?: number }> }).sections;
-                const subType = sections?.[section]?.subType;
-                if (typeof subType !== "number") {
-                    errors.push(`Failed to read ${section}.subType from ${filePath}`);
-                    continue;
-                }
-                map.set(pid, subType);
-                subtypesResolved++;
-            } catch (error) {
-                errors.push(`Failed to parse ${filePath}: ${(error as Error).message}`);
+            const reading = cachedReading(filePath, section);
+            if (typeof reading === "string") {
+                errors.push(reading);
+                continue;
             }
+            map.set(pid, reading);
+            subtypesResolved++;
         }
     }
 
     const durationMs = performance.now() - start;
     const resolver: PidResolver = (pid) => map.get(pid);
     return { resolver, stats: { filesScanned, subtypesResolved, errors, durationMs } };
+}
+
+/** A file's subType, or the message saying why it has none. */
+type Reading = number | string;
+
+/**
+ * Each .pro's reading, keyed by path and valid while its size and modification time are unchanged. The CLI
+ * loads the same tree once per map and the editor worker once per open; a stat per file costs a fraction of
+ * the read and parse it replaces, and still notices a proto rewritten in place. Grows by one entry per file
+ * of each tree ever loaded - a mod's few hundred protos.
+ */
+const readings = new Map<string, { size: number; mtimeMs: number; reading: Reading }>();
+
+function cachedReading(filePath: string, section: SubdirSpec["section"]): Reading {
+    let stat: fs.Stats;
+    try {
+        stat = fs.statSync(filePath);
+    } catch (error) {
+        readings.delete(filePath);
+        return `Failed to parse ${filePath}: ${(error as Error).message}`;
+    }
+    const cached = readings.get(filePath);
+    if (cached !== undefined && cached.size === stat.size && cached.mtimeMs === stat.mtimeMs) return cached.reading;
+    const reading = readSubType(filePath, section);
+    readings.set(filePath, { size: stat.size, mtimeMs: stat.mtimeMs, reading });
+    return reading;
+}
+
+function readSubType(filePath: string, section: SubdirSpec["section"]): Reading {
+    try {
+        // Same stat-before-allocate budget the CLI parse path applies (max-file-sizes.ts):
+        // the parser's own 1 KB limit rejects oversized DATA, but only after the whole file
+        // has already been read into memory - cap the read itself. fstat and read go through
+        // ONE descriptor so the size check and the read see the same inode; a statSync ->
+        // readFileSync pair on the path leaves a TOCTOU window (CodeQL js/file-system-race)
+        // where a file swapped after the check could bypass the cap.
+        const proCap = MAX_FILE_SIZES.pro;
+        let data: Buffer;
+        const fd = fs.openSync(filePath, "r");
+        try {
+            const size = fs.fstatSync(fd).size;
+            if (proCap !== undefined && size > proCap) {
+                return `Skipped ${filePath}: ${size} bytes exceeds the ${proCap}-byte PRO cap`;
+            }
+            data = fs.readFileSync(fd);
+        } finally {
+            fs.closeSync(fd);
+        }
+        const parsed = proParser.parse(new Uint8Array(data));
+        if (!parsed.document) return `Failed to parse ${filePath}: no canonical document`;
+        const sections = (parsed.document as { sections?: Record<string, { subType?: number }> }).sections;
+        const subType = sections?.[section]?.subType;
+        if (typeof subType !== "number") return `Failed to read ${section}.subType from ${filePath}`;
+        return subType;
+    } catch (error) {
+        return `Failed to parse ${filePath}: ${(error as Error).message}`;
+    }
 }
 
 /**

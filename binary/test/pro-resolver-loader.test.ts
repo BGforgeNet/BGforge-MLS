@@ -9,12 +9,13 @@
  * where pidType is 0 for items, 2 for scenery.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import { loadProDirResolver, composePidResolvers } from "../src/pro-resolver-loader";
 import { resolvePidSubType } from "../src/pid-resolver";
+import { proParser } from "../src/pro";
 import { MAX_FILE_SIZES } from "../src/max-file-sizes";
 import { REPO_ROOT } from "./repo-root";
 
@@ -120,6 +121,39 @@ describe("loadProDirResolver", () => {
         expect(resolver(31)).toBe(4); // good file still parsed
         expect(stats.errors).toHaveLength(1);
         expect(stats.errors[0]).toMatch(/00000042\.pro.*exceeds/);
+    });
+
+    it("parses an unchanged .pro once across repeated loads", () => {
+        copyFixture("items", "00000031.pro");
+        copyFixture("scenery", "00000008.pro");
+        const parse = vi.spyOn(proParser, "parse");
+        try {
+            loadProDirResolver(tmpDir);
+            const { resolver, stats } = loadProDirResolver(tmpDir);
+            expect(parse).toHaveBeenCalledTimes(2);
+            expect(resolver(31)).toBe(4);
+            expect(stats.subtypesResolved).toBe(2);
+        } finally {
+            parse.mockRestore();
+        }
+    });
+
+    it("re-reads a .pro rewritten in place since the last load", () => {
+        const file = path.join(tmpDir, "items", "00000031.pro");
+        copyFixture("items", "00000031.pro");
+        expect(loadProDirResolver(tmpDir).resolver(31)).toBe(4);
+
+        // Same size, so only the modification time tells the two apart. subType is the item header's
+        // big-endian word at 0x20; a weapon (3) needs a longer file than this ammo proto, so the rewrite
+        // no longer parses - a cached reading would still answer 4.
+        const bytes = fs.readFileSync(file);
+        bytes.writeUInt32BE(3, 0x20);
+        fs.writeFileSync(file, bytes);
+        fs.utimesSync(file, new Date(2001, 0, 1), new Date(2001, 0, 1));
+
+        const { resolver, stats } = loadProDirResolver(tmpDir);
+        expect(resolver(31)).toBeUndefined();
+        expect(stats.errors).toEqual([expect.stringMatching(/00000031\.pro/)]);
     });
 
     it("ignores nested subdirectories (top-level only by design)", () => {
