@@ -43,6 +43,14 @@ describe("weidu-tra/format", () => {
         noop(input);
     });
 
+    it("preserves a multi-line %-delimited string verbatim, trailing spaces and blank lines included", () => {
+        noop("@1 = %a \n\n\nb  %\n@2 = ~c~\n");
+    });
+
+    it("reads a tilde inside a %-delimited string as content", () => {
+        noop("@1 = %x~y \nz%\n@2 = ~c~\n");
+    });
+
     it("preserves double-quoted strings when already formatted", () => {
         noop('@1 = "Hello world"\n');
     });

@@ -15,6 +15,8 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
 ### Fixed
 
+- WeiDU .tra: a multi-line `%...%` string is kept exactly as written; its trailing spaces were trimmed and its
+  blank lines collapsed.
 - WeiDU TP2 and D: `//` inside a string, such as a URL in `~...~`, is no longer taken for a comment.
 - WeiDU D: a multi-line SAY, REPLY or JOURNAL string is kept exactly as written; only trigger and action code is
   re-indented.

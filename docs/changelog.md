@@ -13,6 +13,8 @@
 
 ### Formatter
 
+- The .tra formatter keeps a multi-line `%...%` string exactly as written, instead of trimming its trailing spaces and
+  collapsing its blank lines.
 - The TP2 and D formatters leave `//` inside a string alone. A URL in `~...~` was taken for a comment and had spaces
   inserted into it, and a real comment after such a string was moved to its own line.
 - The D formatter keeps a multi-line SAY, REPLY or JOURNAL string exactly as written. It used to re-indent the

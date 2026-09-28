@@ -133,6 +133,15 @@ export function scanTildeDelimiter(text: string, pos: number): TildeDelimiter {
 }
 
 /**
+ * The index just past a `%`-delimited .tra string opening at `pos` - which ends at the next `%`, as the grammar reads
+ * it, so a `~` inside is content - or `text.length` when it never closes.
+ */
+export function scanPercentString(text: string, pos: number): number {
+    const closer = text.indexOf("%", pos + 1);
+    return closer === -1 ? text.length : closer + 1;
+}
+
+/**
  * A string's contents in a form validateFormatting's whitespace strip leaves alone: each whitespace character
  * becomes a visible `\u{..}` escape, so a space or tab changed inside a string reads as changed content. A `\r` is
  * dropped, since line endings are the formatter's to normalize.
@@ -368,6 +377,7 @@ export function stripCommentsFalloutSsl(text: string): string {
  *   - Line comments (`// ...`) and block comments (`/* ... *\/`)
  *   - Tilde string delimiters: ~content~ emits content; ~~~~~content~~~~~ emits content
  *   - Double-quote delimiters: "content" emits content (handles backslash escapes)
+ *   - Percent delimiters: %content% emits content
  *   - `[SOUNDFILE]` sound references (structural metadata)
  * Keeps entry numbers, `@`, and `=` signs so validateFormatting can compare tokens.
  */
@@ -403,6 +413,14 @@ export function stripCommentsTra(text: string): string {
             }
             result += protectStringWhitespace(text.slice(contentStart, Math.min(i, text.length)));
             if (i < text.length) i++; // skip closing "
+            continue;
+        }
+        // Percent strings: strip delimiters, keep content
+        if (text[i] === "%") {
+            const end = scanPercentString(text, i);
+            const contentEnd = text[end - 1] === "%" && end - 1 > i ? end - 1 : end;
+            result += protectStringWhitespace(text.slice(i + 1, contentEnd));
+            i = end;
             continue;
         }
         // Sound references [SOUNDFILE] - remove entirely

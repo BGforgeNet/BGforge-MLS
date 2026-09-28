@@ -283,6 +283,13 @@ describe("shared/format-utils", () => {
 
         it("catches changed whitespace inside a .tra string", () => {
             expect(validateFormatting("@1 = ~a  b~", "@1 = ~a b~", stripCommentsTra)).not.toBeNull();
+            expect(validateFormatting("@1 = %a  b%", "@1 = %a b%", stripCommentsTra)).not.toBeNull();
+        });
+
+        // A multi-byte encoding such as Big5 can put a `~` byte inside a %-delimited string; it is content there,
+        // as it is to the grammar, so it must not open a string that swallows the blank lines after it.
+        it("reads a tilde inside a .tra %string% as content", () => {
+            expect(validateFormatting("@1 = %x~y%\n\n\n@2 = ~z~", "@1 = %x~y%\n@2 = ~z~", stripCommentsTra)).toBeNull();
         });
 
         it("catches changed whitespace inside a .msg text field", () => {
