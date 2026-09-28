@@ -194,6 +194,17 @@ describe("DialogEditorProvider - session wiring", () => {
         expect(toast).toContain("boom");
         expect(toast).toContain("x.d");
     });
+
+    // The webview and the host disagreeing about the contract is a bug; dropping the message hides it.
+    it("reports a message outside the webview protocol instead of dropping it", async () => {
+        const h = await mountEditor(vi.fn().mockResolvedValue(OK_PARSE));
+
+        h.fireMessage({ type: "bogus" });
+
+        expect(showErrorMessageMock).toHaveBeenCalledWith(
+            "Dialog editor failed for x.d: unrecognized message of type bogus",
+        );
+    });
 });
 
 describe("DialogEditorProvider - go to source", () => {

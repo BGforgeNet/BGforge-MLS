@@ -4,7 +4,7 @@ import { type Rgba, applyCreatureColors, isRgbaAnimation } from "@bgforge/image"
 import type { CreatureEntry } from "../ie-resources/creature-index";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
-import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportUnrecognizedMessage, surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { type GameResourceBytes, ImageEditorDocument } from "./document";
 import { type AnimationSetSource } from "./set-document";
@@ -131,13 +131,14 @@ export interface AnimationChannel {
 }
 
 /** The plain case: a webview showing nothing but this. */
-export function webviewChannel(webview: vscode.Webview): AnimationChannel {
+export function webviewChannel(webview: vscode.Webview, file: string): AnimationChannel {
     return {
         post: (message) => void webview.postMessage(message),
         onMessage: (handler) =>
             webview.onDidReceiveMessage((message: unknown) =>
-                // Malformed or unknown-shape message: ignore rather than act on partial data.
-                isWebviewToHost(message) ? handler(message) : undefined,
+                isWebviewToHost(message)
+                    ? handler(message)
+                    : reportUnrecognizedMessage("Animation editor", file, message),
             ),
     };
 }
@@ -247,7 +248,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         };
         panel.webview.html = this.getHtml(panel.webview);
 
-        const attached = this.attach(document, webviewChannel(panel.webview), {
+        const attached = this.attach(document, webviewChannel(panel.webview, path.basename(document.uri.fsPath)), {
             // Through VS Code's own save so its dirty tracking clears - scoped to this document's URI, so
             // it saves the right one even if focus moved since the click.
             save: async (doc) => {

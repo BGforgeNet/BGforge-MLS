@@ -17,7 +17,7 @@ import {
     type SlotLabelResolver,
     type StrrefResolver,
 } from "../ie-resources/game-lookups";
-import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportUnrecognizedMessage, surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
 import { withGameContext } from "./game-rows";
@@ -171,7 +171,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
         panel.webview.onDidReceiveMessage(async (message: unknown) => {
             if (!isWebviewToHost(message)) {
-                // Malformed or unknown-shape message: ignore rather than act on partial data.
+                reportUnrecognizedMessage("Binary editor", path.basename(document.uri.fsPath), message);
                 return;
             }
             try {

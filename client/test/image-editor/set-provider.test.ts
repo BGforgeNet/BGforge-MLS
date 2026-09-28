@@ -99,7 +99,10 @@ vi.mock("vscode", () => {
     };
 });
 
-const { ImageEditorProvider } = await import("../../src/image-editor/provider");
+// The output channel is the live extension's; the toast is what these tests read.
+vi.mock("../../src/logging", () => ({ conlog: vi.fn() }));
+
+const { ImageEditorProvider, webviewChannel } = await import("../../src/image-editor/provider");
 
 const context = { extensionUri: { fsPath: "/ext" } } as unknown as vscode.ExtensionContext;
 
@@ -293,6 +296,29 @@ beforeEach(() => {
     // "nothing here to replace". Left as a resolving stub it would report every write as a collision.
     statMock.mockReset();
     statMock.mockRejectedValue(new Error("ENOENT"));
+});
+
+describe("a message outside the webview protocol", () => {
+    // The webview and the host disagreeing about the contract is a bug; dropping the message hides it.
+    it("is reported, and reaches no handler", () => {
+        let deliver: ((message: unknown) => void) | undefined;
+        const webview = {
+            postMessage: vi.fn(),
+            onDidReceiveMessage: (listener: (message: unknown) => void) => {
+                deliver = listener;
+                return { dispose: () => {} };
+            },
+        } as unknown as vscode.Webview;
+        const handler = vi.fn(async () => {});
+        webviewChannel(webview, "tstbsd.bam").onMessage(handler);
+
+        deliver?.({ type: "bogus" });
+
+        expect(handler).not.toHaveBeenCalled();
+        expect(showErrorMock).toHaveBeenCalledWith(
+            "Animation editor failed for tstbsd.bam: unrecognized message of type bogus",
+        );
+    });
 });
 
 describe("picking a stance the set cannot draw", () => {

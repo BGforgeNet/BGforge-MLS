@@ -9,7 +9,7 @@ import * as path from "path";
 import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
 import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
-import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportUnrecognizedMessage, surfaceWebviewRuntimeError } from "../webview-error";
 import { ThumbnailPump } from "./panel-core";
 import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
@@ -105,11 +105,6 @@ function defaultPort(extensionUri: vscode.Uri): GalleryPort {
 }
 
 /** The `type` of a message the panel refused, for the error text; the message itself may be any shape. */
-function describeMessageType(message: unknown): string {
-    if (typeof message !== "object" || message === null || !("type" in message)) return typeof message;
-    return String((message as { type: unknown }).type);
-}
-
 /**
  * Wire one panel: mount the webview, start a worker, and pump thumbnails between them until it closes.
  *
@@ -258,14 +253,7 @@ export function wireGalleryPanel(
 
     panel.webview.onDidReceiveMessage((message: unknown) => {
         if (!isWebviewToHost(message)) {
-            // A shape this panel does not recognise means the webview and the host disagree about the
-            // contract, which is a bug rather than input: report it on the channels a webview throw uses
-            // rather than acting on partial data or dropping it silently.
-            surfaceWebviewRuntimeError({
-                editor: "Image gallery",
-                file: state.source,
-                message: `unrecognized message of type ${describeMessageType(message)}`,
-            });
+            reportUnrecognizedMessage("Image gallery", state.source, message);
             return;
         }
         switch (message.type) {

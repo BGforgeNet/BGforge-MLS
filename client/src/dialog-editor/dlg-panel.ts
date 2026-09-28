@@ -23,6 +23,7 @@ import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { isWebviewToHost } from "./webview/messages";
 import { handleSharedDialogMessage } from "./shared-host-messages";
+import { reportUnrecognizedMessage } from "../webview-error";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
 import { writeDlgFromModel } from "./dlg-write";
 import { buildDialogHostHtml } from "./webview-host-html";
@@ -223,10 +224,13 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         document.refresh = refresh;
 
         panel.webview.onDidReceiveMessage((raw: unknown) => {
-            // Same reject-and-ignore posture as the other editors: an unrecognized message changes nothing.
+            // As every editor host does: a message outside the protocol changes nothing, and is reported.
             // The shared guard rather than a local cast, so this host and the source one agree on what the
             // one webview may send - and gain a branch together when it learns to send something new.
-            if (!isWebviewToHost(raw)) return;
+            if (!isWebviewToHost(raw)) {
+                reportUnrecognizedMessage("Dialog editor", path.basename(document.uri.path), raw);
+                return;
+            }
             if (handleSharedDialogMessage(raw, path.basename(document.uri.path))) return;
             switch (raw.type) {
                 case "ready":

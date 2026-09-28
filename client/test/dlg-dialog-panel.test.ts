@@ -407,12 +407,14 @@ describe("DlgDialogEditorProvider", () => {
         expect(told).toStrictEqual(["Nothing to paste."]);
     });
 
-    test("ignores a message that does not match the webview protocol", async () => {
+    test("refuses a message that does not match the webview protocol, and reports it", async () => {
         // The shared guard replaced a local cast: a malformed message must change nothing rather than reach a
-        // handler with fields it never checked.
+        // handler with fields it never checked. It is the webview and host disagreeing about the contract - a
+        // bug, not input - so it is reported as the gallery reports one, not dropped.
         const h = harness();
         await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
         executeCommandMock.mockClear();
+        showErrorMock.mockClear();
 
         h.send({ type: "openGame", extra: 1 });
         h.send({ type: "detach" }); // no stateIndex
@@ -420,6 +422,10 @@ describe("DlgDialogEditorProvider", () => {
 
         // The well-formed one still went through; the two malformed ones did not reach a handler.
         expect(executeCommandMock).toHaveBeenCalledTimes(1);
+        expect(showErrorMock.mock.calls.map(([toast]) => toast)).toStrictEqual([
+            "Dialog editor failed for SELFDLG.dlg: unrecognized message of type detach",
+            "Dialog editor failed for SELFDLG.dlg: unrecognized message of type object",
+        ]);
     });
 
     test("reports a file that is not a DLG rather than posting an empty graph", async () => {

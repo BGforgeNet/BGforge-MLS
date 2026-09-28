@@ -25,6 +25,7 @@ import type { DialogMessages } from "../../../shared/dialog-model";
 import { buildDialogHostHtml } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
 import { handleSharedDialogMessage } from "./shared-host-messages";
+import { reportUnrecognizedMessage } from "../webview-error";
 import { isWebviewToHost } from "./webview/messages";
 
 // The languageIds that ARE dialog files. `.td`/`.tssl` are contributed as languageId "typescript" (so the TS
@@ -91,9 +92,11 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         const core = new DialogHostCore(io, document.uri.path);
 
         panel.webview.onDidReceiveMessage((raw: unknown) => {
-            // Same reject-and-ignore posture as the binary editor's isWebviewToHost: an unrecognized
-            // or malformed message changes nothing rather than acting on partial data.
-            if (!isWebviewToHost(raw)) return;
+            // As every editor host does: a message outside the protocol changes nothing, and is reported.
+            if (!isWebviewToHost(raw)) {
+                reportUnrecognizedMessage("Dialog editor", path.basename(document.uri.fsPath), raw);
+                return;
+            }
             if (handleSharedDialogMessage(raw, path.basename(document.uri.fsPath))) return;
             switch (raw.type) {
                 case "ready":

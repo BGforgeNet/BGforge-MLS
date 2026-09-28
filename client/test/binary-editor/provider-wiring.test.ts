@@ -94,6 +94,9 @@ vi.mock("node:worker_threads", () => {
     return { Worker };
 });
 
+// The output channel is the live extension's; the toast is what these tests read.
+vi.mock("../../src/logging", () => ({ conlog: vi.fn() }));
+
 // Mounting a panel reads the webview bundle off disk, which this suite has no build of and does not test.
 vi.mock("../../src/webview-assets", () => ({
     getCachedHtmlAsset: () => "<html>{{stylesUri}}{{codiconsUri}}{{baseUri}}{{primitivesUri}}{{cspSource}}</html>",
@@ -112,7 +115,7 @@ const context = { extensionUri: { fsPath: "/ext" } } as unknown as vscode.Extens
 // its warning. A double missing `path` would fail the code rather than the behaviour under test.
 function uri(value: string): vscode.Uri {
     const path = value.slice(value.indexOf(":") + 1).split(/[?#]/, 1)[0]!;
-    return { path, toString: () => value } as unknown as vscode.Uri;
+    return { path, fsPath: path, toString: () => value } as unknown as vscode.Uri;
 }
 
 function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
@@ -259,6 +262,21 @@ describe("binary editor request failures", () => {
         await send({ type: "requestChildren", requestId: 7, nodeId: null, start: 0, end: 10 });
 
         expect(posted).toContainEqual({ type: "error", requestId: 7, message: "worker is gone" });
+    });
+
+    // The webview and the host disagreeing about the contract is a bug; dropping the message hides it.
+    it("reports a message outside the webview protocol instead of dropping it", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const { panel, send } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+        showErrorMock.mockClear();
+
+        await send({ type: "bogus" });
+
+        expect(showErrorMock).toHaveBeenCalledWith(
+            "Binary editor failed for sw1h01.itm: unrecognized message of type bogus",
+        );
     });
 
     // VS Code's undo stack and the worker's history have parted on this step: say which step and why, then
