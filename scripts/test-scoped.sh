@@ -105,25 +105,27 @@ declare -A suite_cmd=(
     ["tssl-plugin"]="pnpm exec vitest run --config plugins/tssl-plugin/vitest.config.mts"
     ["td-plugin"]="pnpm exec vitest run --config plugins/td-plugin/vitest.config.mts"
 )
+# A suite's prefixes cover every tree its tests import (scripts/utils/test/test-scoped-reach.test.ts checks it):
+# the server's tests drive the formatters, transpilers and compilers it serves, so a change there reaches it.
 declare -A suite_prefixes=(
-    [server]="server/ shared/"
+    [server]="server/ shared/ format/ transpilers/ compilers/bcs/ compilers/ssl/ binary/ client/src/dialog-editor/ scripts/utils/"
     # The set model is built on the image library's own animation model, so a change to either reaches it.
-    [animation]="animation/ image/"
-    [binary]="binary/ shared/"
-    ["binary-editor"]="binary-editor/ binary/"
+    [animation]="animation/ image/ binary/ shared/"
+    [binary]="binary/ shared/ scripts/utils/"
+    ["binary-editor"]="binary-editor/ binary/ shared/"
     # The client's script view decompiles through this codec, so a change to either side reaches it.
-    [bcs]="compilers/bcs/ client/src/bcs-editor/"
-    [client]="client/ server/ shared/ binary-editor/ binary/ image/ animation/"
-    ["client-unit"]="client/ server/ shared/ binary-editor/ binary/ image/ animation/"
+    [bcs]="compilers/bcs/ client/src/bcs-editor/ shared/ scripts/utils/"
+    [client]="client/ server/ shared/ binary-editor/ binary/ image/ animation/ compilers/bcs/ compilers/ssl/ package.json scripts/esbuild-"
+    ["client-unit"]="client/ server/ shared/ binary-editor/ binary/ image/ animation/ compilers/bcs/ compilers/ssl/ package.json scripts/esbuild-"
     [format]="format/ shared/"
     [image]="image/"
     [ssl]="compilers/ssl/ shared/"
     # The front end builds the IR the ssl back end emits, and both routes share `desugar.ts`, so a
     # change under compilers/ssl reaches tssl too.
-    [tssl]="compilers/tssl/ compilers/ssl/ transpilers/common/ shared/"
+    [tssl]="compilers/tssl/ compilers/ssl/ transpilers/ server/out/ shared/"
     [transpilers]="transpilers/ shared/"
     [scripts]="scripts/ shared/"
-    ["tssl-plugin"]="plugins/tssl-plugin/"
+    ["tssl-plugin"]="plugins/tssl-plugin/ server/out/"
     ["td-plugin"]="plugins/td-plugin/"
 )
 grammars_label="grammar test suite"
