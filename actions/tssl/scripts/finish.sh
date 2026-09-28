@@ -34,7 +34,7 @@ fi
 outputs=()
 while IFS= read -r src; do
     ssl="${src%.tssl}.ssl"
-    [[ -f "$ssl" ]] && outputs+=("$ssl")
+    if [[ -f "$ssl" ]]; then outputs+=("$ssl"); fi
 done < <(find "$SCAN_PATH" -type f -name "*.tssl")
 
 if [[ ${#outputs[@]} -eq 0 ]]; then
