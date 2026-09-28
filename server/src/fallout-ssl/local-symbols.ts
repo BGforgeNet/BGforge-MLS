@@ -25,7 +25,7 @@ import * as jsdoc from "../shared/jsdoc";
 import { SyntaxType } from "./syntax-type";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
-import engineProcDocs from "../../out/fallout-ssl-engine-proc-docs.json";
+import engineProcDocs from "@bgforge/shared/data/fallout-ssl-engine-proc-docs.json";
 
 const ENGINE_PROC_DOCS = engineProcDocs as Record<string, string>;
 

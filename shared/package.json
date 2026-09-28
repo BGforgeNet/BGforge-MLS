@@ -8,6 +8,7 @@
     "type": "module",
     "exports": {
         "./*.ts": "./*.ts",
+        "./*.json": "./*.json",
         "./*": "./*.ts"
     },
     "scripts": {

@@ -31,7 +31,7 @@ generate-data.sh   (run by the data updates and publish-server.sh; outputs are c
   fallout-ssl-sfall.yml ──┤──► completion.fallout-ssl.json
                           └──► signature.fallout-ssl.json
 
-  fallout-ssl-base.yml ──► extract-engine-proc-docs.ts
+  fallout-ssl-base.yml ──► extract-engine-proc-docs.ts                     (into shared/data/, the rest into server/out/)
                                   ├──► fallout-ssl-engine-proc-docs.json    (SSL LSP hover enrichment + TSSL plugin hover docs)
                                   └──► fallout-ssl-engine-procedures.json   (server tree-shaking + TSSL plugin TS6133 suppression)
 

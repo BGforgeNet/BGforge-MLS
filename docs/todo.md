@@ -121,7 +121,7 @@ pipeline works exactly as written no test or gate reports it.
 ### Approach
 
 Prefer deriving the argument lists from a source that already carries them - the engine-procedure
-JSON the TSSL plugin consumes (`server/out/fallout-ssl-engine-procedures.json`) is the obvious
+JSON the TSSL plugin consumes (`shared/data/fallout-ssl-engine-procedures.json`) is the obvious
 candidate - and hand-author only the prose. That turns authoring every function into a mapping
 pass plus incremental documentation. Authoring `args` by hand, most-used functions first, is the
 fallback if no existing source lines up; either way each entry improves the feature the moment it

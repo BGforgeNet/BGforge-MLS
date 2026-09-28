@@ -570,6 +570,9 @@ importers:
 
   plugins/tssl-plugin:
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3

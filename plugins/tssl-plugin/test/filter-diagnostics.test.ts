@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
+import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
 import {
     type DiagnosticLike,
     extractIdentifierFromTS6133,

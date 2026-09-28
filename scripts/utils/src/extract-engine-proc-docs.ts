@@ -10,8 +10,8 @@
  * Usage:
  *   pnpm exec tsx scripts/utils/src/extract-engine-proc-docs.ts \
  *     --yaml server/data/fallout-ssl-base.yml \
- *     --out server/out/fallout-ssl-engine-proc-docs.json \
- *     --names server/out/fallout-ssl-engine-procedures.json
+ *     --out shared/data/fallout-ssl-engine-proc-docs.json \
+ *     --names shared/data/fallout-ssl-engine-procedures.json
  */
 
 import fs from "node:fs";

@@ -151,10 +151,8 @@ server ------> format, binary/archive                    (tsconfig paths)
    |---------> compilers/ssl, compilers/tssl,
    |           compilers/bcs, transpilers                (relative source imports)
 
-compilers/tssl --> compilers/ssl, transpilers/common,
-                   server/out/*.json                     (generated data)
+compilers/tssl --> compilers/ssl, transpilers/common
 transpilers ----> transpilers/tbaf, transpilers/td, transpilers/common
-plugins/tssl-plugin --> server/out/*.json                (generated data)
 plugins/td-plugin ....> server/out/td-runtime.d.ts       (read at run time)
 
 nearly every package --> shared                          (workspace dependency)
@@ -169,9 +167,8 @@ Packages reach each other three ways, and none of them goes through another pack
 - **Relative source imports** across the tree, whether or not the target package has an entry of its own - the
   server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/ssl/src/`, the client reaching
   `compilers/ssl/src/` and `compilers/bcs/src/`.
-- **Build outputs as inputs**: the TS plugins and `compilers/tssl` import JSON that `scripts/generate-data.sh` writes
-  into `server/out/`, and `td-plugin` finds `td-runtime.d.ts`, which the server build copies there, by path at run
-  time. The data generation has to run before those builds.
+- **A build output as an input**: `td-plugin` finds `td-runtime.d.ts`, which the server build copies into
+  `server/out/`, by path at run time.
 
 ## Boundaries
 
@@ -285,7 +282,8 @@ JSON at build time - see [syntaxes/README.md](../syntaxes/README.md).
 ### Engine data
 
 Engine definitions flow from YAML in `server/data/` to JSON in `server/out/` at build time, which the server loads
-at startup and the TS plugins bundle. See [data-pipeline.md](data-pipeline.md).
+at startup, and to the engine-procedure JSON in `shared/data/`, which the TSSL compiler and plugin import. See
+[data-pipeline.md](data-pipeline.md).
 
 ## Build
 

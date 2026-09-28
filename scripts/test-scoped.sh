@@ -122,10 +122,10 @@ declare -A suite_prefixes=(
     [ssl]="compilers/ssl/ shared/"
     # The front end builds the IR the ssl back end emits, and both routes share `desugar.ts`, so a
     # change under compilers/ssl reaches tssl too.
-    [tssl]="compilers/tssl/ compilers/ssl/ transpilers/ server/out/ shared/"
+    [tssl]="compilers/tssl/ compilers/ssl/ transpilers/ shared/"
     [transpilers]="transpilers/ shared/"
     [scripts]="scripts/ shared/"
-    ["tssl-plugin"]="plugins/tssl-plugin/ server/out/"
+    ["tssl-plugin"]="plugins/tssl-plugin/ shared/"
     ["td-plugin"]="plugins/td-plugin/"
 )
 grammars_label="grammar test suite"

@@ -122,6 +122,6 @@ Compiled output would carry the signatures and none of that, and `@inline` would
 
 ## Build note
 
-Imports `server/out/fallout-ssl-engine-procedures.json` - a tracked output of the server data pipeline,
+Imports `shared/data/fallout-ssl-engine-procedures.json` - a tracked output of the server data pipeline,
 regenerated from YAML by `scripts/generate-data.sh` (see `docs/data-pipeline.md`). A fresh clone builds
 without running the generator; regenerate only after editing the YAML sources.

@@ -29,7 +29,7 @@ import { sslName, type InlineFunc } from "../types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";
 import { extractInlineFunctions } from "../inline-functions";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
-import engineProcedureNames from "../../../../server/out/fallout-ssl-engine-procedures.json";
+import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
 
 /**
  * Builds the IR for one `.tssl` compilation unit. Throws a positioned refusal on anything unhandled.

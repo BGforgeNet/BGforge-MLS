@@ -3,12 +3,15 @@
 # Regenerate completion JSONs from server/data YAMLs.
 # Must run before build:ts-plugin (which bundles fallout-ssl-engine-proc-docs.json via esbuild).
 # One output is not a JSON under $dest_dir: the BAF strref map is emitted as a TypeScript module into
-# server/src, so the server imports it instead of reading a file at startup.
+# server/src, so the server imports it instead of reading a file at startup. The engine-procedure JSONs go to
+# $engine_dir instead, because the TSSL compiler and plugin import them and a library may not depend on the
+# server's build output.
 
 set -eu -o pipefail
 
 data_dir="server/data"
 dest_dir="server/out"
+engine_dir="shared/data"
 generate_data=(pnpm exec tsx scripts/utils/src/generate-data.ts)
 
 "${generate_data[@]}" \
@@ -20,8 +23,8 @@ generate_data=(pnpm exec tsx scripts/utils/src/generate-data.ts)
 # Extract engine procedure names and docs for the TSSL transpiler and TypeScript plugin
 pnpm exec tsx scripts/utils/src/extract-engine-proc-docs.ts \
     --yaml "$data_dir/fallout-ssl-base.yml" \
-    --out "$dest_dir/fallout-ssl-engine-proc-docs.json" \
-    --names "$dest_dir/fallout-ssl-engine-procedures.json"
+    --out "$engine_dir/fallout-ssl-engine-proc-docs.json" \
+    --names "$engine_dir/fallout-ssl-engine-procedures.json"
 
 pnpm exec tsx scripts/utils/src/update-fallout-base-functions-highlight.ts \
     --yaml "$data_dir/fallout-ssl-base.yml" \

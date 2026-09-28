@@ -21,7 +21,7 @@ import { exportSSL } from "./emit";
 import { buildProgramModel } from "./program-model";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
-import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
+import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
 import type { SourcePosition } from "../../../transpilers/common/line-map";
 import { createTranspiler, type TranspilerEvent } from "../../../transpilers/common/transpiler-pipeline";
 
