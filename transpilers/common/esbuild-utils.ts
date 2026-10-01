@@ -24,8 +24,7 @@ let esbuildInitialized = false;
 
 /**
  * Initialize esbuild (singleton, safe to call multiple times).
- * Native esbuild (used by CLI via alias) doesn't need initialize().
- * esbuild-wasm (used by LSP server) requires it.
+ * Every consumer - the LSP server and the CLI alike - runs esbuild-wasm, which requires initialize().
  *
  * esbuild-wasm spawns `node <bin/esbuild>` via a bare PATH lookup; ensureNodeOnPath points `node`
  * at the extension host's own runtime first (see node-runtime.ts), so an absent or broken PATH
