@@ -44,9 +44,7 @@ Originally a VS Code extension, it now also works with various other editors. Se
 | Dialog editor     |               ✓                |                        |    ✓    |                                |
 | Compiler          | [ssl](compilers/ssl/README.md) |                        |         |                                |
 
-Compiled Fallout `.int` scripts open as editable SSL - highlighting, outline and search - and save back over the `.int` in place. Local and argument names are not stored in a compiled script, so those are generated; a script that cannot be structured back opens as a read-only instruction listing.
-
-Compiled Infinity Engine `.bcs` scripts open the same way, as editable BAF, and save back over the `.bcs` in place. Every name in one is a number the install's own tables give a meaning to, so this needs a game open; without one the tab says so and stays read-only.
+Seamless support for `.int` and `.bcs` included.
 
 ## TypeScript-based languages
 
@@ -119,7 +117,7 @@ BGforge MLS runs in desktop VS Code and in code-server. It is not supported on v
 
 Visual dialog editor for SSL, TSSL, D, and TD files. Open with `CTRL+SHIFT+V` or the command palette. Shows states, transitions, and resolved translation strings.
 
-Compiled Infinity Engine `.dlg` files open in the same editor: the states, transitions, triggers and actions the file stores. Spoken text lives in the game's `dialog.tlk`, so it resolves once a game is open - the editor offers a button to open one when there is none. What a line says can be changed and saved, by pointing it at a different entry in the game's text. The trigger on a state and the condition and action on a reply are script text the file stores, and are edited in place. Replies can be added, removed and retargeted - including at a state in another dialog the tree holds - and states appended; a state's number is its position in the file and other dialogs address it by that number, so states are never renumbered - one is taken out of play by detaching it, which points the replies that led there at the end of the conversation and leaves the record where it is. The dialogs this conversation hands off to, and the ones that hand off to it, are drawn in the same graph as read-only context.
+Seamless support for `.dlg` included.
 
 ![dialog editor example](docs/dialog_editor.png)
 
@@ -139,6 +137,8 @@ Supported animation formats are BAM and FRM. PNG import/export is available, as 
 
 ### Image gallery
 
-`BGforge: Game Image Gallery` (`bgforge.gallery.showGame`) browses the images of the game at `bgforge.weidu.gamePath`; `BGforge: Workspace Image Gallery` (`bgforge.gallery.showWorkspace`) browses the open folder. Both draw a thumbnail grid filtered by name, resource type and format, and draw a picked file on the panel's own animation surface. There is one gallery panel at a time: the second command points the open one at the other source rather than opening a second tab.
+Game and workspace image gallery. IE games only. Launch with commands:
+- `BGforge: Game Image Gallery` browses the images of the game at `bgforge.weidu.gamePath`.
+- `BGforge: Workspace Image Gallery` browses the open folder.
 
-A game gallery carries a second tab for the animation sets the install declares. Picking one draws the whole set, whose members can be edited and saved back, or converted into another engine's animation files.
+![gallery example](docs/gallery.png)
