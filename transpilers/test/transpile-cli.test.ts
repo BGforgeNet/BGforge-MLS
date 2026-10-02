@@ -10,7 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import transpileLibPackage from "../package.json";
 import { REPO_ROOT } from "./repo-root";
-import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout";
 
 const CLI = path.join(REPO_ROOT, "transpilers", transpileLibPackage.bin.fgtp);
 const NODE = process.execPath;
@@ -165,6 +165,18 @@ describe("transpile CLI integration", () => {
             const { code, stdout } = run(tmpTd, "--save");
             expect(code).toBe(0);
             expect(stdout).not.toContain("Transpiled:");
+        });
+    });
+
+    describe("modes fgtp does not implement", () => {
+        it.each(["--save-and-check", "--check-idempotency"])("refuses %s instead of printing the output", (flag) => {
+            const tmpTd = path.join(tmpDir, "mode.td");
+            fs.copyFileSync(path.join(SAMPLES_DIR, "botsmith.td"), tmpTd);
+
+            const { code, stdout, stderr } = run(tmpTd, flag);
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
+            expect(stdout).toBe("");
         });
     });
 

@@ -49,7 +49,6 @@ export function buildChangeSet(session: EditorSession, dirty: boolean): ChangeSe
         ],
         diagnostics: session.relationshipModel ? session.relationshipModel.constraints(session.model) : [],
         dirty,
-        formatValid: true,
         // A structure op can change an entry count; refresh the tab badges so e.g. the Spells known/memorized
         // total stays current (the subtab badges refresh separately via the spellbook re-fetch).
         tabCounts: resolveTabCounts(session.parserId, session.model),

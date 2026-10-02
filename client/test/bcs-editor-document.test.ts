@@ -2,8 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { BcsCompileSymbols, BcsSymbols } from "../../compilers/bcs/src/index";
-import { bcsEngineForScriptStyle } from "../../shared/bcs-engine";
+import { bcsEngineForScriptStyle, type BcsCompileSymbols, type BcsSymbols } from "../../compilers/bcs/src/index";
 
 /**
  * What a `.bcs` tab shows.

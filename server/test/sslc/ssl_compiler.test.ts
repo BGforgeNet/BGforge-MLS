@@ -16,7 +16,13 @@ const mockConsoleLog = vi.fn();
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: (...args: unknown[]) => mockConsoleLog(...args), warn: vi.fn(), error: vi.fn() },
+        console: {
+            log: vi.fn(),
+            info: (...args: unknown[]) => mockConsoleLog(...args),
+            debug: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+        },
         window: {
             showWarningMessage: (...args: unknown[]) => mockShowWarning(...args),
         },

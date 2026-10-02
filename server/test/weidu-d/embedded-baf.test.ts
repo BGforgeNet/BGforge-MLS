@@ -48,7 +48,7 @@ import {
     resolveEmbeddedBafSymbol,
     getEmbeddedBafCompletions,
 } from "../../src/weidu-d/embedded-baf";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import type { Position } from "vscode-languageserver/node";
 
 beforeAll(async () => {

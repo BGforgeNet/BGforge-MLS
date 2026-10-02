@@ -12,8 +12,7 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import type { Node as SyntaxNode, Tree } from "web-tree-sitter";
-import { getParser, initParser } from "../../../shared/parsers/weidu-tp2";
-import { getUtf8ByteOffset } from "../../src/shared/completion-context";
+import { getParser, initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { detectContextFromNode } from "../../src/weidu-tp2/completion/context/detectors";
 import { CompletionContext } from "../../src/weidu-tp2/completion/types";
 
@@ -21,7 +20,7 @@ beforeAll(async () => {
     await initParser();
 });
 
-/** Parse textWithCursor (cursor marked by `|`) and return the node + byte offset at the cursor. */
+/** Parse textWithCursor (cursor marked by `|`) and return the node + offset at the cursor. */
 function parseAtCursor(textWithCursor: string): { node: SyntaxNode; cursorOffset: number; tree: Tree } {
     const cursorIndex = textWithCursor.indexOf("|");
     if (cursorIndex === -1) throw new Error("No cursor marker | found");
@@ -38,7 +37,8 @@ function parseAtCursor(textWithCursor: string): { node: SyntaxNode; cursorOffset
     const node = tree.rootNode.descendantForPosition({ row: line, column: character });
     if (!node) throw new Error("No node found at cursor position");
 
-    return { node, cursorOffset: getUtf8ByteOffset(text, line, character), tree };
+    // The marker's index is the cursor's UTF-16 offset, the unit tree-sitter's node indices use.
+    return { node, cursorOffset: cursorIndex, tree };
 }
 
 function detectAt(textWithCursor: string): CompletionContext[] {

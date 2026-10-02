@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser } from "../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD, type DialogState } from "../../shared/dialog-model";
-import { applyDDialogEdits } from "../../shared/dialog-d-edit";
-import { renameState } from "../../shared/dialog-edit-ops";
+import { modelFromD, type DialogState } from "@bgforge/shared/dialog-model";
+import { applyDDialogEdits } from "@bgforge/shared/dialog-d-edit";
+import { renameState } from "@bgforge/shared/dialog-edit-ops";
 
 // ---------------------------------------------------------------------------
 // Test fixture

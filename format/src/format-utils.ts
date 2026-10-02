@@ -3,7 +3,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { findParseError } from "../../shared/parse-errors";
+import { findParseError } from "@bgforge/shared/parse-errors";
 
 /** Library-shape formatter output. Wrappers convert to LSP TextEdit[] at the LSP boundary. */
 export interface FormatOutput {
@@ -133,70 +133,53 @@ export function scanTildeDelimiter(text: string, pos: number): TildeDelimiter {
 }
 
 /**
- * Options for stripCommentsCommon.
- * When handleTildeStrings is true, tilde-delimited WeiDU string literals are
- * preserved before the shared double-quote / comment handling runs.
+ * The index just past a `%`-delimited .tra string opening at `pos` - which ends at the next `%`, as the grammar reads
+ * it, so a `~` inside is content - or `text.length` when it never closes.
  */
-interface StripCommentsOptions {
-    readonly handleTildeStrings: boolean;
+export function scanPercentString(text: string, pos: number): number {
+    const closer = text.indexOf("%", pos + 1);
+    return closer === -1 ? text.length : closer + 1;
 }
 
 /**
- * Shared comment-stripping implementation for Fallout SSL and WeiDU.
- * Preserves double-quoted string literals and optionally tilde-delimited
- * WeiDU string literals (~...~ and ~~~~~...~~~~~).
- * Removes line comments (//) and block comments.
+ * A string's contents in a form validateFormatting's whitespace strip leaves alone: each whitespace character
+ * becomes a visible `\u{..}` escape, so a space or tab changed inside a string reads as changed content. A `\r` is
+ * dropped, since line endings are the formatter's to normalize.
  */
-function stripCommentsCommon(text: string, options: StripCommentsOptions): string {
-    let result = "";
-    let i = 0;
-    while (i < text.length) {
-        // Tilde strings: WeiDU uses 1 tilde or 5 tildes as delimiters
-        // ~content~ or ~~~~~content~~~~~. Preserve delimiters and content verbatim.
-        if (options.handleTildeStrings && text[i] === "~") {
-            const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
-            result += text.slice(i, contentStart); // opening delimiter
-            if (closerStart !== -1) {
-                result += text.slice(contentStart, closerStart + delimLen); // content + closer
-                i = closerStart + delimLen;
-            } else {
-                // Unclosed: keep scanning the remainder for comments/quotes.
-                i = contentStart;
-            }
-            continue;
-        }
-        // Double-quoted strings
-        if (text[i] === '"') {
-            const start = i++;
-            while (i < text.length && text[i] !== '"') {
-                if (text[i] === "\\") i++; // Skip escaped char
-                i++;
-            }
-            result += text.slice(start, ++i);
-            continue;
-        }
-        // Block comments
-        if (text[i] === "/" && text[i + 1] === "*") {
-            const end = text.indexOf("*/", i + 2);
-            i = end !== -1 ? end + 2 : text.length;
-            continue;
-        }
-        // Line comments
-        if (text[i] === "/" && text[i + 1] === "/") {
-            while (i < text.length && text[i] !== "\n") i++;
-            continue;
-        }
-        result += text[i++];
-    }
-    return result;
+function protectStringWhitespace(s: string): string {
+    return s.replaceAll("\r", "").replaceAll(/\s/g, (c) => `\\u{${c.codePointAt(0)!.toString(16)}}`);
+}
+
+/**
+ * Shared comment-stripping implementation for Fallout SSL and WeiDU: drops comments, keeps string literals - with
+ * their whitespace protected (see protectStringWhitespace) unless `protectStrings` is false.
+ */
+function stripCommentsCommon(text: string, weidu: boolean, protectStrings = true): string {
+    return tokenizeCode(text, weidu)
+        .map((token) => {
+            if (token.type === WeiduTokenType.Comment) return "";
+            return token.type === WeiduTokenType.String && protectStrings
+                ? protectStringWhitespace(token.text)
+                : token.text;
+        })
+        .join("");
 }
 
 /**
  * Strip comments from WeiDU text, respecting string literals.
- * Handles: ~string~, "string", ~~~~~string~~~~~
+ * Handles: ~string~, "string", ~~~~~string~~~~~, %string%
  */
 export function stripCommentsWeidu(text: string): string {
-    return stripCommentsCommon(text, { handleTildeStrings: true });
+    return stripCommentsCommon(text, true);
+}
+
+/**
+ * As stripCommentsWeidu, for WeiDU D, leaving whitespace inside strings to validateFormatting's strip. A D string is
+ * content in a SAY or REPLY and code in a trigger or action, which the D formatter reformats - indenting continuation
+ * lines, spacing a `//` comment - and nothing lexical tells the two apart.
+ */
+export function stripCommentsWeiduD(text: string): string {
+    return stripCommentsCommon(text, true, false);
 }
 
 /** WeiDU token types for formatting. */
@@ -218,6 +201,19 @@ export interface WeiduToken {
  * Properly handles // inside strings (e.g., URLs).
  */
 export function tokenizeWeidu(text: string): WeiduToken[] {
+    return tokenizeCode(text, true);
+}
+
+/**
+ * Tokenize Fallout SSL text into code, `"..."` strings and comments. SSL has no tilde strings, and its `%` is the
+ * modulo operator rather than a variable delimiter.
+ */
+export function tokenizeFalloutSsl(text: string): WeiduToken[] {
+    return tokenizeCode(text, false);
+}
+
+/** The one string/comment scanner behind both dialects; `weidu` adds tilde and percent strings. */
+function tokenizeCode(text: string, weidu: boolean): WeiduToken[] {
     const tokens: WeiduToken[] = [];
     let i = 0;
     let lastCodeStart = 0;
@@ -237,7 +233,7 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
 
     while (i < text.length) {
         // Tilde strings: WeiDU uses 1 tilde or 5 tildes as delimiters
-        if (text[i] === "~") {
+        if (weidu && text[i] === "~") {
             const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
             if (closerStart !== -1) {
                 flushCode(i);
@@ -270,7 +266,7 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
             continue;
         }
         // Percent strings/variables
-        if (text[i] === "%") {
+        if (weidu && text[i] === "%") {
             const start = i++;
             const end = text.indexOf("%", i);
             if (end !== -1) {
@@ -316,6 +312,33 @@ export function tokenizeWeidu(text: string): WeiduToken[] {
 }
 
 /**
+ * Index of the `//` that opens a line comment in WeiDU `line`, or -1. A `//` inside a string (a URL in `~...~`)
+ * or inside a block comment is not one, so a line is scanned token by token rather than for the substring.
+ */
+export function weiduLineCommentStart(line: string): number {
+    return lineCommentStart(tokenizeWeidu(line));
+}
+
+/** {@link weiduLineCommentStart} for Fallout SSL, whose only strings are `"..."`. */
+export function falloutSslLineCommentStart(line: string): number {
+    return lineCommentStart(tokenizeFalloutSsl(line));
+}
+
+function lineCommentStart(tokens: readonly WeiduToken[]): number {
+    let offset = 0;
+    for (const token of tokens) {
+        if (token.type === WeiduTokenType.Comment && token.text.startsWith("//")) return offset;
+        offset += token.text.length;
+    }
+    return -1;
+}
+
+/** Whether WeiDU `line` already carries a line comment, so another cannot be appended to it. */
+export function hasWeiduLineComment(line: string): boolean {
+    return weiduLineCommentStart(line) !== -1;
+}
+
+/**
  * Normalizes whitespace in WeiDU text while preserving strings and comments.
  * Collapses multiple spaces into one, trims outer whitespace.
  *
@@ -345,7 +368,7 @@ export function normalizeWhitespaceWeidu(text: string): string {
  * Handles: "string" only
  */
 export function stripCommentsFalloutSsl(text: string): string {
-    return stripCommentsCommon(text, { handleTildeStrings: false });
+    return stripCommentsCommon(text, false);
 }
 
 /**
@@ -354,6 +377,7 @@ export function stripCommentsFalloutSsl(text: string): string {
  *   - Line comments (`// ...`) and block comments (`/* ... *\/`)
  *   - Tilde string delimiters: ~content~ emits content; ~~~~~content~~~~~ emits content
  *   - Double-quote delimiters: "content" emits content (handles backslash escapes)
+ *   - Percent delimiters: %content% emits content
  *   - `[SOUNDFILE]` sound references (structural metadata)
  * Keeps entry numbers, `@`, and `=` signs so validateFormatting can compare tokens.
  */
@@ -377,26 +401,26 @@ export function stripCommentsTra(text: string): string {
             const { delimLen, contentStart, closerStart } = scanTildeDelimiter(text, i);
             const contentEnd = closerStart !== -1 ? closerStart : text.length;
             // Emit the content without delimiters
-            result += text.slice(contentStart, contentEnd);
+            result += protectStringWhitespace(text.slice(contentStart, contentEnd));
             i = closerStart !== -1 ? closerStart + delimLen : text.length;
             continue;
         }
-        // Double-quoted strings: strip delimiters, keep content (handle escapes)
+        // Double-quoted strings: strip delimiters, keep content (escape sequences verbatim)
         if (text[i] === '"') {
-            i++; // skip opening "
+            const contentStart = ++i; // skip opening "
             while (i < text.length && text[i] !== '"') {
-                if (text[i] === "\\") {
-                    // Emit the escape sequence verbatim
-                    result += text[i];
-                    i++;
-                    if (i < text.length) {
-                        result += text[i++];
-                    }
-                    continue;
-                }
-                result += text[i++];
+                i += text[i] === "\\" ? 2 : 1;
             }
+            result += protectStringWhitespace(text.slice(contentStart, Math.min(i, text.length)));
             if (i < text.length) i++; // skip closing "
+            continue;
+        }
+        // Percent strings: strip delimiters, keep content
+        if (text[i] === "%") {
+            const end = scanPercentString(text, i);
+            const contentEnd = text[end - 1] === "%" && end - 1 > i ? end - 1 : end;
+            result += protectStringWhitespace(text.slice(i + 1, contentEnd));
+            i = end;
             continue;
         }
         // Sound references [SOUNDFILE] - remove entirely
@@ -453,12 +477,14 @@ export function stripCommentsFalloutMsg(text: string): string {
                 const textStart = i;
                 while (i < text.length && text[i] !== "}") i++;
                 result += " ";
-                result += text.slice(textStart, i);
+                result += protectStringWhitespace(text.slice(textStart, i));
                 if (i < text.length) i++; // skip }
             }
 
-            // Advance past remainder of line
+            // The rest of the line (a note, another entry) is kept, so a formatter dropping it is caught.
+            const lineStart = i;
             while (i < text.length && text[i] !== "\n") i++;
+            result += text.slice(lineStart, i);
             if (i < text.length) {
                 result += "\n";
                 i++; // skip \n

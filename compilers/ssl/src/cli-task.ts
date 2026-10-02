@@ -16,7 +16,7 @@ import { formatDisassembly } from "./int/disasm";
 import { printProgram } from "./int/print";
 import { readInt } from "./int/read";
 import { preprocess, preprocessWithOrigins, PreprocessError } from "./preprocess";
-import { getParser } from "../../../shared/parsers/fallout-ssl";
+import { getParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 /** A line to print, and which stream it belongs on. */
 export interface OutputLine {
@@ -31,6 +31,14 @@ export interface TaskResult {
 
 /** Everything one input needs, which is the whole command line minus the other inputs. */
 export type TaskArgs = Omit<SslArgs, "inputs" | "notices" | "help" | "jobs">;
+
+/**
+ * Whether a run parses source, and so needs the grammar loaded - the slowest part of starting up. Decompiling
+ * and listing read bytecode, and preprocessing stops before the parser.
+ */
+export function needsGrammar(args: TaskArgs): boolean {
+    return !args.preprocessOnly && !args.decompile && !args.listing;
+}
 
 /** What an input turned into, and anything about it worth putting on the `-d` line. */
 interface Rendered {
@@ -54,6 +62,12 @@ export function runInput(input: SslInput, args: TaskArgs): TaskResult {
     }
     out(`${args.decompile ? "Decompiling" : args.listing ? "Listing" : "Compiling"} ${file}`);
     const target = input.output ?? defaultOutput(file, outputSuffix(args));
+    // Every other default output is derived and rebuilt over freely; a decompile's is source, and the file
+    // already at that name is most often the one the script was compiled from.
+    if (args.decompile && input.output === undefined && fs.existsSync(target)) {
+        err(`Error: ${target} already exists; name another output with -o`);
+        return { ok: false, lines };
+    }
     const started = Date.now();
     let rendered: Rendered;
     try {
@@ -157,10 +171,12 @@ function defaultOutput(file: string, suffix: string): string {
     return path.join(path.dirname(file), stem + suffix === base ? `${stem}1${suffix}` : stem + suffix);
 }
 
-/** One line naming the file and, where the error knows it, the position inside it. */
+/** A line per problem, naming the file and, where the error knows it, the position inside it. */
 function describe(error: unknown, file: string): string {
     if (error instanceof PreprocessError) return `Error: ${error.message}`;
-    // A diagnostic naming its own file sits in an included header; the message's line belongs to it.
-    if (error instanceof CompileError) return `Error: ${error.diagnostics[0]?.file ?? file}:${error.message}`;
+    // A diagnostic naming its own file sits in an included header; its line belongs to that file.
+    if (error instanceof CompileError) {
+        return error.diagnostics.map((d) => `Error: ${d.file ?? file}:${d.line}:${d.column}: ${d.message}`).join("\n");
+    }
     return `Error: ${file}: ${error instanceof Error ? error.message : String(error)}`;
 }

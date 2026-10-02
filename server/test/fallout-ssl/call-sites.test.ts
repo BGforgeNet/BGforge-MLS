@@ -9,14 +9,14 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 
 const TEST_URI = "file:///test.ssl";

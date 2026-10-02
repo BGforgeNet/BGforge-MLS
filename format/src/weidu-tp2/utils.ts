@@ -15,7 +15,7 @@ import {
     type CollectedItem,
     CollectedItemType,
 } from "./types";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 import {
     type WeiduToken,
     tokenizeWeidu,
@@ -23,11 +23,13 @@ import {
     normalizeWhitespaceWeidu,
     normalizeComment,
     normalizeLineComment,
+    weiduLineCommentStart,
+    hasWeiduLineComment,
 } from "../format-utils";
 
 // Comment normalizers now live in @bgforge/format (shared across all formatters);
 // re-export so sibling TP2 modules keep importing them from "./utils".
-export { normalizeComment, normalizeLineComment } from "../format-utils";
+export { normalizeComment, normalizeLineComment, hasWeiduLineComment } from "../format-utils";
 
 // ============================================
 // Type lookup sets (O(1) instead of O(n) array includes)
@@ -66,8 +68,8 @@ export function isComment(node: SyntaxNode): boolean {
 
 /** Normalize line with potential inline comment. */
 export function withNormalizedComment(line: string): string {
-    if (!line.includes("//")) return line;
-    const idx = line.indexOf("//");
+    const idx = weiduLineCommentStart(line);
+    if (idx === -1) return line;
     const before = line.slice(0, idx);
     if (!before.trim()) {
         // Standalone comment - preserve indent, normalize comment
@@ -88,7 +90,7 @@ export function tryAppendInlineComment(lines: string[], child: SyntaxNode, lastE
         return false;
     }
     const lastLine = lines[lines.length - 1];
-    if (lastLine === undefined || lastLine.includes("//")) {
+    if (lastLine === undefined || hasWeiduLineComment(lastLine)) {
         return false;
     }
     lines[lines.length - 1] = lastLine + INLINE_COMMENT_SPACING + normalizeComment(child.text);
@@ -333,7 +335,7 @@ export function outputAlignedAssignments(
             // Check for inline comment - comment starts on same row as previous item ended
             if (lastEndRow >= 0 && item.startRow === lastEndRow && lines.length > 0) {
                 const lastLine = lines[lines.length - 1];
-                if (lastLine !== undefined && !lastLine.includes("//")) {
+                if (lastLine !== undefined && !hasWeiduLineComment(lastLine)) {
                     lines[lines.length - 1] = lastLine + INLINE_COMMENT_SPACING + item.text;
                     continue;
                 }

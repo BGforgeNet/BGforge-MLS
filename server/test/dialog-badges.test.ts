@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
+import { initParser as initWeiduD } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { parseDialog as parseSSL } from "../src/dialog";
 import {
@@ -10,8 +10,8 @@ import {
     stateBadges,
     type DialogChoice,
     type DialogState,
-} from "../../shared/dialog-model";
-import type { SSLDialogData } from "../../shared/dialog-types";
+} from "@bgforge/shared/dialog-model";
+import type { SSLDialogData } from "@bgforge/shared/dialog-types";
 
 // 1B honest-projection badge layer: a single badge vocabulary derived from the IR.
 // This slice covers only the signals the IR already carries (derived, conditional,

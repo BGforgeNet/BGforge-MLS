@@ -10,10 +10,10 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { conlog } from "../logger";
 import { SyntaxType } from "./syntax-type";
-import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "../../../shared/dialog-types";
+import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "@bgforge/shared/dialog-types";
 import {
     extractSayText,
     extractSayTexts,

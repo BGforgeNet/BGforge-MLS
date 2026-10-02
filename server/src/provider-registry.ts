@@ -42,7 +42,7 @@ import type { StrRefSite } from "./ie-resources/strref-sites";
 import { encodeSemanticTokens } from "./shared/semantic-tokens";
 import { FileWatcherManager } from "./core/file-watcher-manager";
 import { scanWorkspaceFiles } from "./core/workspace-scanner";
-import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "../../shared/protocol";
+import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "@bgforge/shared/protocol";
 
 class ProviderRegistry {
     private providers: Map<string, LanguageProvider> = new Map();
@@ -104,7 +104,7 @@ class ProviderRegistry {
         // finishes read a partially populated index; failures log, never reject.
         // `scanAfter` holds the start; see its doc on ProviderContext for why.
         this.workspaceScan = (context.scanAfter ?? Promise.resolve())
-            .then(() => scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot))
+            .then(() => scanWorkspaceFiles(this.providers.values(), this, context.workspaceRoot, context.scanProgress))
             .catch((error) => {
                 // Stryker disable next-line StringLiteral: log message text, not a behavioral contract
                 conlog(`Workspace scan failed: ${errorMessage(error)}`, "error");

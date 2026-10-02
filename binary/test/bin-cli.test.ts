@@ -21,7 +21,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { buildDlg, parserRegistry } from "../src/index";
 import { REPO_ROOT } from "./repo-root";
-import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout";
 
 const CLI = path.join(REPO_ROOT, "binary/out/cli.js");
 const NODE = process.execPath;
@@ -102,6 +102,15 @@ describe("bin CLI integration", () => {
             const proFile = path.join(FIXTURES, "misc", "00000001.pro");
             const { stdout } = run(proFile);
             expect(stdout.endsWith("\n")).toBe(true);
+        });
+    });
+
+    describe("modes fgbin does not implement", () => {
+        it.each(["--save-and-check", "--check-idempotency"])("refuses %s instead of printing the snapshot", (flag) => {
+            const { code, stdout, stderr } = run(path.join(FIXTURES, "misc", "00000001.pro"), flag);
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
+            expect(stdout).toBe("");
         });
     });
 

@@ -15,7 +15,7 @@ vi.mock("../../src/logger", () => ({
 }));
 
 import { lookupLocalSymbol, clearAllLocalSymbolsCache } from "../../src/fallout-ssl/local-symbols";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 const TEST_URI = "file:///mymod/scripts/test.ssl";
 

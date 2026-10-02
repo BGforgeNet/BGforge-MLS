@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { nodeEditable, nodeDeletable, nodeRenamable } from "../../shared/dialog-editability";
-import type { DialogModel, DialogState, SourceLang } from "../../shared/dialog-model";
+import { nodeEditable, nodeDeletable, nodeRenamable } from "@bgforge/shared/dialog-editability";
+import type { DialogModel, DialogState, SourceLang } from "@bgforge/shared/dialog-model";
 
 /** Minimal model wrapping one state under one dialog root; `editable` mirrors what each family's adapter sets. */
 function model(sourceLang: SourceLang, node: DialogState, editable = sourceLang === "d"): DialogModel {

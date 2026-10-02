@@ -5,13 +5,13 @@
 import { assert, describe, expect, it, beforeAll, vi } from "vitest";
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
 import { getStateLabelHover } from "../../src/weidu-d/hover";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

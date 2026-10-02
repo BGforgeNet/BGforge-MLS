@@ -1,8 +1,7 @@
-import { formatAdapterRegistry, type ParsedField, type ParseResult } from "@bgforge/binary";
-import { assertNotLocked } from "./model";
+import { formatAdapterRegistry, type ParseResult } from "@bgforge/binary";
+import { assertNotLocked, writeFieldValue } from "./model";
 import { layoutFieldRows, type EditorSession } from "./session";
 import { projectRow } from "./window";
-import { serializeSession } from "./serialize";
 import type { EditResult, NodeId } from "./types";
 
 /**
@@ -46,10 +45,7 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
     session.undo.push({ label: `Edit ${node.name}`, before: cloneParseResult(session) });
     session.redo = [];
 
-    // kind === "field" guarantees the source is a ParsedField.
-    const field = node.source as ParsedField;
-    field.value = value;
-    field.rawValue = value;
+    writeFieldValue(session.model, node, value);
 
     // Cascading edits implied by this one (e.g. clearing a sibling inventory slot that held the just-reassigned
     // item, keeping a `uniqueRef` reference unique). `node` now carries its new value, so the relationship model
@@ -62,8 +58,7 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
             const ci = session.model.byId.get(cid);
             const cnode = ci === undefined ? undefined : session.model.nodes[ci];
             if (cnode?.kind === "field") {
-                (cnode.source as ParsedField).value = cval;
-                (cnode.source as ParsedField).rawValue = cval;
+                writeFieldValue(session.model, cnode, cval);
                 cascadeNodes.push(cnode);
             }
         }
@@ -71,14 +66,6 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
 
     invalidateCachedDocument(session.model.parseResult);
     session.dirty = true;
-
-    // Format-validity for the slice: the structure still serializes.
-    let formatValid = true;
-    try {
-        serializeSession(session);
-    } catch {
-        formatValid = false;
-    }
 
     const changed = [projectRow(session.model, node, rel)];
     // Re-project the cascaded siblings (the cleared slots) so the UI reflects them precisely - the blanket
@@ -102,7 +89,6 @@ export function editField(session: EditorSession, nodeId: NodeId, value: number 
             changed,
             diagnostics: rel ? rel.constraints(session.model) : [],
             dirty: session.dirty,
-            formatValid,
         },
     };
 }

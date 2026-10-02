@@ -10,7 +10,7 @@ import {
     type ConvTarget,
 } from "../src/dialog-editor/webview/conversation-tree";
 import { resolveJumpTarget } from "../src/dialog-editor/webview/jump-resolve";
-import type { DialogChoice, DialogState } from "../../shared/dialog-model";
+import type { DialogChoice, DialogState } from "@bgforge/shared/dialog-model";
 import { ch, noJump, root, st } from "./dialog-fixtures";
 
 describe("resolveJumpTarget", () => {

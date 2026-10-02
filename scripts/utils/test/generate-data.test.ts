@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names.ts";
+import { WEIDU_TP2_STANZAS } from "@bgforge/shared/stanza-names.ts";
 import { generateCompletion, generateSignatures, getDetail, loadData } from "../src/generate-data.ts";
 
 const TMP_BASE = "tmp";

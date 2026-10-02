@@ -9,7 +9,7 @@ import { FileIndex } from "../../src/core/file-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 import type { ParseResult } from "../../src/core/parse-result";
 import { normalizeUri } from "../../src/core/normalized-uri";
-import { LANG_FALLOUT_SSL, LANG_WEIDU_TP2 } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL, LANG_WEIDU_TP2 } from "@bgforge/shared/languages";
 
 function makeLoc(uri: string, line: number, char: number): Location {
     return Location.create(uri, Range.create(Position.create(line, char), Position.create(line, char + 5)));

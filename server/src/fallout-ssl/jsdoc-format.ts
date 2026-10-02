@@ -5,8 +5,8 @@
  */
 
 import type { JSdoc } from "../shared/jsdoc";
-import { buildFalloutArgsTable } from "../../../shared/tooltip-table";
-import { buildSignatureBlock, formatDeprecation } from "../../../shared/tooltip-format";
+import { buildFalloutArgsTable } from "@bgforge/shared/tooltip-table";
+import { buildSignatureBlock, formatDeprecation } from "@bgforge/shared/tooltip-format";
 import { LANG_FALLOUT_SSL_TOOLTIP } from "../core/languages";
 
 /**

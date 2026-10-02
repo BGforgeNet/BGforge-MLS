@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser } from "../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { modelFromD, type DialogModel, type DialogState } from "../../shared/dialog-model";
-import { modelToD } from "../../shared/dialog-d-serialize";
+import { modelFromD, type DialogModel, type DialogState } from "@bgforge/shared/dialog-model";
+import { modelToD } from "@bgforge/shared/dialog-d-serialize";
 
 // ---------------------------------------------------------------------------
 // Round-trip helpers

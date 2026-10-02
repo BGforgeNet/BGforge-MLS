@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { DialogBadge } from "../../../../shared/dialog-model";
+    import type { DialogBadge } from "@bgforge/shared/dialog-model";
 
     // Honest-projection badge chip (1B). Renders the highest-priority badge inline and
     // lists the full set on hover - "keep readable": one chip per node/row, the rest a

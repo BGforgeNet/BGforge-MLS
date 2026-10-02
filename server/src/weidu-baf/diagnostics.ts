@@ -4,9 +4,8 @@
  * cannot drift on which compiler ran for a given setting.
  */
 
-import { compileSymbolsFrom } from "../../../compilers/bcs/src/index";
-import { bcsEngineForScriptStyle } from "../../../shared/bcs-engine";
-import { parserManager } from "../../../shared/parsers/parser-manager";
+import { bcsEngineForScriptStyle, compileSymbolsFrom } from "../../../compilers/bcs/src/index";
+import { parserManager } from "@bgforge/shared/parsers/parser-manager";
 import { LANG_WEIDU_BAF } from "../core/languages";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { sendParseResult } from "../diagnostics";

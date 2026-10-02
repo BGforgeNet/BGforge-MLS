@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { allocateNodeIds, allocateOptionIds } from "../../shared/dialog-ssl-ids";
-import type { DialogModel } from "../../shared/dialog-model";
+import { allocateNodeIds, allocateOptionIds } from "@bgforge/shared/dialog-ssl-ids";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 const sslModel = (): DialogModel => ({
     sourceLang: "ssl",

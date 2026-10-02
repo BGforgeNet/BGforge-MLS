@@ -8,7 +8,7 @@
 import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
 import { FoldingRangeKind, type Position } from "vscode-languageserver/node";
-import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { initParser, isInitialized, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { getDocumentSymbols } from "../../src/fallout-ssl/symbol";
 import { getLocalDefinition } from "../../src/fallout-ssl/definition";
 import { findReferences } from "../../src/fallout-ssl/references";
@@ -20,7 +20,7 @@ import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { formatFalloutSsl as formatDocument } from "@bgforge/format";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { FileIndex } from "../../src/core/file-index";
-import { LANG_FALLOUT_SSL } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL } from "@bgforge/shared/languages";
 import { SyntaxType } from "../../src/fallout-ssl/syntax-type";
 import { loadFixture, loadFixtures, findIdentifierPosition, FALLOUT_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";

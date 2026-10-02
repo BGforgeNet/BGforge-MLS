@@ -9,12 +9,12 @@ import { SymbolKind } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 
 import { getDocumentSymbols } from "../../src/weidu-tp2/symbol";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 
 beforeAll(async () => {
     await initParser();

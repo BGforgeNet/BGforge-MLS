@@ -1,4 +1,4 @@
-import { type CompletionItem, type CompletionParams } from "vscode-languageserver/node";
+import { type CompletionParams } from "vscode-languageserver/node";
 import { timeHandler } from "../shared/time-handler";
 import { registry } from "../provider-registry";
 import type { HandlerContext } from "./context";
@@ -20,8 +20,4 @@ export function register(ctx: HandlerContext): void {
             ctx.timingOpts,
         ),
     );
-
-    ctx.connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
-        return item;
-    });
 }

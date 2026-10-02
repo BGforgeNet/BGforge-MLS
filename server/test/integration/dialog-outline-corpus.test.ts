@@ -24,8 +24,8 @@ import * as fg from "fast-glob";
 import { beforeAll, describe, expect, it } from "vitest";
 import { buildConversationTree, type ConvState } from "../../../client/src/dialog-editor/webview/conversation-tree";
 import { ariaPositions, flattenRows, rowAriaLevel } from "../../../client/src/dialog-editor/webview/tree-rows";
-import { modelFromD } from "../../../shared/dialog-model";
-import { initParser, isInitialized } from "../../../shared/parsers/weidu-d";
+import { modelFromD } from "@bgforge/shared/dialog-model";
+import { initParser, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../../src/weidu-d/dialog";
 import { IE_FIXTURES } from "./test-helpers";
 

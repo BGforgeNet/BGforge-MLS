@@ -12,7 +12,7 @@
         type SourceLang,
         type DialogState,
         type DialogTarget,
-    } from "../../../../shared/dialog-model";
+    } from "@bgforge/shared/dialog-model";
     import type { DialogActions } from "./dialog-actions";
     import {
         codeFieldEditable,
@@ -27,7 +27,7 @@
         writeText,
     } from "./inspector-edit";
     import type { CallerRow } from "./find-callers";
-    import type { Reachability } from "../../../../shared/dialog-reachability";
+    import type { Reachability } from "@bgforge/shared/dialog-reachability";
     import { autosize } from "./autosize";
     import CodeField from "./CodeField.svelte";
 

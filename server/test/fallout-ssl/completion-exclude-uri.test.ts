@@ -7,12 +7,12 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 import type { CompletionItem } from "vscode-languageserver/node";
 import { type IndexedSymbol, SourceType } from "../../src/core/symbol";
 import { FileIndex } from "../../src/core/file-index";
-import { LANG_FALLOUT_SSL } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL } from "@bgforge/shared/languages";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 

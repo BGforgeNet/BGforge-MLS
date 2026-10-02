@@ -5,7 +5,7 @@ import "../../webview-ui/primitives.css";
 import App from "./App.svelte";
 import { postToHost } from "./host";
 import { SLOW_FRAME_MS, installFatalErrorHandler, observeSlowFrames } from "../../webview-utils";
-import { initTextmate } from "./highlight/textmate";
+import { startTextmate } from "./highlight/textmate";
 import type { IRawGrammar } from "vscode-textmate";
 import onigWasm from "vscode-oniguruma/release/onig.wasm";
 import bafGrammarJson from "../../../../syntaxes/weidu-baf.tmLanguage.json";
@@ -40,7 +40,7 @@ if (target) {
 
     // Bring the TextMate tokenizer up AFTER mount, and deliberately without awaiting it: it colours the
     // condition/action fields as a progressive enhancement, so it must never gate first paint or blank the
-    // panel if it fails. One engine (vscode-textmate + oniguruma) runs every dialog language's grammar; the
+    // panel if it fails - a failure is a warning naming why the fields stay uncoloured. One engine (vscode-textmate + oniguruma) runs every dialog language's grammar; the
     // editor colours all of them through these same grammars, so the webview is parity by construction.
     // onig.wasm is embedded via the esbuild binary loader and the grammar JSONs via the default json loader
     // (all in-bundle, nothing fetched), so the CSP needs only 'wasm-unsafe-eval' to compile the regex engine
@@ -49,7 +49,7 @@ if (target) {
     // docstring never appears in a condition, but the grammar can reference it). The .json files ARE compiled
     // TextMate grammars, but resolveJsonModule infers a structural literal type that does not unify with
     // IRawGrammar's index-signature interfaces; the Registry consumes them unchanged, so cast at this boundary.
-    void initTextmate(
+    startTextmate(
         onigWasm,
         [
             { scopeName: "source.weidu-baf", grammar: bafGrammarJson as unknown as IRawGrammar },
@@ -58,5 +58,7 @@ if (target) {
             { scopeName: "source.dialog-tsexpr", grammar: tsExprGrammarJson as unknown as IRawGrammar },
         ],
         { baf: "source.weidu-baf", ssl: "source.fallout-ssl", ts: "source.dialog-tsexpr" },
+        (reason) =>
+            postToHost({ type: "notify", level: "warn", text: `Condition and action colouring is off: ${reason}` }),
     );
 }

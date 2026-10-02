@@ -42,6 +42,8 @@
     "devDependencies": {
         "@bgforge/binary": "workspace:*",
         "@bgforge/format": "workspace:*",
+        "@bgforge/shared": "workspace:*",
+        "@bgforge/ssl": "workspace:*",
         "@types/node": "catalog:",
         "fast-check": "catalog:",
         "fast-glob": "catalog:",
@@ -52,10 +54,12 @@
         "vitest": "catalog:",
         "vscode-languageserver": "catalog:",
         "vscode-languageserver-textdocument": "^1.0.14",
+        "vscode-oniguruma": "catalog:",
+        "vscode-textmate": "catalog:",
         "web-tree-sitter": "catalog:",
         "yaml": "catalog:"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=22"
     }
 }

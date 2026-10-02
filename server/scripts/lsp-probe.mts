@@ -32,7 +32,7 @@ import { spawn } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "../../shared/protocol";
+import { LSP_LOG_WORKSPACE_SCAN_COMPLETE } from "@bgforge/shared/protocol";
 
 /** How long to wait for the workspace scan before answering anyway, loudly. Under the 30s overall timeout. */
 const SCAN_WAIT_MS = 20_000;

@@ -9,7 +9,7 @@ import * as path from "path";
 import { Worker } from "node:worker_threads";
 import * as vscode from "vscode";
 import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
-import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportUnrecognizedMessage, surfaceWebviewRuntimeError } from "../webview-error";
 import { ThumbnailPump } from "./panel-core";
 import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
@@ -105,11 +105,6 @@ function defaultPort(extensionUri: vscode.Uri): GalleryPort {
 }
 
 /** The `type` of a message the panel refused, for the error text; the message itself may be any shape. */
-function describeMessageType(message: unknown): string {
-    if (typeof message !== "object" || message === null || !("type" in message)) return typeof message;
-    return String((message as { type: unknown }).type);
-}
-
 /**
  * Wire one panel: mount the webview, start a worker, and pump thumbnails between them until it closes.
  *
@@ -177,6 +172,14 @@ export function wireGalleryPanel(
     const showSet = async (id: number): Promise<void> => {
         const uri = deps.setUri(id);
         if (uri !== undefined) await showOnStage(uri, { set: id });
+    };
+
+    /** A pick that failed to open is said, naming what was picked: silence reads as a click that missed. */
+    const opening = (what: string | number, done: Promise<void>): void => {
+        done.catch((error: unknown) => {
+            const reason = error instanceof Error ? error.message : String(error);
+            void vscode.window.showErrorMessage(`Image gallery could not open ${what}: ${reason}`);
+        });
     };
 
     /**
@@ -250,14 +253,7 @@ export function wireGalleryPanel(
 
     panel.webview.onDidReceiveMessage((message: unknown) => {
         if (!isWebviewToHost(message)) {
-            // A shape this panel does not recognise means the webview and the host disagree about the
-            // contract, which is a bug rather than input: report it on the channels a webview throw uses
-            // rather than acting on partial data or dropping it silently.
-            surfaceWebviewRuntimeError({
-                editor: "Image gallery",
-                file: state.source,
-                message: `unrecognized message of type ${describeMessageType(message)}`,
-            });
+            reportUnrecognizedMessage("Image gallery", state.source, message);
             return;
         }
         switch (message.type) {
@@ -265,7 +261,7 @@ export function wireGalleryPanel(
                 postInit();
                 // A panel opened ON an animation draws it straight away: the link was a request to look at
                 // that set, and landing on its row with an empty stage would answer only half of it.
-                if (state.focusSet !== undefined) void showSet(state.focusSet);
+                if (state.focusSet !== undefined) opening(state.focusSet, showSet(state.focusSet));
                 break;
             case "requestThumbnails":
                 pump?.request(message.ids, message.size);
@@ -278,12 +274,14 @@ export function wireGalleryPanel(
                 // answers "where did the thing I am now looking at come from" when the view has moved, and
                 // moving focus out of the panel to answer it here would take the reader off the picture.
                 const uri = deps.animationUri(source, message.id);
-                if (uri === undefined) void deps.open(source, message.id);
-                else void showOnStage(uri, { item: message.id });
+                opening(
+                    message.id,
+                    uri === undefined ? deps.open(source, message.id) : showOnStage(uri, { item: message.id }),
+                );
                 break;
             }
             case "showSet":
-                void showSet(message.id);
+                opening(message.id, showSet(message.id));
                 break;
             case "openGame":
                 // The same command the resource view's welcome offers, so the two ways in cannot drift.

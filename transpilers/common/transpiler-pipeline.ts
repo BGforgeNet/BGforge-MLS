@@ -87,10 +87,8 @@ export function createTranspiler<TResult>(config: TranspilerConfig<TResult>) {
             }
             const output = config.getOutput(result);
 
-            const lowerPath = filePath.toLowerCase();
-            const outPath = lowerPath.endsWith(config.sourceExtension)
-                ? filePath.slice(0, -config.sourceExtension.length) + config.targetExtension
-                : filePath + config.targetExtension;
+            // validateExtension above guarantees the path ends in sourceExtension (in some letter case).
+            const outPath = filePath.slice(0, -config.sourceExtension.length) + config.targetExtension;
             await fsp.writeFile(outPath, output, "utf-8");
 
             return {

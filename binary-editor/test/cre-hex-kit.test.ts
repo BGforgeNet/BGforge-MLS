@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 import { openSession, sessionStore } from "../src/session";
 import { projectRow } from "../src/window";
 import { getRelationshipModel } from "../src/relationship/registry";
-import { enumSelectedLabel, enumHexDigits } from "../../shared/enum-label";
+import { enumSelectedLabel, enumHexDigits } from "@bgforge/shared/enum-label";
 import type { Model, FlatNode } from "../src/model";
 
 // Edwin is a Conjurer (kit dword 0x00800000); a vendored modify-time CRE.

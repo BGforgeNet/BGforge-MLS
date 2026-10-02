@@ -8,7 +8,7 @@ import { makeMiniFrm, asIndexedView } from "./fixtures";
  * Guards the host->webview wire contract for the packed pixel buffer.
  *
  * The transport is NOT JSON: `Webview.postMessage` recreates an `ArrayBuffer` on the far side for
- * any extension targeting VS Code 1.57+ (this one targets ^1.91.0), which is why the pixels cross
+ * any extension targeting VS Code 1.57+ (below this one's engines.vscode floor), which is why the pixels cross
  * as one buffer instead of base64. `structuredClone` is the right proxy for that - JSON, the old
  * proxy here, would destroy the very type the contract now depends on.
  */

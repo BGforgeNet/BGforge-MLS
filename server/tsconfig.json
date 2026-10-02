@@ -1,7 +1,7 @@
 {
     "extends": "../tsconfig.base.json",
     "compilerOptions": {
-        "lib": ["es2023"],
+        "lib": ["es2024", "es2025.collection"],
         "sourceMap": true,
         "allowImportingTsExtensions": true,
         "outDir": "out",
@@ -15,7 +15,8 @@
         "paths": {
             "@bgforge/binary/archive": ["../binary/src/archive/index.ts"],
             "@bgforge/format": ["../format/src/index.ts"],
-            "@bgforge/format/internal": ["../format/src/internal.ts"]
+            "@bgforge/format/internal": ["../format/src/internal.ts"],
+            "@bgforge/ssl": ["../compilers/ssl/src/index.ts"]
         }
     },
     "include": [

@@ -55,7 +55,7 @@ describe("Symbols.searchWorkspaceSymbols - cancellation responsiveness", () => {
         // Flip cancellation after the first isCancellationRequested read at loop entry,
         // so the inner-loop check fires on the next 16-step boundary.
         const token = tokenCancelledAfter(1);
-        const results = index.searchWorkspaceSymbols("", 500, token);
+        const results = index.searchWorkspaceSymbols("", token);
 
         // After the entry check returns [], a yield here is []. When cancellation flips
         // mid-loop on the interval boundary, the loop exits within 16 pushed results of

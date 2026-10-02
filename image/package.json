@@ -53,10 +53,11 @@
         "test": "vitest run --config vitest.config.ts"
     },
     "devDependencies": {
+        "@types/node": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=22"
     }
 }

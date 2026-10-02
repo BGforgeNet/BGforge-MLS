@@ -17,7 +17,7 @@ import {
     LANG_WEIDU_TRA,
     LANG_WEIDU_TP2,
 } from "../core/languages";
-import { parserManager, setParserLogger } from "../../../shared/parsers/parser-manager";
+import { parserManager, setParserLogger } from "@bgforge/shared/parsers/parser-manager";
 import { registry } from "../provider-registry";
 import * as settings from "../settings";
 import { defaultSettings, normalizeSettings } from "../settings";
@@ -36,6 +36,7 @@ import { ConfiguredGame } from "../ie-resources/configured-game";
 import { getServerCapabilities } from "../server-capabilities";
 import { fireRefresh } from "../shared/lsp-refresh";
 import type { HandlerContext } from "./context";
+import { workDoneScanProgress } from "../core/scan-progress";
 
 // Capability flags captured in onInitialize, consumed in onInitialized.
 // Plain object so both handlers share a reference without module-level lets.
@@ -52,6 +53,10 @@ let workspaceRoot: string | undefined;
 // the flags above, the two handlers are separate closures. Resolved by default so a client that never
 // sends `initialize` (or an onInitialized without one) has nothing to await.
 let translationLoad: Promise<void> = Promise.resolve();
+
+// Resolved by the client's `initialized`, before which LSP allows the server no requests - the scan's progress
+// indicator is one, and waits on this.
+const { promise: clientInitialized, resolve: markClientInitialized } = Promise.withResolvers<void>();
 
 export function register(ctx: HandlerContext): void {
     ctx.connection.onInitialize(async (params: InitializeParams): Promise<InitializeResult> => {
@@ -148,6 +153,7 @@ export function register(ctx: HandlerContext): void {
             getDocumentVersion: (uri) => ctx.documents.get(uri)?.version,
             getTranslationDir: () => translation.directory(),
             scanAfter: translationLoad,
+            scanProgress: workDoneScanProgress(ctx.connection, clientInitialized),
         });
 
         initServerContext({
@@ -180,6 +186,7 @@ export function register(ctx: HandlerContext): void {
 
     ctx.connection.onInitialized(async () => {
         conlog("onInitialized started");
+        markClientInitialized();
         if (capabilityFlags.configuration) {
             // Register for all configuration changes.
             await ctx.connection.client.register(DidChangeConfigurationNotification.type);

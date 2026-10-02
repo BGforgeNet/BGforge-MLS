@@ -1,4 +1,5 @@
 import { type IndexedAnimation, type Frame, type Sequence, FRM_FACINGS, emptyPalette } from "../model/animation.ts";
+import { MAX_ANIMATION_PIXELS, MAX_FRAME_PIXELS } from "../limits.ts";
 
 const HEADER_SIZE = 0x3e;
 
@@ -25,6 +26,9 @@ export function parseFrm(bytes: Uint8Array): IndexedAnimation {
     // Directions can share a data offset; cache frame indices per raw offset so a shared
     // direction reuses the same parsed frames rather than duplicating them in the pool.
     const framesByOffset = new Map<number, number[]>();
+    // The sibling decoders' bounds, applied per frame as it is read: the dimensions are a u16 pair every
+    // decoder after this one allocates RGBA from, and nothing ties them to the pixel bytes the file holds.
+    let declaredPixels = 0;
 
     // Iterate FRM_FACINGS (fixed length 6, one per header direction slot) rather than indexing
     // it by d, so facing comes out as Facing, not Facing | undefined under noUncheckedIndexedAccess.
@@ -40,6 +44,17 @@ export function parseFrm(bytes: Uint8Array): IndexedAnimation {
                 }
                 const width = view.getUint16(cursor + 0x00, be);
                 const height = view.getUint16(cursor + 0x02, be);
+                if (width * height > MAX_FRAME_PIXELS) {
+                    throw new Error(
+                        `parseFrm: frame ${frames.length} claims ${width}x${height} pixels - implausibly large for a sprite`,
+                    );
+                }
+                declaredPixels += width * height;
+                if (declaredPixels > MAX_ANIMATION_PIXELS) {
+                    throw new Error(
+                        `parseFrm: frames claim more than the ${MAX_ANIMATION_PIXELS} pixels a whole animation may hold`,
+                    );
+                }
                 const size = view.getUint32(cursor + 0x04, be);
                 const x = view.getInt16(cursor + 0x08, be);
                 const y = view.getInt16(cursor + 0x0a, be);

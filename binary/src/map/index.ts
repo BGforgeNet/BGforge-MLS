@@ -38,14 +38,7 @@ class MapParser implements BinaryParser {
 
     parse(data: Uint8Array, options?: ParseOptions): ParseResult {
         try {
-            const result = this.parseInternal(data, options);
-            Object.defineProperty(result, "sourceData", {
-                value: new Uint8Array(data),
-                enumerable: false,
-                configurable: true,
-                writable: false,
-            });
-            return result;
+            return this.parseInternal(data, options);
         } catch (error) {
             return this.fail(`Parse error: ${error instanceof Error ? error.message : String(error)}`);
         }

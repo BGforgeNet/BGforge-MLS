@@ -14,6 +14,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import * as fg from "fast-glob";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -24,7 +25,7 @@ import { IE_FIXTURES } from "./test-helpers";
 const ROOT = path.resolve(__dirname, "../../..");
 const D_SYNTAX_PATH = path.join(ROOT, "syntaxes/weidu-d.tmLanguage.json");
 const BAF_SYNTAX_PATH = path.join(ROOT, "syntaxes/weidu-baf.tmLanguage.json");
-const ONIG_WASM_PATH = path.join(ROOT, "node_modules/vscode-oniguruma/release/onig.wasm");
+const ONIG_WASM_PATH = createRequire(__filename).resolve("vscode-oniguruma/release/onig.wasm");
 
 /** Commands whose trigger/action body must reach the BAF grammar. */
 const PATCH_COMMAND =

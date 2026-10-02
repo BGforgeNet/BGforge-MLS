@@ -8,7 +8,7 @@ export default defineConfig({
     clean: true,
     sourcemap: false,
     platform: "node",
-    target: "node20",
+    target: "node22",
     outDir: "out",
     // Emit .js rather than tsdown's default .mjs: package.json is type:module and bin/main point at
     // out/cli.js and out/index.js.

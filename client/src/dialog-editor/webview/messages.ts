@@ -1,4 +1,4 @@
-import type { DialogModel } from "../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 import { isRecord } from "../../is-record";
 
 /**

@@ -18,9 +18,9 @@ import * as path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileFile } from "../../src/compile.ts";
-import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
-import { builtArtifactsPresent } from "../../../../shared/cli/test/built-artifacts.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 
@@ -332,6 +332,15 @@ describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to match
  * is the only way to reach the rest, and it runs here rather than there because it needs no checkout.
  */
 const OPTIMIZED_CASES: Case[] = [
+    {
+        // A fold that overflows only shows once its result feeds another operation: a lone push writes the low
+        // 32 bits either way. A float fold converts its int operand to 32-bit float first.
+        name: "constant folds wrap at 32 bits",
+        source:
+            "variable g;\nprocedure start begin\n g := (2147483647 + 1) / 2;\n g := 46341 * 46341 / 2;\n" +
+            " g := -(-2147483647 - 1) / 2;\n g := 2147483647 * 2147483647 / 2;\n g := (2147483647 + 1) > 0;\n" +
+            " g := 16777217 + 0.5;\nend\n",
+    },
     {
         // `cancel` names a procedure, and that name is the only thing keeping it alive: without counting
         // the reference, the optimiser removes the procedure and cancels something that is no longer there.

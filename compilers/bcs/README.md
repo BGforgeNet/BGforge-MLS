@@ -36,7 +36,7 @@ SC
 ```
 
 There is no separator between a run of fields and the marker that follows it, which is why `100AC` is a
-response weight of 100 followed by its first action's opening marker, and `160OB` is an action id followed by
+response weight of 100 followed by its first action's opening marker, and `29OB` is an action id followed by
 its first object's. A response with no actions writes `100RE` for the same reason.
 
 ## Usage

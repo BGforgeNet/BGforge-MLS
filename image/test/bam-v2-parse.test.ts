@@ -132,6 +132,31 @@ describe("decodeBamV2", () => {
         expect(() => decodeBamV2(structure, () => solidPage(0, 0, 0))).toThrow(/whole animation|in total/);
     });
 
+    // A crafted structure, not a file seen in the wild: its pages are decoded - up to 64 MiB each - only to
+    // be discarded once a frame is refused, so the frames are judged first.
+    it("refuses an implausible frame before decoding a single page", () => {
+        const structure = oneBlockStructure();
+        structure.frames = [{ width: 40000, height: 40000, centerX: 0, centerY: 0, blockStart: 0, blockCount: 0 }];
+        let resolved = 0;
+
+        expect(() =>
+            decodeBamV2(structure, () => {
+                resolved++;
+                return solidPage(0, 0, 0);
+            }),
+        ).toThrow(/implausibly large/);
+        expect(resolved).toBe(0);
+    });
+
+    // Crafted again: the largest real v2 (BG2:EE's MAPICONS) decodes 58 pages, 15.2M pixels in all.
+    it("refuses a crafted structure whose pages decode to more than an animation may hold", () => {
+        const page = solidPage(0, 0, 0, 255, 1024);
+        const structure = oneBlockStructure();
+        structure.requiredPages = Array.from({ length: 70 }, (_, i) => i);
+
+        expect(() => decodeBamV2(structure, () => page)).toThrow(/pages decode to more than/);
+    });
+
     it("rejects a block naming a page the structure never listed as required", () => {
         // requiredPages drives which pages get resolved, so a block outside it would otherwise read
         // an undefined page. Reachable only for a hand-built structure, which is exactly this case.

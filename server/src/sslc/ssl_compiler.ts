@@ -54,7 +54,7 @@ export async function ssl_compile(opts: {
     if (!fs.existsSync(COMPILER_MODULE) || entry === undefined) {
         const msg =
             "The WebAssembly compiler is missing from this installation. Reinstall the server or configure an external compiler path in settings.";
-        conlog(msg);
+        conlog(msg, "error");
         return {
             returnCode: 1,
             stdout: "",
@@ -101,7 +101,7 @@ export async function ssl_compile(opts: {
         // fork() can throw synchronously (e.g. EINVAL on Windows with bad env).
         // Return an error result instead of crashing the server.
         const msg = error instanceof Error ? error.message : String(error);
-        conlog(`WebAssembly compiler fork failed: ${msg}`);
+        conlog(`WebAssembly compiler fork failed: ${msg}`, "error");
         return { returnCode: 1, stdout: "", stderr: msg };
     }
 
@@ -148,13 +148,13 @@ export async function ssl_compile(opts: {
             const msg = `WebAssembly compiler timed out after ${timeoutMs}ms`;
             if (!p.killed) p.kill();
             settle({ returnCode: 1, stdout: stdout.join(""), stderr: msg });
-            conlog(msg);
+            conlog(msg, "error");
         }, timeoutMs);
 
         // Handle fork failures (e.g., ENOENT when compiler module is missing).
         // Without this, the promise would never resolve if fork fails before "close".
         p.on("error", (err) => {
-            conlog(`WebAssembly compiler fork error: ${err.message}`);
+            conlog(`WebAssembly compiler fork error: ${err.message}`, "error");
             stderr.push(err.message);
         });
 

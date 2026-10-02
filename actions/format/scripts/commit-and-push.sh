@@ -18,7 +18,7 @@ source "${GITHUB_ACTION_PATH}/../_shared/lib.sh"
 # Stage only the files fgfmt just processed; never sweep up unrelated changes.
 while IFS= read -r f; do
     [[ -z "$f" ]] && continue
-    [[ -f "$f" ]] && git add -- "$f"
+    if [[ -f "$f" ]]; then git add -- "$f"; fi
 done <"$LIST"
 
 finalize_commit_and_push

@@ -19,13 +19,13 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest } from "vscode-languageclient/node";
-import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "../../../shared/languages";
-import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "../../../shared/protocol";
-import type { DialogMessages } from "../../../shared/dialog-model";
-import { surfaceWebviewRuntimeError } from "../webview-error";
-import { reportSlowFrame } from "../timing";
+import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "@bgforge/shared/languages";
+import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "@bgforge/shared/protocol";
+import type { DialogMessages } from "@bgforge/shared/dialog-model";
 import { buildDialogHostHtml } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
+import { handleSharedDialogMessage } from "./shared-host-messages";
+import { reportUnrecognizedMessage } from "../webview-error";
 import { isWebviewToHost } from "./webview/messages";
 
 // The languageIds that ARE dialog files. `.td`/`.tssl` are contributed as languageId "typescript" (so the TS
@@ -92,46 +92,27 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         const core = new DialogHostCore(io, document.uri.path);
 
         panel.webview.onDidReceiveMessage((raw: unknown) => {
-            // Same reject-and-ignore posture as the binary editor's isWebviewToHost: an unrecognized
-            // or malformed message changes nothing rather than acting on partial data.
-            if (!isWebviewToHost(raw)) return;
+            // As every editor host does: a message outside the protocol changes nothing, and is reported.
+            if (!isWebviewToHost(raw)) {
+                reportUnrecognizedMessage("Dialog editor", path.basename(document.uri.fsPath), raw);
+                return;
+            }
+            if (handleSharedDialogMessage(raw, path.basename(document.uri.fsPath))) return;
             switch (raw.type) {
                 case "ready":
                     core.handleReady();
                     break;
-                // "Go to source" (F4 in the tree): open the text editor at the state's/option's byte offset.
+                // "Go to source" (F4 in the tree): open the text editor at the state's/option's offset.
                 case "revealSource":
                     void this.revealSource(document, raw.offset);
-                    break;
-                // A user-facing notice from the webview (e.g. Del pressed on a non-deletable node): surface it
-                // as a VS Code notification so a blocked action explains itself instead of silently doing nothing.
-                case "notify":
-                    if (raw.level === "warn") void vscode.window.showWarningMessage(raw.text);
-                    else void vscode.window.showInformationMessage(raw.text);
                     break;
                 // The webview emits one "edit" (the whole model) per user action; the core serializes and
                 // applies them (see host-core.ts).
                 case "edit":
                     core.handleEdit(raw.model, raw.seq ?? 0);
                     break;
-                // A fatal error caught by the webview's installFatalErrorHandler (see main.ts). Parity with
-                // the binary editor's "runtimeError" case (provider.ts): surface through the same
-                // operator-visible channels (output channel + toast) instead of leaving a silently blank panel.
-                case "runtimeError": {
-                    const file = path.basename(document.uri.fsPath);
-                    surfaceWebviewRuntimeError({
-                        editor: "Dialog editor",
-                        file,
-                        message: raw.message,
-                        stack: raw.stack,
-                    });
-                    break;
-                }
-                // The webview held its own thread long enough to stop painting (observeSlowFrames in
-                // webview-utils.ts). Logged rather than shown: a stall is a diagnostic, and a toast for one
-                // would itself be noise on exactly the machine already struggling.
-                case "slowFrame":
-                    reportSlowFrame("Dialog editor", path.basename(document.uri.fsPath), raw.ms);
+                // The compiled-dialog messages (openGame, pickString, detach) mean nothing for source.
+                default:
                     break;
             }
         });
@@ -154,14 +135,11 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
      * "Go to source" (F4 from the tree): reveal the .ssl/.d text editor with the caret on the state's/option's
      * source line. If the document is already open in a text editor, reveal THAT one in place (never spawn a
      * fresh tab each time); otherwise open it in the active column full-width, not split beside the dialog
-     * editor. Tree-sitter ranges are UTF-8 BYTE offsets while `positionAt` wants a UTF-16 CHAR offset, so
-     * convert through the document's own text (offsets land on token boundaries, so the byte prefix never
-     * splits a character).
+     * editor. The offset is a tree-sitter index over the JS string the server parsed: UTF-16 code units, the
+     * unit `positionAt` takes.
      */
-    private async revealSource(document: vscode.TextDocument, byteOffset: number): Promise<void> {
-        const text = document.getText();
-        const charOffset = Buffer.from(text, "utf8").subarray(0, byteOffset).toString("utf8").length;
-        const pos = document.positionAt(charOffset);
+    private async revealSource(document: vscode.TextDocument, offset: number): Promise<void> {
+        const pos = document.positionAt(offset);
         const range = new vscode.Range(pos, pos);
         const uri = document.uri.toString();
         // Prefer an existing text editor for this document (in whatever column it already lives); else the
@@ -197,6 +175,9 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
 export function registerDialogEditor(context: vscode.ExtensionContext, client: LanguageClient): vscode.Disposable {
     const provider = new DialogEditorProvider(context, client);
     const editor = vscode.window.registerCustomEditorProvider("bgforge.dialogEditor", provider, {
+        // The webview alone holds the reader's view - selection, graph viewport, tree/graph mode, collapsed
+        // branches, the find query, an edit in progress - and persists none of it, so a hidden tab kept alive
+        // comes back as it was left, at the cost of its memory while hidden.
         webviewOptions: { retainContextWhenHidden: true },
         supportsMultipleEditorsPerDocument: false,
     });

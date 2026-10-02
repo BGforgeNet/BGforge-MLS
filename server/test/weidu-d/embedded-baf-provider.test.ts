@@ -31,7 +31,7 @@ vi.mock("../../src/core/static-loader", () => ({
 
 import { weiduDProvider } from "../../src/weidu-d/provider";
 import { initEmbeddedBaf } from "../../src/weidu-d/embedded-baf";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import type { CompletionItem, Position } from "vscode-languageserver/node";
 

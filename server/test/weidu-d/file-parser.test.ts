@@ -7,12 +7,12 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseFile } from "../../src/weidu-d/file-parser";
 
 const TEST_URI = "file:///mymod/npcs/gaelan.d";
@@ -158,7 +158,7 @@ IF ~~ THEN BEGIN s1
     IF ~~ THEN EXIT
 END
 `;
-        const result = parseFile("file:///workspace/npcs/npc.d", text, "/workspace");
+        const result = parseFile("file:///workspace/npcs/npc.d", text, { workspaceRoot: "/workspace" });
 
         expect(result.symbols).toHaveLength(1);
         // symbol.source.displayPath should be workspace-relative

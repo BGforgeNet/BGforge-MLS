@@ -365,10 +365,10 @@ function findFunctionReferences(root: SyntaxNode, symbolInfo: SymbolInfo, occurr
 // ============================================
 
 /**
- * Convert a byte offset within text to a Position relative to basePosition.
+ * Convert an offset within text to a Position relative to basePosition.
  * Handles multiline strings correctly.
  */
-function byteOffsetToPosition(text: string, offset: number, basePosition: { row: number; column: number }): Position {
+function offsetToPosition(text: string, offset: number, basePosition: { row: number; column: number }): Position {
     let currentLine = basePosition.row;
     let currentCol = basePosition.column;
 
@@ -403,11 +403,11 @@ function findAllVariableReferencesInStringContent(node: SyntaxNode, varName: str
             const matchStart = match.index;
             const matchEnd = match.index + match[0].length;
 
-            // Calculate absolute position by converting byte offset to (line, column)
+            // Calculate absolute position by converting offset to (line, column)
             // String content can be multiline (e.g., five-tilde strings), so we need to
             // traverse the text to find the correct line and column for the match
-            const startPos = byteOffsetToPosition(text, matchStart, node.startPosition);
-            const endPos = byteOffsetToPosition(text, matchEnd, node.startPosition);
+            const startPos = offsetToPosition(text, matchStart, node.startPosition);
+            const endPos = offsetToPosition(text, matchEnd, node.startPosition);
 
             // Create a synthetic node-like object
             // Type assertion is required because we're creating a custom node structure

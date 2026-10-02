@@ -5,14 +5,13 @@ import {
     LSP_COMMAND_SAVE_TRA,
     WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
     lspWorkspaceSymbolsCommand,
-} from "../../shared/protocol";
+} from "@bgforge/shared/protocol";
 import { COMMAND_compile } from "./compile";
 
 export function getServerCapabilities(): ServerCapabilities {
     return {
         textDocumentSync: TextDocumentSyncKind.Incremental,
         completionProvider: {
-            resolveProvider: true,
             completionItem: { labelDetailsSupport: true },
             triggerCharacters: ["@"],
         },

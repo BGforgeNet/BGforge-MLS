@@ -6,7 +6,7 @@
 
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
-import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
+import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
 
 const ENGINE_PROCEDURES: ReadonlySet<string> = new Set(engineProcedureNames);
 

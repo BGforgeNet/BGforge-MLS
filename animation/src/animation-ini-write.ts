@@ -1,10 +1,9 @@
 /**
  * Writing an animation's own INI declaration - the inverse of `animation-ini.ts`.
  *
- * A converted set is art plus a declaration, and until now this project wrote only the art: the notes
- * named the two IDS rows to add and said nothing about the family, so the files landed with nothing
- * telling the engine how to read them. This writes that file, which the install reads as `<id>.ini` in
- * hex from its override folder.
+ * A converted set is art plus a declaration: the art alone lands with nothing telling the engine how to
+ * read it. This writes the declaration, which the install reads as `<id>.ini` in hex from its override
+ * folder.
  *
  * Only the keys a caller names are written. An install's own INIs declare a handful each and leave the
  * rest out, and every reader of them - this project's parser included - treats an absent key as "not

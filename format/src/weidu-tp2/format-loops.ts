@@ -20,13 +20,14 @@ import {
     isKeyword,
     isBodyContent,
     normalizeComment,
+    hasWeiduLineComment,
     normalizeWhitespace,
     handleComment,
     tryAppendInlineComment,
     outputAlignedAssignments,
     pushBlankIfGap,
 } from "./utils";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 
 // ============================================
 // FOR loop formatting
@@ -194,7 +195,7 @@ export function formatForEach(
             // Inline comment on the BEGIN line - append to last header line
             if (beginRow >= 0 && child.startPosition.row === beginRow) {
                 const lastLine = headerLines[headerLines.length - 1];
-                if (lastLine && !lastLine.includes("//")) {
+                if (lastLine && !hasWeiduLineComment(lastLine)) {
                     headerLines[headerLines.length - 1] =
                         lastLine + INLINE_COMMENT_SPACING + normalizeComment(child.text);
                     beginRow = -1;

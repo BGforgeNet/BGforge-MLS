@@ -63,14 +63,33 @@ interface CliArgs {
 /** One caller-specific option: the flag spelling cac takes, and its help line. */
 export type ExtraOption = readonly [flags: string, description: string];
 
+/** The flag that selects each mode other than the default. */
+const MODE_FLAGS: Readonly<Record<Exclude<OutputMode, "stdout">, string>> = {
+    save: "--save",
+    check: "--check",
+    "save-and-check": "--save-and-check",
+    "check-idempotency": "--check-idempotency",
+};
+
+interface ParseCliOptions {
+    /**
+     * Options belonging to ONE cli rather than to all of them. Registered here rather than read out of
+     * `process.argv` by the caller so cac still validates them and `--help` still lists them; their values
+     * come back in `extra` rather than widening `CliArgs` with fields the other CLIs have no use for.
+     */
+    readonly extraOptions?: readonly ExtraOption[];
+    /**
+     * The modes the caller's processFile implements, besides the default. Any other mode flag is refused: a
+     * processFile falls through to its last branch on a mode it does not handle and reports success. Required,
+     * so a new command states them rather than inheriting every one.
+     */
+    readonly modes: readonly Exclude<OutputMode, "stdout">[];
+}
+
 /**
- * @param extraOptions Options belonging to ONE cli rather than to all three. Registered here rather
- * than read out of `process.argv` by the caller so cac still validates them and `--help` still lists
- * them; their values come back in `extra` rather than widening `CliArgs` with fields the other CLIs
- * have no use for.
  * @returns null when `--help` was handled and the caller should stop; a bad argument exits here instead.
  */
-export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOption[] = []): CliArgs | null {
+export function parseCliArgs(helpText: string, { extraOptions = [], modes }: ParseCliOptions): CliArgs | null {
     const cli = cac();
     const command = cli.command("[target]", "File or directory to process");
     for (const [flags, description] of extraOptions) command.option(flags, description);
@@ -134,6 +153,10 @@ export function parseCliArgs(helpText: string, extraOptions: readonly ExtraOptio
             : check
               ? "check"
               : "stdout";
+    if (mode !== "stdout" && !modes.includes(mode)) {
+        console.error(`Error: ${MODE_FLAGS[mode]} is not supported by this command`);
+        process.exit(1);
+    }
 
     return {
         target,
@@ -276,6 +299,8 @@ interface RunOptions {
      * pays that warmup once over a contiguous run instead of once per chunk.
      */
     chunksPerJob?: number;
+    /** How long one child may run before it is stopped as wedged; the default suits every real CLI. */
+    childTimeoutMs?: number;
 }
 
 interface ChildCounts {
@@ -305,9 +330,16 @@ function stripJobsFlag(argv: string[]): string[] {
     return out;
 }
 
+/**
+ * How long one child may run before it is presumed wedged: a hang detector rather than a budget. A child
+ * handles one chunk of the list - several per job - so minutes of it mean a stuck file, not a slow run.
+ */
+const CHILD_TIMEOUT_MS = 10 * 60_000;
+
 function runChild(
     childArgs: string[],
     stdoutSpool: string,
+    timeoutMs: number,
 ): Promise<{ code: number; stderr: string; counts?: ChildCounts }> {
     return new Promise((resolve) => {
         // stdout is spooled to a temp file rather than buffered in memory:
@@ -322,16 +354,30 @@ function runChild(
         });
         let stderr = "";
         let counts: ChildCounts | undefined;
+        let settled = false;
+        // Once: a child that fails to spawn may report `error` with or without a `close` after it.
+        const settle = (code: number): void => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            fs.closeSync(out);
+            resolve({ code, stderr, counts });
+        };
+        const timer = setTimeout(() => {
+            stderr += `Error: a child process did not finish within ${timeoutMs / 1000}s and was stopped\n`;
+            child.kill("SIGKILL");
+        }, timeoutMs);
         child.stderr!.on("data", (d: Buffer) => {
             stderr += d;
         });
         child.on("message", (m) => {
             counts = readChildCounts(m) ?? counts;
         });
-        child.on("close", (code) => {
-            fs.closeSync(out);
-            resolve({ code: code ?? 1, stderr, counts });
+        child.on("error", (error) => {
+            stderr += `Error: a child process failed: ${error.message}\n`;
+            settle(1);
         });
+        child.on("close", (code) => settle(code ?? 1));
     });
 }
 
@@ -342,7 +388,12 @@ function runChild(
  * each child's spooled output is replayed in chunk order so the combined
  * output matches the sequential walk. Counts come back over the IPC channel.
  */
-async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: number): Promise<void> {
+async function runParallelJobs(
+    files: string[],
+    args: CliArgs,
+    chunksPerJob: number,
+    childTimeoutMs: number,
+): Promise<void> {
     const jobs = Math.min(args.jobs, files.length);
     // Many more chunks than workers: per-file cost is highly skewed (one big
     // record can cost 1000x a small one), and with one contiguous chunk per
@@ -369,7 +420,11 @@ async function runParallelJobs(files: string[], args: CliArgs, chunksPerJob: num
                 const listFile = path.join(tmpDir, `chunk-${i}.txt`);
                 fs.writeFileSync(listFile, chunks[i]!.join("\n") + "\n");
                 // oxlint-disable-next-line no-await-in-loop
-                results[i] = await runChild([...baseArgs, "--files-from", listFile], path.join(tmpDir, `stdout-${i}`));
+                results[i] = await runChild(
+                    [...baseArgs, "--files-from", listFile],
+                    path.join(tmpDir, `stdout-${i}`),
+                    childTimeoutMs,
+                );
             }
         };
         await Promise.all(Array.from({ length: jobs }, runWorker));
@@ -429,7 +484,15 @@ export function reportFatal(error: unknown): void {
 }
 
 export async function runCli(options: RunOptions): Promise<void> {
-    const { args, extensions, description, init, processFile, chunksPerJob = 8 } = options;
+    const {
+        args,
+        extensions,
+        description,
+        init,
+        processFile,
+        chunksPerJob = 8,
+        childTimeoutMs = CHILD_TIMEOUT_MS,
+    } = options;
 
     // Child mode (spawned by runParallelJobs): process the handed list with
     // the normal sequential loop and report counts back over IPC. No summary
@@ -473,7 +536,7 @@ export async function runCli(options: RunOptions): Promise<void> {
         if (!args.quiet) console.log(`Found ${files.length} ${description} files`);
         // init() is skipped here: the parent only orchestrates, each child
         // initializes its own parsers.
-        await runParallelJobs(files, args, chunksPerJob);
+        await runParallelJobs(files, args, chunksPerJob, childTimeoutMs);
         return;
     }
 

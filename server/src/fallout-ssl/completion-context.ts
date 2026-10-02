@@ -5,7 +5,7 @@
 
 import type { Position } from "vscode-languageserver/node";
 import { getLinePrefix } from "../cursor-utils";
-import { isInitialized, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { CommentKind, detectCommentKind } from "../shared/completion-context";
 import { createIsInsideString } from "../shared/string-check";
 import { SyntaxType } from "./syntax-type";

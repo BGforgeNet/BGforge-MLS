@@ -32,10 +32,10 @@ import {
     SymbolKind,
 } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
 import { SyntaxType } from "./syntax-type";
 import { extractProcedures, findIdentifierNodeAtPosition, findMacroDefinition, makeRange } from "./utils";
-import { sslMapGet } from "../../../shared/fallout-ssl-names";
+import { sslMapGet } from "@bgforge/shared/fallout-ssl-names";
 import { resolveIdentifierDefinitionNode } from "./symbol-definitions";
 import { memoizeTextLookup } from "../shared/text-lookup";
 

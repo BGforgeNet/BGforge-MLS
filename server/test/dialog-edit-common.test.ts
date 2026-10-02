@@ -6,8 +6,8 @@ import {
     lineIndentAt,
     nextIdSeed,
     removeLineSplice,
-} from "../../shared/dialog-edit-common";
-import type { DialogChoice, DialogModel, DialogState } from "../../shared/dialog-model";
+} from "@bgforge/shared/dialog-edit-common";
+import type { DialogChoice, DialogModel, DialogState } from "@bgforge/shared/dialog-model";
 
 // Direct edge-case coverage for the shared writer/id-allocator helpers. Four language writers depend on this
 // module, so a regression here surfaces as a confusing failure three layers up; these pin the boundaries

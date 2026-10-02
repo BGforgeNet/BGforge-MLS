@@ -33,10 +33,7 @@ export interface GrammarSource {
 
 const grammars = new Map<TmLang, IGrammar>();
 
-let markReady: () => void;
-const ready = new Promise<void>((resolve) => {
-    markReady = resolve;
-});
+const { promise: ready, resolve: markReady } = Promise.withResolvers<void>();
 
 /**
  * Resolves once the tokenizer can colour. Purely a reactivity trigger for the renderer: the webview mounts
@@ -87,6 +84,22 @@ export async function initTextmate(
         }),
     );
     markReady();
+}
+
+/**
+ * Starts the tokenizer without gating first paint: fields render flat until it is up. A failure goes to
+ * `onFailure` rather than becoming an unhandled rejection, which the webview's fatal-error handler would turn
+ * into a blank panel over what is only its colouring.
+ */
+export function startTextmate(
+    onigWasm: Uint8Array,
+    sources: GrammarSource[],
+    roots: Record<TmLang, string>,
+    onFailure: (reason: string) => void,
+): void {
+    initTextmate(onigWasm, sources, roots).catch((error: unknown) => {
+        onFailure(error instanceof Error ? error.message : String(error));
+    });
 }
 
 /**

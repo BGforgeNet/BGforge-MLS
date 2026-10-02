@@ -10,6 +10,7 @@
         "syntaxes/*.tmLanguage.json",
         "syntaxes/*.tmLanguage.yml",
         "server/out/*.json",
+        "shared/data/*.json",
         "server/data/weidu-baf-iesdp.yml",
         "server/data/weidu-baf-ids.yml",
         "server/data/fallout-ssl-sfall.yml",

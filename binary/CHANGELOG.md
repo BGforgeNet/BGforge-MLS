@@ -2,6 +2,17 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## Unreleased
+
+### Changed
+
+- Requires Node 22 or newer, up from 20.
+
+### Fixed
+
+- `fgbin` refuses `--save-and-check` and `--check-idempotency` with an error instead of accepting them and
+  printing the snapshot to stdout; neither was ever implemented for binary files.
+
 ## 0.8.0
 
 ### Removed

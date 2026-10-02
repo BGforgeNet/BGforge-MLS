@@ -26,7 +26,7 @@ import {
     WEIDU_HOOK_TIMEOUT_MS,
     WEIDU_TIMEOUT_MS,
 } from "../../../scripts/utils/src/weidu-binary.ts";
-import { initParser, parseWithCache } from "../../../shared/parsers/weidu-d";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 
 /**
  * WeiDU exits 0 when the file parsed and 4 on a parse error. Anything else (crash, missing binary,

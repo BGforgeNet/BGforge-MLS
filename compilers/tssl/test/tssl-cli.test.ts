@@ -10,7 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import tsslPackage from "../package.json";
 import { REPO_ROOT } from "../../../transpilers/test/repo-root";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout";
 
 const CLI = path.join(REPO_ROOT, "compilers/tssl", tsslPackage.bin.tssl);
 const NODE = process.execPath;
@@ -46,6 +46,17 @@ describe("tssl CLI integration", () => {
 
     it("exits 0 with --help", () => {
         expect(run("--help").code).toBe(0);
+    });
+
+    // Its processFile writes on every mode but `check`, so an unimplemented check mode would write.
+    it.each(["--save-and-check", "--check-idempotency"])("refuses %s without writing anything", (flag) => {
+        const file = path.join(tmpDir, "mode.tssl");
+        fs.writeFileSync(file, 'function start() {\n    display_msg("hi");\n}\n', "utf-8");
+
+        const { code, stderr } = run(file, flag);
+        expect(code).toBe(1);
+        expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
+        expect(fs.readdirSync(tmpDir)).toStrictEqual(["mode.tssl"]);
     });
 
     describe("which outputs a run writes", () => {

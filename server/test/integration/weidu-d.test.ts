@@ -7,7 +7,7 @@
 
 import { join } from "node:path";
 import { describe, expect, it, beforeAll } from "vitest";
-import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
+import { initParser, isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import { getDocumentSymbols } from "../../src/weidu-d/symbol";
 import { getDefinition } from "../../src/weidu-d/definition";
 import { findReferences } from "../../src/weidu-d/references";
@@ -17,7 +17,7 @@ import { formatWeiduD as formatDocument } from "@bgforge/format";
 import { createFoldingRangesProvider } from "../../src/shared/folding-ranges";
 import { SyntaxType } from "../../src/weidu-d/syntax-type";
 import { FileIndex } from "../../src/core/file-index";
-import { LANG_WEIDU_D } from "../../../shared/languages";
+import { LANG_WEIDU_D } from "@bgforge/shared/languages";
 import { parseFile } from "../../src/weidu-d/file-parser";
 import { loadFixture, findIdentifierPosition, IE_FIXTURES } from "./test-helpers";
 import { normalizeUri } from "../../src/core/normalized-uri";
@@ -178,7 +178,7 @@ describe("weidu-d integration", () => {
             const f = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
             const fileIndex = new FileIndex(LANG_WEIDU_D);
-            fileIndex.updateFile(normalizeUri(f.uri), parseFile(f.uri, f.text, IE_FIXTURES));
+            fileIndex.updateFile(normalizeUri(f.uri), parseFile(f.uri, f.text, { workspaceRoot: IE_FIXTURES }));
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("a39");
             expect(results.length).toBeGreaterThan(0);
@@ -190,8 +190,14 @@ describe("weidu-d integration", () => {
             const second = loadFixture(IE_FIXTURES, "Ascension/ascension/balthazar/d/balth.d");
 
             const fileIndex = new FileIndex(LANG_WEIDU_D);
-            fileIndex.updateFile(normalizeUri(first.uri), parseFile(first.uri, first.text, IE_FIXTURES));
-            fileIndex.updateFile(normalizeUri(second.uri), parseFile(second.uri, second.text, IE_FIXTURES));
+            fileIndex.updateFile(
+                normalizeUri(first.uri),
+                parseFile(first.uri, first.text, { workspaceRoot: IE_FIXTURES }),
+            );
+            fileIndex.updateFile(
+                normalizeUri(second.uri),
+                parseFile(second.uri, second.text, { workspaceRoot: IE_FIXTURES }),
+            );
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("");
             expect(results.length).toBeGreaterThan(100);
@@ -212,7 +218,7 @@ END
             const uri = "file:///test/multi-dialog.d";
 
             const fileIndex = new FileIndex(LANG_WEIDU_D);
-            fileIndex.updateFile(normalizeUri(uri), parseFile(uri, text, "/test"));
+            fileIndex.updateFile(normalizeUri(uri), parseFile(uri, text, { workspaceRoot: "/test" }));
 
             const results = fileIndex.symbols.searchWorkspaceSymbols("0");
             expect(results).toHaveLength(2);

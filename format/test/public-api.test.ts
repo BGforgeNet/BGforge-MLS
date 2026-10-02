@@ -30,6 +30,7 @@ const PUBLIC_EXPORTS = [
     "validateFormatting",
     // Per-language normalizers for the content guard
     "stripCommentsWeidu",
+    "stripCommentsWeiduD",
     "stripCommentsFalloutSsl",
     "stripCommentsForCompareFalloutSsl",
     "stripCommentsTra",
@@ -41,8 +42,9 @@ const PUBLIC_EXPORTS = [
 ] as const;
 
 const INTERNAL_EXPORTS = [
-    // Tilde-delimited string scanning
+    // String-aware scanning
     "scanTildeDelimiter",
+    "weiduLineCommentStart",
     // Comment normalizers
     "normalizeLineComment",
     "normalizeBlockComment",

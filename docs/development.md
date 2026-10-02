@@ -7,7 +7,7 @@ This project uses `pnpm` exclusively - `pnpm exec <command>`, never `npx`.
 
 ## Prerequisites
 
-- **Node.js 24**, the line CI builds and tests on. The published packages declare `engines.node` `>=20`, which is the
+- **Node.js 24**, the line CI builds and tests on. The published packages declare `engines.node` `>=22`, which is the
   floor for consumers, not the development version.
 - **pnpm** at the version pinned by the root `package.json` `packageManager` field.
 - **Network access** for the first `pnpm build:grammar` (tree-sitter downloads its WASI SDK into its own cache), for
@@ -98,15 +98,15 @@ file. The reasoning behind that scope is in the header of `.github/workflows/mut
 
 ## CI
 
-| Workflow              | Runs on                                      | Runs                                                                                                |
-| --------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `build.yml`           | Every push and pull request; `vX.Y.Z` tags   | `pnpm test:all`, build, package; the release steps on a tag                                         |
-| `harness.yml`         | Every push and pull request                  | `pnpm test:harness`                                                                                 |
-| `codeql.yml`          | Pushes and pull requests to `master`; weekly | CodeQL static analysis                                                                              |
-| `scorecard.yml`       | Pushes and pull requests to `master`; weekly | OpenSSF Scorecard                                                                                   |
-| `mutation.yml`        | Weekly; manual dispatch                      | `pnpm test:mutation`                                                                                |
-| `test-node-next.yml`  | Weekly; manual dispatch                      | `pnpm test:all` on the Node "Current" line                                                          |
-| `publish-library.yml` | `<lib>/vX.Y.Z` tags                          | Build and publish one library, after its test suite where it has one ([releasing.md](releasing.md)) |
+| Workflow              | Runs on                                      | Runs                                                                               |
+| --------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `build.yml`           | Every push and pull request; `vX.Y.Z` tags   | `pnpm test:all`, build, package; the release steps on a tag                        |
+| `harness.yml`         | Every push and pull request                  | `pnpm test:harness`                                                                |
+| `codeql.yml`          | Pushes and pull requests to `master`; weekly | CodeQL static analysis                                                             |
+| `scorecard.yml`       | Pushes and pull requests to `master`; weekly | OpenSSF Scorecard                                                                  |
+| `mutation.yml`        | Weekly; manual dispatch                      | `pnpm test:mutation`                                                               |
+| `test-node-next.yml`  | Weekly; manual dispatch                      | `pnpm test:all` on the Node "Current" line                                         |
+| `publish-library.yml` | `<lib>/vX.Y.Z` tags                          | Build and publish one library, after its test suite ([releasing.md](releasing.md)) |
 
 ## Testing against real external files
 

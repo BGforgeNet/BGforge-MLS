@@ -13,8 +13,8 @@
 
 import { parseArgs, type SslArgs } from "./args";
 import { runPool, workerCount } from "./cli-pool";
-import { runInput, type OutputLine, type TaskArgs } from "./cli-task";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { needsGrammar, runInput, type OutputLine, type TaskArgs } from "./cli-task";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 const USAGE = `Usage: ssl {switches} filename [-o outputname] [filename [..]]
   -q    accepted and ignored (this compiler never waits for input)
@@ -87,16 +87,13 @@ async function main(argv: readonly string[]): Promise<number> {
     if (!args.noLogo) console.log(LOGO);
 
     const task = taskArgs(args);
-    // Only compiling needs the grammar, and loading it is the slowest part of a run. Decompiling reads
-    // bytecode and never parses source, so it starts without paying for it.
-    const needsGrammar = !args.preprocessOnly && !args.decompile && !args.listing && args.inputs.length > 0;
     const jobs = args.inputs.length > 1 ? workerCount(args.jobs, args.inputs.length) : 1;
 
     let failures = 0;
     if (jobs > 1) {
         failures = await runPool(args.inputs, task, jobs, emit);
     } else {
-        if (needsGrammar) await initParser();
+        if (needsGrammar(task) && args.inputs.length > 0) await initParser();
         for (const input of args.inputs) {
             const result = runInput(input, task);
             for (const line of result.lines) emit(line);

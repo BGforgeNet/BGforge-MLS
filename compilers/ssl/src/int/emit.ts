@@ -26,6 +26,8 @@ import {
     P_TIMED,
 } from "./opcodes";
 import { EngineOp } from "./opcodes-engine";
+import { EmitError } from "./emit-error";
+import { CompileError } from "../compile-error";
 import { NameTable } from "./namelist";
 import { IntWriter } from "./writer";
 import {
@@ -85,12 +87,7 @@ const COMPOUND_OPCODES: Partial<Record<AssignOp, number>> = {
     "/=": Op.DIV,
 };
 
-export class EmitError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = "EmitError";
-    }
-}
+export { EmitError } from "./emit-error";
 
 export interface EmitOptions {
     /**
@@ -760,11 +757,15 @@ class Emitter {
 export function emitInt(program: Program, options: EmitOptions = {}): Uint8Array {
     // A procedure with no definition would emit an empty body that silently returns, so it is refused
     // here rather than earlier: whatever ran before may have removed it as dead, and one nothing can
-    // reach is not worth failing the build over.
-    const missing = program.undefinedProcedures?.[0];
-    if (missing) {
-        throw new EmitError(
-            `${missing.line}:${missing.column}: procedure '${missing.name}' is declared but never defined`,
+    // reach is not worth failing the build over. Every one is named, as a compile reports every error it has.
+    const missing = program.undefinedProcedures ?? [];
+    if (missing.length > 0) {
+        throw new CompileError(
+            missing.map((m) => ({
+                line: m.line,
+                column: m.column,
+                message: `procedure '${m.name}' is declared but never defined`,
+            })),
         );
     }
     return new Emitter(program, options).emit();

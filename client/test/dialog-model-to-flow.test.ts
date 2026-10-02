@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 import { modelToFlow, stateNodeSize } from "../src/dialog-editor/webview/model-to-flow";
-import { stateBadges, type DialogModel, type DialogState } from "../../shared/dialog-model";
+import { stateBadges, type DialogModel, type DialogState } from "@bgforge/shared/dialog-model";
 import { SAMPLE } from "../src/dialog-editor/test/harness/sample-model";
 import { REAL_MODEL } from "../src/dialog-editor/test/harness/real-model";
 

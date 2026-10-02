@@ -37,18 +37,15 @@ import { stopTranspileWorker } from "./transpile/transpile-worker-client";
 import { abortInFlightTsslCompiles } from "./tssl/compile-int";
 import { abortInFlightWeiduCompiles } from "./weidu-compile";
 
-// Create a connection for the server.
-// createConnection() auto-detects transport from process.argv:
-// --stdio, --node-ipc, --pipe, or --socket=N. Defaults to IPC when
-// launched by VSCode, stdio when launched standalone.
+// createConnection() takes the transport from process.argv - --stdio, --node-ipc, --pipe <name> or
+// --socket=N - and throws when none is given. The VS Code client launches the server with --node-ipc.
 const connection = createConnection(ProposedFeatures.all);
 
 // Timing options for request latency logging. Built once so the warn closure
 // always references the live connection console.
 const timingOpts = makeTimingOptions(connection.console);
 
-// Create a simple text document manager. The text document manager
-// supports full document sync only
+// Applies the client's incremental edits (server-capabilities.ts advertises Incremental sync).
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 // Initialize the LSP connection holder for modules that need it

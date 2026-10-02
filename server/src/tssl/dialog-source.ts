@@ -1,6 +1,6 @@
 /**
  * TSSL SOURCE parser: parses raw `.tssl` TypeScript directly (no transpile, no esbuild bundle) into the
- * SSL `DialogData` shape, with byte ranges pointing into the `.tssl` SOURCE. This is what makes `.tssl`
+ * SSL `DialogData` shape, with ranges pointing into the `.tssl` SOURCE. This is what makes `.tssl`
  * dialogs editable in place - unlike `parseTSSLDialog` (transpile-then-parse), whose ranges point into
  * throwaway generated SSL.
  *
@@ -25,7 +25,7 @@ import {
     type SSLDialogReply,
     isSslMessageFn,
     isSslOptionFn,
-} from "../../../shared/dialog-types";
+} from "@bgforge/shared/dialog-types";
 
 const TALK_PROC = "talk_p_proc";
 
@@ -535,7 +535,7 @@ function buildNode(
 }
 
 /**
- * Parse TSSL source into SSL DialogData with byte ranges into the `.tssl` source: nodes (name, replies,
+ * Parse TSSL source into SSL DialogData with ranges into the `.tssl` source: nodes (name, replies,
  * options with multi-level conditions, callTargets/callTransitions, faithfulness tier, bundle `branches`,
  * structured `block`, procRange/nameRange), entry points, entry-call and new-node write-back anchors, and
  * out-of-band starts. At FULL parity with the native SSL parser (`server/src/dialog.ts`): the same four

@@ -17,8 +17,8 @@ import {
     textLockReason,
     writeText,
 } from "../src/dialog-editor/webview/inspector-edit";
-import { modelFromSSL, type DialogChoice, type DialogState } from "../../shared/dialog-model";
-import type { SSLDialogData } from "../../shared/dialog-types";
+import { modelFromSSL, type DialogChoice, type DialogState } from "@bgforge/shared/dialog-model";
+import type { SSLDialogData } from "@bgforge/shared/dialog-types";
 
 describe("writeText (single-line normalization)", () => {
     it("replaces baked newlines with a space so the .msg/.tra line stays single-line (both @N and literal paths)", () => {

@@ -58,11 +58,12 @@
         "zod": "^4.5.4"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "fast-check": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=22"
     }
 }

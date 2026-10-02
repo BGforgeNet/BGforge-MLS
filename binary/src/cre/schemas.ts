@@ -1,7 +1,7 @@
 /**
- * typed-binary schemas for CRE v1. Effects use either the format's own EFF v1
- * spec or the shared `ie-common` EFF v2 body, dispatched at parse time on
- * the header's `effStructureVersion` byte.
+ * typed-binary schemas for CRE v1. Effects use either the shared `ie-common`
+ * EFF v1 feature block or the EFF format's own v2 body, dispatched at parse time
+ * on the header's `effStructureVersion` byte.
  */
 
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";

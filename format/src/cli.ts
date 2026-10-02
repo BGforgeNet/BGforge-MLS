@@ -20,16 +20,17 @@ import {
     getEditorconfigSettings,
     validateFormatting,
     stripCommentsWeidu,
+    stripCommentsWeiduD,
     stripCommentsForCompareFalloutSsl,
     stripCommentsTra,
     stripCommentsFalloutMsg,
     stripComments2da,
     stripCommentsFalloutScriptsLst,
 } from "./index";
-import { initParser as initSslParser, getParser as getSslParser } from "../../shared/parsers/fallout-ssl";
-import { initParser as initBafParser, getParser as getBafParser } from "../../shared/parsers/weidu-baf";
-import { initParser as initDParser, getParser as getDParser } from "../../shared/parsers/weidu-d";
-import { initParser as initTp2Parser, getParser as getTp2Parser } from "../../shared/parsers/weidu-tp2";
+import { initParser as initSslParser, getParser as getSslParser } from "@bgforge/shared/parsers/fallout-ssl";
+import { initParser as initBafParser, getParser as getBafParser } from "@bgforge/shared/parsers/weidu-baf";
+import { initParser as initDParser, getParser as getDParser } from "@bgforge/shared/parsers/weidu-d";
+import { initParser as initTp2Parser, getParser as getTp2Parser } from "@bgforge/shared/parsers/weidu-tp2";
 import {
     EXT_FALLOUT_SSL,
     EXT_WEIDU_BAF,
@@ -39,7 +40,7 @@ import {
     EXT_FALLOUT_MSG,
     EXT_INFINITY_2DA,
     FILENAME_FALLOUT_SCRIPTS_LST,
-} from "../../shared/languages";
+} from "@bgforge/shared/languages";
 import {
     type FileResult,
     type OutputMode,
@@ -49,7 +50,7 @@ import {
     safeProcess,
     reportDiff,
     reportFatal,
-} from "../../shared/cli/cli-utils";
+} from "@bgforge/shared/cli/cli-utils";
 
 // Per-extension input-size cap. Real-world source files stay well below
 // these (the largest checked-in TP2s in the WeiDU corpus are ~100 KB; SSL
@@ -205,6 +206,9 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             case "scripts-lst":
                 normalizeForCompare = stripCommentsFalloutScriptsLst;
                 break;
+            case "d":
+                normalizeForCompare = stripCommentsWeiduD;
+                break;
             default:
                 normalizeForCompare = stripCommentsWeidu;
                 break;
@@ -232,8 +236,9 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             let reResult: FormatResult;
             try {
                 reResult = parseAndFormat(result.text, fileType, opts);
-            } catch {
-                console.error(`Error: Failed to re-parse ${filePath}`);
+            } catch (error) {
+                const msg = error instanceof Error ? error.message : String(error);
+                console.error(`Error: ${filePath}: failed to re-parse the formatted text: ${msg}`);
                 return "error";
             }
             if (reResult.text !== result.text) {
@@ -262,10 +267,10 @@ const HELP = `Usage: fgfmt <file|dir> [--save] [--check] [--save-and-check] [-r]
   --jobs <n>           Process directory files with N parallel workers
   --exclude-from <p>   Skip the files listed in <p> (# comments and blanks ignored)
   --exclude-base <d>   Resolve --exclude-from entries against <d> (default: the target)
-  Without --save or --check: single file prints to stdout, directory shows what would change`;
+  Without --save or --check: the formatted text of each file is printed to stdout`;
 
 async function main() {
-    const args = parseCliArgs(HELP);
+    const args = parseCliArgs(HELP, { modes: ["save", "check", "save-and-check", "check-idempotency"] });
     if (!args) return;
 
     const stat = fs.statSync(args.target);
@@ -286,8 +291,8 @@ async function main() {
         processFile,
         // One chunk per worker: the per-PROCESS warmup outweighs the per-file skew the default of 8
         // levels out. The first WeiDU-D parse in a process makes V8's optimizing tier compile that
-        // grammar's 286 KB lexer function, costing ~1s and 1.3 GB whatever the file is - paid once per
-        // child, so the Infinity Engine corpus pays it 10 times here against 80 at the default.
+        // grammar's large lexer function, a heavy one-off cost in CPU and heap whatever the file is - paid
+        // once per child, so one chunk per worker pays it once per worker rather than eight times.
         chunksPerJob: 1,
     });
 }

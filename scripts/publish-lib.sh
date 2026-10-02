@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Shared publish tail for the @bgforge library packages (binary, format,
-# transpile, server). Source this file; do not execute it directly.
+# Shared publish tail for the @bgforge packages (each scripts/publish-*.sh).
+# Source this file; do not execute it directly.
 # Each publish-<pkg>.sh does its own build, then calls
 # do_publish for the identical "cd into the package, attest, refuse a dirty
 # tree, pnpm publish" sequence.

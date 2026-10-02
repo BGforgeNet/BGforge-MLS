@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
+import { initParser as initWeiduD } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { parseDialog } from "../src/dialog";
-import { modelFromD, modelFromSSL, type DialogModel, type DialogState } from "../../shared/dialog-model";
-import { classifyReachability } from "../../shared/dialog-reachability";
+import { modelFromD, modelFromSSL, type DialogModel, type DialogState } from "@bgforge/shared/dialog-model";
+import { classifyReachability } from "@bgforge/shared/dialog-reachability";
 
 // 1C reachability lens: honest three-way split (reachable / external-entry / orphan).
 // A no-inbound state is entered from OUTSIDE the file (EXTERN), so it is external-entry,

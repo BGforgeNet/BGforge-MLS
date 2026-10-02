@@ -41,13 +41,14 @@ import {
     type WorkspaceSymbolCapability,
     HoverResult,
 } from "../language-provider";
+import { initializedContext } from "../core/capabilities";
 import {
     detectEmbeddedBaf,
     resolveEmbeddedBafSymbol,
     initEmbeddedBaf,
     getEmbeddedBafCompletions,
 } from "./embedded-baf";
-import { stripCommentsWeidu, formatWeiduD as formatAst } from "@bgforge/format";
+import { stripCommentsWeiduD, formatWeiduD as formatAst } from "@bgforge/format";
 import { getFormatOptions } from "../shared/format-options";
 import { resolveSymbolStatic, getStaticCompletions, formatWithValidation } from "../shared/provider-helpers";
 import { isInsideComment, isInsideString } from "./ast-utils";
@@ -56,7 +57,7 @@ import { getDefinition } from "./definition";
 import { getStateLabelHover } from "./hover";
 import { findReferences } from "./references";
 import { prepareRenameSymbol, renameSymbol } from "./rename";
-import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { initParser, parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { getDocumentSymbols } from "./symbol";
 import { compile as weiduCompile } from "../weidu-compile";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
@@ -135,7 +136,7 @@ class WeiduDProvider
             parse: parseWithCache,
             formatAst: (rootNode, options) => formatAst(rootNode, options),
             getFormatOptions,
-            normalizeForCompare: stripCommentsWeidu,
+            normalizeForCompare: stripCommentsWeiduD,
         });
     }
 
@@ -216,12 +217,12 @@ class WeiduDProvider
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, token) ?? [];
     }
 
     reloadFileData(uri: NormalizedUri, text: string): void {
         if (isInitialized() && this.fileIndex) {
-            const result = parseFile(uri, text, this.storedContext?.workspaceRoot);
+            const result = parseFile(uri, text, { workspaceRoot: this.storedContext?.workspaceRoot });
             this.fileIndex.updateFile(uri, result);
         }
     }
@@ -231,11 +232,7 @@ class WeiduDProvider
     }
 
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
-        if (!this.storedContext) {
-            conlog("WeiDU D provider not initialized, cannot compile");
-            return;
-        }
-        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
+        await weiduCompile(uri, initializedContext(this.storedContext, "WeiDU D").settings.weidu, interactive, text);
     }
 }
 

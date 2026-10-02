@@ -133,9 +133,9 @@
      * Frame indices already asked for, so a re-render never re-requests one in flight.
      *
      * Deliberately unbounded - no deadline, no retry. An index is never removed, so a reply that never
-     * arrived would strand its frame; the panel is registered without `retainContextWhenHidden`, so the
-     * only way to miss one is a post to a hidden webview, and showing it again reloads this bundle and
-     * reseeds both maps from a fresh `init`.
+     * arrived would strand its frame; the panel is registered with `retainContextWhenHidden` (register.ts),
+     * so a hidden panel stays live and still receives its replies, and a webview destroyed before one lands
+     * takes this set with it.
      */
     let requestedFrames = new Set<number>();
 

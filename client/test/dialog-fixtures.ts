@@ -5,7 +5,7 @@
  * tree-search) all need the same terse spelling, and a field added to `DialogState` or `DialogChoice`
  * should reach every one of them in a single edit.
  */
-import type { DialogChoice, DialogRoot, DialogState, DialogTarget } from "../../shared/dialog-model";
+import type { DialogChoice, DialogRoot, DialogState, DialogTarget } from "@bgforge/shared/dialog-model";
 
 export function st(id: string, text: string, choices: DialogChoice[], extra: Partial<DialogState> = {}): DialogState {
     return { id, speaker: "NPC", text, choices, ...extra };

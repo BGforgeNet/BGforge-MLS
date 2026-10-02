@@ -1,4 +1,4 @@
-import { crc32 } from "./crc.ts";
+import zlib from "node:zlib";
 
 export const PNG_SIGNATURE: Uint8Array = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -16,7 +16,7 @@ export function writeChunk(type: string, data: Uint8Array): Uint8Array {
     const crcInput = new Uint8Array(typeBuf.length + data.length);
     crcInput.set(typeBuf, 0);
     crcInput.set(data, typeBuf.length);
-    const crc = crc32(crcInput);
+    const crc = zlib.crc32(crcInput);
 
     const out = new Uint8Array(4 + typeBuf.length + data.length + 4);
     const view = new DataView(out.buffer);
@@ -58,7 +58,7 @@ export function readChunks(bytes: Uint8Array): PngChunk[] {
         const data = bytes.slice(dataStart, dataEnd);
         const expectedCrc = view.getUint32(dataEnd, false);
         const crcInput = bytes.subarray(typeStart, dataEnd);
-        const actualCrc = crc32(crcInput);
+        const actualCrc = zlib.crc32(crcInput);
         if (actualCrc !== expectedCrc) {
             throw new Error(`CRC mismatch in chunk "${type}"`);
         }

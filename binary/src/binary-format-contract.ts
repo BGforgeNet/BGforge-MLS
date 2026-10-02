@@ -33,9 +33,8 @@ export function getNumericTypeRange(type: string): NumericRange | undefined {
 }
 
 /**
- * Cached per type name: the spec derivation calls this once per numeric field - 1386 times across the
- * shipped formats - for eight distinct validators, which cost ~180 ms and ~32 MB at module load when
- * each was built fresh. Sharing is safe because zod schemas are immutable: a refinement such as
+ * Cached per type name: the spec derivation calls this once per numeric field across the shipped formats,
+ * for eight distinct validators, which built fresh each time made module load markedly slower and larger. Sharing is safe because zod schemas are immutable: a refinement such as
  * `.optional()` returns a new schema rather than mutating this one.
  */
 const numericTypeSchemas = new Map<NumericTypeName, z.ZodNumber>();

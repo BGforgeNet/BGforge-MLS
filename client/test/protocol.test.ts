@@ -8,7 +8,7 @@ import {
     LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX,
     WORKSPACE_SYMBOL_SCOPED_LANGUAGES,
     lspWorkspaceSymbolsCommand,
-} from "../../shared/protocol";
+} from "@bgforge/shared/protocol";
 
 describe("lspWorkspaceSymbolsCommand", () => {
     it("composes a command ID from the prefix and language ID", () => {

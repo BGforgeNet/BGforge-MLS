@@ -14,7 +14,7 @@ import { describe, it, expect } from "vitest";
 import { execFileSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 

@@ -11,8 +11,8 @@ import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 const CLI = path.join(REPO_ROOT, "compilers/ssl/out/cli.js");
 const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-ssl");
@@ -66,6 +66,39 @@ describe("ssl CLI", () => {
             const { code } = run("-x", compiled("built"));
             expect(code).toBe(0);
             expect(fs.readFileSync(path.join(tmpDir, "built.ssl"), "utf-8")).toContain("procedure start begin");
+        });
+
+        // Decompiling reads bytecode and never parses source, so a pool of workers doing it has no use for the
+        // grammar - proved by running the bundle from a copy that has none beside it.
+        it("decompiles several inputs in parallel without loading the grammar", () => {
+            const inputs = [compiled("pooled-a"), compiled("pooled-b")];
+            const bundle = path.join(tmpDir, "bundle");
+            fs.mkdirSync(bundle);
+            const out = path.dirname(CLI);
+            for (const file of fs.readdirSync(out).filter((name) => name.endsWith(".js"))) {
+                fs.copyFileSync(path.join(out, file), path.join(bundle, file));
+            }
+            // The bundle imports web-tree-sitter by name; only the grammar files are meant to be missing.
+            fs.symlinkSync(path.join(REPO_ROOT, "compilers/ssl/node_modules"), path.join(bundle, "node_modules"));
+
+            const result = spawnSync(process.execPath, [path.join(bundle, "cli.js"), "-j2", "-x", ...inputs], {
+                encoding: "utf-8",
+                timeout: SPAWN_TIMEOUT_MS,
+            });
+            expect(result.stderr).toBe("");
+            expect(result.status).toBe(0);
+            expect(fs.readFileSync(path.join(tmpDir, "pooled-b.ssl"), "utf-8")).toContain("procedure start begin");
+        });
+
+        it("refuses to write over a source already beside the compiled script, and names -o", () => {
+            const original = source("kept.ssl", HELLO);
+            expect(run(original).code).toBe(0);
+
+            const { code, stderr } = run("-x", path.join(tmpDir, "kept.int"));
+
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${original} already exists; name another output with -o`);
+            expect(fs.readFileSync(original, "utf-8")).toBe(HELLO);
         });
 
         it("recovers source that compiles back to the bytes it came from", () => {
@@ -247,6 +280,15 @@ describe("ssl CLI", () => {
             expect(code).toBe(1);
             expect(stderr).toMatch(/broken\.ssl:\d+:\d+:/);
             expect(fs.existsSync(path.join(tmpDir, "broken.int"))).toBe(false);
+        });
+
+        // The compiler found both; printing only the first costs a compile per error to clean them up.
+        it("reports every error the compile found, one line each", () => {
+            const file = source("two.ssl", "procedure start begin\n a := nope1;\n b := nope2;\nend\n");
+            const { code, stderr } = run(file);
+            expect(code).toBe(1);
+            expect(stderr).toContain(`Error: ${file}:2:`);
+            expect(stderr).toContain(`Error: ${file}:3:`);
         });
 
         it("reports an error below directives on the line the author wrote", () => {

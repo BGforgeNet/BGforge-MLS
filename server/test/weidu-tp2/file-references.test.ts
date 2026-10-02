@@ -16,13 +16,13 @@ import type { Location, Position } from "vscode-languageserver/node";
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
 import { getDefinition } from "../../src/weidu-tp2/definition";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 import { Symbols } from "../../src/core/symbol-index";
 import { normalizeUri } from "../../src/core/normalized-uri";

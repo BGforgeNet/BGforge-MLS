@@ -7,7 +7,7 @@
 
 import { describe, expect, it, beforeAll } from "vitest";
 import { DiagnosticSeverity } from "vscode-languageserver/node";
-import { initParser, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
 
 beforeAll(async () => {

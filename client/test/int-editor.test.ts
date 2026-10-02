@@ -161,7 +161,7 @@ import { routeCompile } from "../src/script-view/compile-command";
 import { ScriptViewFileSystemProvider, scriptViewUri, sourceUriOf } from "../src/script-view/filesystem";
 import { SCRIPT_VIEW_SCHEME } from "../src/script-view/formats";
 import { registerScriptViews } from "../src/script-view/register";
-import { emitInt } from "../../compilers/ssl/src/int/emit";
+import { emitInt } from "@bgforge/ssl";
 
 function compiled(): string {
     const bytes = emitInt({

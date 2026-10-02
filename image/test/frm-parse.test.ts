@@ -24,6 +24,18 @@ describe("parseFrm hostile input", () => {
         expect(() => parseFrm(bytes)).toThrow(/frame header out of range/);
     });
 
+    // A crafted header, not a file seen in the wild: the u16 dimensions reach 4G pixels, and every decoder
+    // after this one allocates from them.
+    it("rejects a crafted frame claiming more pixels than any sprite, before anything is decoded", () => {
+        const bytes = new Uint8Array(0x3e + 0x0c);
+        const view = new DataView(bytes.buffer);
+        view.setUint32(0x00, 4, false);
+        view.setUint16(0x08, 1, false); // one frame per direction, every direction sharing it
+        view.setUint16(0x3e, 0xffff, false);
+        view.setUint16(0x3e + 2, 0xffff, false);
+        expect(() => parseFrm(bytes)).toThrow(/frame 0 claims 65535x65535 pixels/);
+    });
+
     it("reports frame pixel data cut off at end-of-file as truncated", () => {
         const anim: IndexedAnimation = {
             palette: emptyPalette(),

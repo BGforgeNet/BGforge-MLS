@@ -13,7 +13,7 @@ is what a human reads and what an external compiler can be pointed at.
 pnpm add -g @bgforge/tssl
 ```
 
-Requires Node 20 or newer.
+Requires Node 22 or newer.
 
 ## Usage
 
@@ -30,8 +30,9 @@ tssl src/ -r --ssl --no-int       # the readable .ssl alone, for a tree that com
   the bytecode emitter it skips, so passing either alongside warns and carries on: the optimisation
   choice belongs to whatever compiles the generated `.ssl`.
 - `--opt <0|1|2>` - optimisation level (default 1, matching the `ssl` compiler's own default)
-- `-s` - short-circuit `and`/`or`: skip the right operand once the left decides the result
-- `-r`, `-q`, `--jobs <n>`, `--check` - as the repo's other CLIs
+- `-s`, `--short-circuit` - short-circuit `and`/`or`: skip the right operand once the left decides the result
+- `-r`, `-q`, `--jobs <n>`, `--check`, `--exclude-from <path>`, `--exclude-base <dir>` - as the repo's other
+  CLIs. `--save` is accepted and does what the default already does
 
 ## The two outputs agree, and that is checked
 
@@ -122,6 +123,6 @@ Compiled output would carry the signatures and none of that, and `@inline` would
 
 ## Build note
 
-Imports `server/out/fallout-ssl-engine-procedures.json` - a tracked output of the server data pipeline,
+Imports `shared/data/fallout-ssl-engine-procedures.json` - a tracked output of the server data pipeline,
 regenerated from YAML by `scripts/generate-data.sh` (see `docs/data-pipeline.md`). A fresh clone builds
 without running the generator; regenerate only after editing the YAML sources.

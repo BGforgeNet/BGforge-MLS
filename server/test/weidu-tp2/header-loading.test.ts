@@ -17,7 +17,7 @@ import { pathToFileURL } from "url";
 // Mock server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
@@ -26,7 +26,7 @@ import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). */
 const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { Symbols } from "../../src/core/symbol-index";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import { isCallableSymbol } from "../../src/core/symbol";

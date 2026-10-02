@@ -296,7 +296,7 @@ describe("TD plugin", () => {
     describe("TD names filtering with empty runtime", () => {
         it("skips filtering in non-.td files when runtime names set is empty", async () => {
             const { readFileSync } = await import("fs");
-            // readFileSync throws so loadTdNames returns an empty Set (catch branch)
+            // readFileSync throws, so the plugin logs why and works on with no names to filter
             vi.mocked(readFileSync).mockImplementationOnce(() => {
                 throw new Error("read error");
             });
@@ -307,11 +307,18 @@ describe("TD plugin", () => {
                 { name: "begin", kind: "function" },
             ];
             const info = createMockInfo(["/project/script.tssl"], {}, makeCompletionResult(entries));
+            const logged: string[] = [];
+            info.project = {
+                projectService: { logger: { info: (message: string) => logged.push(message) } },
+            } as unknown as ts.server.Project;
             const service = freshPlugin.create(info);
 
             // With an empty names set, filtering is skipped and result is returned as-is
             const result = service.getCompletionsAtPosition("/project/script.tssl", 0, undefined);
             expect(result!.entries).toHaveLength(2);
+            // Why the TD names are not filtered out is in tsserver's log rather than nowhere.
+            expect(logged).toContainEqual(expect.stringContaining("cannot read TD runtime names from"));
+            expect(logged).toContainEqual(expect.stringContaining("read error"));
         });
     });
 

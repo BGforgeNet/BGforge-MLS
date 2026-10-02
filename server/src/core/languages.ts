@@ -32,7 +32,7 @@ export {
     EXT_WEIDU_D,
     CONSUMER_EXTENSIONS_TRA,
     CONSUMER_EXTENSIONS_MSG,
-} from "../../../shared/languages";
+} from "@bgforge/shared/languages";
 
 import {
     LANG_FALLOUT_MSG,
@@ -43,7 +43,7 @@ import {
     LANG_WEIDU_SSL,
     LANG_WEIDU_TP2,
     LANG_WEIDU_TRA,
-} from "../../../shared/languages";
+} from "@bgforge/shared/languages";
 
 /**
  * Languages that support .tra translation references (@123 style).

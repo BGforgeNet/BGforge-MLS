@@ -12,7 +12,7 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
@@ -21,7 +21,7 @@ import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). */
 const parseHeaderToSymbols = (...args: Parameters<typeof parseFile>) => [...parseFile(...args).symbols];
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { isVariableSymbol, DeclarationKind } from "../../src/core/symbol";
 
 beforeAll(async () => {

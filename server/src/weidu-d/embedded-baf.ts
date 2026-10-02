@@ -15,7 +15,7 @@ import { type IndexedSymbol, SymbolKind } from "../core/symbol";
 import { Symbols } from "../core/symbol-index";
 import { loadStaticSymbols } from "../core/static-loader";
 import { LANG_WEIDU_BAF } from "../core/languages";
-import { isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
+import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import { SyntaxType } from "./syntax-type";
 
 /** Grammar field names whose `$.string` child holds embedded BAF code. */

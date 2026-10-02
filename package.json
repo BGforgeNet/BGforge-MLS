@@ -77,8 +77,8 @@
         "ssl-equiv": "tsx compilers/ssl/scripts/ssl-equiv.mts",
         "ssl-oracles": "tsx compilers/ssl/scripts/ssl-oracles.mts",
         "ssl-verdicts": "tsx compilers/ssl/scripts/ssl-verdicts.mts",
-        "tssl-int-diff": "tsx compilers/ssl/scripts/tssl-int-diff.mts",
-        "tssl-oracles": "tsx compilers/ssl/scripts/tssl-oracles.mts",
+        "tssl-int-diff": "tsx --tsconfig compilers/tssl/tsconfig.json compilers/ssl/scripts/tssl-int-diff.mts",
+        "tssl-oracles": "tsx --tsconfig compilers/tssl/tsconfig.json compilers/ssl/scripts/tssl-oracles.mts",
         "lint": "oxlint && pnpm lint:types && pnpm lint:tests && pnpm lint:scripts && pnpm lint:shell && pnpm lint:workflows && pnpm lint:md-links",
         "lint:types": "oxlint --type-aware -A all -D typescript/no-floating-promises -D typescript/no-misused-promises -D typescript/await-thenable",
         "lint:tests": "oxlint --vitest-plugin -A all -D vitest/no-focused-tests -D vitest/no-identical-title -D vitest/no-import-node-test -D vitest/valid-describe-callback -D vitest/no-duplicate-hooks -D vitest/prefer-hooks-in-order -D vitest/require-local-test-context-for-concurrent-snapshots -D vitest/no-conditional-expect -D vitest/require-to-throw-message",
@@ -106,6 +106,7 @@
         "bench": "pnpm --filter @bgforge/mls-server bench && pnpm --filter @bgforge/tssl bench"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "@oxlint/plugins": "1.80.0",
         "@stryker-mutator/core": "^9.6.1",
         "@stryker-mutator/typescript-checker": "^9.6.1",
@@ -115,30 +116,23 @@
         "@vitest/coverage-v8": "catalog:",
         "@vscode/codicons": "^0.0.45",
         "@vscode/vsce": "^3.9.2",
-        "cac": "catalog:",
-        "diff": "catalog:",
         "esbuild": "catalog:",
-        "esbuild-svelte": "^0.9.5",
+        "esbuild-svelte": "catalog:",
         "jsonc-parser": "^3.3.1",
         "knip": "~6.25.0",
-        "mocha": "^11.8.0",
         "oxfmt": "0.65.0",
         "oxlint": "1.80.0",
         "oxlint-tsgolint": "^7.0.2001",
-        "playwright": "1.63.0",
-        "quick-lru": "catalog:",
+        "playwright": "catalog:",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
-        "svelte": "^5.57.0",
+        "svelte": "catalog:",
         "svelte-check": "^4.7.6",
         "tree-sitter-cli": "catalog:",
         "tsx": "^4.23.13",
         "typescript": "catalog:",
         "vite": "^8.2.2",
         "vitest": "catalog:",
-        "vscode-oniguruma": "^2.0.1",
-        "vscode-textmate": "^9.3.2",
-        "web-tree-sitter": "catalog:",
         "yaml": "catalog:"
     },
     "contributes": {
@@ -349,7 +343,7 @@
                 "extensions": [
                     ".slb"
                 ],
-                "configuration": "./language-configurations/weidu-slb.language-configuration.json",
+                "configuration": "./language-configurations/weidu-ssl.language-configuration.json",
                 "icon": {
                     "light": "./themes/icons/weidu-baf.png",
                     "dark": "./themes/icons/weidu-baf.png"
@@ -840,7 +834,7 @@
                 "bgforge.debug": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable debug logging in the Output panel (BGforge MLS channel). Useful for troubleshooting rename, include resolution, and other issues. On switching on, also logs the editor's name and the LSP capabilities its client announced, to check which features a given editor supports."
+                    "description": "Enable the language server's debug logging. It is written to the BGforge MLS output channel at Debug level, so set that channel's log level to Debug (Output panel, Set Log Level) to see it. Useful for troubleshooting rename, include resolution, and other issues. On switching on, also logs the editor's name and the LSP capabilities its client announced, to check which features a given editor supports."
                 },
                 "bgforge.binaryEditor.autoDumpJson": {
                     "type": "boolean",
@@ -904,7 +898,7 @@
     ],
     "icon": "resources/bgforge.png",
     "engines": {
-        "vscode": "^1.91.0"
+        "vscode": "^1.101.0"
     },
     "packageManager": "pnpm@12.3.4"
 }

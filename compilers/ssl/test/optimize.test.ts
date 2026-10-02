@@ -26,8 +26,8 @@ import {
     type Program,
     type Stmt,
 } from "../src/int/ir.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
@@ -217,6 +217,20 @@ describe.skipIf(!wasmPresent)("level 2 constant folding", () => {
     it("folds the arithmetic operators bottom-up", () => {
         expect(foldedValue("2 + 3 * 4")).toEqual(int(14));
         expect(foldedValue("10 - 4")).toEqual(int(6));
+    });
+
+    // Values read off the reference compiler at -O2 (pnpm ssl-diff).
+    it("wraps integer folds at 32 bits before a further operation reads them", () => {
+        expect(foldedValue("(2147483647 + 1) / 2")).toEqual(int(-1073741824));
+        expect(foldedValue("46341 * 46341 / 2")).toEqual(int(-1073739507));
+        expect(foldedValue("2147483647 * 2147483647 / 2")).toEqual(int(0));
+        expect(foldedValue("-(-2147483647 - 1) / 2")).toEqual(int(-1073741824));
+        expect(foldedValue("(2147483647 + 1) > 0")).toEqual(int(0));
+    });
+
+    it("converts an int operand to 32-bit float before a float fold", () => {
+        expect(foldedValue("16777217 + 0.5")).toEqual({ kind: "float", value: 16777216 });
+        expect(foldedValue("(16777217 == 16777216.0) + 10")).toEqual(int(11));
     });
 
     it("truncates an integer division toward zero", () => {

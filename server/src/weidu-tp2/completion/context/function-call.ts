@@ -231,7 +231,7 @@ function extractUsedParamsAfter(sectionNode: SyntaxNode, afterPosition: number):
 
 /**
  * Recursively search for the "=" token in a node tree.
- * Returns the byte offset of the "=" token, or -1 if not found.
+ * Returns the offset of the "=" token, or -1 if not found.
  */
 function findEqualsPosition(node: SyntaxNode): number {
     if (node.text === "=" && node.type === "=") {
@@ -413,7 +413,7 @@ export function detectFunctionDefContext(node: SyntaxNode, cursorOffset: number)
  * Function body returns null (no filtering).
  *
  * @param node Function definition node
- * @param cursorOffset Byte offset of cursor
+ * @param cursorOffset Offset of cursor
  * @returns Context array if cursor is in param position, null otherwise
  */
 function detectFunctionDefinitionContext(node: SyntaxNode, cursorOffset: number): CompletionContext[] | null {

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { readDlg } from "../src/dlg";
-import type { DlgModelInput } from "../../shared/dialog-model-dlg";
+import type { DlgModelInput } from "@bgforge/shared/dialog-model-dlg";
 
 /**
  * `shared/dialog-model-dlg.ts` declares its input structurally rather than importing `@bgforge/binary`, which

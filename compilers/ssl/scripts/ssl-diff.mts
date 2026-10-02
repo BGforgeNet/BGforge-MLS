@@ -29,7 +29,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileFile } from "../src/compile.ts";
 import { formatDisassembly } from "../src/int/disasm.ts";
 import { readInt } from "../src/int/read.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 // Anchored to this file rather than to cwd, so the probe works from anywhere. The repo's shared
 // `repo-root` helper is not usable here: it reads `__dirname`, which an ES module does not have.

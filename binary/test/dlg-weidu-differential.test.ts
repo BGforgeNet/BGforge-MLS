@@ -1,10 +1,9 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { buildDlg, readDlg, toDlgBuildInput } from "../src/dlg";
-import { resolveWeidu, WEIDU_HOOK_TIMEOUT_MS } from "../../scripts/utils/src/weidu-binary.ts";
+import { resolveWeidu, runWeiduBatch, WEIDU_HOOK_TIMEOUT_MS } from "../../scripts/utils/src/weidu-binary.ts";
 import { REPO_ROOT } from "./repo-root";
 
 /**
@@ -54,12 +53,7 @@ describe(`readDlg - differential against WeiDU-compiled DLGs (${FIXTURES.length}
 
         // One invocation for all fixtures: extern.d's EXTERN label only resolves when its target dialog is
         // compiled in the same run. WeiDU writes its own placeholder DIALOG.TLK into the output dir too.
-        const stdout = execFileSync(weidu, ["--nogame", "--out", ".", ...sources], {
-            cwd: workDir,
-            timeout: WEIDU_TIMEOUT_MS,
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "pipe"],
-        });
+        const stdout = runWeiduBatch(weidu, ["--nogame", "--out", ".", ...sources], workDir, WEIDU_TIMEOUT_MS);
 
         reported = new Map();
         for (const m of stdout.matchAll(SAVED_LINE)) {

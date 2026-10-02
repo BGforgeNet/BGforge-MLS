@@ -4,7 +4,6 @@ import { Bridge } from "./state/bridge";
 import { installFatalErrorHandler } from "../../webview-utils";
 import type { WebviewToHost } from "./messages";
 
-// @ts-expect-error -- acquireVsCodeApi is injected by the VSCode webview runtime
 const vscode = acquireVsCodeApi();
 
 const target = document.querySelector("#app");

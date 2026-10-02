@@ -19,6 +19,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { parseRawGrammar } from "vscode-textmate";
@@ -26,7 +27,7 @@ import type { GrammarSource } from "../src/dialog-editor/webview/highlight/textm
 import type { Span } from "../src/dialog-editor/webview/highlight/types";
 
 const REPO_ROOT = path.resolve(__dirname, "../..");
-const ONIG_WASM = path.join(REPO_ROOT, "node_modules/vscode-oniguruma/release/onig.wasm");
+const ONIG_WASM = createRequire(__filename).resolve("vscode-oniguruma/release/onig.wasm");
 
 function grammarSource(scopeName: string, file: string): GrammarSource {
     const full = path.join(REPO_ROOT, "syntaxes", file);

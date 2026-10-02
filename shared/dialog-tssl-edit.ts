@@ -1,6 +1,6 @@
 /**
  * TSSL surgical source editor: splices field/structural edits back into the `.tssl` TypeScript SOURCE using the
- * byte ranges the source parser recorded (ranges into the .tssl, not generated SSL). Because a TSSL option call
+ * ranges the source parser recorded (ranges into the .tssl, not generated SSL). Because a TSSL option call
  * is byte-identical to SSL (`NOption(101, Node002, 4)`), the ENTIRE write-back - per-node option edits, bundle
  * branch editing, and the whole-model orchestration (rename, delete, inbound-call removal, add-node, ensure
  * terminal, entry wiring) - is shared with the `.ssl` writer through `applyFalloutFamilyEdits`. Only the target

@@ -56,7 +56,7 @@ describe.skipIf(!hasFixture)("map writer object-section helpers", () => {
         const doc = getMapCanonicalDocument(pr) ?? rebuildMapCanonicalDocument(pr);
         expect(doc).toBeDefined();
         const start = mapObjectsSectionStart(doc);
-        const total = (pr.sourceData as Uint8Array).length;
+        const total = denbus1Bytes.length;
         // The objects section + its serialized length should reach the end of the
         // decoded region (objects are the last real section before any opaque tail).
         expect(start).toBeGreaterThan(0);
@@ -83,7 +83,7 @@ describe.skipIf(!hasFixture)("map object-ops round-trip", () => {
     it("add then remove is a byte-identity inverse", () => {
         const pr = parseClean();
         const { elev, count } = elevationWithObjects(pr);
-        const original = pr.sourceData as Uint8Array;
+        const original = cleanBytes;
 
         const added = buildMapObjectAddEntryBytes(pr, [`Elevation ${elev} Objects`]);
         expect(added).toBeDefined();
@@ -101,7 +101,7 @@ describe.skipIf(!hasFixture)("map object-ops round-trip", () => {
         const { elev, count } = elevationWithObjects(pr);
         // Fixture must have at least 2 objects to reorder; fail loudly if not.
         expect(count).toBeGreaterThanOrEqual(2);
-        const original = pr.sourceData as Uint8Array;
+        const original = cleanBytes;
         const up = buildMapObjectMoveEntryBytes(pr, [`Elevation ${elev} Objects`], 1, "up");
         expect(up).toBeDefined();
         const upPr = mapParser.parse(up!, { gracefulMapBoundaries: true });
@@ -163,7 +163,7 @@ describe.skipIf(!hasFixture)("map object inventory ops", () => {
     it("add inventory entry grows the object's inventory; add-then-remove is byte-identity", () => {
         const pr = parseClean();
         const { elev } = elevationWithObjects(pr);
-        const original = pr.sourceData as Uint8Array;
+        const original = cleanBytes;
         const beforeDoc = docOf(pr);
         const invBefore = beforeDoc.objects.elevations[elev]!.objects[0]!.inventory.length;
         const objCountBefore = beforeDoc.objects.elevations[elev]!.objects.length;

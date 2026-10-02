@@ -8,13 +8,8 @@
  * value/rawValue in the rebuilt model before committing. `commitModel` invalidates the cached document so
  * serialize rebuilds from the mutated display tree.
  */
-import {
-    buildCreMemorizeBytes,
-    buildCreRemoveOrphanMemorizedBytes,
-    formatAdapterRegistry,
-    type ParsedField,
-} from "@bgforge/binary";
-import { assertNotLocked, buildModel, type FlatNode, type Model } from "./model";
+import { buildCreMemorizeBytes, buildCreRemoveOrphanMemorizedBytes, formatAdapterRegistry } from "@bgforge/binary";
+import { assertNotLocked, buildModel, writeFieldValue, type FlatNode, type Model } from "./model";
 import { commitModel, noopResult, reparse } from "./structure-ops";
 import { childGroups, fieldsByKey, fieldNumber, findGroup, normKey } from "./relationship/model-helpers";
 import type { EditorSession } from "./session";
@@ -31,14 +26,11 @@ const MEMINFO_SECTION = "Spell Memorization Info";
 const MEMORIZED_SECTION = "Memorized Spells";
 const MEMORIZED_FLAG = 1; // CreMemorizedSpellFlags bit0 = Memorized
 
-/** Set a field (by humanized name) on a group's child to `value`, mutating value AND rawValue - the same
- *  contract `editField` uses, so an enum/flag field carries its numeric code and serialize encodes it. */
+/** Set a field (by humanized name) on a group's child to `value`, as `editField` does. */
 function setField(model: Model, group: FlatNode, fieldName: string, value: number | string): void {
     const node = fieldsByKey(model, group).get(normKey(fieldName));
     if (!node) return;
-    const src = node.source as ParsedField;
-    src.value = value;
-    src.rawValue = value;
+    writeFieldValue(model, node, value);
 }
 
 const lastChildGroup = (model: Model, section: string): FlatNode | undefined => {

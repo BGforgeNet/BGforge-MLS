@@ -18,8 +18,8 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { afterAll, describe, expect, it } from "vitest";
-import { REPO_ROOT } from "../../../../shared/cli/test/repo-root.ts";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 /**
  * Exercises all three levels: an unreferenced global and an uncalled procedure go at `-O1`, and the

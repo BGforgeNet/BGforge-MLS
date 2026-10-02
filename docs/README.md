@@ -74,17 +74,17 @@ The index of every document in the repo. Start here.
 
 ## Build, release, and CI
 
-| Document                                       | Contents                                                                                                                                             |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [../scripts/README.md](../scripts/README.md)   | Build and test scripts reference                                                                                                                     |
-| [../scripts/dev-web.md](../scripts/dev-web.md) | Running the extension in code-server (`pnpm dev:web`)                                                                                                |
-| [releasing.md](releasing.md)                   | Tag-driven release procedures per stream (extension, libraries, Action)                                                                              |
-| [dependencies.md](dependencies.md)             | Dependency bump policy, pinned version constraints and hold rationale                                                                                |
-| [ignore-files.md](ignore-files.md)             | What ships in the VSIX and npm tarballs, the oxfmt/oxlint exclusion asymmetry, and the lint rule policy                                              |
-| [supply-chain.md](supply-chain.md)             | SBOM/SLSA provenance, CodeQL + Scorecard, and two deliberate non-additions                                                                           |
-| [../actions/README.md](../actions/README.md)   | Reusable composite GitHub Actions: shared contract, plus one README each                                                                             |
-| [../actions/](../actions/)                     | The per-Action READMEs, and `development.md` for changing them                                                                                       |
-| Per-package changelogs                         | [binary](../binary/CHANGELOG.md), [format](../format/CHANGELOG.md), [tssl](../compilers/tssl/CHANGELOG.md), [transpile](../transpilers/CHANGELOG.md) |
+| Document                                       | Contents                                                                                                                                                                                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [../scripts/README.md](../scripts/README.md)   | Build and test scripts reference                                                                                                                                                           |
+| [../scripts/dev-web.md](../scripts/dev-web.md) | Running the extension in code-server (`pnpm dev:web`)                                                                                                                                      |
+| [releasing.md](releasing.md)                   | Tag-driven release procedures per stream (extension, libraries, Action)                                                                                                                    |
+| [dependencies.md](dependencies.md)             | Dependency bump policy, pinned version constraints and hold rationale                                                                                                                      |
+| [ignore-files.md](ignore-files.md)             | What ships in the VSIX and npm tarballs, the oxfmt/oxlint exclusion asymmetry, and the lint rule policy                                                                                    |
+| [supply-chain.md](supply-chain.md)             | SBOM/SLSA provenance, CodeQL + Scorecard, and two deliberate non-additions                                                                                                                 |
+| [../actions/README.md](../actions/README.md)   | Reusable composite GitHub Actions: shared contract, plus one README each                                                                                                                   |
+| [../actions/](../actions/)                     | The per-Action READMEs, and `development.md` for changing them                                                                                                                             |
+| Per-package changelogs                         | [binary](../binary/CHANGELOG.md), [format](../format/CHANGELOG.md), [tssl](../compilers/tssl/CHANGELOG.md), [ssl](../compilers/ssl/CHANGELOG.md), [transpile](../transpilers/CHANGELOG.md) |
 
 ## Keeping this index complete
 

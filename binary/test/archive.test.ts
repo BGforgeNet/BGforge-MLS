@@ -16,6 +16,7 @@ import {
     openGame,
     detectGameIdentity,
     bufferSource,
+    fileSource,
     resourceTypeExt,
     resourceTypeCode,
     type ByteSource,
@@ -403,22 +404,34 @@ describe("openBif (compressed)", () => {
 
     /**
      * The BIFC header's uncompressed total is a `u32` read straight from the file, so it must not size an
-     * allocation: a corrupt or hostile value reserves that much before a single block is inflated, and the
-     * inflated archive keeps a view on it for its whole lifetime. Asserting the extracted bytes alone would
-     * not catch this - the archive reads back correctly either way, just off a buffer sized by the file's
-     * claim. So the assertion is on the BACKING store, which is the only place the difference shows.
+     * allocation: a corrupt or hostile value would reserve that much before a single block is inflated. It is
+     * checked against what did inflate instead, so a claim the blocks do not bear out is refused - after the
+     * inflate, with nothing reserved for it.
      */
-    it("sizes a BIFC V1.0 archive by what inflates, not by its declared uncompressed size", () => {
+    it("refuses a BIFC V1.0 archive whose blocks fall short of its declared size, allocating nothing for it", () => {
         const bytes = buildBifcBlocks(sampleBif());
         const declared = 0x1000_0000; // 256 MB, against an archive of a few dozen bytes
         new DataView(bytes.buffer).setUint32(8, declared, true);
-        const bif = openBif(bufferSource(bytes));
-        try {
-            expect(arr(bif.readFile(0))).toEqual(arr(ITEM_DATA));
-            expect(bif.readFile(0).buffer.byteLength).toBeLessThan(declared);
-        } finally {
-            bif.close();
-        }
+        expect(() => openBif(bufferSource(bytes))).toThrow(`of the ${declared} it declares`);
+    });
+
+    // Crafted headers, not archives seen in the wild.
+    it("refuses a crafted BIFC V1.0 archive cut off before its last block", () => {
+        const bytes = buildBifcBlocks(sampleBif());
+        expect(() => openBif(bufferSource(bytes.subarray(0, bytes.byteLength - 4)))).toThrow(/runs past the end/);
+    });
+
+    it("refuses a crafted BIF V1.0 header whose filename length runs past the file", () => {
+        const bytes = buildBifcWhole(sampleBif());
+        new DataView(bytes.buffer).setUint32(8, 0xffff_0000, true);
+        expect(() => openBif(bufferSource(bytes))).toThrow(/filename of 4294901760 bytes/);
+    });
+
+    it("refuses a crafted BIF V1.0 archive whose stream inflates short of its declared size", () => {
+        const bytes = buildBifcWhole(sampleBif());
+        const dv = new DataView(bytes.buffer);
+        dv.setUint32(12 + "test.bif".length, dv.getUint32(12 + "test.bif".length, true) + 100, true);
+        expect(() => openBif(bufferSource(bytes))).toThrow(/of the \d+ it declares/);
     });
 
     it("inflates a BIFC V1.0 block-compressed archive to the same files", () => {
@@ -435,6 +448,20 @@ describe("byte-source bounds", () => {
         const src = bufferSource(Uint8Array.from([1, 2, 3]));
         expect(() => src.read(2, 5)).toThrow(/out of bounds/);
         expect(() => src.read(-1, 1)).toThrow(/Invalid read/);
+    });
+
+    // Reads out of an archive happen long after it was opened, where nothing else knows which file it was.
+    it("names the file an out-of-bounds read was made on", () => {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "byte-source-"));
+        const file = path.join(dir, "three.bin");
+        fs.writeFileSync(file, Uint8Array.from([1, 2, 3]));
+        const src = fileSource(file);
+        try {
+            expect(() => src.read(2, 5)).toThrow(`${file}: Read out of bounds`);
+        } finally {
+            src.close();
+            fs.rmSync(dir, { recursive: true, force: true });
+        }
     });
 });
 
@@ -770,6 +797,66 @@ describe("openGame (real filesystem)", () => {
         const game = openGame(makeGameDir());
         try {
             expect(game.ids("SNDSLOT")).toBeUndefined();
+        } finally {
+            game.close();
+        }
+    });
+
+    // Absent is an answer; present-but-unreadable is a fault, and folding it into "absent" leaves every name the
+    // table would have supplied silently numeric.
+    it("refuses a table that is present but cannot be read, naming it, and keeps refusing", () => {
+        const dir = makeGameDir();
+        fs.mkdirSync(path.join(dir, "override", "sndslot.ids"), { recursive: true });
+        const game = openGame(dir);
+        try {
+            expect(() => game.ids("SNDSLOT")).toThrow(/^Cannot read SNDSLOT\.IDS: .*EISDIR/);
+            expect(() => game.ids("sndslot")).toThrow(/^Cannot read SNDSLOT\.IDS: /);
+        } finally {
+            game.close();
+        }
+    });
+
+    // Skipping an override folder the scan cannot list would serve every file in it from the BIF below instead.
+    it("refuses to open a game whose override folder cannot be listed, naming it", () => {
+        const dir = makeGameDir();
+        fs.symlinkSync("override", path.join(dir, "override"));
+        expect(() => openGame(dir)).toThrow(/^Cannot list .*override: ELOOP/);
+    });
+
+    it("opens a game where a plain file sits at an override folder's name", () => {
+        const dir = makeGameDir({ override: new Uint8Array([1]) });
+        const game = openGame(dir);
+        game.close();
+    });
+
+    // An install has hundreds of archives; an error that does not say which is one to search for.
+    it("names the KEY it could not read", () => {
+        const dir = makeGameDir();
+        fs.writeFileSync(path.join(dir, "chitin.key"), new Uint8Array(24));
+        expect(() => openGame(dir)).toThrow(`${path.join(dir, "chitin.key")}: Not a KEY V1 file`);
+    });
+
+    it("names the BIF it could not read", () => {
+        const dir = makeGameDir();
+        fs.writeFileSync(path.join(dir, "data", "test.bif"), new Uint8Array(24));
+        const game = openGame(dir);
+        try {
+            expect(() => game.read("item01", "itm")).toThrow(
+                `${path.join(dir, "data", "test.bif")}: Unrecognized BIF signature`,
+            );
+        } finally {
+            game.close();
+        }
+    });
+
+    // The read of an auxiliary file takes the same plain file name its write does - not a path into
+    // a folder below override, and not one out of it.
+    it("refuses to read an auxiliary file by anything but a plain file name", () => {
+        const dir = makeGameDir({ "override/sub/x.pal": new Uint8Array([1]) });
+        const game = openGame(dir);
+        try {
+            expect(() => game.readAuxFile("sub/x.pal")).toThrow('Refusing to read "sub/x.pal": not a plain file name');
+            expect(() => game.auxFile("..\\x.pal")).toThrow("not a plain file name");
         } finally {
             game.close();
         }

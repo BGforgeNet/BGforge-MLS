@@ -1,10 +1,11 @@
 <script lang="ts">
+    import { SvelteMap, SvelteSet } from "svelte/reactivity";
     import { matchesTag, resourceTags } from "../../resource-tags";
     import { filterTiles } from "../grid-window";
     import { type GalleryTile, type HostToWebview, type SetTile, type WebviewToHost } from "../messages";
-    import { type GalleryTab, resolveTab, showTabStrip, viewerMounted } from "../tabs";
+    import { type GalleryTab, filesPane, resolveTab, showTabStrip, viewerMounted } from "../tabs";
     import BetaNotice from "../../../webview-ui/BetaNotice.svelte";
-    import { isHostMessage } from "../../../webview-utils";
+    import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, isHostMessage } from "../../../webview-utils";
     import Grid from "./Grid.svelte";
     import SetPicker from "./SetPicker.svelte";
     import Tabs from "./Tabs.svelte";
@@ -74,12 +75,14 @@
      * VALUE rather than an absent key. A plain "is it missing" check would re-request an item that has
      * already been tried and failed, once per scroll past it.
      */
-    let thumbnails: Map<string, string | undefined> = $state(new Map());
+    const thumbnails = new SvelteMap<string, string | undefined>();
     /** Which answered items are creature animations, so a tile can say why its picture holds one frame. */
-    let directional: Set<string> = $state(new Set());
+    const directional = new SvelteSet<string>();
     /** The animation this panel was opened on, if any - kept for the note when the install has no such id. */
     let focusSet: number | undefined = $state();
     let loaded = $state(false);
+    /** The host has not answered within the bounded wait - said in place of an empty grid. */
+    let initTimedOut = $state(false);
 
     const inFormat = $derived(items.filter((tile) => format === "" || tile.ext === format));
     /**
@@ -134,16 +137,28 @@
             deliverToViewer?.(message.message);
             return;
         }
-        // Replaced, not mutated: mutating a Map in place does not go through the reactive proxy, so the tile
-        // waiting on this picture would never re-render - a bug that only shows up in the live panel.
-        thumbnails = new Map([...thumbnails, [message.id, message.dataUri]]);
-        if (message.directional === true) directional = new Set([...directional, message.id]);
+        // Set in place on a SvelteMap, which tracks each key: only the tile reading this id re-renders. Copying
+        // a plain Map per message instead cost O(n) each, quadratic over an install's five-figure list.
+        thumbnails.set(message.id, message.dataUri);
+        if (message.directional === true) directional.add(message.id);
     }
 
     $effect(() => {
         globalThis.addEventListener("message", onMessage);
         return () => globalThis.removeEventListener("message", onMessage);
     });
+
+    // The same bounded wait the animation editor puts on its first reply.
+    $effect(
+        () =>
+            installInitTimeout({
+                ms: DEFAULT_INIT_TIMEOUT_MS,
+                isResolved: () => loaded,
+                onTimeout: () => {
+                    initTimedOut = true;
+                },
+            }).cancel,
+    );
 </script>
 
 <div class="gallery" class:showing={showing !== undefined}>
@@ -182,7 +197,11 @@
 {/if}
 </div>
 {#if tab === "files"}
-    {#if loaded && items.length === 0}
+    {#if filesPane(loaded, initTimedOut, items.length) === "no-response"}
+        <p class="empty">
+            Nothing from the host for {DEFAULT_INIT_TIMEOUT_MS / 1000}s. Check the "BGforge MLS" output channel.
+        </p>
+    {:else if filesPane(loaded, initTimedOut, items.length) === "empty"}
         <!-- The empty state says what is missing; where the missing thing is an open game, it also supplies
              it, rather than naming a command the reader has to go and find. -->
         <p class="empty">{note ?? "No drawable resources here."}</p>

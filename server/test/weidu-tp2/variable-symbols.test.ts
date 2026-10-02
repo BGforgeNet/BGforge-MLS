@@ -2,12 +2,12 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
-import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { ScopeKind } from "../../src/weidu-tp2/scope-kinds";
 import { findVariableDefinitionNode, getVariableSymbolAtPosition } from "../../src/weidu-tp2/variable-symbols";
 

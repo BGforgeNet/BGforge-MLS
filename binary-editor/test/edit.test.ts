@@ -6,6 +6,7 @@ import { setExpanded } from "../src/model";
 import { buildLayout } from "../src/layout";
 import { editField, invalidateCachedDocument } from "../src/edit";
 import { undo } from "../src/structure-ops";
+import { validate } from "../src/validate";
 import { formatAdapterRegistry, type ParseResult, type ParsedField } from "@bgforge/binary";
 import { openItmSession, firstEffectFields, itmFixturePresent } from "./ie-fixture";
 import { buildModel, creResult, findGroupNodeField } from "./cross-record-fixture";
@@ -31,10 +32,24 @@ describe("editField", () => {
         if (!child) throw new Error("no child field node in Global Variables");
         const result = editField(session, child.id, 42);
         expect(result.changeSet.dirty).toBe(true);
-        expect(result.changeSet.formatValid).toBe(true);
         const changed = result.changeSet.changed.find((r) => r.id === child.id);
         expect(changed).toBeDefined();
         expect(changed?.displayValue).toBe("42");
+    });
+
+    // The edit itself does not check that the record still saves: the validate pass that follows every edit
+    // does, and says which value broke it.
+    it("reports an edit that leaves the record unsaveable through the validate pass", () => {
+        const { session, gv } = openAndExpandGlobals();
+        const child = session.model.nodes.find((n) => n.parentId === gv.id && n.kind === "field")!;
+
+        editField(session, child.id, 2 ** 40);
+
+        expect(validate(session)).toContainEqual({
+            nodeId: "",
+            severity: "warning",
+            message: expect.stringContaining("Too big: expected number to be <=2147483647 (actual=1099511627776)"),
+        });
     });
 
     it("pushes an undo entry", () => {

@@ -17,9 +17,9 @@ export type BcsEngine = "bg" | "iwd" | "iwd2" | "pst";
 
 /** One parameter of an IDS signature: `I:Value*Table` is type `I` tagged `Value` naming `Table`. */
 export interface Parameter {
-    type: string;
-    tag: string;
-    table: string | undefined;
+    readonly type: string;
+    readonly tag: string;
+    readonly table: string | undefined;
 }
 
 /** An `Area` is stored in front of its `Name` inside one string, and is always exactly this long. */
@@ -72,7 +72,25 @@ export function hasRegion(engine: BcsEngine): boolean {
 
 const SIGNATURE = /^([^(]+)\((.*)\)$/s;
 
-export function parseSignature(text: string): { name: string; parameters: Parameter[] } | undefined {
+export interface Signature {
+    readonly name: string;
+    readonly parameters: readonly Parameter[];
+}
+
+/**
+ * Parsed once per distinct signature text: both directions parse a row's signature per call, and a script
+ * makes thousands of calls over a few hundred rows. Bounded by the distinct signatures of the tables loaded.
+ */
+const parsedSignatures = new Map<string, Signature | undefined>();
+
+export function parseSignature(text: string): Signature | undefined {
+    if (parsedSignatures.has(text)) return parsedSignatures.get(text);
+    const parsed = parseUncached(text);
+    parsedSignatures.set(text, parsed);
+    return parsed;
+}
+
+function parseUncached(text: string): Signature | undefined {
     const match = SIGNATURE.exec(text.trim());
     if (match === null) return undefined;
     const body = match[2]!.trim();

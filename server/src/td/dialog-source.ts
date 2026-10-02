@@ -1,6 +1,6 @@
 /**
  * TD SOURCE parser: parses raw `.td` TypeScript directly (no transpile/bundle) into the WeiDU D
- * `DDialogData` shape, with byte ranges into the `.td` SOURCE. A zero-arg `function stateNNN` is a dialog
+ * `DDialogData` shape, with ranges into the `.td` SOURCE. A zero-arg `function stateNNN` is a dialog
  * state; its enclosing `if (...)` becomes the state entry trigger; `say(tra(N))` is an NPC line; a
  * `reply(tra(M))` then `goTo(t)`/`exit()`/`extern(f,s)` (statement OR chain form) is a player transition.
  *
@@ -20,7 +20,7 @@ import type {
     DDialogTransition,
     TDStateRef,
     TDWiring,
-} from "../../../shared/dialog-types";
+} from "@bgforge/shared/dialog-types";
 
 const span = (n: Node): { start: number; end: number } => ({ start: n.getStart(), end: n.getEnd() });
 const stripQuotes = (s: string): string => s.replaceAll(/^["'`]|["'`]$/g, "");
@@ -336,7 +336,7 @@ function parseWiring(sf: SourceFile, stateNames: ReadonlySet<string>): TDWiring 
 
 /**
  * Parse TD source into WeiDU D DialogData with ranges into the source. Every zero-parameter top-level
- * `function` is a state (param'd functions are inlined helpers); per-state and per-transition byte ranges plus
+ * `function` is a state (param'd functions are inlined helpers); per-state and per-transition ranges plus
  * the state-list wiring (`tdWiring`) drive surgical write-back.
  */
 export function parseTDSource(text: string): DDialogData {

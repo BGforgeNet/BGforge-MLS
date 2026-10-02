@@ -13,7 +13,7 @@ import {
     LSP_COMMAND_SAVE_TRA,
     LSP_COMMAND_WORKSPACE_SYMBOLS_PREFIX,
     VSCODE_COMMAND_COMPILE,
-} from "../../../shared/protocol";
+} from "@bgforge/shared/protocol";
 import { registry } from "../provider-registry";
 import { timeHandler } from "../shared/time-handler";
 import { handleCompileError } from "./compile-error";

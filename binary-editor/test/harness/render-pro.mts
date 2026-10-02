@@ -147,7 +147,6 @@ if (!target) {
                         changed: [{ ...row, rawValue: Number(v), displayValue: v }],
                         diagnostics: [],
                         dirty: true,
-                        formatValid: true,
                     },
                 },
                 "*",

@@ -8,12 +8,12 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
-import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { findReferences } from "../../src/weidu-tp2/references";
 import { getSymbolAtPosition } from "../../src/weidu-tp2/symbol-discovery";
 

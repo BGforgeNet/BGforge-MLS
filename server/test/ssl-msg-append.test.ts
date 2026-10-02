@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendMsgEntries } from "../../shared/dialog-tra-edit";
+import { appendMsgEntries } from "@bgforge/shared/dialog-tra-edit";
 
 describe("appendMsgEntries", () => {
     it("appends new entries as {id}{}{text}, leaving existing bytes untouched", () => {

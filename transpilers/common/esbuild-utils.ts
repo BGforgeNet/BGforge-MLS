@@ -24,8 +24,7 @@ let esbuildInitialized = false;
 
 /**
  * Initialize esbuild (singleton, safe to call multiple times).
- * Native esbuild (used by CLI via alias) doesn't need initialize().
- * esbuild-wasm (used by LSP server) requires it.
+ * Every consumer - the LSP server and the CLI alike - runs esbuild-wasm, which requires initialize().
  *
  * esbuild-wasm spawns `node <bin/esbuild>` via a bare PATH lookup; ensureNodeOnPath points `node`
  * at the extension host's own runtime first (see node-runtime.ts), so an absent or broken PATH
@@ -190,7 +189,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
 
     // Strip ESM module boilerplate from esbuild output
     const afterCleanup: number[] = [];
-    const cleaned = expandExponentLiterals(cleanupEsbuildOutput(outputFile.text, marker, afterCleanup));
+    const cleaned = cleanupEsbuildOutput(outputFile.text, marker, afterCleanup);
 
     // Post-expand: expand any remaining cross-file enum compat objects
     // and strip prefixes from externalized enum property accesses
@@ -381,7 +380,8 @@ export function cleanupEsbuildOutput(
 }
 
 /**
- * Write esbuild's exponent-form integers (`1e3`, `15e5`) back out in decimal.
+ * Write exponent-form integers (`1e3`, `15e5`) back out in decimal: esbuild's shortest-form output, or what the
+ * author wrote in a file with no imports.
  *
  * esbuild prints the shortest form of a number and has no option to keep the source's, and WeiDU refuses
  * `1e3` in BAF - which is also what a D action string holds. Only the integer forms are expanded; a negative
@@ -427,7 +427,8 @@ export function forEachCodeSegment(code: string, fn: (segment: string) => void):
 
 /**
  * Replace regex matches in code, but only outside string literals and comments.
- * Strings (single/double/template) and comments (line/block) are copied verbatim.
+ * Strings (single/double) and comments (line/block) are copied verbatim; a template literal keeps its text
+ * while each `${...}` expression inside it, being code, is replaced in too.
  * Safe for esbuild output which has no regex literals.
  */
 export function replaceOutsideStrings(code: string, pattern: RegExp, replacer: (match: string) => string): string {
@@ -436,7 +437,7 @@ export function replaceOutsideStrings(code: string, pattern: RegExp, replacer: (
     while (i < code.length) {
         const ch = code[i];
 
-        // Pass through string/template/comment spans verbatim; only code spans
+        // Pass through string/comment spans verbatim; only code spans
         // get the replacer applied.
         let end: number;
         let isCode = false;
@@ -444,6 +445,9 @@ export function replaceOutsideStrings(code: string, pattern: RegExp, replacer: (
             end = skipString(code, i);
         } else if (ch === "`") {
             end = skipTemplateLiteral(code, i);
+            result += replaceInTemplateExpressions(code.substring(i, end), pattern, replacer);
+            i = end;
+            continue;
         } else if (ch === "/" && i + 1 < code.length && code[i + 1] === "/") {
             end = i;
             while (end < code.length && code[end] !== "\n") end++;
@@ -493,26 +497,56 @@ export function skipTemplateLiteral(code: string, start: number): number {
         }
         if (code[i] === "`") return i + 1;
         if (code[i] === "$" && i + 1 < code.length && code[i + 1] === "{") {
-            // Template expression - scan for matching }, handling nested strings/templates
-            i += 2;
-            let braceDepth = 1;
-            while (i < code.length && braceDepth > 0) {
-                if (code[i] === "{") braceDepth++;
-                else if (code[i] === "}") braceDepth--;
-                else if (code[i] === '"' || code[i] === "'") {
-                    i = skipString(code, i);
-                    continue;
-                } else if (code[i] === "`") {
-                    i = skipTemplateLiteral(code, i);
-                    continue;
-                }
-                i++;
-            }
+            i = Math.min(templateExpressionEnd(code, i + 2) + 1, code.length);
             continue;
         }
         i++;
     }
     return i;
+}
+
+/**
+ * Index of the `}` closing a template's `${` expression whose body starts at `start` (or the end of `code` if
+ * unclosed), past nested braces, strings and templates.
+ */
+function templateExpressionEnd(code: string, start: number): number {
+    let i = start;
+    let braceDepth = 1;
+    while (i < code.length) {
+        if (code[i] === '"' || code[i] === "'") {
+            i = skipString(code, i);
+            continue;
+        }
+        if (code[i] === "`") {
+            i = skipTemplateLiteral(code, i);
+            continue;
+        }
+        if (code[i] === "{") braceDepth++;
+        else if (code[i] === "}" && --braceDepth === 0) return i;
+        i++;
+    }
+    return code.length;
+}
+
+/** A whole template literal with its text kept and replaceOutsideStrings applied to each `${...}` body. */
+function replaceInTemplateExpressions(template: string, pattern: RegExp, replacer: (match: string) => string): string {
+    let result = "";
+    let i = 0;
+    while (i < template.length) {
+        if (template[i] === "\\") {
+            result += template.substring(i, i + 2);
+            i += 2;
+        } else if (template[i] === "$" && template[i + 1] === "{") {
+            const close = templateExpressionEnd(template, i + 2);
+            const body = replaceOutsideStrings(template.substring(i + 2, close), pattern, replacer);
+            result += "${" + body + template.substring(close, close + 1);
+            i = close + 1;
+        } else {
+            result += template[i];
+            i++;
+        }
+    }
+    return result;
 }
 
 /** Skip past a block comment. Returns index after closing `* /`. */

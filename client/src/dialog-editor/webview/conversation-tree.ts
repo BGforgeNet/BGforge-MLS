@@ -23,7 +23,7 @@ import {
     type DialogReaction,
     type DialogRoot,
     type DialogState,
-} from "../../../../shared/dialog-model";
+} from "@bgforge/shared/dialog-model";
 import { isUnsavedDraftChoice, isUnsavedDraftState, textEditability } from "./inspector-edit";
 import type { JumpTarget } from "./jump-resolve";
 
@@ -59,7 +59,7 @@ export interface ConvReply {
         tree/card render it as an unsaved draft. Absent (not false) for a committed option. */
     pending?: boolean;
     target: ConvTarget;
-    /** Byte offset of this option's statement in the source (SSL `callRange`/`stmtRange`, or the first call
+    /** Offset of this option's statement in the source (SSL `callRange`/`stmtRange`, or the first call
         site for a `call` transition; WeiDU D `sourceRange`), for "go to source". Absent for a pending/synthetic
         option. */
     sourceOffset?: number;
@@ -136,7 +136,7 @@ export interface ConvState {
         field uses (textEditability over the state's own text): false for a locked SSL @N or a read-only/
         derived node. Mirrors ConvReply.textEditable for the option text. */
     textEditable: boolean;
-    /** Byte offset of this state's source (SSL `procRange`, or D `sourceRange`), for "go to source".
+    /** Offset of this state's source (SSL `procRange`, or D `sourceRange`), for "go to source".
         Absent for a synthetic/derived state or a pending new node with no source span. */
     sourceOffset?: number;
 }

@@ -23,12 +23,13 @@ import {
     isBodyContent,
     isParamKeyword,
     normalizeComment,
+    hasWeiduLineComment,
     normalizeWhitespace,
     handleComment,
     outputAlignedAssignments,
     pushBlankIfGap,
 } from "./utils";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 
 // ============================================
 // Assignment parsing
@@ -393,7 +394,7 @@ export function formatFunctionCall(node: SyntaxNode, ctx: FormatContext, depth: 
             // Check if comment is on same line as previous content - append inline
             if (lastChildEndRow >= 0 && child.startPosition.row === lastChildEndRow && lines.length > 0) {
                 const lastLine = lines[lines.length - 1];
-                if (lastLine !== undefined && !lastLine.includes("//")) {
+                if (lastLine !== undefined && !hasWeiduLineComment(lastLine)) {
                     lines[lines.length - 1] = lastLine + INLINE_COMMENT_SPACING + normalizeComment(child.text);
                     continue;
                 }

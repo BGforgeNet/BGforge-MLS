@@ -11,8 +11,8 @@ import * as path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { Language, Parser } from "web-tree-sitter";
 import { compileSource } from "../src/compile.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");
@@ -52,6 +52,15 @@ describe.skipIf(!wasmPresent)("compileSource", () => {
         expect(result.problems[0]?.message).toMatch(/unknown identifier/);
     });
 
+    it("names every procedure declared but never defined, not only the first", () => {
+        const { result } = compileWith("procedure a;\nprocedure b;\nprocedure start begin\n call a;\n call b;\nend\n");
+        expect(result.bytes).toBeUndefined();
+        expect(result.problems.map((p) => [p.line, p.message])).toEqual([
+            [1, "procedure 'a' is declared but never defined"],
+            [2, "procedure 'b' is declared but never defined"],
+        ]);
+    });
+
     it("names the header a preprocessor refusal came from", () => {
         const { result, dir } = compileWith('#include "hdr.h"\nprocedure start begin end\n', {
             "hdr.h": "#bogus\n",
@@ -74,6 +83,15 @@ describe.skipIf(!wasmPresent)("compileSource", () => {
         expect(result.bytes).toBeUndefined();
         expect(result.problems).toHaveLength(1);
         expect(result.warnings).toMatchObject([{ line: 2 }]);
+    });
+
+    // The compiled file holds one byte per character, as the reference reads its input; a wider one would
+    // lose its high byte and compile a different string than the source shows.
+    it("refuses a character wider than a byte, where it stands", () => {
+        const { result } = compileWith('procedure start begin\n display_msg("\u4E2D");\nend\n');
+        expect(result.bytes).toBeUndefined();
+        expect(result.problems).toMatchObject([{ line: 2, column: 15 }]);
+        expect(result.problems[0]?.message).toContain("\u4E2D");
     });
 
     it("reports an unlocatable failure at the top of the file rather than throwing", () => {

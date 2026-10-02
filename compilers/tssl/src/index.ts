@@ -2,8 +2,9 @@
  * TSSL transpiler - TypeScript to Fallout SSL.
  * Transpiles TypeScript files with .tssl extension to Fallout SSL scripts.
  * Entry points:
- *   compile() - LSP: resolves, converts, writes .ssl file to disk
- *   transpile() - CLI: resolves, converts, returns SSL string without writing
+ *   transpile() - resolves, converts, returns the SSL string; the CLI and the language server call it
+ *   transpileWithSourceMap() - the same, with where each generated line came from
+ *   compile() - resolves, converts, writes the .ssl beside the source
  *
  * The pipeline is ts-morph end to end: the entry parses under a shadow .ts name so the TypeScript
  * checker resolves its imports (folib's package.json `exports` and re-export barrels included), the
@@ -13,15 +14,14 @@
  */
 
 import * as path from "path";
-import { EXT_TSSL } from "../../../shared/languages";
+import { EXT_TSSL } from "@bgforge/shared/languages";
 import { conlog, type TsslContext } from "./types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "./batch";
 import { extractInlineFunctions, extractJsDocs } from "./inline-functions";
 import { exportSSL } from "./emit";
 import { buildProgramModel } from "./program-model";
-// Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
-// Inlined by esbuild at bundle time.
-import engineProcedureNames from "../../../server/out/fallout-ssl-engine-procedures.json";
+// Generated from server/data/fallout-ssl-base.yml by generate-data.sh, and inlined into every bundle.
+import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
 import type { SourcePosition } from "../../../transpilers/common/line-map";
 import { createTranspiler, type TranspilerEvent } from "../../../transpilers/common/transpiler-pipeline";
 
@@ -84,18 +84,18 @@ export interface TSSLCompileResult {
 
 /**
  * Convert TSSL to SSL, writing the output to disk.
- * Used by the LSP compile handler.
+ * @deprecated `transpile` plus a write of the result beside the source does the same. Removed in the next
+ * major version.
  */
 export async function compile(uri: string, text: string): Promise<TSSLCompileResult> {
-    // No batch state on the LSP compile path - TSSL CLI directory mode is the only batch consumer.
+    // One file, so no batch state to reuse a project across.
     const { outPath, events, result } = await tsslFor().compile(uri, text);
     return { sslPath: outPath, events, sourceMap: result.sourceMap };
 }
 
 /**
- * Transpile TSSL to SSL, returning the output string without writing to disk.
- * Used by the CLI where the caller controls file I/O. The source map is not returned here: the CLI writes
- * a file and reports the compiler's own output, with no editor to place a diagnostic in.
+ * Transpile TSSL to SSL, returning the output string without writing to disk, for a caller that does its
+ * own file I/O.
  * @param batch Optional shared state for batch processing (pass createBatchState() result)
  */
 export async function transpile(filePath: string, text: string, batch?: TranspileBatchState): Promise<string> {
@@ -104,8 +104,8 @@ export async function transpile(filePath: string, text: string, batch?: Transpil
 }
 
 /**
- * As `transpile`, keeping the record of where each generated line came from.
- * Used by the LSP compile handler, which places the SSL compiler's errors back on the author's lines.
+ * As `transpile`, keeping the record of where each generated line came from, for a caller that places the SSL
+ * compiler's errors back on the author's lines.
  */
 export async function transpileWithSourceMap(
     filePath: string,

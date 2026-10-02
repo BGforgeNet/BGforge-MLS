@@ -2,6 +2,29 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
+## Unreleased
+
+### Changed
+
+- Requires Node 22 or newer, up from 20.
+
+### Deprecated
+
+- `tbaf.compile()` and `td.compile()`, which write the output file themselves: `transpile()` plus a write to
+  `outputPathFor(path)` does the same. They will be removed in the next major version.
+
+### Fixed
+
+- TBAF and TD leave string literals alone when substituting a loop variable or an inlined parameter: `"step i"`
+  inside a loop over `i` is no longer rewritten to `"step 1"`, `"step 2"`.
+- A number written in exponent form, such as `1e3`, reaches the BAF or D output in decimal in a file without
+  imports too, as it already did in one with imports.
+- TBAF inlines a function whose returned condition calls another user function, instead of failing with "a
+  node that was removed or forgotten".
+- `fgtp` refuses `--save-and-check` and `--check-idempotency` with an error instead of printing the output to
+  stdout as though neither were given. `--help` no longer lists `--save-and-check`, which never saved or checked
+  anything.
+
 ## 0.4.1
 
 ### Fixed

@@ -5,7 +5,7 @@
 
 import { createIsInsideComment } from "../shared/comment-check";
 import { createIsInsideString } from "../shared/string-check";
-import { isInitialized, parseWithCache } from "../../../shared/parsers/weidu-d";
+import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import { SyntaxType } from "./syntax-type";
 
 /** Comment node types in the D grammar. */

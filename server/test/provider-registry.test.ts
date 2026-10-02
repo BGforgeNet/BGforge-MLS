@@ -33,7 +33,7 @@ import {
     LANG_WEIDU_SLB,
     LANG_WEIDU_SSL,
     LANG_WEIDU_TP2,
-} from "../../shared/languages";
+} from "@bgforge/shared/languages";
 
 // Mock per-concern modules to suppress logs and control file finding during tests
 vi.mock("../src/logger", () => ({

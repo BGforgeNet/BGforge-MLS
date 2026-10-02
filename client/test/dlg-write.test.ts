@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildDlg, readDlg, type DlgBuildInput } from "@bgforge/binary";
 import { writeDlgFromModel } from "../src/dialog-editor/dlg-write";
-import { modelFromDlg, modelFromDlgs, resrefName } from "../../shared/dialog-model-dlg";
-import type { DialogModel } from "../../shared/dialog-model";
+import { modelFromDlg, modelFromDlgs, resrefName } from "@bgforge/shared/dialog-model-dlg";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 /** Resrefs are fixed-width and NUL-padded on the wire, which is how the reader hands them back. */
 const resref = (name: string) => name.padEnd(8, "\u0000");

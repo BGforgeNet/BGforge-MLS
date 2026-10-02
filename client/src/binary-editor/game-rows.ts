@@ -296,8 +296,8 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
     if (typeof value !== "object" || value === null) return value;
 
     // Both, not either: `ref` resolves a row's VALUE and `slotRef` its LABEL, and a CRE sound slot carries each.
-    // Applied in sequence rather than as exclusive branches - returning after the first is how the label used to
-    // get dropped on exactly the rows the feature exists for.
+    // Applied in sequence rather than as exclusive branches: returning after the first drops the label on exactly
+    // the rows the feature exists for.
     let row = value;
     if (isValueRefRow(row) && row.ref.kind === "strref") {
         const text = lookups.strref(row.rawValue);
@@ -345,7 +345,7 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
         //
         // What a PRESENT resource then offers is a question about its type, not about the game: an editor that
         // can SHOW it earns the chip - a CRE points at five BCS scripts and a DLG, none of which anything here
-        // reads, so the chip used to open six hex dumps per creature - and a type that IS a picture earns a
+        // reads, so a chip on each would open six hex dumps per creature - and a type that IS a picture earns a
         // thumbnail, which is how an item's icon and a creature's portraits draw in the row.
         const resref = row.rawValue;
         const target = lookups.resourceType({ type: row.ref.type, byFlavour: row.ref.byFlavour }, resref);

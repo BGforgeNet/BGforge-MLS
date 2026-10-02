@@ -209,6 +209,9 @@ type Source =
           rank: number;
       };
 
+/** A lookup table's cached answer: null when the game does not ship it, its error when it cannot be read. */
+type TableEntry<T> = null | { table: T } | { error: Error };
+
 interface TreeEntry {
     resref: string; // uppercased
     type: number;
@@ -283,16 +286,18 @@ function resolveLangDir(gameDir: string, edition: string, explicitLang?: string)
  */
 function escapesGameDir(relative: string): boolean {
     if (path.isAbsolute(relative) || /^[a-z]:/i.test(relative)) return true;
-    return relative.split("/").some((seg) => seg === "..");
+    // Both separators: a name from a setting or a caller is not normalized as a KEY's is, and on Windows a
+    // backslash is one.
+    return relative.split(/[\\/]/).some((seg) => seg === "..");
 }
 
 /**
- * A name the write paths join under a game folder must be one plain filename segment: the read paths refuse
- * `..` and rooted names through `escapesGameDir`, and a write must not be the one direction that escapes.
+ * A name joined under a game folder must be one plain filename segment, whichever way it goes: a path would
+ * reach into a folder below, or out of the install through `..` or a rooted name.
  */
-function assertPlainName(name: string): void {
+function assertPlainName(name: string, verb: "read" | "write"): void {
     if (name === "" || name === "." || name === ".." || /[\\/]/.test(name) || escapesGameDir(name)) {
-        throw new Error(`Refusing to write "${name}": not a plain file name`);
+        throw new Error(`Refusing to ${verb} "${name}": not a plain file name`);
     }
 }
 
@@ -348,10 +353,20 @@ function bifSearchRelRoots(gameDir: string): string[] {
     return [...roots];
 }
 
+/** Opens an archive file, naming it in any refusal: an install has hundreds, and a parser is handed bytes alone. */
+function named<T>(file: string, open: () => T): T {
+    try {
+        return open();
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(reason.startsWith(file) ? reason : `${file}: ${reason}`, { cause: error });
+    }
+}
+
 export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const keyPath = resolveCaseInsensitive(gameDir, "chitin.key");
     if (!keyPath) throw new Error(`chitin.key not found in ${gameDir}`);
-    const key = parseKey(fs.readFileSync(keyPath));
+    const key = named(keyPath, () => parseKey(fs.readFileSync(keyPath)));
     const openBifs = new Map<number, BifArchive>();
     const bifRelRoots = bifSearchRelRoots(gameDir);
 
@@ -362,20 +377,21 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     const baseIdentity = detectGameIdentity(key);
     const tlkEncoding = options.encoding ?? (baseIdentity.edition === "ee" ? "utf-8" : "windows-1252");
     const tlkCache = new Map<"male" | "female", Tlk | null>();
-    const idsCache = new Map<string, ReadonlyMap<number, string> | null>();
-    const idsAllCache = new Map<string, ReadonlyMap<number, readonly string[]> | null>();
-    const twoDaCache = new Map<string, ReadonlyMap<number, string> | null>();
-    const twoDaTableCache = new Map<string, TwoDaTable | null>();
+    const idsCache = new Map<string, TableEntry<ReadonlyMap<number, string>>>();
+    const idsAllCache = new Map<string, TableEntry<ReadonlyMap<number, readonly string[]>>>();
+    const twoDaCache = new Map<string, TableEntry<ReadonlyMap<number, string>>>();
+    const twoDaTableCache = new Map<string, TableEntry<TwoDaTable>>();
 
     /**
      * One resource-backed lookup table, parsed on first use and cached by resref.
      *
      * An absent table is a normal answer - not every game ships every IDS, and `itemtype.2da` is
-     * Enhanced-Edition-only - so a miss caches as null rather than re-reading on every lookup. Shared by the
-     * four table accessors below, which otherwise differ only in their cache, parser and resource type.
+     * Enhanced-Edition-only - so a miss caches as null rather than re-reading on every lookup. A table that is
+     * there but cannot be read is a fault, cached as its error and thrown on every lookup, naming the table.
+     * Shared by the four table accessors below, which otherwise differ only in their cache, parser and type.
      */
     function cachedTable<T>(
-        cache: Map<string, T | null>,
+        cache: Map<string, TableEntry<T>>,
         resref: string,
         resType: number,
         parse: (bytes: Uint8Array) => T,
@@ -383,15 +399,22 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         const cacheKey = resref.toLowerCase();
         let entry = cache.get(cacheKey);
         if (entry === undefined) {
-            entry = null;
-            try {
-                entry = parse(readResource(resref, resType));
-            } catch {
-                // Resource not found, or unreadable - reported as "no table" by the null above.
+            if (winningSource(resref, resType) === undefined) {
+                entry = null;
+            } else {
+                try {
+                    entry = { table: parse(readResource(resref, resType)) };
+                } catch (error) {
+                    const name = `${resref.toUpperCase()}.${(resourceTypeExt(resType) ?? "").toUpperCase()}`;
+                    const reason = error instanceof Error ? error.message : String(error);
+                    entry = { error: new Error(`Cannot read ${name}: ${reason}`, { cause: error }) };
+                }
             }
             cache.set(cacheKey, entry);
         }
-        return entry ?? undefined;
+        if (entry === null) return undefined;
+        if ("error" in entry) throw entry.error;
+        return entry.table;
     }
 
     // WeiDU-style language resolution: EE games keep dialog.tlk under lang/<lang>/, so without an explicit lang
@@ -439,8 +462,12 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             let names: string[];
             try {
                 names = fs.readdirSync(dirPath);
-            } catch {
-                return;
+            } catch (error) {
+                const code = (error as NodeJS.ErrnoException).code;
+                // A plain file at the folder's name holds no overrides; any other failure would serve the
+                // folder's files from the BIF below them without a word, so it is refused.
+                if (code === "ENOTDIR") return;
+                throw new Error(`Cannot list ${dirPath}: ${code ?? String(error)}`, { cause: error });
             }
             for (const name of names) {
                 const dot = name.lastIndexOf(".");
@@ -507,7 +534,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     : `BIF file not found: ${entry.name}`,
             );
         }
-        const archive = openBif(fileSource(bifPath));
+        const archive = named(bifPath, () => openBif(fileSource(bifPath)));
         openBifs.set(bifIndex, archive);
         return archive;
     }
@@ -537,6 +564,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
 
     /** Where an auxiliary loose file sits in `override`, or undefined when there is none. */
     function auxFilePath(fileName: string): string | undefined {
+        assertPlainName(fileName, "read");
         return resolveGamePath(gameDir, `override/${fileName}`);
     }
 
@@ -623,7 +651,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return { kind: "bif", archivePath, entry: tileset ? source.tilesetIndex : source.fileIndex, tileset };
         },
         write(resref, type, bytes, writeOptions) {
-            assertPlainName(resref);
+            assertPlainName(resref, "write");
             const typeCode = typeCodeOf(type);
             const ext = resourceTypeExt(typeCode);
             if (!ext) throw new Error(`No file extension known for resType 0x${typeCode.toString(16)}`);
@@ -680,7 +708,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
             return looseSourceIn(resref, typeCodeOf(type), folder)?.path;
         },
         writeAuxFile(fileName, bytes) {
-            assertPlainName(fileName);
+            assertPlainName(fileName, "write");
             const target = path.join(ensureFolder(gameDir, "override"), fileName.toLowerCase());
             atomicWriteFileSync(target, bytes);
             return target;
@@ -701,7 +729,9 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     resolved = resolveGamePath(gameDir, candidate);
                     if (resolved) break;
                 }
-                entry = resolved ? openTlk(fileSource(resolved), { encoding: tlkEncoding }) : null;
+                entry = resolved
+                    ? named(resolved, () => openTlk(fileSource(resolved), { encoding: tlkEncoding }))
+                    : null;
                 tlkCache.set(variant, entry);
             }
             return entry ?? undefined;

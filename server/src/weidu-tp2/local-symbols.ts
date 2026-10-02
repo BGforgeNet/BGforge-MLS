@@ -18,7 +18,7 @@
 import type { IndexedSymbol } from "../core/symbol";
 import { TextCache } from "../shared/text-cache";
 import { parseFile } from "./header-parser";
-import { isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 
 /** Cached local symbols data: symbols array + name lookup map */
 export interface LocalSymbolsData {
@@ -111,8 +111,8 @@ export function clearLocalSymbolsCache(uri: string): void {
 }
 
 /**
- * Clear entire cache.
- * Used for testing.
+ * Clear entire cache. The tests' isolation reset: the cache is module state keyed by (uri, version), and
+ * tests reuse both across different texts.
  */
 export function clearAllLocalSymbolsCache(): void {
     cache.clearAll();

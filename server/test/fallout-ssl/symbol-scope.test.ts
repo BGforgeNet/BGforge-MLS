@@ -8,14 +8,14 @@ import type { Position } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),
     initLspConnection: vi.fn(),
 }));
 
-import { initParser, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { ScopeKind, assertNeverScope } from "../../src/fallout-ssl/scope-kinds";
 import { findContainingProcedure, isLocalToProc } from "../../src/fallout-ssl/symbol-definitions";
 import { getSymbolScope } from "../../src/fallout-ssl/symbol-scope";

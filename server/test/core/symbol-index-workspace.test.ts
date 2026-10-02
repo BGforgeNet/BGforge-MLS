@@ -143,7 +143,7 @@ describe("Symbols - workspace symbol search", () => {
         });
 
         it("should cap results at maxResults", () => {
-            const results = index.searchWorkspaceSymbols("", 3);
+            const results = index.searchWorkspaceSymbols("", undefined, 3);
             expect(results).toHaveLength(3);
         });
 

@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { buildWeiduTable, buildFalloutArgsTable, type VarSection } from "../../../shared/tooltip-table";
+import { buildWeiduTable, buildFalloutArgsTable, type VarSection } from "@bgforge/shared/tooltip-table";
 
 describe("buildWeiduTable", () => {
     it("returns empty string when all sections are empty", () => {

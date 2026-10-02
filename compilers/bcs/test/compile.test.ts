@@ -10,7 +10,7 @@ import {
     type BcsCompileSymbols,
     type BcsSignatureRow,
 } from "@bgforge/bcs";
-import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
+import { getParser, initParser } from "@bgforge/shared/parsers/weidu-baf";
 import { COMPILE_SYMBOLS, SYMBOLS } from "./fixture-symbols";
 
 /**

@@ -13,7 +13,7 @@ pnpm add @bgforge/transpile
 npm install @bgforge/transpile
 ```
 
-Requires Node 20 or newer.
+Requires Node 22 or newer.
 
 ## Usage
 
@@ -77,15 +77,17 @@ pnpm add -g @bgforge/transpile
 ```
 
 ```
-fgtp <file.td|file.tbaf|dir> [--save] [--check] [--save-and-check] [-r] [-q]
+fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q] [--jobs <n>] [--exclude-from <path>] [--exclude-base <dir>]
 ```
 
 - `--save` - write the transpiled output alongside the source
   (`.td` -> `.d`, `.tbaf` -> `.baf`)
 - `--check` - exit 1 if any output is not up to date
-- `--save-and-check` - save and verify in one pass
 - `-r` - recurse into directories
 - `-q` - quiet mode (suppress summary)
+- `--jobs <n>` - process a directory's files with N parallel workers
+- `--exclude-from <path>` - skip the files listed in `<path>` (`#` comments and blank lines ignored)
+- `--exclude-base <dir>` - resolve `--exclude-from` entries against `<dir>` instead of the target
 
 Without `--save`, the transpiled output is printed to stdout.
 

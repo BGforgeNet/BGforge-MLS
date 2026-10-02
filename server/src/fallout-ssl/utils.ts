@@ -21,8 +21,8 @@ import {
 } from "../core/symbol";
 import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
-import { buildSignatureBlock } from "../../../shared/tooltip-format";
-import { sslMapGet, sslNameKey, sslNamesEqual } from "../../../shared/fallout-ssl-names";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
+import { sslMapGet, sslNameKey, sslNamesEqual } from "@bgforge/shared/fallout-ssl-names";
 import { buildTooltipBase } from "./jsdoc-format";
 import {
     type MacroData,
@@ -104,7 +104,7 @@ export function extractParams(procNode: Node): ParamInfo[] {
     return result;
 }
 
-import { type SignatureParam, formatSignature } from "../../../shared/signature-format";
+import { type SignatureParam, formatSignature } from "@bgforge/shared/signature-format";
 
 /**
  * Build procedure signature string from AST params, enriched with optional JSDoc.
@@ -401,17 +401,17 @@ export function extractMacros(root: Node): MacroData[] {
             hasParams = true;
         }
 
-        // Reconstruct body text from remaining children using byte offsets.
+        // Reconstruct body text from remaining children using offsets.
         // Column-based offsets break for multiline ERROR nodes because column
-        // resets to 0 on each line. Byte offsets (startIndex/endIndex) are absolute.
+        // resets to 0 on each line. Offsets (startIndex/endIndex) are absolute.
         let bodyText = "";
         if (bodyStartIdx >= 0) {
             const firstChild = children[bodyStartIdx]!;
             const lastChild = children[children.length - 1]!;
             const errorText = errorNode.text;
-            const errorStartByte = errorNode.startIndex;
-            const bodyOffset = firstChild.startIndex - errorStartByte;
-            const bodyEnd = lastChild.endIndex - errorStartByte;
+            const errorStart = errorNode.startIndex;
+            const bodyOffset = firstChild.startIndex - errorStart;
+            const bodyEnd = lastChild.endIndex - errorStart;
             bodyText = errorText.substring(bodyOffset, bodyEnd).trim();
         }
 

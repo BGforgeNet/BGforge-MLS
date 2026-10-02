@@ -5,7 +5,7 @@
 
 import { BufferWriter } from "typed-binary";
 import { effBodySchema, effHeaderSchema } from "./schemas";
-import { EFF_BODY_SIZE, EFF_HEADER_SIZE, EFF_TOTAL_SIZE } from "./types";
+import { EFF_HEADER_SIZE, EFF_TOTAL_SIZE } from "./types";
 import { type EffCanonicalDocument, type EffCanonicalSnapshot } from "./canonical-schemas";
 
 function writerAt(out: Uint8Array, offset: number): BufferWriter {
@@ -16,9 +16,6 @@ export function serializeEffCanonicalDocument(document: EffCanonicalDocument): U
     const out = new Uint8Array(EFF_TOTAL_SIZE);
     effHeaderSchema.write(writerAt(out, 0), document.header);
     effBodySchema.write(writerAt(out, EFF_HEADER_SIZE), document.body);
-    if (out.byteLength !== EFF_HEADER_SIZE + EFF_BODY_SIZE) {
-        throw new Error(`EFF size invariant broken: ${out.byteLength} != ${EFF_HEADER_SIZE + EFF_BODY_SIZE}`);
-    }
     return out;
 }
 

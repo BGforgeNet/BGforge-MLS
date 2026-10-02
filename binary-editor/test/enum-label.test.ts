@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { enumValueLabel, enumSelectedLabel, enumHexDigits } from "../../shared/enum-label";
+import { enumValueLabel, enumSelectedLabel, enumHexDigits } from "@bgforge/shared/enum-label";
 
 describe("enumValueLabel", () => {
     it("prefixes the stored value before the name", () => {

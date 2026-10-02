@@ -5,7 +5,7 @@
     // block is intentionally avoided because the webview runs under a strict nonce CSP that blocks
     // non-nonced injected <style> tags.
     //
-    // Verified against bits-ui@2.15.0 (client/node_modules/bits-ui/dist/bits/combobox):
+    // Verified against bits-ui@2.19.0 (client/node_modules/bits-ui/dist/bits/combobox):
     //   Combobox.Root     - props: type="single", bind:value (STRING), onValueChange, bind:open (bool);
     //                       inputValue is NOT declared as $bindable() so bind:inputValue is one-way only.
     //                       bits-ui does NOT auto-filter rendered items; filtering is the wrapper's responsibility.

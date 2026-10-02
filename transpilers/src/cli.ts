@@ -21,7 +21,7 @@ import {
     safeProcess,
     reportDiff,
     reportFatal,
-} from "../../shared/cli/cli-utils";
+} from "@bgforge/shared/cli/cli-utils";
 type TranspileType = "td" | "tbaf";
 
 const EXTENSIONS = [EXT_TD, EXT_TBAF];
@@ -103,13 +103,14 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: fgtp <file.td|file.tbaf|dir> [--save] [--check] [--save-and-check] [-r] [-q]
-  --save            Write output to file (default: stdout)
-  --check           Check if output files are up to date (exit 1 if not)
-  --save-and-check  Write output and verify the result is unchanged on a re-run
-  -r                Recursively transpile all .td and .tbaf files in directory
-  -q                Quiet mode: suppress summary, only print changed files
-  --jobs <n>        Process directory files with N parallel workers
+const HELP = `Usage: fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q] [--jobs <n>]
+  --save              Write output to file (default: stdout)
+  --check             Check if output files are up to date (exit 1 if not)
+  -r                  Recursively transpile all .td and .tbaf files in directory
+  -q                  Quiet mode: suppress summary, only print changed files
+  --jobs <n>          Process directory files with N parallel workers
+  --exclude-from <p>  Skip the files listed in <p> (# comments and blanks ignored)
+  --exclude-base <d>  Resolve --exclude-from entries against <d> (default: the target)
 
 Examples:
   fgtp mydialog.td              # Print D output to stdout
@@ -121,7 +122,7 @@ Examples:
   .tssl is compiled by the separate 'tssl' CLI (@bgforge/tssl), not by fgtp.`;
 
 async function main() {
-    const args = parseCliArgs(HELP);
+    const args = parseCliArgs(HELP, { modes: ["save", "check"] });
     if (!args) return;
 
     await runCli({ args, extensions: EXTENSIONS, description: ".td and .tbaf", processFile });

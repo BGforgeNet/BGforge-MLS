@@ -15,7 +15,7 @@
 
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
-import { SPAWN_TIMEOUT_MS } from "../../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 import { narrow, scriptsIn, scriptsUnder } from "./corpus-files.ts";
 
 // Anchored to this file rather than through the shared `repo-root` helper: that helper reads

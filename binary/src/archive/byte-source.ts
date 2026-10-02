@@ -15,12 +15,14 @@ export interface ByteSource {
     close(): void;
 }
 
-function checkRange(offset: number, length: number, size: number): void {
+/** `file`, when the source is one, leads the message: reads happen long after the open that knew its name. */
+function checkRange(offset: number, length: number, size: number, file?: string): void {
+    const where = file === undefined ? "" : `${file}: `;
     if (!Number.isInteger(offset) || !Number.isInteger(length) || offset < 0 || length < 0) {
-        throw new RangeError(`Invalid read: offset=${offset} length=${length}`);
+        throw new RangeError(`${where}Invalid read: offset=${offset} length=${length}`);
     }
     if (offset + length > size) {
-        throw new RangeError(`Read out of bounds: offset=${offset} length=${length} exceeds size=${size}`);
+        throw new RangeError(`${where}Read out of bounds: offset=${offset} length=${length} exceeds size=${size}`);
     }
 }
 
@@ -61,12 +63,12 @@ export function fileSource(filePath: string): ByteSource {
     return {
         size,
         read(offset, length) {
-            checkRange(offset, length, size);
+            checkRange(offset, length, size, filePath);
             const buf = Buffer.allocUnsafe(length);
             let done = 0;
             while (done < length) {
                 const n = fs.readSync(fd, buf, done, length - done, offset + done);
-                if (n === 0) throw new RangeError(`Unexpected EOF reading ${length} bytes at ${offset}`);
+                if (n === 0) throw new RangeError(`${filePath}: Unexpected EOF reading ${length} bytes at ${offset}`);
                 done += n;
             }
             return buf;

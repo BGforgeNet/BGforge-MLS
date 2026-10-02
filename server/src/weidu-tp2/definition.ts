@@ -8,7 +8,7 @@
 
 import type { Location, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { SyntaxType } from "./syntax-type";
 import { FUNCTION_CALL_TYPES, getCallableSymbolAtPosition } from "./callable-symbols";
 import { findLocalCallableDefinition } from "./callable-definitions";
@@ -30,6 +30,7 @@ export function getDefinition(
     position: Position,
     symbols?: Symbols,
     traDir?: string,
+    version?: number,
 ): Location | null {
     if (!isInitialized()) {
         return null;
@@ -48,7 +49,7 @@ export function getDefinition(
 
     // Check if cursor is on a function call parameter name
     // If so, navigate to the function definition instead of treating it as a variable
-    const callParamResult = tryFunctionCallParamDefinition(targetNode, text, uri, symbols);
+    const callParamResult = tryFunctionCallParamDefinition(targetNode, text, uri, symbols, version);
     if (callParamResult) {
         return callParamResult;
     }
@@ -63,7 +64,7 @@ export function getDefinition(
     }
 
     // Check if cursor is on a function/macro call
-    const callResult = tryFunctionCallDefinition(targetNode, text, uri, symbols);
+    const callResult = tryFunctionCallDefinition(targetNode, text, uri, symbols, version);
     if (callResult) {
         return callResult;
     }
@@ -140,6 +141,7 @@ function tryFunctionCallParamDefinition(
     text: string,
     uri: string,
     symbols?: Symbols,
+    version?: number,
 ): Location | null {
     // Reuse the guard to check if we're on a parameter name
     // Note: node.tree exists but isn't in the type definitions, so we walk up to root
@@ -173,7 +175,7 @@ function tryFunctionCallParamDefinition(
     const funcName = nameNode.text;
 
     // Look for the function definition
-    const localDef = findLocalCallableDefinition(text, uri, funcName);
+    const localDef = findLocalCallableDefinition(text, uri, funcName, version);
     if (localDef) {
         return localDef.location;
     }
@@ -190,7 +192,13 @@ function tryFunctionCallParamDefinition(
 /**
  * Try to find definition for a function/macro call.
  */
-function tryFunctionCallDefinition(node: SyntaxNode, text: string, uri: string, symbols?: Symbols): Location | null {
+function tryFunctionCallDefinition(
+    node: SyntaxNode,
+    text: string,
+    uri: string,
+    symbols?: Symbols,
+    version?: number,
+): Location | null {
     let root = node;
     while (root.parent) {
         root = root.parent;
@@ -207,7 +215,7 @@ function tryFunctionCallDefinition(node: SyntaxNode, text: string, uri: string, 
     }
 
     // First, look in the current file
-    const localDef = findLocalCallableDefinition(text, uri, callableSymbol.name);
+    const localDef = findLocalCallableDefinition(text, uri, callableSymbol.name, version);
     if (localDef) {
         return localDef.location;
     }

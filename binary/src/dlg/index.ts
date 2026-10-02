@@ -7,7 +7,7 @@
  * compiler and no open install. Only the spoken text is external, held as strrefs into `dialog.tlk`.
  */
 
-import { group, readerAt } from "../ie-common/parse-helpers";
+import { group, iePreambleError, readerAt } from "../ie-common/parse-helpers";
 import { type DlgBuildInput, writeRecord } from "./build";
 import { encodeOpaqueRange } from "../opaque-range";
 import { walkStruct } from "../spec/walk-display";
@@ -36,8 +36,8 @@ const TEXT_BLOCK_LABEL = "text";
 
 const FORMAT_ID = "dlg";
 const FORMAT_NAME = "Infinity Engine DLG v1";
-const DLG_SIGNATURE = "DLG ";
-const DLG_VERSION_V1 = "V1.0";
+const DLG_SIGNATURE = [0x44, 0x4c, 0x47, 0x20] as const; // "DLG "
+const DLG_VERSION_V1 = [0x56, 0x31, 0x2e, 0x30] as const; // "V1.0"
 
 /**
  * Canonical slugs for the transition flags, as `compileFlagTable` derives them from the spec's display
@@ -256,18 +256,13 @@ class DlgParser implements BinaryParser {
     }
 
     parse(data: Uint8Array, _options?: ParseOptions): ParseResult {
-        // The floor is the BG1-era header: a shorter file cannot even carry the table offsets.
+        // The floor is the BG1-era header: a shorter file cannot even carry the table offsets. Worded here rather
+        // than by the other IE parsers' "File too small" because `readDlg` refuses a short file with this sentence.
         if (data.byteLength < DLG_HEADER_SIZE) {
             return this.fail(`Truncated DLG: ${data.byteLength} bytes, need at least ${DLG_HEADER_SIZE}`);
         }
-        const signature = latin1(data, 0, 4);
-        if (signature !== DLG_SIGNATURE) {
-            return this.fail(`Not a DLG file: signature ${JSON.stringify(signature)}`);
-        }
-        const version = latin1(data, 4, 4);
-        if (version !== DLG_VERSION_V1) {
-            return this.fail(`Unsupported DLG version: ${JSON.stringify(version)} (only V1.0 is supported)`);
-        }
+        const preambleError = iePreambleError(data, "DLG", DLG_SIGNATURE, DLG_VERSION_V1);
+        if (preambleError !== undefined) return this.fail(preambleError);
 
         // The two header lengths are both normal - 1002 of the 4286 DLGs in a stock BG:EE plus BG2:ToB pair
         // carry the shorter one - so the variant is recorded on the document (`headerInterrupt` absent) and

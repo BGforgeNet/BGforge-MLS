@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Run ALL tests: main suite phases 1-2, then all remaining tests in one parallel block.
-# This interleaves grammar tests with Phase 3 tests (smoke, samples, external,
-# integration, transpile-external), which is faster than running them sequentially.
+# Run ALL tests: main suite phases 1-2, then the remaining tests in one parallel block, then
+# transpile-external alone. The block interleaves grammar tests with Phase 3 tests (smoke, samples,
+# external, integration), which is faster than running them sequentially.
 
 set -eu -o pipefail
 

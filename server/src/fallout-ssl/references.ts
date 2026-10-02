@@ -10,7 +10,7 @@ import type { Location, Position } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import type { ReferencesIndex } from "../shared/references-index";
 import type { Symbols } from "../core/symbol-index";
-import { parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { ScopeKind } from "./scope-kinds";
 import { getSymbolScope } from "./symbol-scope";
 import { findScopedReferences } from "./reference-finder";

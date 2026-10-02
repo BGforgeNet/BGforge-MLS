@@ -8,14 +8,14 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),
     initLspConnection: vi.fn(),
 }));
 
-import { initParser, parseWithCache } from "../../../shared/parsers/fallout-ssl";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { findScopedReferences } from "../../src/fallout-ssl/reference-finder";
 import type { SslSymbolScope } from "../../src/fallout-ssl/symbol-scope";
 

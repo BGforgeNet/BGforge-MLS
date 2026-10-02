@@ -5,7 +5,7 @@
     // <style> block is intentionally avoided because the webview runs under a strict nonce CSP that blocks
     // non-nonced injected <style> tags.
     //
-    // Verified against bits-ui@2.15.0 (client/node_modules/bits-ui/dist/bits/dropdown-menu):
+    // Verified against bits-ui@2.19.0 (client/node_modules/bits-ui/dist/bits/dropdown-menu):
     //   DropdownMenu.Root     - shared menu Root (menu.svelte); props: open (bool), onOpenChange, dir.
     //   DropdownMenu.Trigger  - renders a <button>; its children are the visible trigger label/icon.
     //                           Props: disabled (bool|null|undefined). Keyboard: Space/Enter/ArrowDown opens.

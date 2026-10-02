@@ -9,11 +9,11 @@ import type { SelectionRange } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 
-import { initParser, isInitialized, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { createSelectionRangesProvider } from "../../src/shared/selection-ranges";
 import { expectWellFormedChain } from "../shared/selection-range-assertions";
 

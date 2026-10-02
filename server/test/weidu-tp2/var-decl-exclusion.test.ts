@@ -17,7 +17,7 @@ import * as path from "path";
 // Mock LSP connection before importing provider
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     })),
     initLspConnection: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock("../../src/path-utils", async (importOriginal) => {
 });
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { defaultSettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";
 

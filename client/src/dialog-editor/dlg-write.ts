@@ -13,8 +13,8 @@
  */
 
 import { buildDlg, toDlgBuildInput, DlgTransitionFlag, type DlgBuildInput } from "@bgforge/binary";
-import type { DialogChoice, DialogModel, DialogState } from "../../../shared/dialog-model";
-import { parseDlgStateId, resrefName, strrefValue } from "../../../shared/dialog-model-dlg";
+import type { DialogChoice, DialogModel, DialogState } from "@bgforge/shared/dialog-model";
+import { parseDlgStateId, resrefName, strrefValue } from "@bgforge/shared/dialog-model-dlg";
 
 type StateRecord = DlgBuildInput["states"][number];
 type TransitionRecord = DlgBuildInput["transitions"][number];

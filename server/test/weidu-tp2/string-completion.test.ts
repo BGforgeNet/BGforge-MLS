@@ -11,14 +11,14 @@ import { type Position, CompletionItemKind } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     })),
     initLspConnection: vi.fn(),
 }));
 
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { CompletionCategory, type Tp2CompletionItem } from "../../src/weidu-tp2/completion/types";
 import { defaultSettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";

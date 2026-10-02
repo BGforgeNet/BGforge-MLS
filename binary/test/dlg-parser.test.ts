@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { buildDlg, dlgParser, readDlg } from "../src/dlg";
 import type { DlgCanonicalDocument } from "../src/dlg/canonical-schemas";
 import { createCanonicalDlgJsonSnapshot, loadCanonicalDlgJsonSnapshot } from "../src/dlg/json-snapshot";
-import { resolveWeidu, WEIDU_HOOK_TIMEOUT_MS } from "../../scripts/utils/src/weidu-binary.ts";
+import { resolveWeidu, runWeiduBatch, WEIDU_HOOK_TIMEOUT_MS } from "../../scripts/utils/src/weidu-binary.ts";
 import { REPO_ROOT } from "./repo-root";
 
 /**
@@ -91,6 +90,18 @@ describe("serializeDlg - a document that does not fit its bytes", () => {
         corrupt(snapshot.document);
 
         expect(() => loadCanonicalDlgJsonSnapshot(JSON.stringify(snapshot))).toThrow(/does not fit|out of range/i);
+    });
+
+    // A crafted snapshot, not one written by the editor: the text block's recorded offset sizes the buffer
+    // before anything else reads it. The shared range schema stops at 16 MiB, sized for MAP; a DLG is 1 MiB.
+    test("refuses a crafted text block placed past the DLG size budget, before allocating for it", () => {
+        const snapshot = snapshotOf(source()) as Record<string, any>;
+        const text = snapshot.opaqueRanges.find((r: { label: string }) => r.label === "text");
+        text.offset = 8 * 1024 * 1024;
+
+        expect(() => loadCanonicalDlgJsonSnapshot(JSON.stringify(snapshot))).toThrow(
+            /exceeding the format's 1048576 byte budget/,
+        );
     });
 
     test("accepts the document it was given untouched", () => {
@@ -213,11 +224,7 @@ describe(`dlgParser (${COMPILED.length} fixtures)`, () => {
             .filter((f) => f.endsWith(".d"))
             .sort();
         for (const src of sources) fs.copyFileSync(path.join(FIXTURE_DIR, src), path.join(workDir, src));
-        execFileSync(weidu, ["--nogame", "--out", ".", ...sources], {
-            cwd: workDir,
-            timeout: WEIDU_TIMEOUT_MS,
-            stdio: "ignore",
-        });
+        runWeiduBatch(weidu, ["--nogame", "--out", ".", ...sources], workDir, WEIDU_TIMEOUT_MS);
     }, WEIDU_HOOK_TIMEOUT_MS);
 
     afterAll(() => {

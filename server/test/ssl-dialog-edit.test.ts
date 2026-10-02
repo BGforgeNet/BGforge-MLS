@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../src/dialog";
-import { modelFromSSL, type DialogModel } from "../../shared/dialog-model";
-import { applySSLDialogEdits, eligibleToDelete, isLocalNewSSLNode } from "../../shared/dialog-ssl-edit";
-import { duplicateState, renameState } from "../../shared/dialog-edit-ops";
+import { modelFromSSL, type DialogModel } from "@bgforge/shared/dialog-model";
+import { applySSLDialogEdits, eligibleToDelete, isLocalNewSSLNode } from "@bgforge/shared/dialog-ssl-edit";
+import { duplicateState, renameState } from "@bgforge/shared/dialog-edit-ops";
 import { findCallers } from "../../client/src/dialog-editor/webview/find-callers";
-import { allocateNodeIds } from "../../shared/dialog-ssl-ids";
-import { serializeCond, serializeSSLConditionalOption } from "../../shared/dialog-ssl-serialize";
+import { allocateNodeIds } from "@bgforge/shared/dialog-ssl-ids";
+import { serializeCond, serializeSSLConditionalOption } from "@bgforge/shared/dialog-ssl-serialize";
 
 const structuredCloneModel = (m: DialogModel): DialogModel => structuredClone(m);
 

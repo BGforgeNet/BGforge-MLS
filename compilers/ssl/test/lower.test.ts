@@ -20,8 +20,8 @@ import { IntWriter } from "../src/int/writer.ts";
 import { engineFunction } from "../src/int/engine-functions.ts";
 import { LowerError, lowerProgram } from "../src/lower.ts";
 import type { Program, Stmt } from "../src/int/ir.ts";
-import { REPO_ROOT } from "../../../shared/cli/test/repo-root.ts";
-import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts.ts";
+import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
 const wasmPresent = builtArtifactsPresent([path.join(WASM_DIR, "tree-sitter-ssl.wasm")], "pnpm build:grammar");

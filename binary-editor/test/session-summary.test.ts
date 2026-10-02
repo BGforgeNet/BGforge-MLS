@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { dispatch } from "../src/protocol";
 import { projectRow } from "../src/window";
 import { sessionStore } from "../src/session";
-import { enumSelectedLabel } from "../../shared/enum-label";
+import { enumSelectedLabel } from "@bgforge/shared/enum-label";
 import type { Row } from "../src/types";
 
 // ---------------------------------------------------------------------------

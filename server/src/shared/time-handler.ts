@@ -9,7 +9,7 @@
  * module is the LSP-shaped adapter over it (handler in, wrapped handler out, tagged `lsp-timing`).
  */
 
-import { timed } from "../../../shared/timing";
+import { timed } from "@bgforge/shared/timing";
 
 /** Default slow-request threshold in milliseconds. See server/INTERNALS.md#latency-budgets. */
 const ENV_THRESHOLD_MS = parseInt(process.env["BGFORGE_LSP_SLOW_MS"] ?? "", 10);

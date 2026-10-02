@@ -17,7 +17,7 @@ import { readFileSync } from "fs";
 import * as path from "path";
 import { type CompletionItem, CompletionItemKind, type MarkupContent } from "vscode-languageserver/node";
 import type { CompletionItemWithCategory, CompletionCategory } from "../shared/completion-context";
-import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
+import { WEIDU_TP2_STANZAS } from "@bgforge/shared/stanza-names";
 import { conlog } from "../logger";
 import {
     type IndexedSymbol,

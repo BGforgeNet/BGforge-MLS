@@ -53,6 +53,12 @@ describe("loop unroll: for-loop iteration and cleanup", () => {
         expect(out).not.toContain("Attack(4)");
     });
 
+    it("leaves the loop variable's name alone inside a string argument", async () => {
+        const out = await tbaf(`for (let i = 1; i <= 2; i++) {\n    DisplayString(i, "step i");\n}\n`);
+        expect(out).toContain('DisplayString(1, "step i")');
+        expect(out).toContain('DisplayString(2, "step i")');
+    });
+
     it("supports a += step increment", async () => {
         const out = await tbaf(`for (let i = 0; i < 6; i += 3) {\n    Attack(i);\n}\n`);
         expect(out).toContain("Attack(0)");

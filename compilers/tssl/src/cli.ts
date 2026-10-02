@@ -15,9 +15,8 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { EXT_TSSL } from "../../../shared/languages";
-import { emitProgram } from "../../ssl/src/compile";
-import { optimize } from "../../ssl/src/optimize";
+import { EXT_TSSL } from "@bgforge/shared/languages";
+import { emitProgram, optimize } from "@bgforge/ssl";
 import { createBatchState, transpile, type TranspileBatchState } from "./index";
 import { lowerTsslProgram } from "./int/lower";
 import {
@@ -29,7 +28,7 @@ import {
     safeProcess,
     reportDiff,
     reportFatal,
-} from "../../../shared/cli/cli-utils";
+} from "@bgforge/shared/cli/cli-utils";
 
 // A TSSL source is a TypeScript module; the largest in real mod corpora stay well under 200 KB. The cap
 // is a defence against an oversized or truncated input triggering a large allocation before the parser
@@ -162,12 +161,16 @@ function emitFor(extra: Record<string, unknown>): Emit {
 }
 
 async function main() {
-    const args = parseCliArgs(HELP, [
-        ["--ssl", "Also write the readable .ssl"],
-        ["--no-int", "Skip the bytecode"],
-        ["--opt <level>", "Optimisation level"],
-        ["-s, --short-circuit", "Short-circuit and/or"],
-    ]);
+    const args = parseCliArgs(HELP, {
+        extraOptions: [
+            ["--ssl", "Also write the readable .ssl"],
+            ["--no-int", "Skip the bytecode"],
+            ["--opt <level>", "Optimisation level"],
+            ["-s, --short-circuit", "Short-circuit and/or"],
+        ],
+        // Writing is the default, so `--save` is accepted as a synonym for it.
+        modes: ["save", "check"],
+    });
     if (!args) return;
 
     const extra = args.extra ?? {};

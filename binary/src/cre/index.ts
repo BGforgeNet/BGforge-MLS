@@ -2,16 +2,15 @@
  * Infinity Engine CRE v1 parser. The header points at five variable-length
  * sections plus a fixed item-slot block; the effects table's per-record
  * size depends on the header byte at 0x0033 (`effStructureVersion`):
- *   - 0 -> the 48-byte feature block (0x30 bytes each) - the SHARED `effectSpec`
+ *   - 0 -> the 48-byte feature block (0x30 bytes each) - the `ie-common` `effectSpec`
  *          (byte-identical to EFF v1; the same record ITM/SPL embed)
- *   - 1 -> EFF v2 body records (0x108 bytes each, shared via ie-common)
+ *   - 1 -> EFF v2 body records (0x108 bytes each), the EFF format's own body spec
  * Both kinds round-trip byte-identically through the canonical-doc layer.
  */
 
-import { group, readerAt } from "../ie-common/parse-helpers";
+import { group, iePreambleError, readerAt } from "../ie-common/parse-helpers";
 import { walkStruct } from "../spec/walk-display";
 import { effBodySpecAnnotated, effBodyPresentation } from "../eff/specs/body.overrides";
-import { bytesEqual } from "../ie-common/types";
 import type { BinaryParser, ParseOptions, ParseResult, ParsedField } from "../types";
 import type { CreCanonicalDocument } from "./canonical-schemas";
 import {
@@ -110,16 +109,8 @@ class CreParser implements BinaryParser {
         if (data.byteLength < CRE_HEADER_SIZE) {
             return this.fail(`File too small: ${data.byteLength} bytes, need at least ${CRE_HEADER_SIZE} for header`);
         }
-        const signature = [...data.subarray(0, 4)];
-        if (!bytesEqual(signature, [...CRE_SIGNATURE])) {
-            return this.fail(`Not a CRE file: signature ${JSON.stringify(String.fromCodePoint(...signature))}`);
-        }
-        const version = [...data.subarray(4, 8)];
-        if (!bytesEqual(version, [...CRE_VERSION_V1])) {
-            return this.fail(
-                `Unsupported CRE version: ${JSON.stringify(String.fromCodePoint(...version))} (only V1.0 is supported)`,
-            );
-        }
+        const preambleError = iePreambleError(data, "CRE", CRE_SIGNATURE, CRE_VERSION_V1);
+        if (preambleError !== undefined) return this.fail(preambleError);
 
         const header: CreHeaderData = creHeaderSchema.read(readerAt(data, 0));
 

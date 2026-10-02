@@ -25,7 +25,7 @@ while IFS= read -r f; do
         *.tbaf) out="${f%.tbaf}.baf" ;;
         *) continue ;;
     esac
-    [[ -f "$out" ]] && git add -- "$out"
+    if [[ -f "$out" ]]; then git add -- "$out"; fi
 done <"$LIST"
 
 finalize_commit_and_push

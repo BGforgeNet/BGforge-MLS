@@ -57,22 +57,29 @@ So, per bump:
   range decides). `tsc` does not read `.svelte` files, so after the move run `pnpm typecheck:svelte` as well as
   every `tsc` config.
 - `@types/node` tracks the latest LTS Node major. The published packages support LTS Node only (`engines.node`
-  `>=20`), so do not bump `@types/node` to odd-numbered "Current" majors - that would expose type definitions for APIs
+  `>=22`), so do not bump `@types/node` to odd-numbered "Current" majors - that would expose type definitions for APIs
   not present at the supported runtime floor. Move it forward only when a new even-numbered Node release reaches LTS.
   That is a calendar trigger nothing in the repo can fire, so it needs checking rather than waiting on: an even major
   is released in April and enters LTS the following October, and `curl -s https://nodejs.org/dist/index.json` reports
   each release's `lts` field.
+- The extension's own code - the client, the language server it starts, and every library bundled into either - runs
+  on the Node inside the oldest VS Code that `engines.vscode` admits, not on `engines.node`; VS Code 1.101 carries
+  Node 22.15 (its `cgmanifest.json` names the version). So every tsconfig sets `lib` to `es2024` plus
+  `es2025.collection` (the Set methods) rather than all of `es2025`, whose `Float16Array`, `RegExp.escape` and
+  `Promise.try` that Node lacks. Raise `lib` only with `engines.vscode`, against the Node its oldest release carries.
 - `ini` (runtime dep of `@bgforge/format`) is held at `^6.x`; `7.0.0` is a major with potential parse/stringify
   behavior changes that need a changelog review before adoption. It also carries a second, independent hold reason:
-  ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) drops Node 20/21, which the published packages still support
-  (`engines.node` `>=20`). Both reasons must clear before the bump.
+  ini 7's engine floor (`^22.22.2 || ^24.15.0 || >=26`) sits above both `engines.node` `>=22` and the Node inside the
+  oldest supported VS Code, which runs `@bgforge/format` inside the language server. No VS Code release shipped Node
+  22.22.2: 1.122 carries 22.22.1 and 1.123 moved to 24.15.0, so `engines.vscode` must reach `^1.123.0` (and
+  `engines.node` match ini's range) for this reason to clear. Both reasons must clear before the bump.
 - `playwright` (devDep) is pinned to an EXACT version (no caret) because the webview harnesses launch a browser from
   Playwright's version-keyed cache: a development machine and the `Harness` CI job download that browser via
   `playwright install`, and a caret drift to a version whose browser revision is not cached would break the harness
   run until a re-download. Bump the pin and re-run `playwright install` together. A plain `pnpm install` never
   downloads a browser - the harness paths install Chromium explicitly.
-- `bits-ui` (client devDep, bundled into the binary-editor and animation-editor webviews) is exact-pinned (no caret).
-  Its primitives (Tabs, Combobox, Checkbox, the flag-group controls) render user-visible chrome, so version moves are
+- `bits-ui` (client devDep, reached only through the primitive wrappers in `client/src/webview-ui/`) is exact-pinned
+  (no caret). Those primitives render user-visible chrome in every webview that uses them, so version moves are
   deliberate: bump the pin and verify via the render harness drivers that exercise those primitives
   (`render-primitives.mts`, `render-resource-picker.mts`, `render-creature-palette.mts`) - never let a caret drift
   change webview rendering as a side effect of an unrelated install.
@@ -129,7 +136,7 @@ So, per bump:
   makes the set of enabled rules a property of whenever the lockfile was last refreshed, so the same commit lints
   clean on one machine and red on another; `.oxlintrc.json` records rules that began firing on a minor bump, each
   needing a decision. `@oxlint/plugins` must move in the same change as `oxlint` and to the same version - it
-  supplies the plugin API that `.oxlint/oxlint-plugin-no-showmessage.mjs` is written against. Bumping means reading
+  supplies the plugin API the plugins in `.oxlint/` are written against. Bumping means reading
   the release notes for newly-enabled rules, running `pnpm exec oxlint` on a clean tree, and deciding each new
   finding rather than mass-disabling.
 - `oxlint-tsgolint` (the type-aware backend behind `pnpm lint:types`) is caret-ranged, but its version tracks the
@@ -142,8 +149,8 @@ So, per bump:
   run still reports zero `tsconfig-error` lines. This is also the one place a TS 7 constraint already binds while the
   workspace `typescript` pin sits on 6.x.
 - The lint binaries are pinned and checksum-verified the same way WeiDU is, in the scripts that fetch them rather
-  than in a manifest: `actionlint` and `zizmor` in `scripts/lint-workflows.sh`, `shellcheck` and `shfmt` in
-  `scripts/lint-shell.sh`. `shellcheck` is the one that is fetched even when the host already has it, because
+  than in a manifest: `actionlint` and `zizmor` in `scripts/lint-workflows.sh`, `shfmt` in `scripts/lint-shell.sh`,
+  `shellcheck` in `scripts/tool-download-lib.sh`, which both of them source. `shellcheck` is the one that is fetched even when the host already has it, because
   GitHub-hosted runners preinstall it and the runner image decides the version otherwise. Each records one sha256 per
   published asset, so bump the version and replace every hash together - a tag is mutable, the asset hash is what is
   actually verified. These are not covered by `pnpm outdated`; check them against upstream releases whenever the npm

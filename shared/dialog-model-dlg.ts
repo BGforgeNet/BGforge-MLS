@@ -4,13 +4,14 @@
  * A DLG is the compiled form of what a `.d` file describes, so it produces the same model D does and renders
  * through the same graph rather than getting a parallel one of its own. The differences are all absences:
  * states have indices instead of labels, spoken text is a strref rather than inline, and there is no source
- * text - hence no byte ranges. A line is therefore changed by repointing its strref rather than by editing
+ * text - hence no ranges. A line is therefore changed by repointing its strref rather than by editing
  * text, and each state and reply carries its file position so the writer can rebuild the file from the model.
  *
  * The input is declared structurally rather than imported from `@bgforge/binary`, which `shared/` does not
  * depend on and should not start to; `@bgforge/binary`'s `Dlg` satisfies it, pinned by a test.
  */
 
+import { bareMsgId } from "./dialog-edit-common";
 import type { DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget } from "./dialog-model";
 
 export interface DlgModelState {
@@ -66,8 +67,7 @@ export function strrefText(strref: number): string {
  * render text it then refuses to save.
  */
 export function strrefValue(text: string): number | null {
-    const match = /^@(\d+)$/.exec(text.trim());
-    return match ? Number(match[1]) : null;
+    return bareMsgId(text) ?? null;
 }
 
 /** A state's id across the whole tree: its dialog and its number, since numbers repeat between files. */

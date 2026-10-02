@@ -54,10 +54,12 @@
         "ts-morph": "catalog:"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
+        "@bgforge/ssl": "workspace:*",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },
     "engines": {
-        "node": ">=20"
+        "node": ">=22"
     }
 }

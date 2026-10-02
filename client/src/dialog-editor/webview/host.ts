@@ -4,9 +4,9 @@
  * VS Code runtime) it is absent, and posting is a no-op.
  */
 
-declare function acquireVsCodeApi(): { postMessage(msg: unknown): void };
+import type { VsCodeApi } from "../../webview-utils";
 
-let api: { postMessage(msg: unknown): void } | undefined;
+let api: VsCodeApi | undefined;
 try {
     api = typeof acquireVsCodeApi === "function" ? acquireVsCodeApi() : undefined;
 } catch {

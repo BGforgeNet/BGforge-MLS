@@ -17,7 +17,7 @@ vi.mock("../../src/logger", () => ({
 }));
 
 import { lookupLocalSymbol, clearAllLocalSymbolsCache } from "../../src/fallout-ssl/local-symbols";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 describe("fallout-ssl local symbol hover", () => {
     beforeAll(async () => {

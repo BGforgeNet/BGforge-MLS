@@ -7,14 +7,14 @@ import { SemanticTokenTypes } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { getSemanticTokenSpans } from "../../src/weidu-tp2/semantic-tokens";
 import {
     RESREF_TOKEN_TYPE,

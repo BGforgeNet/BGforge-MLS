@@ -68,7 +68,7 @@
         onToggle: (stateId: string) => void;
         /** Un-collapse the given states so a reveal target inside a collapsed branch becomes visible. */
         onExpand: (stateIds: string[]) => void;
-        /** Go to the source line for a byte offset (F4) - opens the .ssl/.d text editor at that position. */
+        /** Go to the source line for an offset (F4) - opens the .ssl/.d text editor at that position. */
         onGoToSource: (sourceOffset: number) => void;
         onJump: (file: string, stateId: string) => void;
         /** Right-click on a state row, at viewport coords - opens the parent's menu. */

@@ -15,7 +15,7 @@
 
 import { chromium } from "playwright";
 import path from "node:path";
-import { modelFromDlgs, type DlgModelInput } from "../../../../../shared/dialog-model-dlg";
+import { modelFromDlgs, type DlgModelInput } from "@bgforge/shared/dialog-model-dlg";
 import { harnessPaths, makeChecker } from "./driver-util";
 
 const { appHtml, outDir } = harnessPaths(import.meta.url);

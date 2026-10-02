@@ -10,7 +10,7 @@
  */
 
 import type { InboundRef } from "./dlg-references";
-import type { DlgReplyRef } from "../../../shared/dialog-dlg-edit";
+import type { DlgReplyRef } from "@bgforge/shared/dialog-dlg-edit";
 
 export interface DetachSummary {
     readonly resref: string;

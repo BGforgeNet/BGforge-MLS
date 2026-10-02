@@ -15,7 +15,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, it } from "vitest";
 import { parseDialog } from "../../server/src/dialog";
-import { modelFromSSL } from "../../shared/dialog-model";
+import { modelFromSSL } from "@bgforge/shared/dialog-model";
 import { buildConversationTree } from "../src/dialog-editor/webview/conversation-tree";
 import { flattenRows } from "../src/dialog-editor/webview/tree-rows";
 import { REPO_ROOT } from "./repo-root";

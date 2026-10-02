@@ -13,7 +13,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { type Document } from "yaml";
 import { HIGHLIGHT_STANZAS } from "../../fallout-update/src/fallout/types.ts";
-import { FALLOUT_SSL_BUILTIN_FUNCTION_STANZAS } from "../../../shared/stanza-names.ts";
+import { FALLOUT_SSL_BUILTIN_FUNCTION_STANZAS } from "@bgforge/shared/stanza-names.ts";
 import { loadData } from "./generate-data.ts";
 import { updateHighlightStanza } from "./update-tp2-highlight.ts";
 import { type HighlightPattern, YAML_DUMP_OPTIONS, cmpStr, parseYamlDocStrict } from "./yaml-helpers.ts";

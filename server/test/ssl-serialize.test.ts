@@ -4,8 +4,8 @@ import {
     serializeSSLOption,
     serializeSSLProcedure,
     serializeSSLReply,
-} from "../../shared/dialog-ssl-serialize";
-import type { DialogChoice, DialogState } from "../../shared/dialog-model";
+} from "@bgforge/shared/dialog-ssl-serialize";
+import type { DialogChoice, DialogState } from "@bgforge/shared/dialog-model";
 
 describe("serializeSSLOption", () => {
     it("serializes a node-targeted option as NOption(<id>, <target>, <skill>);", () => {

@@ -78,17 +78,21 @@ function processItem(text: string, pos: number): ProcessedLine {
     if (text[pos] === "\n") {
         return { text: "", nextPos: pos + 1 };
     }
+    if (text[pos] === "\r" && text[pos + 1] === "\n") {
+        return { text: "", nextPos: pos + 2 };
+    }
 
     // Entry line: starts with `{`
     if (text[pos] === "{") {
         const entry = parseEntry(text, pos);
         if (entry !== null) {
             const formatted = `{${entry.number}}{${entry.audio}}{${entry.text}}`;
-            // Advance past any trailing content on the same line up to newline
-            let cur = entry.nextPos;
-            while (cur < text.length && text[cur] !== "\n") cur++;
-            const nextPos = cur < text.length ? cur + 1 : cur;
-            return { text: formatted, nextPos };
+            // Whatever follows the entry on its line - a note, another entry - is kept as written: the engine
+            // reads only the brace groups, and anything else is the author's.
+            const nlPos = text.indexOf("\n", entry.nextPos);
+            const lineEnd = nlPos === -1 ? text.length : nlPos;
+            const rest = text.slice(entry.nextPos, lineEnd).trimEnd();
+            return { text: formatted + rest, nextPos: nlPos === -1 ? lineEnd : lineEnd + 1 };
         }
     }
 
@@ -122,7 +126,10 @@ export function formatMsg(rawText: string): FormatOutput {
     // Collapse consecutive blank lines into one.
     const collapsed = outputLines.filter((line, i) => !(line === "" && outputLines[i - 1] === ""));
 
-    const formatted = collapsed.join("\n") + "\n";
+    // Lines are re-joined with the file's own line ending (its first one), so a CRLF file stays CRLF.
+    const firstNewline = text.indexOf("\n");
+    const eol = firstNewline > 0 && text[firstNewline - 1] === "\r" ? "\r\n" : "\n";
+    const formatted = collapsed.join(eol) + eol;
 
     // Identity check
     if (formatted === rawText) {

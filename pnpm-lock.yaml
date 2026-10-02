@@ -125,6 +125,9 @@ catalogs:
     esbuild:
       specifier: ^0.28.2
       version: 0.28.2
+    esbuild-svelte:
+      specifier: ^0.9.5
+      version: 0.9.5
     esbuild-wasm:
       specifier: ^0.28.2
       version: 0.28.2
@@ -134,9 +137,18 @@ catalogs:
     fast-glob:
       specifier: ^3.3.3
       version: 3.3.3
+    mocha:
+      specifier: ^11.8.0
+      version: 11.8.0
+    playwright:
+      specifier: 1.63.0
+      version: 1.63.0
     quick-lru:
       specifier: ^7.3.0
       version: 7.3.0
+    svelte:
+      specifier: ^5.57.0
+      version: 5.57.0
     tree-sitter-cli:
       specifier: 0.27.0
       version: 0.27.0
@@ -161,6 +173,12 @@ catalogs:
     vscode-languageserver-protocol:
       specifier: 3.18.3
       version: 3.18.3
+    vscode-oniguruma:
+      specifier: ^2.0.1
+      version: 2.0.1
+    vscode-textmate:
+      specifier: ^9.3.2
+      version: 9.3.2
     web-tree-sitter:
       specifier: ^0.27.0
       version: 0.27.0
@@ -177,6 +195,9 @@ importers:
 
   .:
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:shared
       '@oxlint/plugins':
         specifier: 1.80.0
         version: 1.80.0
@@ -204,17 +225,11 @@ importers:
       '@vscode/vsce':
         specifier: ^3.9.2
         version: 3.9.2(supports-color@8.1.1)
-      cac:
-        specifier: 'catalog:'
-        version: 7.0.0
-      diff:
-        specifier: 'catalog:'
-        version: 9.0.0
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
       esbuild-svelte:
-        specifier: ^0.9.5
+        specifier: 'catalog:'
         version: 0.9.5(esbuild@0.28.2)(svelte@5.57.0)
       jsonc-parser:
         specifier: ^3.3.1
@@ -222,9 +237,6 @@ importers:
       knip:
         specifier: ~6.25.0
         version: 6.25.0
-      mocha:
-        specifier: ^11.8.0
-        version: 11.8.0
       oxfmt:
         specifier: 0.65.0
         version: 0.65.0(svelte@5.57.0)
@@ -235,11 +247,8 @@ importers:
         specifier: ^7.0.2001
         version: 7.0.2001
       playwright:
-        specifier: 1.63.0
-        version: 1.63.0
-      quick-lru:
         specifier: 'catalog:'
-        version: 7.3.0
+        version: 1.63.0
       remark-cli:
         specifier: ^12.0.1
         version: 12.0.1(supports-color@8.1.1)
@@ -247,7 +256,7 @@ importers:
         specifier: ^13.1.0
         version: 13.1.0(supports-color@8.1.1)
       svelte:
-        specifier: ^5.57.0
+        specifier: 'catalog:'
         version: 5.57.0
       svelte-check:
         specifier: ^4.7.6
@@ -267,15 +276,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
-      vscode-oniguruma:
-        specifier: ^2.0.1
-        version: 2.0.1
-      vscode-textmate:
-        specifier: ^9.3.2
-        version: 9.3.2
-      web-tree-sitter:
-        specifier: 'catalog:'
-        version: 0.27.0
       yaml:
         specifier: 'catalog:'
         version: 2.9.0
@@ -289,6 +289,9 @@ importers:
       '@bgforge/binary':
         specifier: workspace:*
         version: link:../binary
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -314,6 +317,9 @@ importers:
         specifier: ^4.5.4
         version: 4.5.4
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       fast-check:
         specifier: 'catalog:'
         version: 4.9.0
@@ -330,6 +336,21 @@ importers:
         specifier: workspace:*
         version: link:../binary
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+      esbuild-svelte:
+        specifier: 'catalog:'
+        version: 0.9.5(esbuild@0.28.2)(svelte@5.57.0)
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      svelte:
+        specifier: 'catalog:'
+        version: 5.57.0
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -351,6 +372,9 @@ importers:
       '@bgforge/image':
         specifier: workspace:*
         version: link:../image
+      '@bgforge/ssl':
+        specifier: workspace:*
+        version: link:../compilers/ssl
       '@xyflow/svelte':
         specifier: ^1.6.6
         version: 1.6.6(svelte@5.57.0)
@@ -360,28 +384,55 @@ importers:
       elkjs:
         specifier: ^0.12.0
         version: 0.12.0
+      svelte:
+        specifier: 'catalog:'
+        version: 5.57.0
       vscode-languageclient:
         specifier: 'catalog:'
         version: 10.1.1
       vscode-languageserver-protocol:
         specifier: 'catalog:'
         version: 3.18.3
+      vscode-oniguruma:
+        specifier: 'catalog:'
+        version: 2.0.1
+      vscode-textmate:
+        specifier: 'catalog:'
+        version: 9.3.2
       web-tree-sitter:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
       '@types/vscode':
-        specifier: ~1.91.0
-        version: 1.91.0
+        specifier: ~1.101.0
+        version: 1.101.0
       '@vscode/test-electron':
         specifier: ^3.1.0
         version: 3.1.0(supports-color@8.1.1)
+      esbuild:
+        specifier: 'catalog:'
+        version: 0.28.2
+      esbuild-svelte:
+        specifier: 'catalog:'
+        version: 0.9.5(esbuild@0.28.2)(svelte@5.57.0)
       fast-glob:
         specifier: 'catalog:'
         version: 3.3.3
+      mocha:
+        specifier: 'catalog:'
+        version: 11.8.0
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
   compilers/bcs:
     dependencies:
@@ -389,6 +440,9 @@ importers:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       vitest:
         specifier: 'catalog:'
         version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
@@ -399,6 +453,9 @@ importers:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
@@ -418,6 +475,12 @@ importers:
         specifier: 'catalog:'
         version: 28.0.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
+      '@bgforge/ssl':
+        specifier: workspace:*
+        version: link:../ssl
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
@@ -443,6 +506,9 @@ importers:
         specifier: 'catalog:'
         version: 0.27.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/ini':
         specifier: ^4.1.1
         version: 4.1.1
@@ -486,6 +552,9 @@ importers:
 
   image:
     devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.3
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
@@ -507,6 +576,9 @@ importers:
 
   plugins/tssl-plugin:
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -529,6 +601,12 @@ importers:
       '@bgforge/format':
         specifier: workspace:*
         version: link:../format
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@bgforge/ssl':
+        specifier: workspace:*
+        version: link:../compilers/ssl
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.3
@@ -559,12 +637,37 @@ importers:
       vscode-languageserver-textdocument:
         specifier: ^1.0.14
         version: 1.0.14
+      vscode-oniguruma:
+        specifier: 'catalog:'
+        version: 2.0.1
+      vscode-textmate:
+        specifier: 'catalog:'
+        version: 9.3.2
       web-tree-sitter:
         specifier: 'catalog:'
         version: 0.27.0
       yaml:
         specifier: 'catalog:'
         version: 2.9.0
+
+  shared:
+    dependencies:
+      cac:
+        specifier: 'catalog:'
+        version: 7.0.0
+      diff:
+        specifier: 'catalog:'
+        version: 9.0.0
+      quick-lru:
+        specifier: 'catalog:'
+        version: 7.3.0
+      web-tree-sitter:
+        specifier: 'catalog:'
+        version: 0.27.0
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
   transpilers:
     dependencies:
@@ -578,12 +681,18 @@ importers:
         specifier: 'catalog:'
         version: 0.28.2
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       fast-check:
         specifier: 'catalog:'
         version: 4.9.0
       tsdown:
         specifier: 'catalog:'
         version: 0.23.0(oxc-resolver@11.24.2)(tsx@4.23.13)(typescript@6.0.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.11(@types/node@24.13.3)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
 
   transpilers/common:
     dependencies:
@@ -591,6 +700,9 @@ importers:
         specifier: 'catalog:'
         version: 7.3.0
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       esbuild-wasm:
         specifier: 'catalog:'
         version: 0.28.2
@@ -2142,8 +2254,8 @@ packages:
   '@types/unist@3.0.3':
     resolution: {integrity: sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q==}
 
-  '@types/vscode@1.91.0':
-    resolution: {integrity: sha512-PgPr+bUODjG3y+ozWUCyzttqR9EHny9sPAfJagddQjDwdtf66y2sDKJMnFZRuzBA2YtBGASqJGPil8VDUPvO6A==}
+  '@types/vscode@1.101.0':
+    resolution: {integrity: sha512-ZWf0IWa+NGegdW3iU42AcDTFHWW7fApLdkdnBqwYEtHVIBGbTu0ZNQKP/kX3Ds/uMJXIMQNAojHR4vexCEEz5Q==}
 
   '@typespec/ts-http-runtime@0.3.8':
     resolution: {integrity: sha512-bLMpVcWZNzq6lYOybwFwOAR1IXKcHnhUNqYeHjl1bET/qE3jFPFH+p8Wrh3rU4xwdnifPxmKNESBYnvnmc75aA==}
@@ -6173,7 +6285,7 @@ snapshots:
 
   '@types/unist@3.0.3': {}
 
-  '@types/vscode@1.91.0': {}
+  '@types/vscode@1.101.0': {}
 
   '@typespec/ts-http-runtime@0.3.8(supports-color@8.1.1)':
     dependencies:

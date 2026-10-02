@@ -1,5 +1,0 @@
-// Simple entries
-@1 = ~Hello world~
-@2 = "Double quoted"
-@100 = ~Entry with sound~ [SOUND01]
-@200 = ~Male text~ ~Female text~

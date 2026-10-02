@@ -14,6 +14,7 @@
  * variables and reorder that table, so the file would no longer compile back to the bytes it came from.
  */
 
+import { DecompileError } from "./decompile";
 import { engineFunctionAt } from "./engine-functions";
 import {
     proceduresOf,
@@ -53,9 +54,20 @@ function quote(text: string): string {
     return `"${text.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", "\\n").replaceAll("\t", "\\t")}"`;
 }
 
-/** Floats print with a decimal point so they cannot be read back as integers. */
+/**
+ * Floats print with a decimal point so they cannot be read back as integers, and in plain digits, the only
+ * float spelling the grammar reads: the shortest one that reads back as the same 32-bit float.
+ */
 function number(value: number): string {
-    return Number.isInteger(value) ? `${value}.0` : `${value}`;
+    if (!Number.isFinite(value)) throw new DecompileError(`float constant ${value} has no spelling in SSL source`);
+    const sign = value < 0 ? "-" : "";
+    const magnitude = Math.abs(value);
+    // Every float from 2^53 up is a whole number, so this also covers the range toFixed spells with an exponent.
+    if (Number.isInteger(magnitude)) return `${sign}${BigInt(magnitude)}.0`;
+    for (let digits = 1; ; digits++) {
+        const text = magnitude.toFixed(digits);
+        if (Math.fround(Number(text)) === magnitude) return sign + text;
+    }
 }
 
 /**

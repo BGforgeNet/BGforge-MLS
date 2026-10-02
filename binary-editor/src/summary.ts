@@ -15,7 +15,7 @@
 
 import type { FlatNode, Model } from "./model";
 import type { RelationshipModel } from "./relationship/types";
-import { enumSelectedLabel, enumHexDigits } from "../../shared/enum-label";
+import { enumSelectedLabel, enumHexDigits } from "@bgforge/shared/enum-label";
 import { projectRow } from "./window";
 
 /** Computes a one-line display summary for a list-section group entry. */
@@ -140,21 +140,16 @@ function resolveFieldSummary(
  * - Identifies which section spec applies by looking up the node's parent name.
  * - Projects the keyed child field (with rel for enum resolution).
  * - Returns undefined on any miss (absent parent, absent field, empty value).
- * - Never throws.
+ * - Lets a fault in the projection through: shown as a missing summary, it would pass for an empty value.
  */
 function makeComposer(spec: FormatSummarySpec): SummaryComposer {
     return (node, model, rel): string | undefined => {
         if (node.kind !== "group") return;
         const section = findSpec(node, model, spec.sections);
         if (!section) return;
-        try {
-            const value = resolveFieldSummary(node, model, section.fieldName, rel);
-            // Treat empty-string values as absent so the positional name shows through.
-            return value && value.length > 0 ? value : undefined;
-        } catch {
-            // Swallow unexpected errors; fall through to the undefined return below.
-        }
-        return undefined;
+        const value = resolveFieldSummary(node, model, section.fieldName, rel);
+        // Treat empty-string values as absent so the positional name shows through.
+        return value && value.length > 0 ? value : undefined;
     };
 }
 

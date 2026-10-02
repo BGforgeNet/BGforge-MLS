@@ -62,6 +62,19 @@ describe("substituteVars", () => {
         expect(substituteVars("x v y", plain)).toBe("x AB y");
         expect(substituteVars("x v y", dollar)).toBe("x $& $1 $$ y");
     });
+
+    // A string literal is text, not code: the loop variable `i` in `"step i"` is a word the author wrote.
+    test("leaves quoted string literals alone", () => {
+        const vars: VarsContext = new Map([["i", "5"]]);
+        expect(substituteVars('Display("step i")', vars)).toBe('Display("step i")');
+        expect(substituteVars('f(i, \'i\', "a \\" i")', vars)).toBe('f(5, \'i\', "a \\" i")');
+    });
+
+    test("substitutes inside a template literal's ${...} but not its text", () => {
+        const vars: VarsContext = new Map([["i", "5"]]);
+        expect(substituteVars("`row ${i} of i`", vars)).toBe("`row ${5} of i`");
+        expect(substituteVars("`a ${f({ k: i })} ${'i'}`", vars)).toBe("`a ${f({ k: 5 })} ${'i'}`");
+    });
 });
 
 describe("parseIncrement", () => {

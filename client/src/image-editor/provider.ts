@@ -4,7 +4,7 @@ import { type Rgba, applyCreatureColors, isRgbaAnimation } from "@bgforge/image"
 import type { CreatureEntry } from "../ie-resources/creature-index";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
 import { SHARED_TILES_CSS, buildSharedWebviewHtml, sharedWebviewRoots } from "../webview-html";
-import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportUnrecognizedMessage, surfaceWebviewRuntimeError } from "../webview-error";
 import { type DocumentBackup, decodeBackup, encodeBackup } from "./backup";
 import { type GameResourceBytes, ImageEditorDocument } from "./document";
 import { type AnimationSetSource } from "./set-document";
@@ -131,13 +131,14 @@ export interface AnimationChannel {
 }
 
 /** The plain case: a webview showing nothing but this. */
-export function webviewChannel(webview: vscode.Webview): AnimationChannel {
+export function webviewChannel(webview: vscode.Webview, file: string): AnimationChannel {
     return {
         post: (message) => void webview.postMessage(message),
         onMessage: (handler) =>
             webview.onDidReceiveMessage((message: unknown) =>
-                // Malformed or unknown-shape message: ignore rather than act on partial data.
-                isWebviewToHost(message) ? handler(message) : undefined,
+                isWebviewToHost(message)
+                    ? handler(message)
+                    : reportUnrecognizedMessage("Animation editor", file, message),
             ),
     };
 }
@@ -247,7 +248,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
         };
         panel.webview.html = this.getHtml(panel.webview);
 
-        const attached = this.attach(document, webviewChannel(panel.webview), {
+        const attached = this.attach(document, webviewChannel(panel.webview, path.basename(document.uri.fsPath)), {
             // Through VS Code's own save so its dirty tracking clears - scoped to this document's URI, so
             // it saves the right one even if focus moved since the click.
             save: async (doc) => {
@@ -273,7 +274,18 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             try {
                 await this.handleWebviewMessage(document, channel, message, surface);
             } catch (error) {
-                this.post(channel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+                const reason = error instanceof Error ? error.message : String(error);
+                // The webview's `error` replaces the whole view with the could-not-open screen, so it answers
+                // only the request that opens the file. Anything later failed under a view that is still
+                // right, and is reported by the host as the other editors' failures are.
+                if (message.type === "ready") this.post(channel, { type: "error", message: reason });
+                else {
+                    surfaceWebviewRuntimeError({
+                        editor: "Animation editor",
+                        file: path.basename(document.uri.fsPath),
+                        message: reason,
+                    });
+                }
             }
         });
         return new vscode.Disposable(() => {
@@ -381,9 +393,10 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 if (pick === "unchanged") break;
                 // A refusal reposts the view AND says so: the picker offers what the archive's index lists,
                 // and a file listed there can still be undecodable - a control that silently snapped back
-                // would leave the reader thinking the click missed.
+                // would leave the reader thinking the click missed. Said by the host, not as the webview's
+                // `error`, which replaces the whole view with the could-not-open screen.
                 this.post(channel, { type: "init", view: initialView(document) });
-                this.post(channel, { type: "error", message: "That part of the set could not be drawn." });
+                void vscode.window.showWarningMessage("That part of the set could not be drawn.");
                 break;
             }
             case "pickSet":
@@ -421,7 +434,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
                 break;
             }
             case "runSave":
-                await runSave(this.saveContext, document, message.request, (reply) => this.post(channel, reply));
+                await runSave(this.saveContext, document, message.request);
                 break;
             case "save":
                 await surface.save(document);

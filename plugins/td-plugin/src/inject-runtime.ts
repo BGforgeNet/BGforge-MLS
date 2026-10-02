@@ -66,17 +66,9 @@ function extractDeclaredNames(content: string, tsModule: typeof ts): ReadonlySet
     return names;
 }
 
-/**
- * Load TD runtime names from the resolved runtime file.
- * Returns the set of declared names, or an empty set on error.
- */
+/** Load TD runtime names from the resolved runtime file. A read error propagates to the caller, which logs it. */
 export function loadTdNames(runtimePath: string, tsModule: typeof ts): ReadonlySet<string> {
-    try {
-        const content = fs.readFileSync(runtimePath, "utf-8");
-        return extractDeclaredNames(content, tsModule);
-    } catch {
-        return new Set();
-    }
+    return extractDeclaredNames(fs.readFileSync(runtimePath, "utf-8"), tsModule);
 }
 
 /**

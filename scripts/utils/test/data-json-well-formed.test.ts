@@ -3,13 +3,13 @@
  * hand-edited.
  *
  * oxfmt parses every JSON it formats, but several data-JSON groups are excluded
- * from oxfmt (server/out/*.json, syntaxes/*.tmLanguage.json, themes/*.json) and
- * so bypass that check. A committed corruption - the unescaped-quote class that
+ * from oxfmt (server/out/*.json, shared/data/*.json, syntaxes/*.tmLanguage.json,
+ * themes/*.json) and so bypass that check. A committed corruption - the unescaped-quote class that
  * silently emptied the WeiDU TP2 provider - would otherwise ship undetected.
  * This validates every data JSON with the parser its runtime consumer uses:
  *
- *   strict (JSON.parse): machine-emitted JSON - server/out, the generated
- *     TextMate grammars, and binary data - which is plain RFC-8259 JSON.
+ *   strict (JSON.parse): machine-emitted JSON - server/out, shared/data, the
+ *     generated TextMate grammars, and binary data - which is plain RFC-8259 JSON.
  *   JSONC (jsonc-parser, the library VSCode itself loads them with): the VSCode
  *     assets - themes, language configurations, snippets - which legally permit
  *     // comments and trailing commas.
@@ -23,7 +23,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser";
 import { describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 function lsFiles(...patterns: string[]): string[] {
     const spec = patterns.map((p) => `'${p}'`).join(" ");
@@ -32,7 +32,12 @@ function lsFiles(...patterns: string[]): string[] {
         .filter(Boolean);
 }
 
-const strictFiles = lsFiles("server/out/*.json", "syntaxes/*.tmLanguage.json", "binary/data/*.json");
+const strictFiles = lsFiles(
+    "server/out/*.json",
+    "shared/data/*.json",
+    "syntaxes/*.tmLanguage.json",
+    "binary/data/*.json",
+);
 const jsoncFiles = lsFiles("themes/*.json", "language-configurations/*.json", "snippets/*.json");
 
 describe("committed data JSON is well-formed", () => {

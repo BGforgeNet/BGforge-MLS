@@ -8,12 +8,12 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { findReferences } from "../../src/weidu-d/references";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { normalizeUri } from "../../src/core/normalized-uri";

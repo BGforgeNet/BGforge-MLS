@@ -12,7 +12,7 @@
 // policy is not enforced (see build.mts); that is the live drive's job, and it passed.
 import { chromium } from "playwright";
 import { parseDialog } from "../../../../../server/src/dialog";
-import { modelFromSSL } from "../../../../../shared/dialog-model";
+import { modelFromSSL } from "@bgforge/shared/dialog-model";
 import { harnessPaths, makeChecker } from "./driver-util";
 
 // A minimal SSL dialog with one conditional option, so the parse yields a real editable condition. The

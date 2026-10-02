@@ -7,7 +7,7 @@
  * nodes so no edge dangles.
  */
 
-import { hasSourceSpans, nodeEditable } from "../../../../shared/dialog-editability";
+import { hasSourceSpans, nodeEditable } from "@bgforge/shared/dialog-editability";
 import {
     isFlaggedNode,
     renderFamily,
@@ -15,8 +15,8 @@ import {
     sslTerminalKind,
     type DialogModel,
     type DialogState,
-} from "../../../../shared/dialog-model";
-import { classifyReachability } from "../../../../shared/dialog-reachability";
+} from "@bgforge/shared/dialog-model";
+import { classifyReachability } from "@bgforge/shared/dialog-reachability";
 import { msgRef } from "./inspector-edit";
 
 /** The distinct `@N` message refs a state uses across its own line and its options. */

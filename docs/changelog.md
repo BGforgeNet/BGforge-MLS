@@ -1,5 +1,122 @@
 # Changelog
 
+## Unreleased
+
+### Transpilers
+
+- TBAF and TD leave string literals alone when substituting a loop variable or an inlined parameter: `"step i"`
+  inside a loop over `i` is no longer rewritten to `"step 1"`, `"step 2"`.
+- A number written in exponent form, such as `1e3`, reaches the BAF or D output in decimal in a file without
+  imports too, as it already did in one with imports.
+- TBAF inlines a function whose returned condition calls another user function, instead of failing with "a
+  node that was removed or forgotten".
+
+### Formatter
+
+- The .tra formatter keeps a multi-line `%...%` string exactly as written, instead of trimming its trailing spaces and
+  collapsing its blank lines.
+- The TP2 and D formatters leave `//` inside a string alone. A URL in `~...~` was taken for a comment and had spaces
+  inserted into it, and a real comment after such a string was moved to its own line.
+- The D formatter keeps a multi-line SAY, REPLY or JOURNAL string exactly as written. It used to re-indent the
+  string's later lines, which changed the text the game shows. Multi-line trigger and action code is still
+  indented.
+- The formatters' safety check also catches whitespace changed inside a string, and then leaves the file unchanged
+  instead of saving the change. WeiDU D is exempt, since its formatter reformats the code in trigger and action
+  strings.
+- The `.msg` formatter keeps what follows an entry on its line, such as a note or a second entry, instead of
+  deleting it, and keeps CRLF line endings instead of converting the file to LF.
+- The Fallout SSL formatter keeps tabs inside string literals, and no longer takes `//` inside a `#define`'s string
+  (`"http://..."`) for a comment.
+
+### Fallout SSL
+
+- The built-in compiler folds integer constants with 32-bit wraparound and float constants in 32-bit precision, as
+  the reference compiler does, so a constant such as `2147483647 + 1` compiles to the same value in both.
+- The built-in compiler compiles non-ASCII text in the editor to the same bytes as the reference compiler reading
+  the saved file, in UTF-8 and windows-1252 files alike. A character the file's encoding cannot hold is reported
+  where it stands instead of compiling as another one.
+- TSSL refuses a string holding a character wider than one byte, such as a Chinese letter, instead of compiling
+  it as a different character.
+- The built-in compiler reports every procedure that is declared but never defined, not only the first.
+- With `bgforge.falloutSSL.compilePath` pointing at a compiler that does not run, validation stops trying to start
+  it on every keystroke; an explicit compile still checks it again.
+- When the built-in SSL compiler, the TSSL compiler or the transpiler stops answering, it is restarted, so the
+  next compile runs instead of timing out behind the stuck one.
+- Decompiling a script prints every float constant as a plain decimal the compiler reads back, and refuses NaN
+  and infinity by name instead of printing text that does not compile.
+
+### Output channel
+
+- The BGforge MLS channel's Set Log Level now filters both the extension's and the language server's lines,
+  which are written at their real levels. With `bgforge.debug` on, debug lines appear once the channel's level
+  is Debug.
+
+### Language features
+
+- Indexing the workspace at startup shows its progress in editors that display server progress, VS Code's status
+  bar included. Until it finishes, answers that span files can come back short.
+- TP2 hover, go to definition and completion reuse their walk of a file until it changes, so repeated requests
+  on a large installer answer at once instead of re-reading the whole file each time.
+- TP2 call hierarchy reads other files as they are open in the editor, unsaved changes included, and places a
+  call correctly when accented or other non-ASCII text comes before it on its line.
+- Go to definition on an `#include` or file path written in a different letter case than the file on disk works
+  when a folder above the workspace can be entered but not listed, as on shared hosts with private home folders.
+
+### Dialog editor
+
+- Go to source (F4) opens the `.d` or `.ssl` file on the state's own line when accented or other non-ASCII text
+  appears earlier in the file, instead of a line too early.
+- In a `.dlg` dialog, an action the editor refuses (Del on a state that cannot be deleted) shows a message saying
+  why, as it already did for `.d` and `.ssl` dialogs, instead of doing nothing.
+
+### WeiDU
+
+- Renaming a D state label edits the right ranges when other files are parsed between the rename's two requests,
+  such as during a workspace scan.
+- A compile started while an earlier one of the same file was still running no longer has its temporary file
+  deleted by the earlier one, and is still stopped when the editor shuts down.
+- TP2 completion inside a function call offers parameter names or values correctly when accented or other
+  non-ASCII text appears earlier in the file, instead of mixing up which of the two the cursor is on.
+- When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
+  does not exist.
+- A WeiDU or SSL compiler set up as a `.cmd` or `.bat` file is run through `cmd.exe` with every argument quoted,
+  so a path containing a space or `&` reaches it whole. Arguments used to be joined with spaces, unquoted.
+
+### Binary editor
+
+- In a `.map`, a script's SID link follows an edit to an object's SID, instead of still jumping to the object that
+  no longer runs that script.
+- When the editor's background worker fails a request, such as loading a list's rows, the view stops waiting
+  for it and shows the error, instead of loading forever.
+- An undo or redo the editor cannot apply says so and why, instead of quietly redrawing the view.
+- Opening a game whose override folder cannot be read fails and names the folder, instead of showing the archived
+  copies of the files in it. An IDS or 2DA table that is present but unreadable is reported by name wherever it
+  is needed, instead of being treated as absent.
+- An error reading a game's `chitin.key`, a BIF archive or a `dialog.tlk` names the file.
+- A damaged or crafted FRM or BAM v2 file, a compressed BIF that ends early, and a DLG snapshot claiming more
+  than a DLG can hold are refused with a message, instead of loading truncated data or exhausting memory.
+
+### Other editors
+
+- `@bgforge/mls-server` requires Node 22 or newer, up from 20.
+- In the animation viewer, picking a stance or armour level of a set that cannot be drawn shows a warning and
+  keeps the animation on screen, instead of replacing the whole view with "Could not open file".
+- In the animation viewer, a save or conversion that is refused or fails says why in a notification and keeps
+  the animation on screen, instead of replacing the view with "Could not open file".
+- The image gallery says why an item or animation it could not open failed, instead of ignoring the click.
+- The image gallery says so when the extension does not answer it, as the animation viewer does, instead of
+  showing an empty grid.
+
+### Translations
+
+- A `.tra` or `.msg` file with an upper-case extension (`SETUP.TRA`) is re-read when saved, like a lower-case one.
+- Saving a dialog's text into a `.tra` or `.msg` file that exists but cannot be read says so, naming the file,
+  instead of reporting nothing to save.
+
+### Requirements
+
+- Minimum supported VS Code is now 1.101 (was 1.91).
+
 ## 3.16.2
 
 ### Transpilers

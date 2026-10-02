@@ -15,11 +15,11 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { type Location, CompletionItemKind, type Hover, type MarkupContent } from "vscode-languageserver/node";
 import { computeDisplayPath, extractFilename } from "../core/location-utils";
-import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
+import { type ParseFileOptions, type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { SyntaxType } from "./syntax-type";
 import { isPhantomAssignment, looksLikeConstant, stripStringDelimiters } from "./tree-utils";
 import { FUNCTION_CALL_TYPES } from "./callable-symbols";
@@ -122,22 +122,6 @@ export function parseHeader(text: string, uri: string): FunctionInfo[] {
     return extractFunctions(tree.rootNode, uri);
 }
 
-/**
- * Parse a TP2 file and extract all top-level variable definitions with JSDoc.
- */
-export function parseHeaderVariables(text: string, uri: string): VariableInfo[] {
-    if (!isInitialized()) {
-        return [];
-    }
-
-    const tree = parseWithCache(text);
-    if (!tree) {
-        return [];
-    }
-
-    return extractVariables(tree.rootNode, uri);
-}
-
 interface ExtractAllResult {
     functions: FunctionInfo[];
     variables: VariableInfo[];
@@ -212,13 +196,9 @@ function extractAll(root: SyntaxNode, uri: string): ExtractAllResult {
     return { functions, variables, refs };
 }
 
-// Backwards-compatible helpers for non-hot callers (parseHeader / parseHeaderVariables).
+// The functions alone, for parseHeader.
 function extractFunctions(root: SyntaxNode, uri: string): FunctionInfo[] {
     return extractAll(root, uri).functions;
-}
-
-function extractVariables(root: SyntaxNode, uri: string): VariableInfo[] {
-    return extractAll(root, uri).variables;
 }
 
 /**
@@ -594,13 +574,9 @@ function variableInfoToSymbol(varInfo: VariableInfo, displayPath?: string | null
 }
 
 /** Options for parseFile */
-interface ParseSymbolsOptions {
-    /** Workspace root path for computing relative displayPath */
-    workspaceRoot?: string;
+interface ParseSymbolsOptions extends ParseFileOptions {
     /** Skip path in hover (for local symbols where path is redundant) */
     skipPath?: boolean;
-    /** Override source type (default: Workspace). Use Navigation for non-header files. */
-    sourceType?: SourceType;
 }
 
 /**

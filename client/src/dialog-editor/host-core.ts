@@ -7,8 +7,8 @@
  * under automated tests - the same core both ways, so the harness cannot drift from production behavior.
  */
 
-import { modelFromD, modelFromSSL, type DialogMessages, type DialogModel } from "../../../shared/dialog-model";
-import type { DDialogData, SSLDialogData } from "../../../shared/dialog-types";
+import { modelFromD, modelFromSSL, type DialogMessages, type DialogModel } from "@bgforge/shared/dialog-model";
+import type { DDialogData, SSLDialogData } from "@bgforge/shared/dialog-types";
 import { computeDialogSourceEdit } from "./dialog-source-edit";
 import { EchoGuard } from "./edit-origin";
 import { SerialQueue } from "./serial-queue";

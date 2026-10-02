@@ -10,11 +10,11 @@
 import { type Position, MarkupKind } from "vscode-languageserver/node";
 import { type HoverResult, HoverResult as HR } from "../language-provider";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import { findLabelNodeAtPosition, findStateInDialog } from "./state-utils";
 import { parse as parseJSDoc } from "../shared/jsdoc";
-import { buildSignatureBlock } from "../../../shared/tooltip-format";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
 
 /**
  * Get hover info for a state label (definition or reference).

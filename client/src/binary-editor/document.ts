@@ -122,15 +122,19 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
         this._onDidChange.fire({
             document: this,
             label,
-            undo: async () => {
-                const r = await this.bridge.send({ type: "undo", sessionId: this.sessionId });
-                this._onDidRefresh.fire(r.type === "structure" ? r.result.changeSet : undefined);
-            },
-            redo: async () => {
-                const r = await this.bridge.send({ type: "redo", sessionId: this.sessionId });
-                this._onDidRefresh.fire(r.type === "structure" ? r.result.changeSet : undefined);
-            },
+            undo: () => this.replay("undo", label),
+            redo: () => this.replay("redo", label),
         });
+    }
+
+    /**
+     * Steps the worker session's history. A refused step means VS Code's stack and the session's have parted,
+     * so it is named to the user; the view is then refreshed whole, to whatever the session now holds.
+     */
+    private async replay(step: "undo" | "redo", label: string): Promise<void> {
+        const r = await this.bridge.send({ type: step, sessionId: this.sessionId });
+        if (r.type === "error") void vscode.window.showErrorMessage(`Could not ${step} "${label}": ${r.message}`);
+        this._onDidRefresh.fire(r.type === "structure" ? r.result.changeSet : undefined);
     }
 
     /** Current serialized bytes for the session. */

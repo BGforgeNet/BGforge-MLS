@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseTDSource } from "../src/td/dialog-source";
-import { modelFromD, type DialogModel } from "../../shared/dialog-model";
-import { applyTDDialogEdits } from "../../shared/dialog-td-edit";
+import { modelFromD, type DialogModel } from "@bgforge/shared/dialog-model";
+import { applyTDDialogEdits } from "@bgforge/shared/dialog-td-edit";
 import {
     addReply,
     addState,
@@ -11,7 +11,7 @@ import {
     removeReply,
     renameState,
     setChoiceTarget,
-} from "../../shared/dialog-edit-ops";
+} from "@bgforge/shared/dialog-edit-ops";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
 
 const botsmith = readFileSync(fileURLToPath(new URL("td/samples/botsmith.td", import.meta.url)), "utf8");

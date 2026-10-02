@@ -1,16 +1,15 @@
 /**
  * Pure HTML construction for the dialog editor webview.
  *
- * Split out of panel.ts (which owns the vscode/webview boundary: asWebviewUri, the
- * cached bundle read, nonce generation) so the CSP shape and the inline-script
+ * Split out of webview-host-html.ts (which owns the vscode/webview boundary: asWebviewUri,
+ * the cached bundle read, nonce generation) so the CSP shape and the inline-script
  * contract are unit-testable without the vscode runtime. The caller supplies the
  * already-resolved cspSource, css URI, nonce, and bundle text.
  *
  * Inlining (not an external `<script src>`) is the load-bearing choice: code-server's
  * webview can silently refuse a nonce-authorised external script, leaving the panel
- * blank, whereas an inline nonce'd script loads reliably - the binary editor builds
- * its HTML the same way. A future shared `buildWebviewHtml` could unify the two; until
- * then this stays dialog-specific to avoid touching the binary editor's proven path.
+ * blank, whereas an inline nonce'd script loads reliably - the other editors' shared
+ * builder (webview-html.ts) inlines the same way; its header says why this one is separate.
  */
 
 import { inlineWebviewScript } from "../webview-assets";
@@ -31,7 +30,7 @@ export function buildDialogWebviewHtml(opts: DialogWebviewHtmlOptions): string {
     // style-src needs 'unsafe-inline' (not just a nonce) because Svelte Flow positions
     // nodes via runtime inline `transform` styles; a strict nonce-only style policy would
     // block them and nodes would stack at the origin. script-src is nonce + 'wasm-unsafe-eval':
-    // the BAF syntax tokenizer compiles a tree-sitter grammar, and WebAssembly compilation is
+    // the TextMate highlighter's oniguruma engine is WebAssembly, and WebAssembly compilation is
     // gated by script-src, so a nonce alone leaves the fields flat. No connect-src is needed -
     // the wasm is embedded in the script bundle, not fetched (see webview/main.ts).
     //

@@ -6,7 +6,7 @@
 
 import type { Location, Position } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { findLabelNodeAtPosition, findStateInDialog } from "./state-utils";
 
 /**

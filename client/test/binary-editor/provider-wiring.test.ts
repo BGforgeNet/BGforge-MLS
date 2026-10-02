@@ -18,9 +18,10 @@ const BACKUP_URI = "file:///storage/backups/sw1h01.itm.bak";
 const DISK_BYTES = new Uint8Array([1, 1, 1]);
 const BACKUP_BYTES = new Uint8Array([2, 2, 2]);
 
-const { readFileMock, showWarningMock, workerRequests, CHANGE_SET } = vi.hoisted(() => ({
+const { readFileMock, showWarningMock, showErrorMock, workerRequests, CHANGE_SET } = vi.hoisted(() => ({
     readFileMock: vi.fn(),
     showWarningMock: vi.fn(),
+    showErrorMock: vi.fn(),
     workerRequests: [] as { type: string; uri?: string; bytes?: Uint8Array; engine?: string }[],
     // One row is enough to tell a re-projection apart from an empty refresh.
     CHANGE_SET: { changed: [{ id: "root/0", kind: "field", label: "Name" }], diagnostics: [], dirty: false },
@@ -28,8 +29,14 @@ const { readFileMock, showWarningMock, workerRequests, CHANGE_SET } = vi.hoisted
 
 vi.mock("vscode", () => {
     class EventEmitter {
-        readonly event = (): { dispose: () => void } => ({ dispose: () => {} });
-        fire(): void {}
+        private readonly listeners: ((event: unknown) => void)[] = [];
+        readonly event = (listener: (event: unknown) => void): { dispose: () => void } => {
+            this.listeners.push(listener);
+            return { dispose: () => {} };
+        };
+        fire(event: unknown): void {
+            for (const listener of this.listeners) listener(event);
+        }
         dispose(): void {}
     }
     return {
@@ -38,7 +45,7 @@ vi.mock("vscode", () => {
             parse: (value: string) => ({ toString: () => value }),
             joinPath: (...parts: unknown[]) => ({ toString: () => parts.join("/") }),
         },
-        window: { showWarningMessage: showWarningMock },
+        window: { showWarningMessage: showWarningMock, showErrorMessage: showErrorMock },
         workspace: { fs: { readFile: readFileMock } },
     };
 });
@@ -58,21 +65,25 @@ vi.mock("node:worker_threads", () => {
             request: { type: string; uri?: string; bytes?: Uint8Array; engine?: string };
         }): void {
             workerRequests.push(msg.request);
+            // A dead worker, for the one request only the failure test sends.
+            if (msg.request.type === "getChildren") throw new Error("worker is gone");
             const response =
                 msg.request.type === "reproject"
                     ? { type: "structure", result: { changeSet: CHANGE_SET } }
-                    : {
-                          type: "opened",
-                          result: {
-                              sessionId: "session-1",
-                              format: "itm",
-                              formatName: "ITM",
-                              layout: { blocks: [] },
-                              warnings: [],
-                              errors: [],
-                              rootWindow: [],
-                          },
-                      };
+                    : msg.request.type === "undo"
+                      ? { type: "error", message: "nothing to undo" }
+                      : {
+                            type: "opened",
+                            result: {
+                                sessionId: "session-1",
+                                format: "itm",
+                                formatName: "ITM",
+                                layout: { blocks: [] },
+                                warnings: [],
+                                errors: [],
+                                rootWindow: [],
+                            },
+                        };
             queueMicrotask(() => this.onMessage?.({ id: msg.id, response }));
         }
 
@@ -82,6 +93,9 @@ vi.mock("node:worker_threads", () => {
     }
     return { Worker };
 });
+
+// The output channel is the live extension's; the toast is what these tests read.
+vi.mock("../../src/logging", () => ({ conlog: vi.fn() }));
 
 // Mounting a panel reads the webview bundle off disk, which this suite has no build of and does not test.
 vi.mock("../../src/webview-assets", () => ({
@@ -101,7 +115,7 @@ const context = { extensionUri: { fsPath: "/ext" } } as unknown as vscode.Extens
 // its warning. A double missing `path` would fail the code rather than the behaviour under test.
 function uri(value: string): vscode.Uri {
     const path = value.slice(value.indexOf(":") + 1).split(/[?#]/, 1)[0]!;
-    return { path, toString: () => value } as unknown as vscode.Uri;
+    return { path, fsPath: path, toString: () => value } as unknown as vscode.Uri;
 }
 
 function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
@@ -201,6 +215,7 @@ describe("binary editor hot-exit restore", () => {
 function fakePanel() {
     const posted: { type: string }[] = [];
     let dispose: (() => void) | undefined;
+    let receive: ((message: unknown) => Promise<void>) | undefined;
     const panel = {
         webview: {
             options: {},
@@ -211,15 +226,76 @@ function fakePanel() {
                 posted.push(message);
                 return Promise.resolve(true);
             },
-            onDidReceiveMessage: () => ({ dispose: () => {} }),
+            onDidReceiveMessage: (listener: (message: unknown) => Promise<void>) => {
+                receive = listener;
+                return { dispose: () => {} };
+            },
         },
         onDidDispose: (cb: () => void) => {
             dispose = cb;
             return { dispose: () => {} };
         },
     };
-    return { posted, panel: panel as unknown as vscode.WebviewPanel, close: () => dispose?.() };
+    return {
+        posted,
+        panel: panel as unknown as vscode.WebviewPanel,
+        close: () => dispose?.(),
+        send: (message: unknown) => receive?.(message),
+    };
 }
+
+describe("binary editor request failures", () => {
+    beforeEach(() => {
+        workerRequests.length = 0;
+        readFileMock.mockReset();
+        readFileMock.mockImplementation(() => Promise.resolve(DISK_BYTES));
+    });
+
+    // The webview holds a promise per requestId and settles it only on a reply naming that id, so an error
+    // without one leaves the view waiting for rows that are never coming.
+    it("answers a request the worker failed with an error naming the request", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const { panel, posted, send } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+
+        await send({ type: "requestChildren", requestId: 7, nodeId: null, start: 0, end: 10 });
+
+        expect(posted).toContainEqual({ type: "error", requestId: 7, message: "worker is gone" });
+    });
+
+    // The webview and the host disagreeing about the contract is a bug; dropping the message hides it.
+    it("reports a message outside the webview protocol instead of dropping it", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const { panel, send } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+        showErrorMock.mockClear();
+
+        await send({ type: "bogus" });
+
+        expect(showErrorMock).toHaveBeenCalledWith(
+            "Binary editor failed for sw1h01.itm: unrecognized message of type bogus",
+        );
+    });
+
+    // VS Code's undo stack and the worker's history have parted on this step: say which step and why, then
+    // re-sync the view to whatever the session now holds.
+    it("says why an undo the worker refused failed, and still refreshes the view", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const edits: vscode.CustomDocumentEditEvent[] = [];
+        document.onDidChange((edit) => edits.push(edit));
+        const refreshes: unknown[] = [];
+        document.onDidRefresh((changeSet) => refreshes.push(changeSet));
+        document.pushEdit("Edit Name");
+
+        await edits[0]!.undo();
+
+        expect(showErrorMock).toHaveBeenCalledWith('Could not undo "Edit Name": nothing to undo');
+        expect(refreshes).toEqual([undefined]);
+    });
+});
 
 describe("binary editor across a game change", () => {
     beforeEach(() => {

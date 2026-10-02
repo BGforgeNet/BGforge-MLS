@@ -24,6 +24,7 @@ import { preprocessTextWithOrigins } from "../src/preprocess.ts";
 import { printProgram } from "../src/int/print.ts";
 import { createBatchState, transpile } from "../../tssl/src/index.ts";
 import { setConlog } from "../../tssl/src/types.ts";
+import { lowerTsslProgram } from "../../tssl/src/int/lower.ts";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..", "..", "..");
 const WASM_DIR = path.join(REPO_ROOT, "server/out");
@@ -61,18 +62,6 @@ async function run(target: string, sets: { label: string; options: CompileOption
     parser.setLanguage(await Language.load(path.join(WASM_DIR, "tree-sitter-ssl.wasm")));
     setConlog(() => {});
 
-    // Resolved lazily so this script runs before the direct front end exists, reporting it as unbuilt
-    // rather than failing to load - which is what lets the harness be the first thing written.
-    let direct: ((file: string, text: string) => unknown) | null = null;
-    try {
-        const mod = (await import("../../tssl/src/int/lower.ts")) as {
-            lowerTsslProgram?: (file: string, text: string) => unknown;
-        };
-        direct = mod.lowerTsslProgram ?? null;
-    } catch {
-        direct = null;
-    }
-
     const batch = createBatchState();
     const sources = sourcesOf(target);
     let same = 0;
@@ -90,13 +79,9 @@ async function run(target: string, sets: { label: string; options: CompileOption
         const ssl = await transpile(file, text, batch);
         const preprocessed = preprocessTextWithOrigins(ssl, entry);
 
-        if (direct === null) {
-            unsupported += sets.length;
-            continue;
-        }
-        let lowered: Parameters<typeof emitProgram>[0];
+        let lowered: ReturnType<typeof lowerTsslProgram>;
         try {
-            lowered = direct(file, text) as Parameters<typeof emitProgram>[0];
+            lowered = lowerTsslProgram(file, text);
         } catch (error) {
             unsupported += sets.length;
             console.log(`unsupported ${name}: ${error instanceof Error ? error.message : String(error)}`);
@@ -124,9 +109,8 @@ async function run(target: string, sets: { label: string; options: CompileOption
         }
     }
 
-    const built = direct === null ? " (direct front end not built)" : "";
     const scope = `${sources.length} sources x ${sets.length} switch set${sets.length === 1 ? "" : "s"}`;
-    console.log(`${scope}: ${same} identical, ${differed} differ, ${unsupported} unsupported${built}`);
+    console.log(`${scope}: ${same} identical, ${differed} differ, ${unsupported} unsupported`);
     process.exit(differed > 0 ? 1 : 0);
 }
 

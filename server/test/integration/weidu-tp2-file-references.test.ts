@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { describe, expect, it, beforeAll } from "vitest";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { initParser, parseWithCache } from "../../../shared/parsers/weidu-tp2";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { getDefinition } from "../../src/weidu-tp2/definition";
 import { loadFixture, IE_FIXTURES } from "./test-helpers";
 

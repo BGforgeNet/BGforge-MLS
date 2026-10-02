@@ -21,6 +21,19 @@ function noop(text: string): void {
 }
 
 describe("fallout-msg/format", () => {
+    it("keeps text after an entry's closing brace", () => {
+        noop("{100}{}{Hello} # translator note\n");
+    });
+
+    it("keeps a second entry on the same line", () => {
+        noop("{1}{}{a}{2}{}{b}\n");
+    });
+
+    it("keeps CRLF line endings", () => {
+        noop("{100}{}{Hello}\r\n# note\r\n\r\n{101}{}{Bye}\r\n");
+        expect(formatMsg("{ 100 }{}{Hello}\r\n{101}{}{Bye}\r\n").text).toBe("{100}{}{Hello}\r\n{101}{}{Bye}\r\n");
+    });
+
     it("trims whitespace inside number braces", () => {
         expect(fmt("{ 100 }{}{text}\n")).toBe("{100}{}{text}\n");
     });

@@ -10,14 +10,14 @@
  * Usage:
  *   pnpm exec tsx scripts/utils/src/extract-engine-proc-docs.ts \
  *     --yaml server/data/fallout-ssl-base.yml \
- *     --out server/out/fallout-ssl-engine-proc-docs.json \
- *     --names server/out/fallout-ssl-engine-procedures.json
+ *     --out shared/data/fallout-ssl-engine-proc-docs.json \
+ *     --names shared/data/fallout-ssl-engine-procedures.json
  */
 
 import fs from "node:fs";
 import { parseArgs } from "node:util";
 import YAML from "yaml";
-import { FALLOUT_SSL_STANZAS } from "../../../shared/stanza-names.ts";
+import { FALLOUT_SSL_STANZAS } from "@bgforge/shared/stanza-names.ts";
 
 interface YamlItem {
     readonly name: string;

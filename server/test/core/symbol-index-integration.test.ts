@@ -10,7 +10,7 @@ import { describe, expect, it, beforeAll } from "vitest";
 import * as path from "path";
 import * as fs from "fs";
 import { type CompletionItem, CompletionItemKind, type MarkupContent } from "vscode-languageserver/node";
-import { builtArtifactsPresent } from "../../../shared/cli/test/built-artifacts";
+import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts";
 import { Symbols } from "../../src/core/symbol-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 

@@ -111,7 +111,7 @@
         // on every run.
         "unicorn/number-literal-case": "off",
 
-        // Off for what the rule reaches, not for availability (`lib` is es2023 everywhere, so
+        // Off for what the rule reaches, not for availability (`lib` is es2024 everywhere, so
         // `.toSorted()` compiles and `--fix-suggestions` rewrites it). Of its 189 sites, 89 already
         // spread-copy the receiver, where the rewrite adds a second copy; the one shape that would be
         // a defect - a bare `xs.sort()` in statement position on a possibly caller-owned array - is
@@ -528,7 +528,12 @@
             // The `patterns` group repeats the node-fs ban from the override above because oxlint REPLACES a
             // rule's options per override instead of merging them - verified by probe. Without it these two
             // directories would silently drop that ban.
-            "files": ["client/src/binary-editor/webview/**", "client/src/image-editor/webview/**"],
+            "files": [
+                "client/src/binary-editor/webview/**",
+                "client/src/dialog-editor/webview/**",
+                "client/src/gallery/webview/**",
+                "client/src/image-editor/webview/**"
+            ],
             "rules": {
                 "no-restricted-imports": [
                     "error",
@@ -536,7 +541,7 @@
                         "paths": [
                             {
                                 "name": "bits-ui",
-                                "message": "Import bits-ui only via webview/components/primitives wrappers."
+                                "message": "Import bits-ui only via the primitive wrappers in client/src/webview-ui/ or binary-editor/webview/components/primitives/."
                             }
                         ],
                         "patterns": [

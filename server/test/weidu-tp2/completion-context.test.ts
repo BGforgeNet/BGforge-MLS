@@ -10,7 +10,7 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 // Mock the server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
@@ -18,7 +18,7 @@ vi.mock("../../src/server", () => ({
 import { getContextAtPosition } from "../../src/weidu-tp2/completion/context";
 import { filterItemsByContext } from "../../src/weidu-tp2/completion/filter";
 import { CompletionContext, type Tp2CompletionItem } from "../../src/weidu-tp2/completion/types";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { CompletionCategory } from "../../src/shared/completion-context";
 

@@ -6,6 +6,7 @@ packages:
   - format
   - image
   - server
+  - shared
   - compilers/bcs
   - compilers/ssl
   - compilers/tssl
@@ -39,14 +40,25 @@ catalog:
   # backs the transpilers.
   esbuild: ^0.28.2
   esbuild-wasm: ^0.28.2
+  # The root webview build and the client and binary-editor render harnesses each bundle Svelte.
+  esbuild-svelte: ^0.9.5
   fast-check: ^4.9.0
   # Declared by both client and server.
   fast-glob: ^3.3.3
+  # Declared by the root (the E2E runner) and client (its programmatic suite entry).
+  mocha: ^11.8.0
+  # Declared by the root and the client and binary-editor harnesses, which all drive one browser build.
+  playwright: 1.63.0
   quick-lru: ^7.3.0
+  # The webviews' compiler and runtime, declared by root (svelte-check), client and binary-editor.
+  svelte: ^5.57.0
   tsdown: ^0.23.0
   # The CLI generates the parsers web-tree-sitter loads, so both must agree on the parser ABI.
   tree-sitter-cli: 0.27.0
   web-tree-sitter: ^0.27.0
+  # The dialog webview's highlighter and the server's TextMate grammar tests load the same engine.
+  vscode-oniguruma: ^2.0.1
+  vscode-textmate: ^9.3.2
   # Declared by both the root workspace and server.
   yaml: ^2.9.0
 

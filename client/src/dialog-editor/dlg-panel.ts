@@ -15,15 +15,15 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { readDlg } from "@bgforge/binary";
-import { modelFromDlgs, resrefName, type DlgModelInput, type DlgNeighbour } from "../../../shared/dialog-model-dlg";
-import { detachDlgState, setDlgLineText } from "../../../shared/dialog-dlg-edit";
+import { modelFromDlgs, resrefName, type DlgModelInput, type DlgNeighbour } from "@bgforge/shared/dialog-model-dlg";
+import { detachDlgState, setDlgLineText } from "@bgforge/shared/dialog-dlg-edit";
 import { detachConfirmMessage, detachResultMessage } from "./dlg-detach";
 import { neighbourStates, type InboundRef } from "./dlg-references";
-import type { DialogMessages, DialogModel } from "../../../shared/dialog-model";
+import type { DialogMessages, DialogModel } from "@bgforge/shared/dialog-model";
 import { backupHandle, warnBackupUnreadable } from "../hot-exit-backup";
-import { surfaceWebviewRuntimeError } from "../webview-error";
-import { reportSlowFrame } from "../timing";
 import { isWebviewToHost } from "./webview/messages";
+import { handleSharedDialogMessage } from "./shared-host-messages";
+import { reportUnrecognizedMessage } from "../webview-error";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
 import { writeDlgFromModel } from "./dlg-write";
 import { buildDialogHostHtml } from "./webview-host-html";
@@ -224,10 +224,14 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
         document.refresh = refresh;
 
         panel.webview.onDidReceiveMessage((raw: unknown) => {
-            // Same reject-and-ignore posture as the other editors: an unrecognized message changes nothing.
+            // As every editor host does: a message outside the protocol changes nothing, and is reported.
             // The shared guard rather than a local cast, so this host and the source one agree on what the
             // one webview may send - and gain a branch together when it learns to send something new.
-            if (!isWebviewToHost(raw)) return;
+            if (!isWebviewToHost(raw)) {
+                reportUnrecognizedMessage("Dialog editor", path.basename(document.uri.path), raw);
+                return;
+            }
+            if (handleSharedDialogMessage(raw, path.basename(document.uri.path))) return;
             switch (raw.type) {
                 case "ready":
                     this.postModel(document, post);
@@ -246,24 +250,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
                 case "edit":
                     this.applyModelEdit(document, post, raw.model, raw.seq);
                     break;
-                // A fatal error caught by the webview's installFatalErrorHandler (see webview/main.ts).
-                // Parity with the source dialog editor and the binary editor: reported through the same
-                // channels rather than leaving a blank panel with nothing said.
-                case "runtimeError": {
-                    const file = path.basename(document.uri.path);
-                    surfaceWebviewRuntimeError({
-                        editor: "Dialog editor",
-                        file,
-                        message: raw.message,
-                        stack: raw.stack,
-                    });
-                    break;
-                }
-                // Same reporting as the source dialog editor: the webview measured a block of its own
-                // thread and posted the number up, since nothing out here can see inside its frame.
-                case "slowFrame":
-                    reportSlowFrame("Dialog editor", path.basename(document.uri.path), raw.ms);
-                    break;
+                // revealSource has no text to reveal in a compiled dialog.
                 default:
                     break;
             }
@@ -479,6 +466,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
 
 export function registerDlgDialogEditor(context: vscode.ExtensionContext, deps: DlgHostDeps): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider("bgforge.dlgViewer", new DlgDialogEditorProvider(context, deps), {
+        // Kept alive for the reason given at the source-dialog editor's registration (panel.ts).
         webviewOptions: { retainContextWhenHidden: true },
         supportsMultipleEditorsPerDocument: false,
     });

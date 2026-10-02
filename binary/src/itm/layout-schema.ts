@@ -1,6 +1,6 @@
 /**
- * ITM declarative layout. Renders the item on a single dense page instead of the legacy Header / Abilities
- * / Effects tabs: header fields grouped into panels, then the Abilities and Effects arrays as master-detail
+ * ITM declarative layout. Renders the item on a single dense page: header fields grouped into panels, then
+ * the Abilities and Effects arrays as master-detail
  * list blocks (each delegates to the shared ListSection via the windowed path - filtering, structure ops,
  * and the per-entry detail form all come for free). One variant ("item"), stamped by the parser.
  *

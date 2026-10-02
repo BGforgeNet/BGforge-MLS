@@ -1,10 +1,11 @@
-import { applyDDialogEdits } from "../../../shared/dialog-d-edit";
-import { applySSLDialogEdits } from "../../../shared/dialog-ssl-edit";
-import { applyTSSLDialogEdits } from "../../../shared/dialog-tssl-edit";
-import { applyTDDialogEdits } from "../../../shared/dialog-td-edit";
-import { allocateNodeIds, allocateOptionIds } from "../../../shared/dialog-ssl-ids";
-import { allocateDFamilyIds } from "../../../shared/dialog-td-ids";
-import { renderFamily, type DialogMessages, type DialogModel } from "../../../shared/dialog-model";
+import { applyDDialogEdits } from "@bgforge/shared/dialog-d-edit";
+import { applySSLDialogEdits } from "@bgforge/shared/dialog-ssl-edit";
+import { applyTSSLDialogEdits } from "@bgforge/shared/dialog-tssl-edit";
+import { applyTDDialogEdits } from "@bgforge/shared/dialog-td-edit";
+import { allocateNodeIds, allocateOptionIds } from "@bgforge/shared/dialog-ssl-ids";
+import { allocateDFamilyIds } from "@bgforge/shared/dialog-td-ids";
+import { bareMsgKey } from "@bgforge/shared/dialog-edit-common";
+import { renderFamily, type DialogMessages, type DialogModel } from "@bgforge/shared/dialog-model";
 
 export interface DialogSourceEdit {
     /** Spliced source text, or null when the structure is unchanged (no source WorkspaceEdit needed). */
@@ -23,7 +24,7 @@ export interface DialogSourceEdit {
 
 /** A pending item that was just given an `@N` id: no source span of its own, but an `@N` text now. */
 function isBareRef(text: string | undefined): boolean {
-    return /^@\d+$/.test((text ?? "").trim());
+    return bareMsgKey(text) !== undefined;
 }
 
 /**

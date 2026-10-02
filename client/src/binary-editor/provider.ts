@@ -17,7 +17,7 @@ import {
     type SlotLabelResolver,
     type StrrefResolver,
 } from "../ie-resources/game-lookups";
-import { surfaceWebviewRuntimeError } from "../webview-error";
+import { reportUnrecognizedMessage, surfaceWebviewRuntimeError } from "../webview-error";
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
 import { withGameContext } from "./game-rows";
@@ -171,16 +171,21 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
         panel.webview.onDidReceiveMessage(async (message: unknown) => {
             if (!isWebviewToHost(message)) {
-                // Malformed or unknown-shape message: ignore rather than act on partial data.
+                reportUnrecognizedMessage("Binary editor", path.basename(document.uri.fsPath), message);
                 return;
             }
             try {
                 await this.handleWebviewMessage(document, panel, message);
             } catch (error) {
                 // A rejected bridge send (worker crash/hang timeout) lands here instead of becoming an
-                // unhandled promise rejection. Surface it in the webview's error banner so the failure is
-                // visible rather than a silently dead editor.
-                this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+                // unhandled promise rejection. Surface it in the webview's error banner, naming the request it
+                // answers so the webview settles the promise waiting on it rather than waiting forever.
+                const requestId = "requestId" in message ? message.requestId : undefined;
+                this.post(panel, {
+                    type: "error",
+                    ...(requestId === undefined ? {} : { requestId }),
+                    message: error instanceof Error ? error.message : String(error),
+                });
             }
         });
     }

@@ -19,7 +19,7 @@ import {
     renderFamily,
     rewriteSameFileExternRef,
 } from "./dialog-model";
-import { allChoices, allStates } from "./dialog-edit-common";
+import { allChoices, allStates, bareMsgKey } from "./dialog-edit-common";
 import { sslNameKey } from "./fallout-ssl-names";
 
 /** Every state id across the model - a thin projection over the shared `allStates` flatten. */
@@ -38,9 +38,8 @@ function rootOf(model: DialogModel, state: DialogState): DialogModel["roots"][nu
  * `@N` inside a literal is left alone. Used by `duplicateState` so a copy never aliases the source's string.
  */
 function detachRef(text: string | undefined, messages: DialogModel["messages"]): string | undefined {
-    const t = (text ?? "").trim();
-    const m = /^@(\d+)$/.exec(t);
-    const resolved = m ? messages?.[m[1]!] : undefined;
+    const key = bareMsgKey(text);
+    const resolved = key === undefined ? undefined : messages?.[key];
     // Preserve `undefined` (a textless "continue" option) rather than coercing it to "".
     return resolved ?? text;
 }
@@ -159,7 +158,7 @@ export function deleteState(model: DialogModel, state: DialogState): void {
 
 /**
  * Duplicate a state as a brand-new state with a fresh, unique id. Crucially the
- * copy carries NO `sourceRange`: it has no original byte span, and inheriting the
+ * copy carries NO `sourceRange`: it has no original span, and inheriting the
  * source's range would make the surgical save splice the copy over the original's
  * bytes. Returns the copy (a new state, so it is a pending insert for save).
  */
@@ -405,7 +404,7 @@ export function removeReplyFromBranch(state: DialogState, branch: DialogBranch, 
  * Append a pending-new `kind:"if"` branch to a bundle state. No span fields are set
  * (stmtRange/elseClauseRange/thenBlockEnd/insertAnchor/conditionRange all absent),
  * which signals to the save path that this branch is new and must be emitted from
- * scratch rather than spliced over an existing byte range.
+ * scratch rather than spliced over an existing range.
  */
 export function addBranch(state: DialogState, condition: string): DialogBranch {
     if (!state.branches) state.branches = [];

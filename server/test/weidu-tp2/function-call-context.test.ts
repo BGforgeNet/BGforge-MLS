@@ -10,7 +10,7 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { getContextAtPosition, getFuncParamsContext } from "../../src/weidu-tp2/completion/context";
 import { CompletionContext, ParamSection } from "../../src/weidu-tp2/completion/types";
 
@@ -125,6 +125,26 @@ describe("isAtFunctionName edge cases", () => {
     it("STR_VAR section keyword bounds function-name region", () => {
         const contexts = ctx(`LAF | STR_VAR x = ~a~ END`);
         expect(contexts).toContain(CompletionContext.LafName);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Non-ASCII text before the cursor. Tree-sitter node indices are UTF-16 code units (the parser is fed a JS
+// string), the same unit as an LSP position, so accented text earlier in the file must not shift the cursor.
+// Nine two-byte characters would move a byte-counted cursor nine places right, into the neighbouring token.
+// ---------------------------------------------------------------------------
+describe("classification after non-ASCII text", () => {
+    const accented = `OUTER_SPRINT greeting ~ééééééééé~\n`;
+
+    it("cursor on a parameter name stays a name", () => {
+        const contexts = ctx(`${accented}LAF foo INT_VAR x| = 12345678 END`);
+        expect(contexts).toContain(CompletionContext.FuncParamName);
+        expect(contexts).not.toContain(CompletionContext.FuncParamValue);
+    });
+
+    it("cursor on a parameter value stays a value", () => {
+        const contexts = ctx(`${accented}LAF foo INT_VAR x = 1| y = 2 END`);
+        expect(contexts).toContain(CompletionContext.FuncParamValue);
     });
 });
 

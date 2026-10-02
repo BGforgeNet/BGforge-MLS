@@ -15,8 +15,7 @@
  */
 
 import * as fs from "fs";
-import { emitProgram } from "../../../compilers/ssl/src/compile";
-import { optimize } from "../../../compilers/ssl/src/optimize";
+import { emitProgram, optimize } from "@bgforge/ssl";
 import { createBatchState } from "../../../compilers/tssl/src/batch";
 import { transpile } from "../../../compilers/tssl/src/index";
 import { lowerTsslProgram } from "../../../compilers/tssl/src/int/lower";

@@ -34,8 +34,8 @@ import {
     type DialogRoot,
     type DialogChoice,
     type DialogTarget,
-} from "../../../shared/dialog-model";
-import { nodeEditable, nodeDeletable } from "../../../shared/dialog-editability";
+} from "@bgforge/shared/dialog-model";
+import { nodeEditable, nodeDeletable } from "@bgforge/shared/dialog-editability";
 import {
     addState,
     addReply,
@@ -44,7 +44,7 @@ import {
     deleteState,
     renameState,
     setChoiceTarget,
-} from "../../../shared/dialog-edit-ops";
+} from "@bgforge/shared/dialog-edit-ops";
 
 export interface FamilyCorpus {
     /** Display name for the describe block ("weidu-d", "fallout-ssl", ...). */

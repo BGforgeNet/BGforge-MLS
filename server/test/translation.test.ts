@@ -11,7 +11,7 @@ import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest"
 // Mock modules to avoid LSP connection issues
 vi.mock("../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),
@@ -19,7 +19,7 @@ vi.mock("../src/lsp-connection", () => ({
 
 vi.mock("../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
@@ -114,6 +114,19 @@ describe("Translation", () => {
             expect(onDisk).toContain("{100}{}{Edited msg!}");
             // Untouched entries stay byte-for-byte.
             expect(onDisk).toContain("{101}{}{ Message 101 }");
+        });
+
+        // Writing over a file that could not be read might clobber it, so nothing is written - and the edit is
+        // then lost unless the caller is told, which a quiet "nothing changed" does not do.
+        it("refuses, naming the file, when the .msg exists but cannot be read", async () => {
+            fs.mkdirSync(path.join(tempDir, "blocked.msg"));
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra blocked.msg */\nconst x = mstr(100);`;
+
+            expect(() => translation.writeMessages(uri, text, "typescript", { "100": "Edited msg!" })).toThrow(
+                `Cannot read ${path.join(tempDir, "blocked.msg")} to update it: EISDIR`,
+            );
         });
 
         it("appends a new .msg id while rewriting an existing one", async () => {
@@ -1045,6 +1058,29 @@ translation~`;
             // reloadFileLines' own extension check rejects it before any data is touched.
             const outsideUri = `file://${tempDir}/test.tssl`;
             t.reloadFile(outsideUri, "weidu-tra", `@100 = ~Updated text~`);
+
+            expect(notifyReload).not.toHaveBeenCalled();
+        });
+
+        it("reloads an upper-case .TRA file, matching the loader's case-insensitive discovery", async () => {
+            const notifyReload = vi.fn();
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir, notifyReload);
+            await t.init();
+            // reloadFile realpaths the document, so it must exist on disk to reach the extension check.
+            fs.writeFileSync(path.join(tempDir, "SETUP.TRA"), `@100 = ~Old text~`);
+
+            t.reloadFile(`file://${tempDir}/SETUP.TRA`, "weidu-tra", `@100 = ~Updated text~`);
+
+            expect(notifyReload).toHaveBeenCalledTimes(1);
+        });
+
+        it("does not reload a file whose extension merely ends in tra", async () => {
+            const notifyReload = vi.fn();
+            const t = new Translation({ directory: tempDir, auto_tra: true }, tempDir, notifyReload);
+            await t.init();
+            fs.writeFileSync(path.join(tempDir, "test.xtra"), `@100 = ~Old text~`);
+
+            t.reloadFile(`file://${tempDir}/test.xtra`, "weidu-tra", `@100 = ~Updated text~`);
 
             expect(notifyReload).not.toHaveBeenCalled();
         });

@@ -21,8 +21,8 @@
  * - `OR(n)` is itself a stored trigger record, whose first integer is the count.
  */
 
-import { collectParseErrors } from "../../../shared/parse-errors";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-baf";
+import { collectParseErrors } from "@bgforge/shared/parse-errors";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-baf";
 import type { Node as SyntaxNode, Parser } from "web-tree-sitter";
 import {
     ANYONE,
@@ -218,8 +218,15 @@ function int32(value: number): number {
     return Int32Array.of(value)[0]!;
 }
 
-/** A run of unset numbers, which is what most of a record's fields are. */
-const zeros = (count: number): number[] => Array.from({ length: count }, () => 0);
+/**
+ * A run of unset numbers, which is what most of a record's fields are. A loop, not `Array.from` with a mapper:
+ * every object compiled builds several of these, and on V8 the mapper form is over ten times slower.
+ */
+function zeros(count: number): number[] {
+    const out: number[] = [];
+    for (let i = 0; i < count; i++) out.push(0);
+    return out;
+}
 
 /**
  * The named children that carry meaning; comments are extras the grammar hangs anywhere.
@@ -235,16 +242,28 @@ function items(node: SyntaxNode): SyntaxNode[] {
     );
 }
 
+/**
+ * Each table's name-to-value direction, inverted once per symbols object rather than once per compile: a batch
+ * compiling thousands of scripts against one install would otherwise rebuild every table it touches per file.
+ * Keyed weakly, so the cache lives exactly as long as the caller's symbols do.
+ */
+const invertedTables = new WeakMap<BcsCompileSymbols, Map<string, ReadonlyMap<string, number>>>();
+
 class Compiler {
     private readonly symbols: BcsCompileSymbols;
     private readonly engine: BcsEngine;
     private readonly diagnostics: BcsCompileDiagnostic[] = [];
-    /** Each table inverted once. A table is read per argument otherwise, and scripts repeat names heavily. */
-    private readonly byName = new Map<string, ReadonlyMap<string, number>>();
+    private readonly byName: Map<string, ReadonlyMap<string, number>>;
 
     constructor(symbols: BcsCompileSymbols, engine: BcsEngine) {
         this.symbols = symbols;
         this.engine = engine;
+        let byName = invertedTables.get(symbols);
+        if (byName === undefined) {
+            byName = new Map();
+            invertedTables.set(symbols, byName);
+        }
+        this.byName = byName;
     }
 
     script(root: SyntaxNode): BcsScript {

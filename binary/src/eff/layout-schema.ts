@@ -1,7 +1,7 @@
 /**
  * EFF declarative layout. EFF v2 is a single standalone effect (8-byte header + 264-byte body), so the
- * editor renders it as one dense page via the generic layout renderer instead of the legacy Header/Body
- * tabs. One variant ("effect"), stamped by the parser.
+ * editor renders it as one dense page via the generic layout renderer. One variant ("effect"), stamped by the
+ * parser.
  *
  * Field refs are the semantic keys the EFF adapter produces for the body fields (`eff.body.<camelCase>`,
  * verified against the model). The two signature/version magic fields (header and body) and the reserved

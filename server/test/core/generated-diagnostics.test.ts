@@ -13,7 +13,7 @@ import type { Diagnostic } from "vscode-languageserver/node";
 const published = new Map<string, Diagnostic[]>();
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: ({ uri, diagnostics }: { uri: string; diagnostics: Diagnostic[] }) => {
             published.set(uri, diagnostics);
         },

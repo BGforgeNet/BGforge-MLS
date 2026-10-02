@@ -65,10 +65,7 @@ let ctx: ServerContext | undefined;
 
 // Barrier promise: resolves with the context when initServerContext is called.
 // Callers that arrive before init simply await this and receive the real value.
-let resolveContextReady: (value: ServerContext) => void;
-const contextReady = new Promise<ServerContext>((resolve) => {
-    resolveContextReady = resolve;
-});
+const { promise: contextReady, resolve: resolveContextReady } = Promise.withResolvers<ServerContext>();
 
 // Watchdog: emits a single warn-level log if initServerContext does not arrive
 // within INIT_WATCHDOG_MS. Does NOT reject the barrier - the no-rejection

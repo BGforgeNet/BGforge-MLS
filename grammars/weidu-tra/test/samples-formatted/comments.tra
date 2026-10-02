@@ -1,5 +1,0 @@
-// Line comment
-/* Block comment */
-@1 = ~text~
-// Another comment
-@2 = ~more text~

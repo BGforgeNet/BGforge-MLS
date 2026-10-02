@@ -24,9 +24,9 @@ import { parseDialog } from "../src/dialog";
 import { parseTSSLSource } from "../src/tssl/dialog-source";
 import { parseTDSource } from "../src/td/dialog-source";
 import { parseDDialog } from "../src/weidu-d/dialog";
-import { initParser as initWeiduD } from "../../shared/parsers/weidu-d";
-import { modelFromSSL, modelFromD, type DialogModel, type DialogState } from "../../shared/dialog-model";
-import { setChoiceTarget } from "../../shared/dialog-edit-ops";
+import { initParser as initWeiduD } from "@bgforge/shared/parsers/weidu-d";
+import { modelFromSSL, modelFromD, type DialogModel, type DialogState } from "@bgforge/shared/dialog-model";
+import { setChoiceTarget } from "@bgforge/shared/dialog-edit-ops";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
 
 const sample = (name: string): string =>

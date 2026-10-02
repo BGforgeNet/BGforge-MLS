@@ -8,7 +8,7 @@
 import { type DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
 import { makeRange } from "../core/position-utils";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { isFunctionDef } from "@bgforge/format/internal";
 import { looksLikeConstant } from "./tree-utils";
 import { SyntaxType } from "./syntax-type";

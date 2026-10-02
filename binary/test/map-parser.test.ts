@@ -61,11 +61,9 @@ describe("MAP parser - real maps", () => {
         expect(Array.isArray(result.document?.localVariables)).toBe(true);
         expect(Array.isArray(result.document?.scripts)).toBe(true);
         expect(typeof result.document?.objects?.totalObjects).toBe("number");
-        expect(result.sourceData).toBeInstanceOf(Uint8Array);
-        expect(
-            result.sourceData &&
-                Buffer.from(result.sourceData).equals(Buffer.from(loadMap(resolveMapPath("artemple.map")))),
-        ).toBe(true);
+        // The serializer rebuilds from the document, so a copy of the input bytes would only be memory held
+        // alongside it.
+        expect(result.sourceData).toBeUndefined();
     });
 
     it("strict mode preserves PRO-dependent object tails as opaque ranges without parse errors", () => {

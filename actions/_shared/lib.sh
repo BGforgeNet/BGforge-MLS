@@ -46,10 +46,13 @@ lc_emit_list() {
         git fetch --no-tags --depth=1 origin "$base" "$head" >/dev/null 2>&1 || true
         if git rev-parse --verify --quiet "$base" >/dev/null &&
             git rev-parse --verify --quiet "$head" >/dev/null; then
+            # An `if`, not `[[ ]] && echo`: that form leaves a missing last path's failed test as the loop's
+            # status, and pipefail plus errexit then ends the listing with no message and no outputs.
             git diff --name-only --diff-filter=AMR "$base" "$head" -- "$SCAN_PATH" |
                 "$filter_fn" |
-                while IFS= read -r f; do [[ -f "$f" ]] && echo "$f"; done \
-                    >"$list"
+                while IFS= read -r f; do
+                    if [[ -f "$f" ]]; then echo "$f"; fi
+                done >"$list"
             mode=incremental
         fi
     fi

@@ -37,7 +37,7 @@ vi.mock("web-tree-sitter", () => {
 });
 
 // Import after mocking
-import { createParserModule, createCachedParserModule } from "../../../shared/parsers/parser-factory";
+import { createParserModule, createCachedParserModule } from "@bgforge/shared/parsers/parser-factory";
 
 describe("shared/parser-factory", () => {
     beforeEach(() => {

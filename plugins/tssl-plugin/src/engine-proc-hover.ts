@@ -4,7 +4,7 @@
  * and provides a function to append it to QuickInfo results.
  */
 
-import engineProcDocs from "../../../server/out/fallout-ssl-engine-proc-docs.json";
+import engineProcDocs from "@bgforge/shared/data/fallout-ssl-engine-proc-docs.json";
 
 const docs: Readonly<Record<string, string>> = engineProcDocs;
 

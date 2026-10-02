@@ -9,9 +9,10 @@
 
 import * as path from "node:path";
 import type { Parser } from "web-tree-sitter";
-import { collectParseErrors } from "../../../shared/parse-errors";
+import { collectParseErrors } from "@bgforge/shared/parse-errors";
 import { CompileError } from "./compile-error";
 import { EmitError, emitInt, type EmitOptions } from "./int/emit";
+import { WIDE_CHARACTER } from "./int/namelist";
 import type { Program } from "./int/ir";
 import { LowerError, lowerProgram, type LowerOptions } from "./lower";
 import { optimize, type OptimizeOptions } from "./optimize";
@@ -30,12 +31,32 @@ export interface CompileOptions extends LowerOptions, EmitOptions, OptimizeOptio
 }
 
 /**
+ * The compiled file stores a name or string one byte per character, as the reference reads its input, so
+ * the source is text of byte values: the CLI reads a file as latin1 and the language server hands over
+ * the bytes a save would write. A wider character would lose its high byte and compile another string.
+ */
+function refuseWideCharacters(text: string): void {
+    const wide = WIDE_CHARACTER.exec(text);
+    if (wide === null) return;
+    const before = text.slice(0, wide.index);
+    const lineStart = before.lastIndexOf("\n") + 1;
+    throw new CompileError([
+        {
+            line: before.split("\n").length,
+            column: wide.index - lineStart + 1,
+            message: `${JSON.stringify(wide[0])} is not a byte; the source must be read as one byte per character`,
+        },
+    ]);
+}
+
+/**
  * Parses and optimises already-preprocessed source text, stopping before emission.
  *
  * Separate from `compileText` for the callers that want the program itself: the CLI prints it for `-D`,
  * and a test can assert on it without decoding bytes.
  */
 export function buildProgram(parser: Parser, text: string, options: CompileOptions = {}): Program {
+    refuseWideCharacters(text);
     const tree = parser.parse(text);
     if (tree === null) throw new CompileError([{ line: 1, column: 1, message: "parser returned no tree" }]);
     try {

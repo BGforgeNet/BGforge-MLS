@@ -8,21 +8,21 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     }),
     getDocuments: () => ({ get: vi.fn() }),
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { findReferences } from "../../src/fallout-ssl/references";
 import { ReferencesIndex } from "../../src/shared/references-index";
 import { parseFile } from "../../src/fallout-ssl/header-parser";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import { Symbols } from "../../src/core/symbol-index";
 import { FileIndex } from "../../src/core/file-index";
-import { LANG_FALLOUT_SSL } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL } from "@bgforge/shared/languages";
 
 /** Extract refs only (convenience wrapper for tests migrated from call-sites). */
 const extractCallSites = (text: string, uri: string) => parseFile(uri, text).refs;
@@ -109,8 +109,8 @@ end
 
         it("does not report a differently-spelled occurrence as a reference", () => {
             const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
-            fileIndex.updateFile(normalizeUri(HEADER_URI), parseFile(HEADER_URI, HEADER, "/mod"));
-            fileIndex.updateFile(normalizeUri(CALLER_URI), parseFile(CALLER_URI, CALLER, "/mod"));
+            fileIndex.updateFile(normalizeUri(HEADER_URI), parseFile(HEADER_URI, HEADER, { workspaceRoot: "/mod" }));
+            fileIndex.updateFile(normalizeUri(CALLER_URI), parseFile(CALLER_URI, CALLER, { workspaceRoot: "/mod" }));
 
             const refs = findReferences(
                 CALLER,

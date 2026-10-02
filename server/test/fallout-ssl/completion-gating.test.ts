@@ -8,7 +8,7 @@ import type { CompletionItem, Position } from "vscode-languageserver/node";
 
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 
@@ -17,7 +17,7 @@ vi.mock("../../src/logger", () => ({
 }));
 
 import { falloutSslProvider } from "../../src/fallout-ssl/provider";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { normalizeUri } from "../../src/core/normalized-uri";
 
 beforeAll(async () => {

@@ -14,12 +14,12 @@
 import { type Location, CompletionItemKind, InsertTextFormat, MarkupKind } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { computeDisplayPath, extractFilename } from "../core/location-utils";
-import { type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
+import { type ParseFileOptions, type ParseResult, EMPTY_PARSE_RESULT } from "../core/parse-result";
 import { makeRange } from "../core/position-utils";
 import { ScopeLevel, type StateSymbol, SourceType, SymbolKind } from "../core/symbol";
-import { buildSignatureBlock } from "../../../shared/tooltip-format";
+import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { forEachDialogLabelRef } from "./label-refs";
 
 /** Build the composite key for dialog-scoped labels. */
@@ -59,7 +59,8 @@ function createStateSymbol(uri: string, dialogFile: string, labelNode: SyntaxNod
 /**
  * Parse a D file and return state symbols and references.
  */
-export function parseFile(uri: string, text: string, workspaceRoot?: string): ParseResult {
+export function parseFile(uri: string, text: string, options: ParseFileOptions = {}): ParseResult {
+    const { workspaceRoot } = options;
     if (!isInitialized()) {
         return EMPTY_PARSE_RESULT;
     }

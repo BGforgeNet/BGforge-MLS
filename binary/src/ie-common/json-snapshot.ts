@@ -1,5 +1,6 @@
 /**
- * Shared JSON-snapshot factory for the IE binary formats (ITM, SPL, EFF).
+ * Shared JSON-snapshot factory for the formats whose bytes rebuild from the canonical document alone: the IE
+ * formats that bind it, and PRO. MAP and DLG keep their own, each saying why.
  *
  * Each format's `<format>/json-snapshot.ts` calls `createIeJsonSnapshot` to
  * get a serialise/load pair that follows the same round-trip discipline:

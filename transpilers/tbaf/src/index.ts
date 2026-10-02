@@ -54,9 +54,10 @@ function transformBundled(bundled: string, filePath: string, traTag: string | un
     // Uses a per-compile Project rather than the module-scoped shared one
     // in transpilers/common/shared-project.ts. The shared pattern fits
     // short-lived source files whose AST is consumed synchronously within
-    // a single call (as in parseExpressionFromText). Here the bundled
-    // source flows through the full transform -> emit pipeline, and a
-    // concurrent transpile would overwrite the virtual file mid-walk.
+    // a single call. Here the bundled source flows through the full
+    // transform -> emit pipeline, and a concurrent transpile would
+    // overwrite the virtual file mid-walk; the expressions the transformer
+    // parses along the way live in this project too.
     // Fresh-Project construction at this granularity (one per compile) is
     // a small fraction of total compile time.
     const project = new Project({ useInMemoryFileSystem: true });
@@ -82,7 +83,8 @@ export interface TBAFCompileResult {
 
 /**
  * Compile a TBAF file to BAF, writing the output to disk.
- * Used by the LSP compile handler.
+ * @deprecated `transpile` plus a write to `outputPathFor(path)` does the same. Removed in the next major
+ * version.
  */
 export async function compile(uri: string, text: string): Promise<TBAFCompileResult> {
     const { outPath, events, result } = await tbaf.compile(uri, text);

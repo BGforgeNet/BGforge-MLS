@@ -22,13 +22,20 @@ export function allChoices(model: DialogModel): DialogChoice[] {
 }
 
 /**
- * The numeric id of a bare `@N` display text, or undefined when the text is not a bare ref. THE single `@N`
- * parser for every writer/serializer (they used to each re-implement this regex, two of them with a `NaN`
- * sentinel). A caller that wants a `NaN` sentinel wraps it: `bareMsgId(text) ?? NaN`.
+ * The digits of a bare `@N` display text as written, or undefined when the text is not a bare ref. THE single
+ * `@N` parser: the key form is for a lookup in the messages, which are keyed by the digits as written.
+ */
+export function bareMsgKey(text: string | undefined): string | undefined {
+    return /^@(\d+)$/.exec((text ?? "").trim())?.[1];
+}
+
+/**
+ * The numeric id of a bare `@N` display text, or undefined when the text is not a bare ref. A caller that wants
+ * a `NaN` sentinel wraps it: `bareMsgId(text) ?? NaN`.
  */
 export function bareMsgId(text: string | undefined): number | undefined {
-    const m = /^@(\d+)$/.exec((text ?? "").trim());
-    return m ? Number(m[1]) : undefined;
+    const key = bareMsgKey(text);
+    return key === undefined ? undefined : Number(key);
 }
 
 /** First free `.msg`/`.tra` id: one past the max existing numeric key (or 1 when there are none). Only
@@ -53,7 +60,7 @@ export function nextIdSeed(existingMessages: Record<string, string>): number {
  * as new and re-appended every structural save.
  */
 export function isAllocatedNewOption(c: DialogChoice): boolean {
-    return c.callRange === undefined && c.stmtRange === undefined && /^@\d+$/.test((c.text ?? "").trim());
+    return c.callRange === undefined && c.stmtRange === undefined && bareMsgKey(c.text) !== undefined;
 }
 
 /** The leading whitespace of the line containing `offset` - reused as the indent for an inserted statement. */

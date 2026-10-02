@@ -15,7 +15,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { REPO_ROOT } from "./repo-root";
-import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout";
 
 const BUNDLE = path.join(REPO_ROOT, "transpilers/out/index.js");
 const DTS = path.join(REPO_ROOT, "transpilers/out/index.d.ts");

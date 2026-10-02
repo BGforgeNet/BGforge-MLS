@@ -19,12 +19,13 @@ Transpiler support (TypeScript to target language): TSSL, TBAF, TD.
 ## Installation
 
 ```bash
-pnpm install -g @bgforge/mls-server
+pnpm add -g @bgforge/mls-server
 ```
 
 ## Usage
 
-The server communicates over stdio:
+The transport is chosen on the command line: `--stdio`, `--node-ipc`, `--pipe <name>` or `--socket=<port>`. Most
+editors want stdio:
 
 ```bash
 bgforge-mls-server --stdio

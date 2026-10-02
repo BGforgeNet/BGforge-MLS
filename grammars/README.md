@@ -2,7 +2,7 @@
 
 See also: [docs/development.md](../docs/development.md) | [docs/architecture.md](../docs/architecture.md) | [scripts/README.md](../scripts/README.md)
 
-Six tree-sitter grammars for the supported languages. Four back full LSP providers (formatting, symbols, etc.); the other two (MSG, TRA) have no provider but are parsed by the server to surface parse errors as diagnostics, and provide highlighting for external editors.
+Tree-sitter grammars for the supported languages. Four back full LSP providers (formatting, symbols, etc.). The MSG and TRA grammars back none - the translation features and the formatter read those files without them - but the server parses with them to surface parse errors as diagnostics, and they provide highlighting for external editors.
 
 | Grammar       | Language                        | Used By                                                                  |
 | ------------- | ------------------------------- | ------------------------------------------------------------------------ |

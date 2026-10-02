@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it, beforeAll } from "vitest";
-import { initParser, getParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser, getParser } from "@bgforge/shared/parsers/fallout-ssl";
 import {
     formatFalloutSsl as formatDocument,
     validateFormatting,
@@ -180,5 +180,22 @@ describe("fallout-ssl formatter: keyword case", () => {
     it("keeps `:=` in a for-loop declaration rather than rewriting it to `=`", () => {
         const output = format("PROCEDURE start BEGIN\nfor (variable i := 0; i < 3; i += 1) begin end\nEND");
         expect(output).toContain("variable i := 0");
+    });
+});
+
+describe("fallout-ssl formatter: string contents", () => {
+    it("keeps a tab inside a string literal", () => {
+        const output = format('procedure start begin\n    display_msg("a\tb");\nend\n');
+        expect(output).toContain('display_msg("a\tb");');
+    });
+
+    it("leaves // inside a #define's string literal alone", () => {
+        const output = format('#define SITE "http://example.com/page"\n');
+        expect(output).toBe('#define SITE "http://example.com/page"\n');
+    });
+
+    it("still normalizes a comment after a #define whose string holds //", () => {
+        const output = format('#define SITE "http://example.com/page" //note\n');
+        expect(output).toBe('#define SITE "http://example.com/page"    // note\n');
     });
 });

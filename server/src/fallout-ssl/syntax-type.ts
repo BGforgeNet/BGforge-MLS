@@ -3,4 +3,4 @@
 // importing server internals (which would form a format <-> server source
 // cycle). Server code keeps importing "./syntax-type" unchanged; the generated
 // tree-sitter.d.ts resolves its `import type { SyntaxType }` through here too.
-export { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
+export { SyntaxType } from "@bgforge/shared/syntax-types/fallout-ssl";

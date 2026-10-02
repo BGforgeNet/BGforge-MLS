@@ -61,10 +61,11 @@ export function getWordBoundaryRegex(name: string): RegExp {
  * substituteVars("i < count", vars) // => "i < 5"
  */
 export function substituteVars(text: string, vars: VarsContext): string {
+    // Code only: a string literal is text the author wrote, so `i` in `"step i"` is not the loop variable.
     let result = text;
     vars.forEach((value, key) => {
         // Function replacer: a value carrying `$&` or `$1` is inserted literally, not read as a template.
-        result = result.replace(getWordBoundaryRegex(key), () => value);
+        result = replaceOutsideStrings(result, getWordBoundaryRegex(key), () => value);
     });
     return result;
 }

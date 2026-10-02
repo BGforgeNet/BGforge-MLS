@@ -25,7 +25,7 @@ const mockShowError = vi.fn();
 
 vi.mock("../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
         window: {
             showInformationMessage: mockShowInfo,
@@ -512,8 +512,9 @@ describe("weidu-compile", () => {
 
             await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
 
-            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("WeiDU not found"));
-            expect(mockShowError).toHaveBeenCalledWith(expect.stringContaining("bgforge.mls.weidu.path"));
+            expect(mockShowError).toHaveBeenCalledWith(
+                "WeiDU not found at '/usr/bin/weidu'. Check the bgforge.weidu.path setting.",
+            );
             // Only the specific ENOENT message, not the generic "Failed to parse" on top
             expect(mockShowError).toHaveBeenCalledTimes(1);
         });

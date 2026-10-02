@@ -16,20 +16,20 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
 // Mock lsp-connection to suppress console output during tests.
 vi.mock("../src/lsp-connection", () => ({
     getConnection: () => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
     }),
 }));
 
 // Also mock server module accessed by some transitive imports.
 vi.mock("../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
 import { getDocumentSymbols } from "../src/fallout-ssl/symbol";
-import { initParser } from "../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
     await initParser();

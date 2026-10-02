@@ -8,8 +8,8 @@ import { type Hover, MarkupKind } from "vscode-languageserver/node";
 import type { Ret } from "../shared/jsdoc";
 import type { FunctionInfo, VariableInfo } from "./header-parser";
 import { looksLikeConstant } from "./tree-utils";
-import { buildWeiduTable, type VarRow, type VarSection } from "../../../shared/tooltip-table";
-import { buildWeiduHoverContent } from "../../../shared/tooltip-format";
+import { buildWeiduTable, type VarRow, type VarSection } from "@bgforge/shared/tooltip-table";
+import { buildWeiduHoverContent } from "@bgforge/shared/tooltip-format";
 import { LANG_WEIDU_TP2_TOOLTIP } from "../core/languages";
 
 /** Maximum length for parameter descriptions in hover table. */

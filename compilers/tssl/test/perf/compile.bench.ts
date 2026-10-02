@@ -12,8 +12,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { bench, describe } from "vitest";
-import { emitProgram } from "../../../ssl/src/compile";
-import { optimize } from "../../../ssl/src/optimize";
+import { emitProgram, optimize } from "@bgforge/ssl";
 import { createBatchState } from "../../src/batch";
 import { lowerTsslProgram } from "../../src/int/lower";
 

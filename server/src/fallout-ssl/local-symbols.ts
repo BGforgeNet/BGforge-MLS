@@ -10,7 +10,7 @@
 
 import type { IndexedSymbol } from "../core/symbol";
 import { TextCache } from "../shared/text-cache";
-import { parseWithCache, isInitialized } from "../../../shared/parsers/fallout-ssl";
+import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
 import {
     extractProcedures,
     extractMacros,
@@ -25,7 +25,7 @@ import * as jsdoc from "../shared/jsdoc";
 import { SyntaxType } from "./syntax-type";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
-import engineProcDocs from "../../out/fallout-ssl-engine-proc-docs.json";
+import engineProcDocs from "@bgforge/shared/data/fallout-ssl-engine-proc-docs.json";
 
 const ENGINE_PROC_DOCS = engineProcDocs as Record<string, string>;
 
@@ -138,7 +138,8 @@ export function clearLocalSymbolsCache(uri: string): void {
 }
 
 /**
- * Clear entire cache (for testing).
+ * Clear entire cache. The tests' isolation reset: the cache is module state keyed by (uri, version), and
+ * tests reuse both across different texts.
  */
 export function clearAllLocalSymbolsCache(): void {
     cache.clearAll();

@@ -27,26 +27,11 @@ export function pvrzResourceName(page: number): string {
  * zlib inflate and the whole-texture BC decode for each one.
  */
 export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver, sourceBytes?: Uint8Array): RgbaAnimation {
-    const pages = new Map<number, PvrTexture>();
-    // The raw PVRZ bytes are retained alongside the decoded textures so an unmodified animation can
-    // write its pages back untouched instead of re-encoding through a lossy codec.
-    const sourcePages = new Map<number, Uint8Array>();
-    for (const page of structure.requiredPages) {
-        const bytes = resolve(page);
-        if (bytes === undefined) {
-            throw new Error(
-                `decodeBamV2: cannot resolve PVRZ page ${page} (${pvrzResourceName(page)}) - the file is incomplete`,
-            );
-        }
-        sourcePages.set(page, bytes);
-        pages.set(page, decodePvrz(bytes));
-    }
-
-    // Running total, checked before each allocation: every frame can sit under MAX_FRAME_PIXELS while
-    // the animation as a whole is ruinous, and a v2 frame needs no backing bytes to claim its size.
+    // The declared frames are judged before any page is decoded, as v1 judges its entry table first: a page
+    // costs up to 64 MiB, all of it wasted on a structure refused afterwards. Every frame can sit under
+    // MAX_FRAME_PIXELS while the animation as a whole is ruinous, and a v2 frame needs no backing bytes.
     let totalPixels = 0;
-
-    const frames: RgbaFrame[] = structure.frames.map((entry, index) => {
+    structure.frames.forEach((entry, index) => {
         if (entry.width * entry.height > MAX_FRAME_PIXELS) {
             throw new Error(
                 `decodeBamV2: frame ${index} claims ${entry.width}x${entry.height} pixels - implausibly large for a sprite`,
@@ -58,6 +43,34 @@ export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver, so
                 `decodeBamV2: frames 0-${index} claim ${totalPixels} pixels in total - more than the ${MAX_ANIMATION_PIXELS} a whole animation may hold`,
             );
         }
+    });
+
+    const pages = new Map<number, PvrTexture>();
+    // The raw PVRZ bytes are retained alongside the decoded textures so an unmodified animation can
+    // write its pages back untouched instead of re-encoding through a lossy codec.
+    const sourcePages = new Map<number, Uint8Array>();
+    // Each page is bounded on its own by decodePvrz; their number is not. The same budget as the frames:
+    // the largest shipped v2 (BG2:EE's MAPICONS) decodes 58 pages, 15.2M pixels in all.
+    let pagePixels = 0;
+    for (const page of structure.requiredPages) {
+        const bytes = resolve(page);
+        if (bytes === undefined) {
+            throw new Error(
+                `decodeBamV2: cannot resolve PVRZ page ${page} (${pvrzResourceName(page)}) - the file is incomplete`,
+            );
+        }
+        const texture = decodePvrz(bytes);
+        pagePixels += texture.width * texture.height;
+        if (pagePixels > MAX_ANIMATION_PIXELS) {
+            throw new Error(
+                `decodeBamV2: its pages decode to more than the ${MAX_ANIMATION_PIXELS} pixels a whole animation may hold`,
+            );
+        }
+        sourcePages.set(page, bytes);
+        pages.set(page, texture);
+    }
+
+    const frames: RgbaFrame[] = structure.frames.map((entry, index) => {
         // Zero-filled, so any region no block covers stays fully transparent.
         const pixels = new Uint8Array(entry.width * entry.height * 4);
 

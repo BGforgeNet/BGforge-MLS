@@ -344,17 +344,16 @@ switch (Global("state", "LOCALS")) {
         });
     });
 
-    describe("parseExpressionFromText (shared project)", () => {
-        it("parses expressions correctly across multiple sequential calls", () => {
+    describe("parseExpressionFromText", () => {
+        it("keeps an earlier expression readable after parsing another", () => {
+            // Inlining a function called from inside another inlined condition parses a second expression
+            // while the first is still in use; its nodes must survive that.
             const t = new TBAFTransformer();
-            // Each expression is consumed before the next call (mirrors production usage).
-            // The shared Project overwrites the same virtual file on each call.
-            const aText = t.parseExpressionFromText("Global('foo', 'LOCALS', 1)")?.getText();
-            const bText = t.parseExpressionFromText("Global('bar', 'LOCALS', 2)")?.getText();
-            expect(aText).toBeDefined();
-            expect(bText).toBeDefined();
-            expect(aText).toContain("foo");
-            expect(bText).toContain("bar");
+            t.transform(new Project({ useInMemoryFileSystem: true }).createSourceFile("empty.ts", ""));
+            const a = t.parseExpressionFromText("Global('foo', 'LOCALS', 1)");
+            const b = t.parseExpressionFromText("Global('bar', 'LOCALS', 2)");
+            expect(a?.getText()).toBe("Global('foo', 'LOCALS', 1)");
+            expect(b?.getText()).toBe("Global('bar', 'LOCALS', 2)");
         });
     });
 

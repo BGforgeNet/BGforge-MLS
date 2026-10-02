@@ -10,7 +10,7 @@
  * provisioned rather than treated as a reason to report green.
  */
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import path from "node:path";
 
 /** Root of the project repository - mirrors test-helpers.ts, which keeps its copy private. */
@@ -64,6 +64,21 @@ export function resolveWeidu(): string {
         throw new Error(`ensure-weidu.sh returned "${resolved}", which does not answer --version`);
     }
     return resolved;
+}
+
+/**
+ * Run WeiDU over a batch of files in `cwd` and return its stdout. WeiDU can exit 0 after a `FATAL ERROR`
+ * having written nothing (an IDS table it cannot find, a source it cannot parse); that is thrown here with
+ * WeiDU's own output, rather than surfacing later as an output file that is not there.
+ */
+export function runWeiduBatch(weidu: string, args: readonly string[], cwd: string, timeoutMs: number): string {
+    const result = spawnSync(weidu, args, { cwd, timeout: timeoutMs, encoding: "utf8" });
+    if (result.error) throw result.error;
+    const output = `${result.stdout}${result.stderr}`;
+    if (result.status !== 0 || output.includes("FATAL ERROR")) {
+        throw new Error(`weidu ${args.join(" ")} failed (exit ${result.status}):\n${output.slice(-2000)}`);
+    }
+    return result.stdout;
 }
 
 /** Exit status off a thrown execFileSync error, narrowed rather than cast - `catch` binds `unknown`. */

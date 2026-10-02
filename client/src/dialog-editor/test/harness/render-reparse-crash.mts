@@ -17,7 +17,7 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { parseDialog } from "../../../../../server/src/dialog";
-import { modelFromSSL } from "../../../../../shared/dialog-model";
+import { modelFromSSL } from "@bgforge/shared/dialog-model";
 import { harnessPaths, makeChecker } from "./driver-util";
 
 const { appHtml } = harnessPaths(import.meta.url);

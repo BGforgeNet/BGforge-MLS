@@ -11,14 +11,14 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 // Mock the server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
-import type { DDialogData } from "../../../shared/dialog-types";
+import type { DDialogData } from "@bgforge/shared/dialog-types";
 import { parseDDialog } from "../../src/weidu-d/dialog";
-import { initParser } from "../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 
 const SAMPLES_DIR = path.resolve(__dirname, "../../../grammars/weidu-d/test/samples");
 

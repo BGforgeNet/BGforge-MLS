@@ -21,7 +21,7 @@
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
 
 const ignorePatterns: readonly string[] = JSON.parse(fs.readFileSync(".oxfmtrc.json", "utf8")).ignorePatterns ?? [];
 

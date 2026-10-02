@@ -24,8 +24,6 @@ server/out/*
 # work on a clean checkout with no build step.
 !server/out/completion.*.json
 !server/out/signature.*.json
-!server/out/fallout-ssl-engine-proc-docs.json
-!server/out/fallout-ssl-engine-procedures.json
 
 transpilers/out
 format/out

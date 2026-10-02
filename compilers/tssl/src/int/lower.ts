@@ -21,15 +21,25 @@
  */
 
 import { SyntaxKind, type FunctionDeclaration, type Node, type Project } from "ts-morph";
-import type { BinaryOp, Declaration, Expr, ProcedureDecl, Program, Stmt, VariableDecl } from "../../../ssl/src/int/ir";
-import { engineFunction } from "../../../ssl/src/int/engine-functions";
-import { Expansions, type Desugarer, type Origin } from "../../../ssl/src/desugar";
+import {
+    engineFunction,
+    Expansions,
+    type BinaryOp,
+    type Declaration,
+    type Desugarer,
+    type Expr,
+    type Origin,
+    type ProcedureDecl,
+    type Program,
+    type Stmt,
+    type VariableDecl,
+} from "@bgforge/ssl";
 import { buildProgramModel, refuseAt, type TsslProgram } from "../program-model";
 import { sslName, type InlineFunc } from "../types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";
 import { extractInlineFunctions } from "../inline-functions";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
-import engineProcedureNames from "../../../../server/out/fallout-ssl-engine-procedures.json";
+import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
 
 /**
  * Builds the IR for one `.tssl` compilation unit. Throws a positioned refusal on anything unhandled.

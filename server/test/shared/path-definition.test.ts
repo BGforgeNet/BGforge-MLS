@@ -44,6 +44,22 @@ describe("resolveExisting", () => {
         expect(resolveExisting(path.join(root, "narrow", "target.TXT"))).toBe(path.join(narrowDir, "Target.txt"));
     });
 
+    it("resolves below an ancestor it may enter but not list", () => {
+        // Shared hosts commonly make /home or a user's home execute-only; the ancestors already exist as
+        // written, so nothing above the first mismatched segment needs listing.
+        const locked = path.join(root, "Locked");
+        fs.mkdirSync(path.join(locked, "Inner"), { recursive: true });
+        fs.writeFileSync(path.join(locked, "Inner", "Target.txt"), "");
+        fs.chmodSync(locked, 0o311);
+        try {
+            expect(resolveExisting(path.join(locked, "Inner", "target.TXT"))).toBe(
+                path.join(locked, "Inner", "Target.txt"),
+            );
+        } finally {
+            fs.chmodSync(locked, 0o755);
+        }
+    });
+
     it("returns null once the walk exceeds the entry budget", () => {
         expect(resolveExisting(path.join(root, "wide", "target.TXT"))).toBeNull();
     });

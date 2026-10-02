@@ -1,5 +1,6 @@
 /**
- * One worker of the CLI's compile pool: loads the grammar once, then compiles whatever inputs it is sent.
+ * One worker of the CLI's compile pool: loads the grammar once when the run parses source, then handles
+ * whatever inputs it is sent.
  *
  * The grammar load is the expensive part of starting up and is why a worker is kept and fed rather than
  * spawned per input. Results go back as VALUES - the lines to print included - because the main thread
@@ -8,8 +9,8 @@
 
 import { parentPort, workerData } from "node:worker_threads";
 import type { SslInput } from "./args";
-import { runInput, type TaskArgs } from "./cli-task";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { needsGrammar, runInput, type TaskArgs } from "./cli-task";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 
 interface Task {
     index: number;
@@ -22,7 +23,7 @@ if (port === null) throw new Error("cli-worker must be started as a worker threa
 const args = (workerData as { args: TaskArgs }).args;
 
 // Tasks that arrive before the grammar has finished loading queue behind it rather than racing it.
-const ready = initParser();
+const ready = needsGrammar(args) ? initParser() : Promise.resolve();
 
 port.on("message", (task: Task) => {
     void ready.then(() => {

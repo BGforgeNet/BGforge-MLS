@@ -9,7 +9,7 @@
  * never changed and selection jumped to the wrong state. Falls back to the other roots only when the id is
  * genuinely absent from the active root.
  */
-import type { DialogRoot, DialogState } from "../../../../shared/dialog-model";
+import type { DialogRoot, DialogState } from "@bgforge/shared/dialog-model";
 
 export function findStateInRoots(
     roots: DialogRoot[],

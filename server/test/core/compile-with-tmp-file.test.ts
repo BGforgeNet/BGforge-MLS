@@ -57,4 +57,59 @@ describe("compileWithTmpFile", () => {
 
         expect(fs.readFileSync(sensitive, "utf8")).toBe("ORIGINAL");
     });
+
+    /** A compile whose `run` has started and then waits until released. */
+    function heldCompile(map: Map<NormalizedUri, AbortController>, tmpPath: string, text: string) {
+        let release!: () => void;
+        let started!: () => void;
+        const running = new Promise<void>((resolve) => {
+            started = resolve;
+        });
+        const done = compileWithTmpFile({
+            uri: "file:///x" as NormalizedUri,
+            tmpPath,
+            text,
+            activeCompiles: map,
+            run: () =>
+                new Promise<void>((resolve) => {
+                    release = resolve;
+                    started();
+                }),
+        });
+        return { running, done, release: () => release() };
+    }
+
+    it("leaves the newer compile tracked, and its tmp file in place, when a displaced one finishes", async () => {
+        const map = new Map<NormalizedUri, AbortController>();
+        const tmpPath = path.resolve(dir, "tmpfile");
+        const older = heldCompile(map, tmpPath, "OLD");
+        await older.running;
+        const newer = heldCompile(map, tmpPath, "NEW");
+        await newer.running;
+
+        older.release();
+        await older.done;
+
+        expect(map.get("file:///x" as NormalizedUri)?.signal.aborted).toBe(false);
+        expect(fs.readFileSync(tmpPath, "utf8")).toBe("NEW");
+
+        newer.release();
+        await newer.done;
+
+        expect(map.size).toBe(0);
+        expect(fs.existsSync(tmpPath)).toBe(false);
+    });
+
+    it("still cleans up a compile aborted at shutdown", async () => {
+        const map = new Map<NormalizedUri, AbortController>();
+        const tmpPath = path.resolve(dir, "tmpfile");
+        const run = heldCompile(map, tmpPath, "TEXT");
+        await run.running;
+
+        abortAllCompiles(map);
+        run.release();
+        await run.done;
+
+        expect(fs.existsSync(tmpPath)).toBe(false);
+    });
 });

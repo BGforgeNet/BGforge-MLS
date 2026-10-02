@@ -22,10 +22,9 @@ import {
     type WorkspaceEdit,
     InsertTextFormat,
 } from "vscode-languageserver/node";
-import { readFileSync } from "fs";
 import { extname } from "path";
 import { fileURLToPath } from "url";
-import { uriToPath } from "../uri-utils";
+import { readWorkspaceTextSync } from "../core/workspace-text";
 import {
     prepareCallHierarchy as computePrepareCallHierarchy,
     incomingCalls as computeIncomingCalls,
@@ -61,6 +60,7 @@ import {
     type SemanticTokenCapability,
     type WorkspaceSymbolCapability,
 } from "../language-provider";
+import { initializedContext } from "../core/capabilities";
 import { getFormatOptions } from "../shared/format-options";
 import { stripCommentsWeidu, formatWeiduTp2 as formatAst } from "@bgforge/format";
 import { resolveSymbolWithLocal, formatWithValidation } from "../shared/provider-helpers";
@@ -69,7 +69,7 @@ import { getContextAtPosition, getFuncParamsContext, isAtDeclarationSite } from 
 import { filterItemsByContext } from "./completion/filter";
 import { getParamCompletions } from "./completion/parameter";
 import { CompletionCategory, CompletionContext, type Tp2CompletionItem } from "./completion/types";
-import { initParser, parseWithCache, isInitialized } from "../../../shared/parsers/weidu-tp2";
+import { initParser, parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { getDocumentSymbols } from "./symbol";
 import { getDefinition, isOnFunctionCallParamName } from "./definition";
 import { parseFile } from "./header-parser";
@@ -79,7 +79,8 @@ import { findReferences } from "./references";
 import { renameSymbol, prepareRenameSymbol } from "./rename";
 import { buildFunctionCallSnippet, getKeywordSnippet } from "./snippets";
 import { getFunctionParamHover } from "./hover";
-import { localCompletion, isInsideComment, isInsideString, isOnLoopVariableBinding } from "./ast-utils";
+import { isInsideComment, isInsideString, isOnLoopVariableBinding } from "./ast-utils";
+import { clearRequestCaches, localVariables } from "./request-caches";
 import {
     getLocalSymbols as extractLocalSymbols,
     getLocalSymbolsData,
@@ -87,7 +88,7 @@ import {
     clearLocalSymbolsCache,
     type LocalSymbolsData,
 } from "./local-symbols";
-import { WEIDU_JSDOC_TYPES } from "../../../shared/weidu-types";
+import { WEIDU_JSDOC_TYPES } from "@bgforge/shared/weidu-types";
 import { getJsdocCompletions as getSharedJsdocCompletions } from "../shared/jsdoc-completions";
 import { createFoldingRangesProvider } from "../shared/folding-ranges";
 import { createSelectionRangesProvider } from "../shared/selection-ranges";
@@ -263,7 +264,7 @@ function getSnippetPrefixFromSymbol(
  */
 function collectLocalCompletions(
     local: LocalSymbolsData,
-    text: string,
+    document: { text: string; uri: string; version: number | undefined },
     options?: { variablesOnly?: boolean; excludeWord?: string },
 ): Tp2CompletionItem[] {
     const { variablesOnly = false, excludeWord } = options ?? {};
@@ -279,7 +280,7 @@ function collectLocalCompletions(
     }
 
     // Deep-scoped variables (inside function bodies, loops) not covered by file-scope
-    for (const v of localCompletion(text)) {
+    for (const v of localVariables(document.uri, document.version, document.text)) {
         const label = v.label;
         if (seen.has(label)) continue;
         if (excludeWord && label === excludeWord) continue;
@@ -361,6 +362,7 @@ class WeiduTp2Provider
 
         conlog(
             `[tp2] Completion contexts: [${contexts.join(", ")}] at ${position.line}:${position.character} in ${ext}`,
+            "debug",
         );
 
         if (contexts.includes(CompletionContext.Comment)) {
@@ -402,10 +404,14 @@ class WeiduTp2Provider
         const local = getLocalSymbolsData(text, version, uri);
 
         if (declSite === "assignment") {
-            return collectLocalCompletions(local, text, { variablesOnly: true, excludeWord: currentWord });
+            return collectLocalCompletions(
+                local,
+                { text, uri, version },
+                { variablesOnly: true, excludeWord: currentWord },
+            );
         }
 
-        const localCompletions = collectLocalCompletions(local, text, { excludeWord: currentWord });
+        const localCompletions = collectLocalCompletions(local, { text, uri, version }, { excludeWord: currentWord });
         const baseItems: Tp2CompletionItem[] = [...items, ...localCompletions];
 
         // Inside a string the only thing that resolves is a `%var%` interpolation, so keep the variables and
@@ -430,8 +436,9 @@ class WeiduTp2Provider
         return isInsideString(text, position);
     }
 
-    hover(text: string, symbol: string, _uri: NormalizedUri, position: Position): HoverResult {
-        const paramHover = getFunctionParamHover(text, symbol, position, this.fileIndex?.symbols);
+    hover(text: string, symbol: string, uri: NormalizedUri, position: Position): HoverResult {
+        const version = this.storedContext?.getDocumentVersion?.(uri);
+        const paramHover = getFunctionParamHover(text, symbol, position, this.fileIndex?.symbols, uri, version);
         if (paramHover) {
             return HoverResult.found(paramHover);
         }
@@ -457,7 +464,14 @@ class WeiduTp2Provider
     }
 
     definition(text: string, position: Position, uri: NormalizedUri): Location | null {
-        return getDefinition(text, uri, position, this.fileIndex?.symbols, this.storedContext?.getTranslationDir?.());
+        return getDefinition(
+            text,
+            uri,
+            position,
+            this.fileIndex?.symbols,
+            this.storedContext?.getTranslationDir?.(),
+            this.storedContext?.getDocumentVersion?.(uri),
+        );
     }
 
     reloadFileData(uri: NormalizedUri, text: string): void {
@@ -473,19 +487,16 @@ class WeiduTp2Provider
     }
 
     workspaceSymbols(query: string, token: CancellationToken): SymbolInformation[] {
-        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, 500, token) ?? [];
+        return this.fileIndex?.symbols.searchWorkspaceSymbols(query, token) ?? [];
     }
 
     onDocumentClosed(uri: NormalizedUri): void {
         clearLocalSymbolsCache(uri);
+        clearRequestCaches(uri);
     }
 
     async compile(uri: NormalizedUri, text: string, interactive: boolean): Promise<void> {
-        if (!this.storedContext) {
-            conlog("WeiDU TP2 provider not initialized, cannot compile");
-            return;
-        }
-        await weiduCompile(uri, this.storedContext.settings.weidu, interactive, text);
+        await weiduCompile(uri, initializedContext(this.storedContext, "WeiDU TP2").settings.weidu, interactive, text);
     }
 
     format(text: string, uri: NormalizedUri): FormatResult {
@@ -535,17 +546,9 @@ class WeiduTp2Provider
         return this.fileIndex?.symbols.lookupDefinition(name) ?? null;
     }
 
-    /**
-     * Read a workspace file for re-parsing during a call-hierarchy query. Reads from disk in latin1
-     * (TP2's legacy encoding), so an unsaved editor buffer is not reflected - acceptable for an
-     * on-demand action where the graph is over the saved installer.
-     */
+    /** Read a workspace file for re-parsing during a call-hierarchy query. */
     private readFileText(fileUri: string): string | null {
-        try {
-            return readFileSync(uriToPath(fileUri), "latin1");
-        } catch {
-            return null;
-        }
+        return readWorkspaceTextSync(fileUri, this.storedContext?.getDocumentText);
     }
 
     references(

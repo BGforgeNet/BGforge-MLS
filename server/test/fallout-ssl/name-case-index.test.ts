@@ -21,10 +21,10 @@ vi.mock("../../src/path-utils", () => ({
 }));
 
 import { parseFile } from "../../src/fallout-ssl/header-parser";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
 import { FileIndex } from "../../src/core/file-index";
 import { normalizeUri } from "../../src/core/normalized-uri";
-import { LANG_FALLOUT_SSL } from "../../../shared/languages";
+import { LANG_FALLOUT_SSL } from "@bgforge/shared/languages";
 
 const testUri = "file:///mymod/headers/test.h";
 const workspaceRoot = "/mymod";
@@ -32,7 +32,7 @@ const workspaceRoot = "/mymod";
 /** Index a header through the same parse the server runs on it. */
 function indexHeader(text: string): FileIndex {
     const index = new FileIndex(LANG_FALLOUT_SSL);
-    index.updateFile(normalizeUri(testUri), parseFile(testUri, text, workspaceRoot));
+    index.updateFile(normalizeUri(testUri), parseFile(testUri, text, { workspaceRoot }));
     return index;
 }
 

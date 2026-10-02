@@ -68,4 +68,32 @@ describe("scanWorkspaceFiles", () => {
         expect(firstTick).toBeGreaterThanOrEqual(0);
         expect(firstTick).toBeLessThan(lastFile);
     });
+
+    // A scan of a large mod takes minutes; without a signal the only sign of it is answers that come back short.
+    it("reports how many files are done out of how many, then that it finished", async () => {
+        const { findFilesByExtensions } = await import("../../src/path-utils");
+        vi.mocked(findFilesByExtensions).mockResolvedValue(["a.tph", "b.tph", "c.tph"]);
+        const reports: string[] = [];
+        const progress = {
+            report: (done: number, total: number) => reports.push(`${done}/${total}`),
+            done: () => reports.push("done"),
+        };
+
+        await scanWorkspaceFiles([scannerProvider(() => undefined)], { reloadFileData: () => {} }, "/root", progress);
+
+        expect(reports).toEqual(["0/3", "1/3", "2/3", "3/3", "done"]);
+    });
+
+    it("says it finished even when there is nothing to scan", async () => {
+        const { findFilesByExtensions } = await import("../../src/path-utils");
+        vi.mocked(findFilesByExtensions).mockResolvedValue([]);
+        const done = vi.fn();
+
+        await scanWorkspaceFiles([scannerProvider(() => undefined)], { reloadFileData: () => {} }, "/root", {
+            report: () => {},
+            done,
+        });
+
+        expect(done).toHaveBeenCalledTimes(1);
+    });
 });

@@ -19,8 +19,8 @@
  *     section, so it is parser/serializer-managed, not user-editable here);
  * The header slot arrays - soundSlots (100), objectRefs (5) - each get a per-slot key
  * (`cre.header.<group>.<slot>`, the adapter keeps the slot leaf in the key) and render as their own grids,
- * alongside the equipped item slots (40, distinct slot labels -> distinct slugs). Proficiencies are no longer
- * a slot array: the 20 bytes are 40 packed scalar header fields (`cre.header.proficiency<N>Active` /
+ * alongside the equipped item slots (40, distinct slot labels -> distinct slugs). Proficiencies are not a
+ * slot array: the 20 bytes are 40 packed scalar header fields (`cre.header.proficiency<N>Active` /
  * `...Original`) rendered as a 2-column matrix (Active Class / Original Class).
  *
  * The Effects detail form renders the ~300-entry opcode as a searchable combobox (every enum is one); being

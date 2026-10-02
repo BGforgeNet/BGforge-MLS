@@ -3,7 +3,7 @@ import type { Game, Tlk } from "@bgforge/binary/archive";
 
 const warn = vi.fn();
 vi.mock("../src/lsp-connection", () => ({
-    getConnection: () => ({ console: { log: vi.fn(), warn, error: vi.fn() } }),
+    getConnection: () => ({ console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn, error: vi.fn() } }),
     getDocuments: () => ({ get: vi.fn() }),
     initLspConnection: vi.fn(),
 }));

@@ -6,18 +6,17 @@
  * the edge that caused it. The cycles that exist today are listed below with the reason each is
  * tolerated; anything else fails here.
  *
- * Only RUNTIME edges count. `verbatimModuleSyntax` is on across the workspace, so `import type` and
- * fully type-only named imports are erased before the emitted module graph exists and cannot
- * participate in an initialisation cycle. Dynamic `import()` is excluded for the same reason: it
- * defers evaluation, which is one of the ways an edge is legitimately broken. Scope is `.ts`/`.mts`/
- * `.cts`/`.tsx`; `.svelte` components compose recursively by design and are not part of this graph.
+ * Only runtime edges count (see import-graph.ts), since only those can take part in an initialisation
+ * cycle. Scope is `.ts`/`.mts`/`.cts`/`.tsx`; `.svelte` components compose recursively by design and are
+ * not part of this graph.
  */
 
 import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { SPAWN_TIMEOUT_MS } from "../../../shared/spawn-timeout.ts";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { localImportTargets } from "./import-graph.ts";
 
 // Anchored to this file, not cwd: vitest runs this config from the repo root and from scripts/.
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
@@ -39,42 +38,6 @@ const ALLOWED: readonly { readonly reason: string; readonly files: readonly stri
     },
 ];
 
-/**
- * `import`/`export ... from "<specifier>"`. The clause may span lines but may not contain a quote
- * or a semicolon, which is what stops a lazy match from running past the end of one statement.
- */
-const IMPORT_FROM = /(?:^|\n)\s*(?:import|export)\s+(type\s+)?([^;'"]*?)\bfrom\s*["']([^"']+)["']/g;
-
-/** True for `import { type A, type B } from "x"` - every named binding erased, so no runtime edge. */
-function isFullyTypeOnly(clause: string): boolean {
-    const braced = /\{([^}]*)\}/.exec(clause);
-    if (!braced) return false;
-    const outsideBraces = clause
-        .replace(/\{[^}]*\}/, "")
-        .replaceAll(",", "")
-        .trim();
-    if (outsideBraces !== "") return false;
-    const names = braced[1]!
-        .split(",")
-        .map((name) => name.trim())
-        .filter(Boolean);
-    return names.length > 0 && names.every((name) => /^type\s/.test(name));
-}
-
-function resolveRelative(fromFile: string, specifier: string): string | undefined {
-    const target = path.resolve(path.dirname(fromFile), specifier);
-    const candidates = [
-        ...(target.endsWith(".js") ? [target.replace(/\.js$/, ".ts")] : []),
-        target,
-        `${target}.ts`,
-        `${target}.mts`,
-        `${target}.cts`,
-        `${target}.tsx`,
-        path.join(target, "index.ts"),
-    ];
-    return candidates.find((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
-}
-
 const files = execSync("git ls-files -- '*.ts' '*.mts' '*.cts' '*.tsx'", {
     cwd: repoRoot,
     encoding: "utf8",
@@ -88,17 +51,7 @@ const files = execSync("git ls-files -- '*.ts' '*.mts' '*.cts' '*.tsx'", {
 
 const graph = new Map<string, string[]>();
 for (const file of files) {
-    const source = fs.readFileSync(file, "utf8");
-    const targets = new Set<string>();
-    for (const match of source.matchAll(IMPORT_FROM)) {
-        if (match[1]) continue;
-        if (isFullyTypeOnly(match[2]!)) continue;
-        const specifier = match[3]!;
-        if (!specifier.startsWith(".")) continue;
-        const resolved = resolveRelative(file, specifier);
-        if (resolved !== undefined) targets.add(resolved);
-    }
-    graph.set(file, [...targets]);
+    graph.set(file, localImportTargets(file, fs.readFileSync(file, "utf8")));
 }
 
 /** Tarjan's strongly connected components; components of size 1 are not cycles here. */

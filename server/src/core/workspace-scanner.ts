@@ -25,6 +25,12 @@ interface WorkspaceScannerRegistryAccess {
     reloadFileData(langId: string, uri: string, text: string): void;
 }
 
+/** Where the scan says how far it has got: files done out of the total, then that it has finished. */
+export interface ScanProgress {
+    report(done: number, total: number): void;
+    done(): void;
+}
+
 /** Normalize a provider index extension (or a discovered path's extension) to lowercase, no leading dot. */
 function normalizeExt(ext: string): string {
     return (ext.startsWith(".") ? ext.slice(1) : ext).toLowerCase();
@@ -46,6 +52,20 @@ export async function scanWorkspaceFiles(
     providers: Iterable<LanguageProvider>,
     registry: WorkspaceScannerRegistryAccess,
     workspaceRoot: string | undefined,
+    progress?: ScanProgress,
+): Promise<void> {
+    try {
+        await scan(providers, registry, workspaceRoot, progress);
+    } finally {
+        progress?.done();
+    }
+}
+
+async function scan(
+    providers: Iterable<LanguageProvider>,
+    registry: WorkspaceScannerRegistryAccess,
+    workspaceRoot: string | undefined,
+    progress: ScanProgress | undefined,
 ): Promise<void> {
     if (!workspaceRoot) {
         return;
@@ -69,6 +89,8 @@ export async function scanWorkspaceFiles(
     const limit = pLimit(WORKSPACE_SCAN_CONCURRENCY);
     const scanned = new Map<string, number>();
     const failed = new Map<string, number>();
+    let finished = 0;
+    progress?.report(0, files.length);
 
     await Promise.all(
         files.map((relativePath) =>
@@ -76,6 +98,7 @@ export async function scanWorkspaceFiles(
                 const ext = normalizeExt(extname(relativePath));
                 const provider = extToProvider.get(ext);
                 if (!provider) {
+                    progress?.report(++finished, files.length);
                     return;
                 }
                 scanned.set(ext, (scanned.get(ext) ?? 0) + 1);
@@ -91,6 +114,7 @@ export async function scanWorkspaceFiles(
                 // backgrounded scan runs as one unbroken microtask cascade that starves the
                 // LSP connection (initialize response, first requests) until the last file.
                 await yieldEventLoop();
+                progress?.report(++finished, files.length);
             }),
         ),
     );
@@ -99,7 +123,7 @@ export async function scanWorkspaceFiles(
         const providerId = extToProvider.get(ext)?.id;
         const failures = failed.get(ext) ?? 0;
         if (failures > 0) {
-            conlog(`Startup scan for ${providerId} (.${ext}) had ${failures} read failures`);
+            conlog(`Startup scan for ${providerId} (.${ext}) had ${failures} read failures`, "warn");
         }
         if (count > 0) {
             conlog(`Scanned ${count} .${ext} files for ${providerId}`);

@@ -9,7 +9,7 @@ Infinity Engine 2DA, and Fallout scripts.lst files.
 pnpm add @bgforge/format
 ```
 
-Requires Node 20 or newer.
+Requires Node 22 or newer.
 
 ## Library API
 

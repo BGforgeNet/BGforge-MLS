@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { distinctStateIds, findStateInRoots } from "../src/dialog-editor/webview/state-lookup";
-import type { DialogModel, DialogState } from "../../shared/dialog-model";
+import type { DialogModel, DialogState } from "@bgforge/shared/dialog-model";
 
 const st = (id: string, choices: DialogState["choices"] = []): DialogState => ({ id, text: "", choices });
 

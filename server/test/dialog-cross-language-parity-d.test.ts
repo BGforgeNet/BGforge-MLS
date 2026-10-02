@@ -19,7 +19,7 @@
  */
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { initParser } from "../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { parseTDSource } from "../src/td/dialog-source";
 import {
@@ -28,7 +28,7 @@ import {
     type DialogModel,
     type DialogState,
     type SourceLang,
-} from "../../shared/dialog-model";
+} from "@bgforge/shared/dialog-model";
 import {
     addReply,
     addState,
@@ -37,7 +37,7 @@ import {
     removeReply,
     renameState,
     setChoiceTarget,
-} from "../../shared/dialog-edit-ops";
+} from "@bgforge/shared/dialog-edit-ops";
 import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
 
 // --- Projection: the language-agnostic logical shape we assert parity on ---------------------------------------

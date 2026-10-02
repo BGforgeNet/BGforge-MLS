@@ -1,6 +1,6 @@
 <script lang="ts">
     import DialogGraph from "./DialogGraph.svelte";
-    import type { DialogModel } from "../../../../shared/dialog-model";
+    import type { DialogModel } from "@bgforge/shared/dialog-model";
     import { hasHost } from "./host";
     import { reduceDialogView, shouldTimeOut } from "./app-messages";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, isHostMessage } from "../../webview-utils";

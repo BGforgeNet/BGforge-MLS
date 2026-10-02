@@ -9,7 +9,7 @@
  * is the timeout condition. `timedOut` itself is a timer concern that stays in the component.
  */
 
-import type { DialogModel } from "../../../../shared/dialog-model";
+import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 export interface DialogView {
     model: DialogModel | null;

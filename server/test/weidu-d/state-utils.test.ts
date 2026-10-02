@@ -5,13 +5,13 @@
 import { describe, expect, it, beforeAll, vi } from "vitest";
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
 
 import { normalizeDialogFile, findLabelNodeAtPosition, findStateInDialog } from "../../src/weidu-d/state-utils";
-import { parseWithCache, initParser } from "../../../shared/parsers/weidu-d";
+import { parseWithCache, initParser } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {
     await initParser();

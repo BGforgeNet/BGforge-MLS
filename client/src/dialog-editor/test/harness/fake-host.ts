@@ -8,10 +8,10 @@
  */
 
 import { DialogHostCore, type DialogHostIO } from "../../host-core";
-import { initParser } from "../../../../../shared/parsers/weidu-d";
+import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../../../../../server/src/weidu-d/dialog";
-import { appendTraEntries, rewriteTraEntries } from "../../../../../shared/dialog-tra-edit";
-import { modelFromD, type DialogMessages, type DialogModel } from "../../../../../shared/dialog-model";
+import { appendTraEntries, rewriteTraEntries } from "@bgforge/shared/dialog-tra-edit";
+import { modelFromD, type DialogMessages, type DialogModel } from "@bgforge/shared/dialog-model";
 import { parseTra } from "./driver-util";
 
 export interface FakeHost {

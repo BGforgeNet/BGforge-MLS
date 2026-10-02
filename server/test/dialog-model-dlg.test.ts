@@ -8,9 +8,9 @@
  */
 
 import { describe, expect, test } from "vitest";
-import { modelFromDlg, modelFromDlgs, type DlgModelInput } from "../../shared/dialog-model-dlg";
-import { nodeEditable } from "../../shared/dialog-editability";
-import { stateHeadLabel } from "../../shared/dialog-model";
+import { modelFromDlg, modelFromDlgs, type DlgModelInput } from "@bgforge/shared/dialog-model-dlg";
+import { nodeEditable } from "@bgforge/shared/dialog-editability";
+import { stateHeadLabel } from "@bgforge/shared/dialog-model";
 
 /** Two states: state 0 says @100 under a trigger and offers three replies; state 1 is a plain reply target. */
 function sampleDlg(): DlgModelInput {

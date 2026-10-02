@@ -30,6 +30,7 @@ import type {
     WorkspaceEdit,
 } from "vscode-languageserver/node";
 import type { IndexedSymbol } from "./symbol";
+import type { ScanProgress } from "./workspace-scanner";
 import type { NormalizedUri } from "./normalized-uri";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
 import type { StrRefSite } from "../ie-resources/strref-sites";
@@ -63,6 +64,15 @@ export interface FormatResult {
     edits: TextEdit[];
     /** Warning message to show to user (e.g., validation failure) */
     warning?: string;
+}
+
+/**
+ * A provider's stored context. The registry inits every provider before it serves a request, so a missing one
+ * is a wiring bug, refused by name rather than logged over while the request quietly does nothing.
+ */
+export function initializedContext(context: ProviderContext | undefined, provider: string): ProviderContext {
+    if (!context) throw new Error(`${provider} provider was used before its init`);
+    return context;
 }
 
 /**
@@ -100,6 +110,8 @@ export interface ProviderContext {
      * the parse.
      */
     scanAfter?: Promise<unknown>;
+    /** Where the startup scan reports how far it has got. */
+    scanProgress?: ScanProgress;
 }
 
 // =============================================================================

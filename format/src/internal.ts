@@ -8,7 +8,7 @@
  */
 
 // Tilde-delimited string scanning (WeiDU ~text~ / ~~~~~text~~~~~)
-export { scanTildeDelimiter } from "./format-utils";
+export { scanTildeDelimiter, weiduLineCommentStart } from "./format-utils";
 export type { TildeDelimiter } from "./format-utils";
 
 // Comment normalizers, shared across the tree formatters

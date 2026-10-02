@@ -9,7 +9,7 @@ import { describe, expect, it, beforeAll, vi } from "vitest";
 // Mock the server module to avoid LSP connection issues
 vi.mock("../../src/server", () => ({
     connection: {
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     },
 }));
@@ -17,13 +17,13 @@ vi.mock("../../src/server", () => ({
 // Mock LSP connection for static loader
 vi.mock("../../src/lsp-connection", () => ({
     getConnection: vi.fn(() => ({
-        console: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
+        console: { log: vi.fn(), info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() },
         sendDiagnostics: vi.fn(),
     })),
     initLspConnection: vi.fn(),
 }));
 
-import { initParser } from "../../../shared/parsers/weidu-tp2";
+import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { weiduTp2Provider } from "../../src/weidu-tp2/provider";
 import { localCompletion } from "../../src/weidu-tp2/ast-utils";
 import { defaultSettings } from "../../src/settings";

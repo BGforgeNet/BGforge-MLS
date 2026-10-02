@@ -8,7 +8,7 @@ export default defineConfig({
     clean: true,
     sourcemap: false,
     platform: "node",
-    target: "node20",
+    target: "node22",
     outDir: "out",
     // Emit .js (not .mjs): package.json is type:module and bin/exports point at
     // out/cli.js / out/index.js. Rolldown shares parser code between the two
@@ -20,13 +20,4 @@ export default defineConfig({
     // tsdown configs build fast enough never to trip it and leave the default alone; re-enable with
     // `checks: { pluginTimings: true }` when actually profiling this build.
     checks: { pluginTimings: false },
-    // Re-create CJS globals so any inlined CJS code resolves in the ESM bundle.
-    banner: {
-        js: [
-            `import { createRequire } from "module";`,
-            `const require = createRequire(import.meta.url);`,
-            `const __filename = require("url").fileURLToPath(import.meta.url);`,
-            `const __dirname = require("path").dirname(__filename);`,
-        ].join("\n"),
-    },
 });

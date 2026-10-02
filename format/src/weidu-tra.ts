@@ -9,12 +9,13 @@
  * Strings may be:
  *   - Tilde-delimited: ~text~ or ~~~~~text~~~~~ (five tildes = multi-tilde mode)
  *   - Double-quoted: "text"
+ *   - Percent-delimited: %text%
  *
  * Comments (`// ...` and `/* ... *\/`) are passed through with trailing
  * whitespace trimmed only.
  */
 
-import { stripBom, scanTildeDelimiter, type FormatOutput } from "./format-utils";
+import { stripBom, scanPercentString, scanTildeDelimiter, type FormatOutput } from "./format-utils";
 
 /** Matches the entry prefix: @<optional_whitespace><number><optional_whitespace>=<optional_whitespace> */
 const ENTRY_PREFIX_RE = /^(@)\s*(-?\d+)\s*=\s*/;
@@ -72,6 +73,12 @@ function scanEntryRest(text: string, pos: number): { rest: string; nextPos: numb
         } else if (text[pos] === '"') {
             parts.push(text.slice(lastFlush, pos));
             const strEnd = scanQuotedString(text, pos);
+            parts.push(text.slice(pos, strEnd));
+            pos = strEnd;
+            lastFlush = pos;
+        } else if (text[pos] === "%") {
+            parts.push(text.slice(lastFlush, pos));
+            const strEnd = scanPercentString(text, pos);
             parts.push(text.slice(pos, strEnd));
             pos = strEnd;
             lastFlush = pos;

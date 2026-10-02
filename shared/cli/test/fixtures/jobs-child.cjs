@@ -21,6 +21,11 @@ const files = fs
 let changed = 0;
 for (const file of files) {
     const content = fs.readFileSync(file, "utf-8");
+    // HANG_MARKER: a file containing "hang" leaves the child running forever, to exercise the parent's timeout.
+    if (content.includes("hang")) {
+        setInterval(() => {}, 1000);
+        return;
+    }
     if (content.includes("fail")) {
         process.stderr.write(`jobs-child: refusing ${file}\n`);
         process.exit(1);

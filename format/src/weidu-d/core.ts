@@ -7,13 +7,14 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-d";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-d";
 import {
     normalizeWhitespaceWeidu,
     throwOnParseError,
     tokenizeWeidu,
     WeiduTokenType,
     normalizeComment,
+    weiduLineCommentStart,
 } from "../format-utils";
 import { withNormalizedComment } from "../weidu-tp2/utils";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
@@ -64,7 +65,7 @@ function normalizeDelimitedString(text: string): string {
     const inner = text.slice(1, -1);
 
     // If has // comments, can't collapse
-    if (inner.includes("//")) {
+    if (weiduLineCommentStart(inner) !== -1) {
         return text;
     }
 
@@ -108,9 +109,20 @@ function normalizeTransitionText(text: string): string {
     return result.trim();
 }
 
+/** The fields whose string holds BAF code (layout is formatting); any other string is text the game shows. */
+const CODE_STRING_FIELDS = ["trigger", "action"];
+
+function isCodeString(node: SyntaxNode): boolean {
+    const parent = node.parent;
+    return (
+        parent !== null &&
+        CODE_STRING_FIELDS.some((field) => parent.childrenForFieldName(field).some((c) => c?.id === node.id))
+    );
+}
+
 // Get line length excluding comment
 function codeLengthOf(line: string): number {
-    const idx = line.indexOf("//");
+    const idx = weiduLineCommentStart(line);
     return idx !== -1 ? line.slice(0, idx).trimEnd().length : line.length;
 }
 
@@ -223,13 +235,29 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
         }
     };
 
+    // Where each text string (REPLY, JOURNAL) starts, relative to the node: tokens carry no tree, so a string
+    // token is matched to its node by offset.
+    const textStringStarts = new Set<number>();
+    const collectTextStrings = (n: SyntaxNode): void => {
+        if (n.type === SyntaxType.String) {
+            if (!isCodeString(n)) textStringStarts.add(n.startIndex - node.startIndex);
+            return;
+        }
+        for (const child of n.children) collectTextStrings(child);
+    };
+    collectTextStrings(node);
+
+    let tokenStart = 0;
     for (const token of tokens) {
+        const start = tokenStart;
+        tokenStart += token.text.length;
         if (token.type !== WeiduTokenType.Code) {
-            // String or comment
-            if (token.text.includes("\n")) {
+            // A text string stays whole, its newlines and indentation being what the game shows; a code string or
+            // a block comment spanning lines is re-indented line by line.
+            const isText = token.type === WeiduTokenType.String && textStringStarts.has(start);
+            if (token.text.includes("\n") && !isText) {
                 processMultiLineToken(token.text, false);
             } else {
-                // Single-line string/comment
                 if (currentLine && !currentLine.endsWith(" ")) {
                     currentLine += " ";
                 }
@@ -261,9 +289,11 @@ function reindentState(node: SyntaxNode, ctx: FormatContext): string {
     const baseRow = node.startPosition.row;
     const lines = node.text.split("\n");
 
-    // Build map of extra indent per line by walking AST
-    // Any line that continues a multi-line node from previous line gets +1
+    // A line continuing a multi-line CODE string (trigger, action) is indented one level past the line the
+    // string starts on. A line continuing a TEXT string is the text itself: its leading and trailing whitespace
+    // and its blank lines are what the game shows, so it is kept exactly as written.
     const extraIndent: number[] = Array.from<number>({ length: lines.length }).fill(0);
+    const insideText: boolean[] = Array.from<boolean>({ length: lines.length }).fill(false);
     // END is the last non-blank line of a state
     let endKeywordLine = lines.length - 1;
     while (endKeywordLine > 0 && !lines[endKeywordLine]?.trim()) {
@@ -272,19 +302,16 @@ function reindentState(node: SyntaxNode, ctx: FormatContext): string {
 
     function markContinuations(n: SyntaxNode) {
         // Only count top-level string nodes (not inner tilde_string etc)
-        const isString = n.type === SyntaxType.String;
-        const startLine = n.startPosition.row - baseRow;
-        const endLine = n.endPosition.row - baseRow;
-
-        if (isString && endLine > startLine && startLine >= 0) {
-            // This string spans lines
-            // Base depth is the extraIndent of the line where this string starts
-            const baseDepth = (startLine < extraIndent.length ? extraIndent[startLine] : 0) ?? 0;
-            for (let line = startLine + 1; line <= endLine; line++) {
-                if (line < extraIndent.length) {
-                    extraIndent[line] = Math.max(extraIndent[line] ?? 0, baseDepth + 1);
-                }
+        if (n.type === SyntaxType.String) {
+            const startLine = n.startPosition.row - baseRow;
+            const endLine = n.endPosition.row - baseRow;
+            const code = isCodeString(n);
+            const baseDepth = extraIndent[startLine] ?? 0;
+            for (let line = Math.max(startLine + 1, 0); line <= endLine && line < lines.length; line++) {
+                if (code) extraIndent[line] = Math.max(extraIndent[line] ?? 0, baseDepth + 1);
+                else insideText[line] = true;
             }
+            return;
         }
         for (const child of n.children) {
             markContinuations(child);
@@ -292,11 +319,15 @@ function reindentState(node: SyntaxNode, ctx: FormatContext): string {
     }
     markContinuations(node);
 
-    // Now reindent with the computed extra indents
     const result: string[] = [];
     let prevBlank = false;
 
     lines.forEach((line, i) => {
+        if (insideText[i]) {
+            result.push(line);
+            prevBlank = false;
+            return;
+        }
         const trimmed = line.trim();
         if (!trimmed) {
             if (!prevBlank && result.length > 0) {

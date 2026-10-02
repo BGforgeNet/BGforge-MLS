@@ -20,10 +20,22 @@ function init(modules: { typescript: typeof ts }): ts.server.PluginModule {
     let tdNames: ReadonlySet<string> | undefined;
     const runtime = resolveRuntimePath();
 
-    /** TD runtime names, used to filter them OUT of non-.td file completions. */
-    function getTdNames(): ReadonlySet<string> {
+    /**
+     * TD runtime names, used to filter them OUT of non-.td file completions. Completions work on without the
+     * filter when the runtime cannot be read, so that is logged rather than raised - once, as the result is cached.
+     */
+    function getTdNames(logger: ts.server.Logger | undefined): ReadonlySet<string> {
         if (tdNames === undefined) {
-            tdNames = loadTdNames(runtime.path, modules.typescript);
+            try {
+                tdNames = loadTdNames(runtime.path, modules.typescript);
+            } catch (error) {
+                const reason = error instanceof Error ? error.message : String(error);
+                logger?.info(
+                    `[td-plugin] cannot read TD runtime names from ${runtime.path}: ${reason}; ` +
+                        "TD API names will show in non-.td completions.",
+                );
+                tdNames = new Set();
+            }
         }
         return tdNames;
     }
@@ -57,7 +69,7 @@ function init(modules: { typescript: typeof ts }): ts.server.PluginModule {
                         }
 
                         // In non-.td files, filter out TD runtime names
-                        const names = getTdNames();
+                        const names = getTdNames(info.project?.projectService?.logger);
                         if (names.size === 0) return result;
                         return { ...result, entries: filterTdRuntimeCompletions(result.entries, names) };
                     };

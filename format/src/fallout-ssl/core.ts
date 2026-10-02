@@ -16,9 +16,15 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 // its format context.
 import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, formatSwitchStmt } from "./control-flow";
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
-import { SyntaxType } from "../../../shared/syntax-types/fallout-ssl";
+import { SyntaxType } from "@bgforge/shared/syntax-types/fallout-ssl";
 
-import { throwOnParseError, normalizeComment } from "../format-utils";
+import {
+    throwOnParseError,
+    normalizeComment,
+    falloutSslLineCommentStart,
+    tokenizeFalloutSsl,
+    WeiduTokenType,
+} from "../format-utils";
 import { canonicalKeyword } from "./canonical-keyword";
 // Comment normalization is shared across all formatters; re-export the imported
 // binding so existing `./core` importers (e.g. control-flow) keep their path.
@@ -91,10 +97,9 @@ function normalizePreprocessor(text: string): string {
     }
     const body = text.slice(0, tailStart);
 
-    // Trailing line comment: split at the first "//" with non-empty code
-    // before. Preprocessor lines have no string literals, so a literal
-    // `indexOf` is safe.
-    const slashIdx = body.indexOf("//");
+    // Trailing line comment: split at the first "//" with non-empty code before it. A `#define` body can hold a
+    // string literal (`"http://..."`), so the `//` is found by token rather than by substring.
+    const slashIdx = falloutSslLineCommentStart(body);
     if (slashIdx > 0) {
         const code = body.slice(0, slashIdx).trimEnd();
         const comment = body.slice(slashIdx);
@@ -129,6 +134,13 @@ function normalizePreprocessor(text: string): string {
     return text;
 }
 
+/** Replace tabs with the indent unit everywhere except inside string literals, whose tabs are content. */
+function expandTabsOutsideStrings(text: string): string {
+    return tokenizeFalloutSsl(text)
+        .map((token) => (token.type === WeiduTokenType.String ? token.text : token.text.replaceAll("\t", ctx.indent)))
+        .join("");
+}
+
 export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAULT_OPTIONS): FormatResult {
     throwOnParseError(node);
 
@@ -143,11 +155,6 @@ export function formatDocument(node: SyntaxNode, options: FormatOptions = DEFAUL
 }
 
 export function formatNode(node: SyntaxNode, depth: number): string {
-    // Handle ERROR nodes: preserve original text
-    if (node.type === SyntaxType.ERROR) {
-        return node.text;
-    }
-
     switch (node.type) {
         case SyntaxType.SourceFile: {
             const content = formatChildren(node, depth);
@@ -157,7 +164,7 @@ export function formatNode(node: SyntaxNode, depth: number): string {
             // starting position on input with internal `\n` runs, giving O(n²)
             // (CodeQL js/polynomial-redos). The leading-`/^\n+/` is anchored
             // and therefore linear.
-            const expanded = content.replaceAll("\t", ctx.indent).replace(/^\n+/, "");
+            const expanded = expandTabsOutsideStrings(content).replace(/^\n+/, "");
             let endIdx = expanded.length;
             while (endIdx > 0 && expanded.codePointAt(endIdx - 1) === 10) endIdx--;
             return expanded.slice(0, endIdx) + "\n";

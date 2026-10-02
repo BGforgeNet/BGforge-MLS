@@ -28,7 +28,7 @@ import { compileTsslToInt } from "./tssl/compile-int";
 import { relocateGeneratedDiagnostics } from "./core/generated-diagnostics";
 import * as weidu from "./weidu-compile";
 import { runBafDiagnostics } from "./weidu-baf/diagnostics";
-export { LSP_COMMAND_COMPILE as COMMAND_compile } from "../../shared/protocol";
+export { LSP_COMMAND_COMPILE as COMMAND_compile } from "@bgforge/shared/protocol";
 
 /**
  * Reports a failed transpile as a diagnostic on the source being edited; the popup stays for the compile
@@ -168,7 +168,8 @@ export async function compile(uri: string, langId: string, interactive: boolean,
         return;
     }
 
-    conlog(`Don't know how to compile ${langId} - ${uri}`);
+    // Every save of a file with nothing to compile it passes through here, so this is not news.
+    conlog(`Don't know how to compile ${langId} - ${uri}`, "debug");
     if (interactive) {
         showInfo(`Don't know how to compile ${langId} - ${uri}`);
     }

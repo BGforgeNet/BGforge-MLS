@@ -13,4 +13,5 @@ export type { BcsSymbols } from "./decompile";
 export { BcsCompileError, compileBaf, compileSymbolsFrom } from "./compile";
 export type { BcsCompileDiagnostic, BcsCompileSymbols, BcsSignatureRow, BcsTableSource } from "./compile";
 export type { BcsEngine } from "./signature";
+export { bcsEngineForScriptStyle } from "./engine-for-style";
 export type { BcsAction, BcsBlock, BcsObject, BcsResponse, BcsScript, BcsTrigger } from "./types";

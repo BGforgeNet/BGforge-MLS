@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { problemsOf } from "../../../compilers/ssl/src/problems";
+import { problemsOf } from "@bgforge/ssl";
 import type { ScriptView } from "../script-view/filesystem";
 import { compileForSave } from "./compiler";
 import { LISTING_MARKER, render } from "./document";

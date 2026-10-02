@@ -121,7 +121,7 @@ modules.
 | `animation/`                         | `@bgforge/animation`: IE animation-set resolution and conversion - see [animation/README.md](../animation/README.md)                       |
 | `compilers/`                         | `ssl`, `tssl`, `bcs` - see [compilers/README.md](../compilers/README.md)                                                                   |
 | `transpilers/`                       | `@bgforge/transpile` + `fgtp`, over the private `tbaf`, `td` and `common` packages - see [transpilers/README.md](../transpilers/README.md) |
-| `shared/`                            | Pure TypeScript used by several packages: parser management, the dialog model, protocol ids, syntax-type enums, CLI helpers                |
+| `shared/`                            | `@bgforge/shared` (private): parser management, the dialog model, protocol ids, syntax-type enums, CLI helpers                             |
 | `plugins/`                           | TypeScript Language Service plugins (`tssl-plugin`, `td-plugin`)                                                                           |
 | `grammars/`                          | Tree-sitter grammars - see [grammars/README.md](../grammars/README.md)                                                                     |
 | `syntaxes/`                          | TextMate grammars - see [syntaxes/README.md](../syntaxes/README.md)                                                                        |
@@ -145,32 +145,34 @@ Shared webview components and stylesheets are in `client/src/webview-ui/`; the e
 ```
 client ------> binary-editor ---> binary
    |---------> binary, image, animation ---> image
-   |---------> compilers/ssl, compilers/bcs              (relative source imports)
+   |---------> compilers/ssl                             (tsconfig paths)
+   |---------> compilers/bcs                             (relative source imports)
 
-server ------> format, binary/archive                    (tsconfig paths)
-   |---------> compilers/ssl, compilers/tssl,
-   |           compilers/bcs, transpilers                (relative source imports)
+server ------> format, binary/archive, compilers/ssl     (tsconfig paths)
+   |---------> compilers/tssl, compilers/bcs,
+   |           transpilers                               (relative source imports)
 
-compilers/tssl --> compilers/ssl, transpilers/common,
-                   server/out/*.json                     (generated data)
+compilers/tssl --> compilers/ssl                         (tsconfig paths)
+   |-----------> transpilers/common                      (relative source imports)
 transpilers ----> transpilers/tbaf, transpilers/td, transpilers/common
-plugins/tssl-plugin --> server/out/*.json                (generated data)
 plugins/td-plugin ....> server/out/td-runtime.d.ts       (read at run time)
 
-nearly every package --> shared/
+nearly every package --> shared                          (workspace dependency)
 ```
 
 Packages reach each other three ways, and none of them goes through another package's bundle:
 
 - **tsconfig `paths` to the sibling's `src/`**, which esbuild honours: `client/tsconfig.json` maps `@bgforge/binary`,
-  `@bgforge/image` and `@bgforge/animation`; `server/tsconfig.json` maps `@bgforge/format` and
-  `@bgforge/binary/archive`. `@bgforge/binary-editor` is a workspace dependency whose `main` is its source.
+  `@bgforge/image`, `@bgforge/animation` and `@bgforge/ssl`; `server/tsconfig.json` maps `@bgforge/format`,
+  `@bgforge/binary/archive` and `@bgforge/ssl`; `compilers/tssl/tsconfig.json` maps `@bgforge/ssl`. Each consumer's
+  vitest config aliases the same packages, and tsx reads only the tsconfig it is given, so the root scripts that run
+  TSSL source pass `--tsconfig compilers/tssl/tsconfig.json`. `@bgforge/binary-editor` and `@bgforge/shared` are
+  workspace dependencies whose entry points are their source, so they need no `paths` entry.
 - **Relative source imports** across the tree, whether or not the target package has an entry of its own - the
-  server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/ssl/src/`, the client reaching
-  `compilers/ssl/src/` and `compilers/bcs/src/`, everything reaching `shared/`.
-- **Build outputs as inputs**: the TS plugins and `compilers/tssl` import JSON that `scripts/generate-data.sh` writes
-  into `server/out/`, and `td-plugin` finds `td-runtime.d.ts`, which the server build copies there, by path at run
-  time. The data generation has to run before those builds.
+  server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/bcs/src/`, the client reaching
+  `compilers/bcs/src/`.
+- **A build output as an input**: `td-plugin` finds `td-runtime.d.ts`, which the server build copies into
+  `server/out/`, by path at run time.
 
 ## Boundaries
 
@@ -263,8 +265,9 @@ that package's README is the reference for usage and flags.
 
 ### SSL and TSSL CLIs
 
-`ssl` in `@bgforge/ssl` and `tssl` in `@bgforge/tssl` - see [compilers/README.md](../compilers/README.md). `ssl` is
-internal and unpublished; `tssl` is published.
+`ssl` in `@bgforge/ssl` and `tssl` in `@bgforge/tssl` - see [compilers/README.md](../compilers/README.md). Both are
+published; `tssl` bundles the SSL compiler rather than depending on the published package, so the two release in
+any order.
 
 ## Grammars and Data
 
@@ -284,7 +287,8 @@ JSON at build time - see [syntaxes/README.md](../syntaxes/README.md).
 ### Engine data
 
 Engine definitions flow from YAML in `server/data/` to JSON in `server/out/` at build time, which the server loads
-at startup and the TS plugins bundle. See [data-pipeline.md](data-pipeline.md).
+at startup, and to the engine-procedure JSON in `shared/data/`, which the TSSL compiler and plugin import. See
+[data-pipeline.md](data-pipeline.md).
 
 ## Build
 

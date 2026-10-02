@@ -25,16 +25,16 @@
     import { distinctStateIds, findStateInRoots, remapChoiceId } from "./state-lookup";
     import { translationHint, unresolvedRefCount } from "./translation-status";
     import { findCallers, type CallerRow } from "./find-callers";
-    import { classifyReachability } from "../../../../shared/dialog-reachability";
+    import { classifyReachability } from "@bgforge/shared/dialog-reachability";
     import type { DialogActions } from "./dialog-actions";
     import { decideReparse, type ReparseMessage } from "./reparse-decision";
     import { resolveJumpTarget } from "./jump-resolve";
     import { layoutFlow } from "./layout";
     import { deepRead } from "./deep-read";
-    import { modelToD } from "../../../../shared/dialog-d-serialize";
-    import * as ops from "../../../../shared/dialog-edit-ops";
-    import { hasSourceSpans, nodeDeletable, nodeEditable, nodeRenamable } from "../../../../shared/dialog-editability";
-    import { dlgAddress } from "../../../../shared/dialog-dlg-edit";
+    import { modelToD } from "@bgforge/shared/dialog-d-serialize";
+    import * as ops from "@bgforge/shared/dialog-edit-ops";
+    import { hasSourceSpans, nodeDeletable, nodeEditable, nodeRenamable } from "@bgforge/shared/dialog-editability";
+    import { dlgAddress } from "@bgforge/shared/dialog-dlg-edit";
     import { hasHost, postToHost } from "./host";
     import { isHostMessage } from "../../webview-utils";
     import {
@@ -47,7 +47,7 @@
         type DialogReaction,
         type DialogState,
         type DialogTarget,
-    } from "../../../../shared/dialog-model";
+    } from "@bgforge/shared/dialog-model";
 
     let { model }: { model: DialogModel } = $props();
 
@@ -323,8 +323,8 @@
         for (const id of ids) if (next.delete(id)) changed = true;
         if (changed) treeCollapsed = next;
     }
-    // Go to source (F4): ask the host to open the .ssl/.d text editor at this byte offset. The host owns the
-    // document and the byte->position conversion (see panel.ts revealSource).
+    // Go to source (F4): ask the host to open the .ssl/.d text editor at this offset. The host owns the
+    // document and the offset->position conversion (see panel.ts revealSource).
     function goToSource(sourceOffset: number): void {
         postToHost({ type: "revealSource", offset: sourceOffset });
     }

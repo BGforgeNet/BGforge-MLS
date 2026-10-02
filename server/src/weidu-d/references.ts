@@ -9,7 +9,7 @@
 import type { Location, Position } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import type { ReferencesIndex } from "../shared/references-index";
-import { parseWithCache } from "../../../shared/parsers/weidu-d";
+import { parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import { findLabelNodeAtPosition } from "./state-utils";
 import { findAllDialogLabelRefs } from "./reference-finder";
 

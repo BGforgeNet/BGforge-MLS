@@ -15,7 +15,7 @@
 import type { CompletionItem, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { classifyAtCursorBoundary } from "./comment-check";
-import { WEIDU_TP2_STANZAS } from "../../../shared/stanza-names";
+import { WEIDU_TP2_STANZAS } from "@bgforge/shared/stanza-names";
 
 /**
  * Valid completion item categories for WeiDU TP2.
@@ -117,62 +117,4 @@ export function detectCommentKind(
             return node.type === lineCommentType ? CommentKind.Comment : null;
         }) ?? CommentKind.None
     );
-}
-
-// ============================================
-// UTF-8 Safe Position Utilities
-// ============================================
-
-/**
- * Convert line/character position to byte offset, handling UTF-8 properly.
- *
- * In LSP, positions use UTF-16 code units (JavaScript string indices).
- * Tree-sitter uses byte offsets in UTF-8.
- *
- * @param text - Document text
- * @param line - 0-based line number
- * @param character - 0-based UTF-16 code unit offset within line
- * @returns Byte offset in UTF-8 encoding
- */
-export function getUtf8ByteOffset(text: string, line: number, character: number): number {
-    let currentLine = 0;
-    let lineStart = 0;
-
-    // Find the start of the target line
-    for (let i = 0; i < text.length; i++) {
-        if (currentLine === line) {
-            lineStart = i;
-            break;
-        }
-        if (text[i] === "\n") {
-            currentLine++;
-        }
-    }
-
-    // Handle case where line is beyond end of document
-    if (currentLine < line) {
-        return Buffer.byteLength(text, "utf8");
-    }
-
-    // Find the character position within the line
-    // character is in UTF-16 code units (JS string indices)
-    let charCount = 0;
-    for (let i = lineStart; i < text.length; i++) {
-        if (charCount === character) {
-            // Return byte offset up to this position
-            return Buffer.byteLength(text.substring(0, i), "utf8");
-        }
-        if (text[i] === "\n") {
-            // Reached end of line before reaching character position
-            // Return byte offset of newline plus remaining characters
-            const lineEndOffset = Buffer.byteLength(text.substring(0, i), "utf8");
-            return lineEndOffset + (character - charCount);
-        }
-        charCount++;
-    }
-
-    // Character is beyond end of document
-    // Return byte offset of document end plus remaining characters
-    const docEndOffset = Buffer.byteLength(text, "utf8");
-    return docEndOffset + (character - charCount);
 }

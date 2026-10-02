@@ -198,11 +198,7 @@ function inlineFunctionConditions(
     if (!returnExpr) return [ctx.trueCondition()];
 
     // Substitute params in return expression text
-    const paramMap = utils.buildParamMap(call, funcDecl, ctx.vars);
-    let returnText = returnExpr.getText();
-    paramMap.forEach((value, key) => {
-        returnText = returnText.replaceAll(new RegExp(`\\b${key}\\b`, "g"), value);
-    });
+    const returnText = utils.substituteVars(returnExpr.getText(), utils.buildParamMap(call, funcDecl, ctx.vars));
 
     // Parse the substituted return expression
     const expr = ctx.parseExpressionFromText(returnText);

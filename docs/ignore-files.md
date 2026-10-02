@@ -45,8 +45,8 @@ this list, is what actually holds.
 
 ## What ships in the npm tarballs
 
-The published packages - `@bgforge/mls-server`, `@bgforge/binary`, `@bgforge/format`, `@bgforge/transpile` and
-`@bgforge/tssl` - take the opposite shape: each `package.json` `files` field is an **allowlist**, so a tarball carries
+The published packages - `@bgforge/mls-server` and the libraries under _Releasing a library_ in
+[releasing.md](releasing.md) - take the opposite shape: each `package.json` `files` field is an **allowlist**, so a tarball carries
 only what that field names plus the files npm always includes. Neither `.gitignore` nor `.vscodeignore` affects them.
 
 ## Formatting exclusions
@@ -73,8 +73,9 @@ the two lists.
 The reach of that promise stops at `.gitignore`, which oxlint honours when it walks the tree. The generated
 tree-sitter declarations (`server/src/*/tree-sitter.d.ts`, `grammars/*/src/`) are gitignored build output, so no
 full-tree run ever reaches them however the lint config is written - linting them takes an explicit path argument.
-The asymmetry therefore covers generated files that are **tracked** (the `server/out/` data JSONs, the
-`shared/syntax-types/` modules), not gitignored build output.
+The asymmetry therefore covers generated source that is **tracked** (the `shared/syntax-types/` modules), not
+gitignored build output. The tracked data JSONs in `server/out/` and `shared/data/` are outside it too: oxlint does
+not read JSON, so the well-formedness guard above is their only check.
 
 ## Lint rule policy
 

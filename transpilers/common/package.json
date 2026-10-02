@@ -7,6 +7,7 @@
         "quick-lru": "catalog:"
     },
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "esbuild-wasm": "catalog:",
         "ts-morph": "catalog:"
     }

@@ -12,7 +12,7 @@
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { SPAWN_TIMEOUT_MS } from "../../shared/spawn-timeout";
+import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout";
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const EXTERNAL_ROOTS = [path.join(REPO_ROOT, "external/fallout"), path.join(REPO_ROOT, "external/infinity-engine")];

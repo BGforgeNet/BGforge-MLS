@@ -18,7 +18,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
-import { initParser, parseWithCache } from "../../shared/parsers/weidu-baf";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-baf";
 import { transpile } from "../src/index";
 import { REPO_ROOT } from "./repo-root";
 

@@ -33,3 +33,21 @@ export function surfaceWebviewRuntimeError(report: WebviewRuntimeErrorReport): v
     conlog(`${headline}${stackSuffix}`, "error");
     void vscode.window.showErrorMessage(`${report.editor} failed for ${report.file}: ${report.message}`);
 }
+
+/** A message's `type`, or its JS type when it has none. */
+function describeMessageType(message: unknown): string {
+    if (typeof message !== "object" || message === null || !("type" in message)) return typeof message;
+    return String((message as { type: unknown }).type);
+}
+
+/**
+ * Report a message outside a webview's protocol. It means the webview and its host disagree about the contract,
+ * which is a bug rather than input, so it is surfaced where a webview throw is - not acted on, and not dropped.
+ */
+export function reportUnrecognizedMessage(editor: string, file: string, message: unknown): void {
+    surfaceWebviewRuntimeError({
+        editor,
+        file,
+        message: `unrecognized message of type ${describeMessageType(message)}`,
+    });
+}

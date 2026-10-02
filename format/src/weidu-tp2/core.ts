@@ -43,6 +43,7 @@ import {
     isFunctionCall,
     isBodyContent,
     normalizeComment,
+    hasWeiduLineComment,
     normalizeWhitespace,
     withNormalizedComment,
     handleComment,
@@ -53,7 +54,7 @@ import { formatCopyAction } from "./copy";
 import { formatFunctionDef, formatFunctionCall } from "./functions";
 import { formatInnerAction, formatInnerPatch, formatReplaceBcsBlock } from "./inner";
 import { formatPredicateAction } from "./predicate";
-import { SyntaxType } from "../../../shared/syntax-types/weidu-tp2";
+import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 import { throwOnParseError } from "../format-utils";
 
 // ============================================
@@ -529,7 +530,7 @@ function tryAppendTopLevelInlineComment(result: string[], child: SyntaxNode, las
     const lastResultLines = lastResult.split("\n");
     const lastLine = lastResultLines[lastResultLines.length - 1];
 
-    if (!lastLine || lastLine.includes("//")) {
+    if (!lastLine || hasWeiduLineComment(lastLine)) {
         return false;
     }
 

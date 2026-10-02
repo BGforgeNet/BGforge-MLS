@@ -13,7 +13,7 @@
 // harness page's policy is not enforced (see build.mts); that is the live drive's job.
 import { chromium } from "playwright";
 import { parseTSSLSource } from "../../../../../server/src/tssl/dialog-source";
-import { modelFromSSL } from "../../../../../shared/dialog-model";
+import { modelFromSSL } from "@bgforge/shared/dialog-model";
 import { harnessPaths, makeChecker } from "./driver-util";
 
 // A minimal TSSL dialog with one conditional option, so the parse yields a real editable condition. The

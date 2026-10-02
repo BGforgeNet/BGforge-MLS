@@ -435,7 +435,7 @@ export class Symbols {
      * Empty query returns all symbols (capped at maxResults).
      * LSP clients perform their own fuzzy filtering on top of these results.
      */
-    searchWorkspaceSymbols(query: string, maxResults = 500, token?: CancellationToken): SymbolInformation[] {
+    searchWorkspaceSymbols(query: string, token?: CancellationToken, maxResults = 500): SymbolInformation[] {
         if (token?.isCancellationRequested) return [];
 
         const lowerQuery = query.toLowerCase();

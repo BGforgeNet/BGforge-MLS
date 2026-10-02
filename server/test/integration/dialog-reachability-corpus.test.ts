@@ -15,9 +15,9 @@ import { readFileSync } from "node:fs";
 import * as fg from "fast-glob";
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseDialog } from "../../src/dialog";
-import { initParser } from "../../../shared/parsers/fallout-ssl";
-import { modelFromSSL } from "../../../shared/dialog-model";
-import { classifyReachability } from "../../../shared/dialog-reachability";
+import { initParser } from "@bgforge/shared/parsers/fallout-ssl";
+import { modelFromSSL } from "@bgforge/shared/dialog-model";
+import { classifyReachability } from "@bgforge/shared/dialog-reachability";
 import { FALLOUT_FIXTURES } from "./test-helpers";
 
 const RP_DIALOGS = join(FALLOUT_FIXTURES, "Fallout2_Restoration_Project/scripts_src");

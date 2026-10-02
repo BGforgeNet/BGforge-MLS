@@ -5,7 +5,7 @@ import {
     rewriteMsgEntries,
     rewriteTraEntries,
     siblingTraCandidates,
-} from "../../shared/dialog-tra-edit";
+} from "@bgforge/shared/dialog-tra-edit";
 
 describe("rewriteTraEntries", () => {
     const TRA = `// Coran's lines

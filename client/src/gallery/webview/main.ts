@@ -4,14 +4,7 @@ import { installFatalErrorHandler, isHostMessage } from "../../webview-utils";
 import { TILE_SIZES } from "../../ie-resources/tile-sizes";
 import type { WebviewToHost } from "./messages";
 
-interface VsCodeApi {
-    postMessage(message: unknown): void;
-    getState(): unknown;
-    setState(state: unknown): void;
-}
-
-// @ts-expect-error -- acquireVsCodeApi is injected by the VSCode webview runtime
-const vscode: VsCodeApi = acquireVsCodeApi();
+const vscode = acquireVsCodeApi();
 
 const target = document.querySelector("#app");
 

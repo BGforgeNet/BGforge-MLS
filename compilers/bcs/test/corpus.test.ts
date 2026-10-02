@@ -3,7 +3,7 @@ import path from "node:path";
 import { beforeAll, describe, expect, test } from "vitest";
 import type { Parser } from "web-tree-sitter";
 import { BcsCompileError, compileBaf, decompileBcs, readBcs, writeBcs } from "@bgforge/bcs";
-import { getParser, initParser } from "../../../shared/parsers/weidu-baf";
+import { getParser, initParser } from "@bgforge/shared/parsers/weidu-baf";
 import { readIdsTables } from "./ids-tables";
 
 /**
