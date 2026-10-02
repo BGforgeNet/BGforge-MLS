@@ -138,6 +138,7 @@ Supported animation formats are BAM and FRM. PNG import/export is available, as 
 ### Image gallery
 
 Game and workspace image gallery. IE games only. Launch with commands:
+
 - `BGforge: Game Image Gallery` browses the images of the game at `bgforge.weidu.gamePath`.
 - `BGforge: Workspace Image Gallery` browses the open folder.
 
