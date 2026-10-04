@@ -22,7 +22,7 @@ import { type LanguageClient, type ExecuteCommandParams, ExecuteCommandRequest }
 import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "@bgforge/shared/languages";
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "@bgforge/shared/protocol";
 import type { DialogMessages } from "@bgforge/shared/dialog-model";
-import { buildDialogHostHtml } from "./webview-host-html";
+import { buildDialogHostHtml, postDialogAssets } from "./webview-host-html";
 import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
 import { handleSharedDialogMessage } from "./shared-host-messages";
 import { reportUnrecognizedMessage } from "../webview-error";
@@ -100,6 +100,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
             if (handleSharedDialogMessage(raw, path.basename(document.uri.fsPath))) return;
             switch (raw.type) {
                 case "ready":
+                    postDialogAssets(panel.webview, this.context.extensionUri);
                     core.handleReady();
                     break;
                 // "Go to source" (F4 in the tree): open the text editor at the state's/option's offset.

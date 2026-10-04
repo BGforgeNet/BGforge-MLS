@@ -5,30 +5,41 @@
  */
 
 import ELK from "elkjs/lib/elk.bundled.js";
-import elkWorkerSource from "elk-worker-source";
+import { dialogAssets } from "./dialog-assets";
 import type { FlowGraph } from "./model-to-flow";
 
 /**
- * Lay out in a real Worker where the platform has one.
+ * Lay out in a real Worker where the platform has one, built on first use.
  *
  * Constructed with no options, elkjs falls back to an in-process FAKE worker and runs the whole layout on
  * the calling thread - a few hundred milliseconds for a companion-sized dialog, during which the webview
- * cannot paint or accept input. The worker script is embedded in the bundle (see
- * scripts/esbuild-elk-worker.mjs) and handed over as a blob: URL, because a webview's resource URLs are a
- * different origin and a Worker must be same-origin; `worker-src blob:` in the panel's CSP admits it.
+ * cannot paint or accept input. The worker script arrives from the host after "ready" (see dialog-assets.ts)
+ * and is handed over as a blob: URL, because a webview's resource URLs are a different origin and a Worker
+ * must be same-origin; `worker-src blob:` in the panel's CSP admits it.
  *
  * Node (the unit tests) has no `Worker` global, so there the fallback stands and the layout runs inline -
  * correct, just synchronous, which is what those tests assert against. The browser path is covered by the
  * render harness, which is the only tier that can observe the difference.
  */
-function layoutEngine(): InstanceType<typeof ELK> {
-    if (typeof Worker === "undefined") return new ELK();
-    return new ELK({
-        workerFactory: () => new Worker(URL.createObjectURL(new Blob([elkWorkerSource], { type: "text/javascript" }))),
-    });
+let engine: Promise<InstanceType<typeof ELK>> | undefined;
+function layoutEngine(): Promise<InstanceType<typeof ELK>> {
+    engine ??=
+        typeof Worker === "undefined"
+            ? Promise.resolve(new ELK())
+            : dialogAssets().then(({ elkWorker }) => {
+                  const url = URL.createObjectURL(new Blob([elkWorker], { type: "text/javascript" }));
+                  return new ELK({ workerFactory: () => new Worker(url) });
+              });
+    return engine;
 }
 
-const elk = layoutEngine();
+/**
+ * Start the layout worker as soon as its script arrives, so the first Graph view does not wait for it to load.
+ * A failure is not reported here: the layout that needs the engine awaits the same promise and reports it.
+ */
+export function prewarmLayout(): void {
+    layoutEngine().catch(() => {});
+}
 
 /**
  * Edge count at which `considerModelOrder` stops paying for itself.
@@ -122,6 +133,7 @@ export async function layoutFlow(graph: FlowGraph): Promise<void> {
         edges: graph.edges.map((e) => ({ id: e.id, sources: [e.sourceHandle ?? e.source], targets: [e.target] })),
     };
 
+    const elk = await layoutEngine();
     const res = await elk.layout(elkGraph);
     const byId = new Map(graph.nodes.map((n) => [n.id, n]));
     for (const c of res.children ?? []) {

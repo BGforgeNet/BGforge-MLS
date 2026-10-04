@@ -22,12 +22,10 @@ await build({
     write: true,
     outdir,
     logLevel: "info",
-    // Embed the tokenizer's assets exactly as the production webview build does
-    // (scripts/esbuild-web-tree-sitter.mjs) - so this harness bundles them the same way the shipped webview
-    // does, and cannot pass while production's bundling breaks. The tokenizer is now TextMate
-    // (vscode-textmate + oniguruma): the .wasm loader embeds onig.wasm as bytes; the grammar JSONs load
-    // through esbuild's default json loader. The .scm loader and the web-tree-sitter node stub are retained
-    // from the shared helper but no longer exercised here (nothing imports web-tree-sitter).
+    // The shared loaders (scripts/esbuild-web-tree-sitter.mjs). The .wasm loader embeds onig.wasm as bytes,
+    // which harness-main.ts posts to the page in place of the host the production panel gets it from; the
+    // grammar JSONs load through esbuild's default json loader, as in production. The .scm loader and the
+    // web-tree-sitter node stub are retained from the shared helper but no longer exercised here.
     loader: webTreeSitterLoaders,
     plugins: [
         esbuildSvelte({ compilerOptions: { dev: true, css: "injected" }, filterWarnings: dropThirdPartyWarnings }),

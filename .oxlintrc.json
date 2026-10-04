@@ -463,6 +463,13 @@
             }
         },
         {
+            // Webview entries bundle as IIFE (scripts/build-webviews.mjs), which cannot carry a top-level await.
+            "files": ["client/src/*/webview/main.ts"],
+            "rules": {
+                "unicorn/prefer-top-level-await": "off"
+            }
+        },
+        {
             // `x | 0` (32-bit truncation) and `x >>> 0` (unsigned 32-bit coercion) are
             // deliberate binary-codec idioms; `Math.trunc` is not equivalent at the bytecode
             // level. Applies inside `binary/` and `image/` (the FRM/BAM parsers and the

@@ -1,3 +1,5 @@
+import { copyFile, mkdir } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { build } from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
 import { stubNodeOnlyImports, webTreeSitterLoaders } from "./esbuild-web-tree-sitter.mjs";
@@ -20,11 +22,9 @@ await build({
     sourcemap: dev,
     minify,
     logLevel: "info",
-    // The dialog webview embeds the oniguruma wasm its TextMate highlighter loads (see
-    // webview/highlight/textmate.ts) through the .wasm-as-bytes loader. The .scm loader and the Node-import
-    // stub are inert for every current entry - the tree-sitter tokenizer they served was retired - and stay
-    // only because the helper is shared with the dialog render harness's build. The binary-editor and
-    // image-editor entries import none of these, so all of it is a no-op for them.
+    // Inert for every current entry: the dialog webview's oniguruma wasm is copied beside the bundle below,
+    // not embedded, and the .scm loader and the Node-import stub served the retired tree-sitter tokenizer. They
+    // stay because the helper is shared with the dialog render harness's build, which still embeds the wasm.
     loader: webTreeSitterLoaders,
     // Keep esbuild-svelte in its default css: "external" mode. Component <style> blocks (e.g. bits-ui's
     // Select.Viewport in the binary editor) are then emitted to a separate .css file the webview never loads,
@@ -37,8 +37,15 @@ await build({
             filterWarnings: dropThirdPartyWarnings,
         }),
         stubNodeOnlyImports,
-        // The dialog webview lays its graph out in a Worker built from this embedded source; the binary and
-        // image entries import nothing from it, so the plugin never fires for them.
+        // Redirects layout.ts's elkjs import to the API-only entry (the layout engine runs in the worker below).
         elkWorkerAsText,
     ],
 });
+
+// The dialog webview's two large payloads, which the host posts to it after "ready" rather than the bundle
+// embedding them (client/src/dialog-editor/webview/dialog-assets.ts says why). Names mirror
+// client/src/dialog-editor/dialog-asset-files.ts, pinned by client/test/dialog-webview-bundle.test.ts.
+const fromClient = createRequire(new URL("../client/package.json", import.meta.url));
+await mkdir("client/out/dialog-editor/webview", { recursive: true });
+await copyFile(fromClient.resolve("elkjs/lib/elk-worker.min.js"), "client/out/dialog-editor/webview/elk-worker.js");
+await copyFile(fromClient.resolve("vscode-oniguruma/release/onig.wasm"), "client/out/dialog-editor/webview/onig.wasm");

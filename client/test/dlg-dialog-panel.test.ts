@@ -69,7 +69,11 @@ vi.mock("vscode", () => ({
         },
     },
 }));
-vi.mock("../src/dialog-editor/webview-host-html", () => ({ buildDialogHostHtml: () => "<html></html>" }));
+const { postDialogAssetsMock } = vi.hoisted(() => ({ postDialogAssetsMock: vi.fn() }));
+vi.mock("../src/dialog-editor/webview-host-html", () => ({
+    buildDialogHostHtml: () => "<html></html>",
+    postDialogAssets: postDialogAssetsMock,
+}));
 
 import { buildDlg } from "@bgforge/binary";
 import { DlgDialogEditorProvider, type DlgDocument } from "../src/dialog-editor/dlg-panel";
@@ -262,6 +266,18 @@ describe("DlgDialogEditorProvider", () => {
         const model = h.posted.find((p) => p.type === "model")?.model;
         expect(model?.sourceLang).toBe("dlg");
         expect(model?.roots).toHaveLength(1);
+    });
+
+    // The bundle no longer carries the graph worker or the regex wasm; without them on "ready" the graph never
+    // lays out and the code fields stay flat.
+    test("sends the webview its layout and colouring assets on ready", async () => {
+        const h = harness();
+        await h.provider.resolveCustomEditor(h.document as never, h.panel, {} as never);
+        postDialogAssetsMock.mockClear();
+
+        h.ready();
+
+        expect(postDialogAssetsMock).toHaveBeenCalledWith(h.panel.webview, expect.anything());
     });
 
     test("the model is read-only, because a DLG has no source text to splice", async () => {

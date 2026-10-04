@@ -26,7 +26,7 @@ import { handleSharedDialogMessage } from "./shared-host-messages";
 import { reportUnrecognizedMessage } from "../webview-error";
 import type { StrrefResolver } from "../ie-resources/game-lookups";
 import { writeDlgFromModel } from "./dlg-write";
-import { buildDialogHostHtml } from "./webview-host-html";
+import { buildDialogHostHtml, postDialogAssets } from "./webview-host-html";
 
 /**
  * The game lookups the editor needs. `strref` is `registerIeResources`'s own resolver, taken in its existing
@@ -234,6 +234,7 @@ export class DlgDialogEditorProvider implements vscode.CustomEditorProvider<DlgD
             if (handleSharedDialogMessage(raw, path.basename(document.uri.path))) return;
             switch (raw.type) {
                 case "ready":
+                    postDialogAssets(panel.webview, this.context.extensionUri);
                     this.postModel(document, post);
                     break;
                 // The webview offers "Open game" when strrefs could not resolve. It cannot run a command

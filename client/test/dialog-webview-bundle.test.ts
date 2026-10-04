@@ -1,11 +1,10 @@
 /**
  * Composition guard for the dialog editor's webview bundle.
  *
- * The webview lays its graph out in a Worker built from elkjs's worker script, which the build
- * embeds as text (scripts/esbuild-elk-worker.mjs). `elkjs/lib/elk.bundled.js` carries its OWN
- * inline copy of that same engine, so importing both ships the ELK engine twice - about 3.4 MB
- * of extra JS the webview's main thread must compile before it can paint. The API-only entry
- * (`elk-api.js`, ~10 KB) is what a caller supplying its own workerFactory needs.
+ * The webview lays its graph out in a Worker built from elkjs's worker script, which the host posts to it
+ * after "ready" along with the regex engine's wasm (webview/dialog-assets.ts): compiled into the bundle, the
+ * two cost the panel about half its boot. `elkjs/lib/elk.bundled.js` carries a further inline copy of the
+ * engine; the API-only entry (`elk-api.js`, ~10 KB) is what a caller supplying its own workerFactory needs.
  *
  * Asserted against the real production plugin set rather than the checked-in bundle, so the
  * guard holds with no build step and cannot go stale against client/out.
@@ -14,10 +13,12 @@
 import { describe, expect, it } from "vitest";
 import { build } from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
+import fs from "fs";
 import path from "path";
 import { stubNodeOnlyImports, webTreeSitterLoaders } from "../../scripts/esbuild-web-tree-sitter.mjs";
 import { elkWorkerAsText } from "../../scripts/esbuild-elk-worker.mjs";
 import { dropThirdPartyWarnings } from "../../scripts/esbuild-svelte-warnings.mjs";
+import { DIALOG_ASSET_DIR, DIALOG_ASSET_FILES } from "../src/dialog-editor/dialog-asset-files";
 
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 
@@ -44,12 +45,18 @@ async function dialogBundleInputs(): Promise<string[]> {
 }
 
 describe("dialog webview bundle composition", () => {
-    it("ships exactly one copy of the ELK engine", async () => {
+    it("embeds neither the ELK engine nor the regex wasm, only the ELK API", async () => {
         const inputs = await dialogBundleInputs();
 
-        // The worker script - the copy that is actually executed - must be there.
-        expect(inputs.some((i) => i.includes("elk-worker.min.js"))).toBe(true);
-        // elk.bundled.js is a SECOND copy of the same engine; the API shim is what belongs here.
-        expect(inputs.filter((i) => i.includes("elk.bundled.js"))).toEqual([]);
+        expect(inputs.filter((i) => /elk-worker|elk\.bundled|onig\.wasm/.test(i))).toEqual([]);
+        expect(inputs.some((i) => i.includes("elk-api.js"))).toBe(true);
     }, 60_000);
+
+    // The host reads these files from where the build copies them; neither side can import the other's list.
+    it("copies each posted asset to the name the host reads", () => {
+        const script = fs.readFileSync(path.join(repoRoot, "scripts/build-webviews.mjs"), "utf8");
+        for (const { from, to } of Object.values(DIALOG_ASSET_FILES)) {
+            expect(script).toContain(`fromClient.resolve("${from}"), "${DIALOG_ASSET_DIR}/${to}"`);
+        }
+    });
 });

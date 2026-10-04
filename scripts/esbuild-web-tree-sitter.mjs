@@ -6,8 +6,8 @@
 
 /**
  * Asset loaders, so an imported asset is embedded in the bundle rather than fetched: `.wasm` as raw bytes
- * (the dialog highlighter's oniguruma engine), `.scm` as a string (no current importer). Embedding keeps the
- * webview off a network fetch, so the CSP needs no connect-src. A loader only fires on a real import.
+ * (the dialog highlighter's oniguruma engine, imported by the render harness only - the panel gets it from its
+ * host), `.scm` as a string (no current importer). A loader only fires on a real import.
  */
 export const webTreeSitterLoaders = { ".wasm": "binary", ".scm": "text" };
 

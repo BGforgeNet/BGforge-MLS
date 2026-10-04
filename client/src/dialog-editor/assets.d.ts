@@ -1,10 +1,10 @@
 /**
  * Ambient types for the non-JS assets the dialog editor's bundles import directly.
  *
- * esbuild turns the `*.wasm` imports into inline data at build time via its `binary` loader (see the `loader`
- * maps in scripts/build-webviews.mjs and test/harness/build.mts), so nothing is fetched at runtime and the
- * shape below is what the bundle actually holds. tsc has no such loader and would otherwise report the
- * imports as unresolved modules.
+ * esbuild turns a `*.wasm` import into inline data at build time via its `binary` loader (the render
+ * harness's build, test/harness/build.mts - the production webview receives the wasm from its host instead),
+ * so the shape below is what that bundle holds. tsc has no such loader and would otherwise report the import
+ * as an unresolved module.
  */
 
 declare module "*.wasm" {
@@ -23,7 +23,7 @@ declare module "*.css";
  * A virtual specifier resolved by scripts/esbuild-elk-worker.mjs to elkjs's worker script, loaded through
  * esbuild's `text` loader. It names no file on disk, which is what lets this declaration stand rather than
  * losing to the package's own types (those describe the worker as a class, not as the source text).
- * layout.ts blob-constructs a Worker from it.
+ * Imported by the render harness only, which posts it to the page as the host would.
  */
 declare module "elk-worker-source" {
     const source: string;

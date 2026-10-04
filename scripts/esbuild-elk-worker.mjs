@@ -1,7 +1,7 @@
 /**
- * Shared esbuild plugin for embedding elkjs's layout worker - used by the production webview build
+ * Shared esbuild plugin for elkjs in the dialog editor - used by the production webview build
  * (scripts/build-webviews.mjs) and the dialog render harness (client/src/dialog-editor/test/harness/
- * build.mts), so the two agree on how the worker reaches the page.
+ * build.mts), so the two agree on which ELK entry the page runs.
  */
 
 import { readFile } from "node:fs/promises";
@@ -22,12 +22,10 @@ const ELK_WORKER_FILE = "elkjs/lib/elk-worker.min.js";
 const ELK_API_ENTRY = "elkjs/lib/elk-api.js";
 
 /**
- * Resolve `elk-worker-source` to elkjs's worker script and load it as TEXT, so the dialog editor can hand
- * its source to `new Worker` through a blob: URL.
- *
- * A webview's own resources are served from a different origin than the page, and a Worker script must be
- * same-origin - so the worker cannot be loaded by URL and has to be embedded and blob-constructed instead.
- * The `.wasm`/`.scm` assets are embedded for the same reason (see esbuild-web-tree-sitter.mjs).
+ * Resolve `elk-worker-source` to elkjs's worker script and load it as TEXT. Only the render harness imports
+ * it, to post to its host-less page the worker source a panel's host posts (webview-host-html.ts
+ * postDialogAssets); layout.ts hands that source to `new Worker` through a blob: URL, because a webview's own
+ * resources are a different origin than the page and a Worker script must be same-origin.
  *
  * Since that worker carries the engine, this also redirects `elkjs/lib/elk.bundled.js` - which layout.ts
  * imports for the ELK class - to the API-only `elkjs/lib/elk-api.js`. elk.bundled.js embeds a SECOND copy

@@ -7,7 +7,8 @@ import { postToHost } from "./host";
 import { SLOW_FRAME_MS, installFatalErrorHandler, observeSlowFrames } from "../../webview-utils";
 import { startTextmate } from "./highlight/textmate";
 import type { IRawGrammar } from "vscode-textmate";
-import onigWasm from "vscode-oniguruma/release/onig.wasm";
+import { decodeBase64, dialogAssets } from "./dialog-assets";
+import { prewarmLayout } from "./layout";
 import bafGrammarJson from "../../../../syntaxes/weidu-baf.tmLanguage.json";
 import sslGrammarJson from "../../../../syntaxes/fallout-ssl.tmLanguage.json";
 import docstringGrammarJson from "../../../../syntaxes/bgforge-mls-docstring.tmLanguage.json";
@@ -35,6 +36,8 @@ observeSlowFrames(SLOW_FRAME_MS, (ms) => postToHost({ type: "slowFrame", ms }));
 
 if (target) {
     mount(App, { target });
+    // Listen for the host's assets before saying "ready", which is what makes it send them.
+    const assets = dialogAssets();
     // Tell the host the webview is ready to receive the model.
     postToHost({ type: "ready" });
 
@@ -42,23 +45,45 @@ if (target) {
     // condition/action fields as a progressive enhancement, so it must never gate first paint or blank the
     // panel if it fails - a failure is a warning naming why the fields stay uncoloured. One engine (vscode-textmate + oniguruma) runs every dialog language's grammar; the
     // editor colours all of them through these same grammars, so the webview is parity by construction.
-    // onig.wasm is embedded via the esbuild binary loader and the grammar JSONs via the default json loader
-    // (all in-bundle, nothing fetched), so the CSP needs only 'wasm-unsafe-eval' to compile the regex engine
-    // and no connect-src. tokenize() returns [] until this resolves; fields render flat until then, then
-    // re-colour. The SSL grammar's include chain reaches the docstring grammar, so it is registered too (a
-    // docstring never appears in a condition, but the grammar can reference it). The .json files ARE compiled
-    // TextMate grammars, but resolveJsonModule infers a structural literal type that does not unify with
-    // IRawGrammar's index-signature interfaces; the Registry consumes them unchanged, so cast at this boundary.
-    startTextmate(
-        onigWasm,
-        [
-            { scopeName: "source.weidu-baf", grammar: bafGrammarJson as unknown as IRawGrammar },
-            { scopeName: "source.fallout-ssl", grammar: sslGrammarJson as unknown as IRawGrammar },
-            { scopeName: "source.bgforge-mls-docstring", grammar: docstringGrammarJson as unknown as IRawGrammar },
-            { scopeName: "source.dialog-tsexpr", grammar: tsExprGrammarJson as unknown as IRawGrammar },
-        ],
-        { baf: "source.weidu-baf", ssl: "source.fallout-ssl", ts: "source.dialog-tsexpr" },
-        (reason) =>
-            postToHost({ type: "notify", level: "warn", text: `Condition and action colouring is off: ${reason}` }),
-    );
+    // onig.wasm arrives from the host after "ready" (see dialog-assets.ts) and the grammar JSONs are bundled
+    // through the default json loader (nothing fetched), so the CSP needs only 'wasm-unsafe-eval' to compile
+    // the regex engine and no connect-src. tokenize() returns [] until this resolves; fields render flat until
+    // then, then re-colour. The SSL grammar's include chain reaches the docstring grammar, so it is registered
+    // too (a docstring never appears in a condition, but the grammar can reference it). The .json files ARE
+    // compiled TextMate grammars, but resolveJsonModule infers a structural literal type that does not unify
+    // with IRawGrammar's index-signature interfaces; the Registry consumes them unchanged, so cast here.
+    //
+    // Both this and the layout worker wait for an idle moment: the host posts the assets just before the
+    // model, and decoding the wasm and starting the worker first would push the first tree render back.
+    const warn = (reason: string): void =>
+        postToHost({ type: "notify", level: "warn", text: `Condition and action colouring is off: ${reason}` });
+    const whenIdle = (task: () => void): void => void requestIdleCallback(task, { timeout: 500 });
+    // An async function rather than top-level await: the bundle is an IIFE, which cannot carry one.
+    const enhance = async (): Promise<void> => {
+        let onigWasm: string;
+        try {
+            ({ onigWasm } = await assets);
+        } catch (error) {
+            warn(error instanceof Error ? error.message : String(error));
+            return;
+        }
+        whenIdle(() => {
+            prewarmLayout();
+            startTextmate(
+                decodeBase64(onigWasm),
+                [
+                    { scopeName: "source.weidu-baf", grammar: bafGrammarJson as unknown as IRawGrammar },
+                    { scopeName: "source.fallout-ssl", grammar: sslGrammarJson as unknown as IRawGrammar },
+                    {
+                        scopeName: "source.bgforge-mls-docstring",
+                        grammar: docstringGrammarJson as unknown as IRawGrammar,
+                    },
+                    { scopeName: "source.dialog-tsexpr", grammar: tsExprGrammarJson as unknown as IRawGrammar },
+                ],
+                { baf: "source.weidu-baf", ssl: "source.fallout-ssl", ts: "source.dialog-tsexpr" },
+                warn,
+            );
+        });
+    };
+    void enhance();
 }

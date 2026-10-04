@@ -9,7 +9,9 @@
 
 import * as vscode from "vscode";
 import { buildDialogWebviewHtml } from "./dialog-webview-html";
-import { generateNonce, getCachedJsAsset } from "../webview-assets";
+import type { DialogAssetsMessage } from "./webview/dialog-assets";
+import { generateNonce, getCachedBase64Asset, getCachedJsAsset } from "../webview-assets";
+import { DIALOG_ASSET_DIR, DIALOG_ASSET_FILES } from "./dialog-asset-files";
 
 export function buildDialogHostHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     const base = vscode.Uri.joinPath(extensionUri, "client", "out", "dialog-editor", "webview");
@@ -20,4 +22,25 @@ export function buildDialogHostHtml(webview: vscode.Webview, extensionUri: vscod
         "client/out/dialog-editor/webview/main.js",
     );
     return buildDialogWebviewHtml({ cspSource: webview.cspSource, cssUri, nonce: generateNonce(), scriptBody });
+}
+
+/**
+ * Post the graph-layout worker and the regex wasm, which the bundle no longer embeds (see the webview's
+ * dialog-assets.ts). Sent on every "ready": a reloaded webview starts with nothing.
+ */
+export function postDialogAssets(webview: vscode.Webview, extensionUri: vscode.Uri): void {
+    const message: DialogAssetsMessage = {
+        type: "assets",
+        elkWorker: getCachedJsAsset(
+            "dialog-elk-worker",
+            extensionUri.fsPath,
+            `${DIALOG_ASSET_DIR}/${DIALOG_ASSET_FILES.elkWorker.to}`,
+        ),
+        onigWasm: getCachedBase64Asset(
+            "dialog-onig-wasm",
+            extensionUri.fsPath,
+            `${DIALOG_ASSET_DIR}/${DIALOG_ASSET_FILES.onigWasm.to}`,
+        ),
+    };
+    void webview.postMessage(message);
 }

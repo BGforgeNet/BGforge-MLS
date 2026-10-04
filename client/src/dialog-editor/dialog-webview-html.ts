@@ -32,11 +32,11 @@ export function buildDialogWebviewHtml(opts: DialogWebviewHtmlOptions): string {
     // block them and nodes would stack at the origin. script-src is nonce + 'wasm-unsafe-eval':
     // the TextMate highlighter's oniguruma engine is WebAssembly, and WebAssembly compilation is
     // gated by script-src, so a nonce alone leaves the fields flat. No connect-src is needed -
-    // the wasm is embedded in the script bundle, not fetched (see webview/main.ts).
+    // the wasm arrives as a host message, not a fetch (see webview/dialog-assets.ts).
     //
     // worker-src admits blob: for the graph layout worker. elkjs lays out on the calling thread unless it is
     // constructed with one, which froze the webview for the length of the layout; its worker script is
-    // embedded in the bundle and handed to `new Worker` as a blob: URL, since a webview resource URL is a
+    // posted by the host and handed to `new Worker` as a blob: URL, since a webview resource URL is a
     // different origin and a Worker must be same-origin. Workers do not fall back to script-src, so without
     // this directive `default-src 'none'` blocks it.
     const csp =

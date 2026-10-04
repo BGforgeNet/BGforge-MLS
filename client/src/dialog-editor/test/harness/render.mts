@@ -734,8 +734,8 @@ check(
 // measurement, on a value long enough to wrap.
 //
 // This does NOT cover the CSP: the harness page's policy is not enforced by Chromium (see build.mts), and
-// the wasm is embedded rather than fetched. Whether the real panel may compile the grammar at all is
-// answerable only by driving the live host.
+// the page posts the wasm to itself rather than receiving it from a host. Whether the real panel may compile
+// the grammar at all is answerable only by driving the live host.
 await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 460, height: 800 });
 await postModel();

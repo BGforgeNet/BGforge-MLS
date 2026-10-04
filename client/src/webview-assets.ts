@@ -6,6 +6,7 @@ type AssetCacheEntry = {
     extensionPath: string;
     html?: string;
     js?: string;
+    base64?: string;
 };
 
 const assetCache = new Map<string, AssetCacheEntry>();
@@ -40,6 +41,13 @@ export function getCachedJsAsset(cacheKey: string, extensionPath: string, relati
         cacheEntry.js = loadAsset(extensionPath, relativePath);
     }
     return cacheEntry.js;
+}
+
+/** A binary asset as base64, the form a webview message carries reliably (see the dialog editor's assets). */
+export function getCachedBase64Asset(cacheKey: string, extensionPath: string, relativePath: string): string {
+    const cacheEntry = getCacheEntry(cacheKey, extensionPath);
+    cacheEntry.base64 ??= fs.readFileSync(path.join(extensionPath, relativePath)).toString("base64");
+    return cacheEntry.base64;
 }
 
 /**
