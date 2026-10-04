@@ -141,6 +141,7 @@
         // a plain Map per message instead cost O(n) each, quadratic over an install's five-figure list.
         thumbnails.set(message.id, message.dataUri);
         if (message.directional === true) directional.add(message.id);
+        post({ type: "thumbnailSeen" });
     }
 
     $effect(() => {

@@ -166,8 +166,21 @@ describe("ThumbnailPump", () => {
     describe("scheduling", () => {
         const items = (...names: string[]) => names.map((n) => `${n}.bam`);
         const stampEach = { stamp: vi.fn((id: string) => `s:${id}`) };
-        const answer = (pump: ThumbnailPump, request: GalleryRequest) =>
+        /** The worker answers, and the webview takes it off the channel straight away. */
+        const answer = (pump: ThumbnailPump, request: GalleryRequest) => {
             pump.handle({ id: request.id, kind: "thumbnail", item: request.item, dataUri: `d:${request.item}` });
+            pump.seen();
+        };
+        /** The worker answers everything it is given, and the webview confirms none of it. */
+        const answerUnseen = (pump: ThumbnailPump, sent: GalleryRequest[]) => {
+            // `sent` grows as each answer frees a slot, so answer until the pump has nothing left to send.
+            let answered = 0;
+            while (answered < sent.length) {
+                const request = sent[answered++]!;
+                pump.handle({ id: request.id, kind: "thumbnail", item: request.item, dataUri: "d" });
+            }
+        };
+        const twelve = items(..."ABCDEFGHIJKL");
 
         it("holds a few jobs at the worker and sends the next as each is answered", () => {
             const { pump, sent } = harness(stampEach);
@@ -195,6 +208,42 @@ describe("ThumbnailPump", () => {
             pump.request(items("A", "B", "C", "D", "E"), 64);
             pump.handle({ id: 1, kind: "needPages", item: "A.bam", pages: ["MOS0012.PVRZ"] });
             expect(sent.slice(4).map((r) => [r.kind, r.item])).toEqual([["pages", "A.bam"]]);
+        });
+
+        // The channel to the webview is in order: whatever is posted ahead of the tiles where a scroll stopped
+        // is drawn first, so answers the webview has not taken yet hold the rest back here.
+        it("holds work back while the webview has not taken its answers, and sends one more per confirmation", () => {
+            const { pump, sent, posted } = harness(stampEach);
+            pump.request(twelve, 64);
+            answerUnseen(pump, sent);
+            const held = sent.length;
+            expect(held).toBeGreaterThan(4); // past the worker's own slots
+            expect(held).toBeLessThan(twelve.length);
+            expect(posted).toHaveLength(held);
+            pump.seen();
+            expect(sent).toHaveLength(held + 1);
+        });
+
+        it("drops what a reloaded webview never confirmed", () => {
+            const { pump, sent } = harness(stampEach);
+            pump.request(twelve, 64);
+            answerUnseen(pump, sent);
+            const held = sent.length;
+            pump.webviewReady();
+            expect(sent.length).toBeGreaterThan(held);
+        });
+
+        // A pump replacing another on a game change hears confirmations for answers it never posted.
+        it("does not bank confirmations for answers it never posted", () => {
+            const plain = harness(stampEach);
+            plain.pump.request(twelve, 64);
+            answerUnseen(plain.pump, plain.sent);
+
+            const banked = harness(stampEach);
+            for (let i = 0; i < 5; i++) banked.pump.seen();
+            banked.pump.request(twelve, 64);
+            answerUnseen(banked.pump, banked.sent);
+            expect(banked.sent).toHaveLength(plain.sent.length);
         });
     });
 

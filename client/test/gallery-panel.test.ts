@@ -8,7 +8,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as vscodeTypes from "vscode";
-import { type GalleryItem, type GallerySource } from "../src/gallery/source";
+import { type GalleryItem, type GallerySource, type Locator } from "../src/gallery/source";
+import { type GalleryRequest, type GalleryResponse } from "../src/gallery/worker-core";
 import { type HostToWebview, type SetTile, type WebviewToHost } from "../src/gallery/webview/messages";
 
 const { showErrorMessageMock, executeCommandMock } = vi.hoisted(() => ({
@@ -310,6 +311,58 @@ describe("wireGalleryPanel message routing", () => {
         expect(posted).toContainEqual({ type: "thumbnail", id: ITEM.id });
     });
 
+    /**
+     * The pump sends the worker nothing more while the webview holds unconfirmed answers, so a confirmation or
+     * a reload the panel failed to route would stall the grid after its first few tiles.
+     */
+    describe("confirmations from the webview", () => {
+        async function stalled() {
+            const sent: GalleryRequest[] = [];
+            let reply: ((response: GalleryResponse) => void) | undefined;
+            const dispatching = {
+                ...deps,
+                sourceFor: () =>
+                    Promise.resolve({
+                        ...fakeSource(),
+                        stamp: (id: string) => `s:${id}`,
+                        locate: (): Locator => ({ kind: "file", path: "/game/override/X.BAM" }),
+                    }),
+                makePort: () => ({
+                    postMessage: (request: GalleryRequest) => sent.push(request),
+                    onMessage: (fn: (response: GalleryResponse) => void) => {
+                        reply = fn;
+                    },
+                    onError: () => {},
+                    dispose: () => {},
+                }),
+            };
+            const { panel, posted, send } = fakePanel();
+            wireGalleryPanel(panel, { source: "game" }, context, dispatching);
+            send({ type: "ready" });
+            await readings(posted);
+            send({ type: "requestThumbnails", ids: Array.from({ length: 12 }, (_, i) => `I${i}.bam`), size: 64 });
+            let answered = 0;
+            while (answered < sent.length) {
+                const request = sent[answered++]!;
+                reply?.({ id: request.id, kind: "thumbnail", item: request.item, dataUri: "d" });
+            }
+            expect(sent.length, "the pump never held anything back").toBeLessThan(12);
+            return { sent, send, held: sent.length };
+        }
+
+        it("sends the worker more once the webview confirms an answer", async () => {
+            const { sent, send, held } = await stalled();
+            send({ type: "thumbnailSeen" });
+            expect(sent).toHaveLength(held + 1);
+        });
+
+        it("stops waiting on answers posted to a webview that reloaded", async () => {
+            const { sent, send, held } = await stalled();
+            send({ type: "ready" });
+            expect(sent.length).toBeGreaterThan(held);
+        });
+    });
+
     it("hands an item with no stage on this panel to deps.open", async () => {
         const { panel, posted, send } = fakePanel();
         wireGalleryPanel(panel, { source: "game" }, context, deps);
@@ -403,6 +456,7 @@ describe("wireGalleryPanel message routing", () => {
         send({ type: "ready" });
         send({ type: "requestThumbnails", ids: [ITEM.id], size: 64 });
         send({ type: "showSet", id: SET.id });
+        send({ type: "thumbnailSeen" });
         send({ type: "viewer", message: { type: "ready" } });
 
         expect(showErrorMessageMock, "a valid message was refused").not.toHaveBeenCalled();

@@ -29,6 +29,13 @@ type Answer = { dataUri?: string; directional?: boolean };
  */
 const MAX_IN_FLIGHT = 4;
 
+/**
+ * Answers the webview may hold unconfirmed, counting the jobs at the worker that will become answers. Its
+ * channel delivers in order and drains slower than a fast scroll fills it, so the excess waits here instead,
+ * where the tiles the scroll stopped on can go first; twice the worker's slots keeps it busy meanwhile.
+ */
+const MAX_UNSEEN = 8;
+
 interface Job {
     item: string;
     key: string;
@@ -58,6 +65,8 @@ export class ThumbnailPump {
     private readonly queued: Job[][] = [];
     /** Queued or in flight, by cache key - what stops a second scroll asking again for unanswered work. */
     private readonly pending = new Set<string>();
+    /** Answers posted and not yet confirmed by the webview. */
+    private unseen = 0;
 
     constructor(io: PumpIo) {
         this.io = io;
@@ -75,18 +84,19 @@ export class ThumbnailPump {
             const key = this.keyFor(item, size);
             if (key === undefined) {
                 // The source cannot find it any more - answer once so the tile stops asking on every scroll.
-                this.io.post({ type: "thumbnail", id: item });
+                this.answer(item, {});
                 continue;
             }
-            if (this.done.has(key)) {
-                this.io.post({ type: "thumbnail", id: item, ...this.done.get(key) });
+            const cached = this.done.get(key);
+            if (cached !== undefined) {
+                this.answer(item, cached);
                 continue;
             }
             if (this.pending.has(key)) continue;
             const at = this.io.source.locate(item);
             if (at === undefined) {
                 this.done.set(key, {});
-                this.io.post({ type: "thumbnail", id: item });
+                this.answer(item, {});
                 continue;
             }
             this.pending.add(key);
@@ -96,9 +106,9 @@ export class ThumbnailPump {
         this.dispatch();
     }
 
-    /** Fill the worker's free slots, newest batch first and in order within it. */
+    /** Fill the worker's free slots while the webview keeps up, newest batch first and in order within it. */
     private dispatch(): void {
-        while (this.inFlight.size < MAX_IN_FLIGHT) {
+        while (this.inFlight.size < MAX_IN_FLIGHT && this.inFlight.size + this.unseen < MAX_UNSEEN) {
             const batch = this.queued.at(-1);
             if (batch === undefined) return;
             const job = batch.shift()!;
@@ -149,8 +159,26 @@ export class ThumbnailPump {
     private settle(key: string, item: string, answer: Answer): void {
         this.pending.delete(key);
         this.done.set(key, answer);
-        this.io.post({ type: "thumbnail", id: item, ...answer });
+        this.answer(item, answer);
         // Every settle frees the slot its job held.
+        this.dispatch();
+    }
+
+    private answer(item: string, answer: Answer): void {
+        this.unseen++;
+        this.io.post({ type: "thumbnail", id: item, ...answer });
+    }
+
+    /** The webview has taken one answer off the channel. */
+    seen(): void {
+        // Floored: a pump that replaced another on a game change also hears about its predecessor's answers.
+        this.unseen = Math.max(0, this.unseen - 1);
+        this.dispatch();
+    }
+
+    /** The webview (re)loaded, so nothing posted to the one before it will be confirmed. */
+    webviewReady(): void {
+        this.unseen = 0;
         this.dispatch();
     }
 }

@@ -258,6 +258,7 @@ export function wireGalleryPanel(
         }
         switch (message.type) {
             case "ready":
+                pump?.webviewReady();
                 postInit();
                 // A panel opened ON an animation draws it straight away: the link was a request to look at
                 // that set, and landing on its row with an empty stage would answer only half of it.
@@ -265,6 +266,9 @@ export function wireGalleryPanel(
                 break;
             case "requestThumbnails":
                 pump?.request(message.ids, message.size);
+                break;
+            case "thumbnailSeen":
+                pump?.seen();
                 break;
             case "open": {
                 if (source === undefined) break;

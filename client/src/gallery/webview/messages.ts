@@ -81,6 +81,8 @@ export type WebviewToHost =
     | { type: "ready" }
     /** Only what the viewport needs, so opening a game-wide grid does not decode thousands of files. */
     | { type: "requestThumbnails"; ids: string[]; size: number }
+    /** One `thumbnail` taken off the channel. The host holds further answers back until it hears this. */
+    | { type: "thumbnailSeen" }
     /**
      * Show this item.
      *
@@ -113,6 +115,7 @@ export function isWebviewToHost(m: unknown): m is WebviewToHost {
     if (!isRecord(m) || typeof m.type !== "string") return false;
     switch (m.type) {
         case "ready":
+        case "thumbnailSeen":
             return true;
         case "requestThumbnails":
             return Array.isArray(m.ids) && m.ids.every((id) => typeof id === "string") && typeof m.size === "number";
