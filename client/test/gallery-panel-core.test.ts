@@ -163,6 +163,52 @@ describe("ThumbnailPump", () => {
         expect(posted).toEqual([{ type: "thumbnail", id: "ICON.bam", dataUri: undefined }]);
     });
 
+    describe("scheduling", () => {
+        const items = (...names: string[]) => names.map((n) => `${n}.bam`);
+        const stampEach = { stamp: vi.fn((id: string) => `s:${id}`) };
+        const answer = (pump: ThumbnailPump, request: GalleryRequest) =>
+            pump.handle({ id: request.id, kind: "thumbnail", item: request.item, dataUri: `d:${request.item}` });
+
+        it("holds a few jobs at the worker and sends the next as each is answered", () => {
+            const { pump, sent } = harness(stampEach);
+            pump.request(items("A", "B", "C", "D", "E", "F"), 64);
+            expect(sent.map((r) => r.item)).toEqual(items("A", "B", "C", "D"));
+            answer(pump, sent[0]!);
+            expect(sent.map((r) => r.item)).toEqual(items("A", "B", "C", "D", "E"));
+        });
+
+        // A fast scroll: the rows passed on the way are asked for first, the rows where it stopped last.
+        it("serves the newest request ahead of an older backlog, then draws the backlog too", () => {
+            const { pump, sent, posted } = harness(stampEach);
+            pump.request(items("A", "B", "C", "D", "E", "F"), 64);
+            pump.request(items("Y", "Z"), 64);
+            // `sent` grows as each answer frees a slot, so answer until the pump has nothing left to send.
+            let answered = 0;
+            while (answered < sent.length) answer(pump, sent[answered++]!);
+            expect(sent.map((r) => r.item)).toEqual(items("A", "B", "C", "D", "Y", "Z", "E", "F"));
+            expect(posted.map((m) => m.type === "thumbnail" && m.id)).toEqual(sent.map((r) => r.item));
+        });
+
+        // A two-phase v2 keeps the slot it already holds: its page round trip is not sent to the back.
+        it("sends a v2's pages job straight away rather than queueing it", () => {
+            const { pump, sent } = harness(stampEach);
+            pump.request(items("A", "B", "C", "D", "E"), 64);
+            pump.handle({ id: 1, kind: "needPages", item: "A.bam", pages: ["MOS0012.PVRZ"] });
+            expect(sent.slice(4).map((r) => [r.kind, r.item])).toEqual([["pages", "A.bam"]]);
+        });
+    });
+
+    // A pump replaced on a game change starts its ids from 1 again, so the old worker's late reply can carry
+    // an id the new pump holds for a different item.
+    it("ignores a reply whose id it holds for a different item", () => {
+        const { pump, posted, sent } = harness();
+        pump.request(["ICON.bam"], 64);
+        pump.handle({ id: 1, kind: "thumbnail", item: "OTHER.bam", dataUri: "stale" });
+        expect(posted).toEqual([]);
+        pump.handle({ id: sent[0]!.id, kind: "thumbnail", item: "ICON.bam", dataUri: "x" });
+        expect(posted).toEqual([{ type: "thumbnail", id: "ICON.bam", dataUri: "x" }]);
+    });
+
     it("ignores a reply whose job it no longer has", () => {
         const { pump, posted } = harness();
         pump.handle({ id: 99, kind: "thumbnail", item: "GHOST.bam", dataUri: "x" } satisfies GalleryResponse);

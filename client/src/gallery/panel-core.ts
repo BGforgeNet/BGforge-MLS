@@ -24,10 +24,27 @@ export interface PumpIo {
 type Answer = { dataUri?: string; directional?: boolean };
 
 /**
+ * Jobs the worker holds at once. Enough that it never idles while a reply crosses back, and few enough that
+ * the queue stays here, where newer requests can go ahead of older ones.
+ */
+const MAX_IN_FLIGHT = 4;
+
+interface Job {
+    item: string;
+    key: string;
+    size: number;
+    at: Locator;
+}
+
+/**
  * Dispatches thumbnail work and routes replies back, at most once per (item, stamp, size).
  *
  * The cache is keyed on the source's stamp rather than the bytes: a stamp costs no read, so a re-scroll over
  * a decoded tile costs nothing at all, and an edited workspace file still redraws because its stamp moved.
+ *
+ * The newest request is served first. The grid asks for each row as it scrolls into view, so a fast scroll
+ * leaves a backlog of rows already scrolled past; served in arrival order, the tiles where the reader stopped
+ * would wait behind all of them. The backlog is still drawn afterwards, because the grid never asks twice.
  */
 export class ThumbnailPump {
     private readonly io: PumpIo;
@@ -35,8 +52,11 @@ export class ThumbnailPump {
     /** Answered items, by cache key. Holds an EMPTY answer for one that could not be drawn, so it is not
      *  retried - hence a key check rather than a truthiness one at every read. */
     private readonly done = new Map<string, Answer>();
-    /** Dispatched but unanswered, by cache key - what stops a second scroll re-sending in-flight work. */
-    private readonly inFlight = new Map<number, { item: string; key: string; size: number }>();
+    /** At the worker and unanswered, by request id. */
+    private readonly inFlight = new Map<number, Job>();
+    /** Waiting for a worker slot, one batch per request, oldest first; served from the newest. */
+    private readonly queued: Job[][] = [];
+    /** Queued or in flight, by cache key - what stops a second scroll asking again for unanswered work. */
     private readonly pending = new Set<string>();
 
     constructor(io: PumpIo) {
@@ -48,8 +68,9 @@ export class ThumbnailPump {
         return stamp === undefined ? undefined : `${item}|${stamp}|${size}`;
     }
 
-    /** Ask for these items at this size. Already-answered and already-in-flight items cost nothing. */
+    /** Ask for these items at this size. Already-answered and already-pending items cost nothing. */
     request(items: readonly string[], size: number): void {
+        const batch: Job[] = [];
         for (const item of items) {
             const key = this.keyFor(item, size);
             if (key === undefined) {
@@ -68,17 +89,33 @@ export class ThumbnailPump {
                 this.io.post({ type: "thumbnail", id: item });
                 continue;
             }
-            const id = this.nextId++;
             this.pending.add(key);
-            this.inFlight.set(id, { item, key, size });
-            this.io.send({ id, kind: "thumbnail", item, at, ext: extOf(item), size });
+            batch.push({ item, key, size, at });
+        }
+        if (batch.length > 0) this.queued.push(batch);
+        this.dispatch();
+    }
+
+    /** Fill the worker's free slots, newest batch first and in order within it. */
+    private dispatch(): void {
+        while (this.inFlight.size < MAX_IN_FLIGHT) {
+            const batch = this.queued.at(-1);
+            if (batch === undefined) return;
+            const job = batch.shift()!;
+            if (batch.length === 0) this.queued.pop();
+            const id = this.nextId++;
+            this.inFlight.set(id, job);
+            this.io.send({ id, kind: "thumbnail", item: job.item, at: job.at, ext: extOf(job.item), size: job.size });
         }
     }
 
-    /** Route one worker reply. Unknown ids are ignored - a reply from a cleared panel is not an error. */
+    /**
+     * Route one worker reply. A reply whose id this pump does not hold for that item is ignored: it is from a
+     * cleared panel or a pump this one replaced, whose ids started from 1 as well.
+     */
     handle(response: GalleryResponse): void {
         const job = this.inFlight.get(response.id);
-        if (job === undefined) return;
+        if (job?.item !== response.item) return;
 
         if (response.kind === "needPages") {
             // Second phase: the worker named the pages, the host resolves each and sends them back. Still no
@@ -113,6 +150,8 @@ export class ThumbnailPump {
         this.pending.delete(key);
         this.done.set(key, answer);
         this.io.post({ type: "thumbnail", id: item, ...answer });
+        // Every settle frees the slot its job held.
+        this.dispatch();
     }
 }
 
