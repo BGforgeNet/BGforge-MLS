@@ -36,11 +36,17 @@ export { combineFrmDirections } from "./frm/combine.ts";
 export { splitFrmDirections } from "./frm/split.ts";
 export { parseBamV1 } from "./bam/parse.ts";
 // Thumbnail-shaped read: the tables without the pixels, then only the frames the caller names.
-export { decodeBamV1Frames, readBamV1Tables } from "./bam/selective.ts";
+export { decodeBamV1Frames, readBamV1, readBamV1Tables } from "./bam/selective.ts";
 // BAM v2 reads in two phases: the structure names the PVRZ pages, the caller resolves them, then
 // decodeBamV2 composes the frames. See v2-parse.ts for why the resolver is injected.
 export { isBamV2, readBamV2Structure } from "./bam/v2-structure.ts";
-export { type PvrzResolver, decodeBamV2, pvrzResourceName } from "./bam/v2-parse.ts";
+export {
+    type PvrzPageCache,
+    type PvrzResolver,
+    createPvrzPageCache,
+    decodeBamV2,
+    pvrzResourceName,
+} from "./bam/v2-parse.ts";
 export { type BamV2PageWrite, serializeBamV2 } from "./bam/v2-serialize.ts";
 export { serializeBamV1 } from "./bam/serialize.ts";
 export { type PairBlocks, combineIeBamPair, splitIeBamBlocks, splitIeBamPair } from "./bam/pair.ts";

@@ -22,6 +22,7 @@ import type {
     IndexedAnimation,
     IndexedSourceFormat,
     LossKind,
+    PvrzPageCache,
     PvrzResolver,
     Rgba,
     RgbaAnimation,
@@ -51,10 +52,12 @@ const REQUIRED_VALUE_EXPORTS = [
     "splitFrmDirections",
     "parseBamV1",
     "decodeBamV1Frames",
+    "readBamV1",
     "readBamV1Tables",
     "isBamV2",
     "readBamV2Structure",
     "decodeBamV2",
+    "createPvrzPageCache",
     "pvrzResourceName",
     "serializeBamV2",
     "serializeBamV1",
@@ -118,6 +121,7 @@ function pinPublicTypes(
     colors: CreatureColors,
     loss: LossKind,
     frmOpts: FrmConvertOpts,
+    pageCache: PvrzPageCache,
 ): number {
     return [
         animation,
@@ -136,12 +140,13 @@ function pinPublicTypes(
         colors,
         loss,
         frmOpts,
+        pageCache,
     ].length;
 }
 
 describe("@bgforge/image public API", () => {
     it("exports every public type by name", () => {
-        expect(pinPublicTypes).toHaveLength(16);
+        expect(pinPublicTypes).toHaveLength(17);
     });
 
     for (const name of REQUIRED_VALUE_EXPORTS) {

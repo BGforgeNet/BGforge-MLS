@@ -9,7 +9,7 @@
  * bytes and no live handles ever cross either.
  */
 import { type ResourceLocation } from "@bgforge/binary";
-import { pvrzResourceName, type PvrzResolver } from "@bgforge/image";
+import { pvrzResourceName, type PvrzPageCache, type PvrzResolver } from "@bgforge/image";
 import { requiredPvrzPages, type Thumbnail, thumbnailOf } from "../ie-resources/thumbnails";
 
 /** What a tile needs drawn. `item` is the gallery's own id, echoed back so a reply routes without the view
@@ -42,6 +42,11 @@ export interface GalleryIo {
      * the real worker supplies it, because a handful of pages back thousands of v2 frames.
      */
     readPage?(name: string, at: ResourceLocation): Uint8Array | undefined;
+    /**
+     * The last decoded page, kept across jobs. Effective only beside `readPage`, whose cache hands back the same
+     * bytes for the same page, which is what this one keys on.
+     */
+    pageCache?: PvrzPageCache;
 }
 
 /**
@@ -64,7 +69,12 @@ export function runJob(request: GalleryRequest, io: GalleryIo): GalleryResponse 
             if (at === undefined || at === null) return;
             return io.readPage?.(pvrzResourceName(page), at) ?? io.readBytes(at);
         };
-        return { id, kind: "thumbnail", item, ...drawn(thumbnailOf(bytes, request.ext, request.size, resolve)) };
+        return {
+            id,
+            kind: "thumbnail",
+            item,
+            ...drawn(thumbnailOf(bytes, request.ext, request.size, resolve, io.pageCache)),
+        };
     } catch (error) {
         return { id, kind: "error", item, message: error instanceof Error ? error.message : String(error) };
     }

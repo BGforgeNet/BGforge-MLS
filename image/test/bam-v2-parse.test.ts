@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fs from "fs";
 import path from "path";
-import { decodeBamV2, pvrzResourceName } from "../src/bam/v2-parse.ts";
+import { createPvrzPageCache, decodeBamV2, pvrzResourceName } from "../src/bam/v2-parse.ts";
 import { type BamV2Structure, readBamV2Structure } from "../src/bam/v2-structure.ts";
 import { encodePvrz } from "../src/pvrz/container.ts";
 import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
@@ -36,6 +36,34 @@ describe("pvrzResourceName", () => {
     it("zero-pads a page number to the four-digit MOS resource the block refers to", () => {
         expect(pvrzResourceName(7)).toBe("MOS0007.PVRZ");
         expect(pvrzResourceName(1010)).toBe("MOS1010.PVRZ");
+    });
+});
+
+describe("createPvrzPageCache", () => {
+    it("hands back the decoded page for the same bytes instead of decoding them again", () => {
+        const cache = createPvrzPageCache();
+        const page = solidPage(16, 20, 24);
+        expect(cache.decode(page)).toBe(cache.decode(page));
+    });
+
+    // Keyed on the byte array, not its content or a page number: different bytes are a different page.
+    it("decodes different bytes afresh", () => {
+        const cache = createPvrzPageCache();
+        const first = cache.decode(solidPage(16, 20, 24));
+        // Exact in RGB565, like the composition test's channels, so the assertion is not about codec rounding.
+        const second = cache.decode(solidPage(8, 12, 16));
+        expect(second).not.toBe(first);
+        expect([...second.rgba.subarray(0, 4)]).toEqual([8, 12, 16, 255]);
+    });
+
+    it("draws the same frames through a cache as without one, across calls sharing a page", () => {
+        const page = solidPage(16, 20, 24);
+        const cache = createPvrzPageCache();
+        const plain = decodeBamV2(oneBlockStructure(), () => page);
+        for (let call = 0; call < 2; call++) {
+            const cached = decodeBamV2(oneBlockStructure(), () => page, undefined, cache);
+            expect([...cached.frames[0]!.pixels]).toEqual([...plain.frames[0]!.pixels]);
+        }
     });
 });
 

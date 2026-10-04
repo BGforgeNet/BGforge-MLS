@@ -3,7 +3,7 @@ import { type IndexedAnimation, emptyPalette } from "../src/model/animation.ts";
 import { parseBamV1 } from "../src/bam/parse.ts";
 import { serializeBamV1 } from "../src/bam/serialize.ts";
 import { encodeBamc } from "../src/bam/bamc.ts";
-import { decodeBamV1Frames, readBamV1Tables } from "../src/bam/selective.ts";
+import { decodeBamV1Frames, readBamV1, readBamV1Tables } from "../src/bam/selective.ts";
 
 // The package's tests build their inputs through the real serializer rather than committing binaries
 // (bam-parse.test.ts:16, bam-roundtrip.test.ts). Four frames of distinct content, four cycles each
@@ -64,5 +64,16 @@ describe("selective BAM v1 decode", () => {
         expect(readBamV1Tables(compressed).frameCount).toBe(readBamV1Tables(bytes).frameCount);
         const picked = decodeBamV1Frames(compressed, [0]);
         expect([...picked.get(0)!.pixels]).toEqual([...decodeBamV1Frames(bytes, [0]).get(0)!.pixels]);
+    });
+
+    it("reads the tables and then decodes frames picked from them, from one open", () => {
+        const reader = readBamV1(encodeBamc(bytes));
+        expect(reader.tables).toEqual(readBamV1Tables(bytes));
+        const first = reader.tables.sequences.map((s) => s.frameRefs[0]!);
+        const picked = reader.decode(first);
+        expect([...picked.keys()]).toEqual([0, 1, 2, 3]);
+        for (const index of first) {
+            expect([...picked.get(index)!.pixels]).toEqual([...parseBamV1(bytes).frames[index]!.pixels]);
+        }
     });
 });

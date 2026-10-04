@@ -17,17 +17,37 @@ export function readBamV1Tables(bytes: Uint8Array): BamV1Tables {
     return readV1Tables(uncompressed(bytes));
 }
 
+/** A BAM v1 opened once: its tables, and a decoder for any frames chosen from them. */
+export interface BamV1Reader {
+    tables: BamV1Tables;
+    /**
+     * Decode only `indices`. Out-of-range indices are skipped: a cycle table may reference a frame the file
+     * does not have, and a thumbnail is not the place to fail on it.
+     */
+    decode(indices: readonly number[]): Map<number, Frame>;
+}
+
 /**
- * Decode only `indices`. Out-of-range indices are skipped: a cycle table may reference a frame the file
- * does not have, and a thumbnail is not the place to fail on it.
+ * For a caller that picks frames FROM the tables: one inflate serves both steps, where calling
+ * `readBamV1Tables` then `decodeBamV1Frames` inflates a BAMC twice.
  */
-export function decodeBamV1Frames(bytes: Uint8Array, indices: readonly number[]): Map<number, Frame> {
+export function readBamV1(bytes: Uint8Array): BamV1Reader {
     const raw = uncompressed(bytes);
     const tables = readV1Tables(raw);
-    const out = new Map<number, Frame>();
-    for (const index of new Set(indices)) {
-        if (index < 0 || index >= tables.frameCount) continue;
-        out.set(index, decodeFrameAt(raw, index, tables));
-    }
-    return out;
+    return {
+        tables,
+        decode(indices) {
+            const out = new Map<number, Frame>();
+            for (const index of new Set(indices)) {
+                if (index < 0 || index >= tables.frameCount) continue;
+                out.set(index, decodeFrameAt(raw, index, tables));
+            }
+            return out;
+        },
+    };
+}
+
+/** `readBamV1(bytes).decode(indices)`, for a caller that already knows which frames it wants. */
+export function decodeBamV1Frames(bytes: Uint8Array, indices: readonly number[]): Map<number, Frame> {
+    return readBamV1(bytes).decode(indices);
 }

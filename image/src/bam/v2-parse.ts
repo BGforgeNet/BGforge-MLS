@@ -20,13 +20,39 @@ export function pvrzResourceName(page: number): string {
 }
 
 /**
+ * Decoded pages kept across `decodeBamV2` calls, keyed by the page's own byte array, so a caller that hands
+ * back the same bytes for the same page skips its inflate and BC decode.
+ *
+ * Holds the latest page only: an install's v2 BAMs come in runs over one page, and over the shipped EE
+ * installs a larger cache adds almost no hits while each entry holds a whole decoded page.
+ */
+export interface PvrzPageCache {
+    decode(bytes: Uint8Array): PvrTexture;
+}
+
+export function createPvrzPageCache(): PvrzPageCache {
+    let last: { bytes: Uint8Array; texture: PvrTexture } | undefined;
+    return {
+        decode(bytes) {
+            if (last?.bytes !== bytes) last = { bytes, texture: decodePvrz(bytes) };
+            return last.texture;
+        },
+    };
+}
+
+/**
  * Compose an animation from its structure plus the pages its blocks reference.
  *
  * Pages are decoded once each and reused across every block that names them: a single BAM can carry
  * thousands of blocks over a handful of 1024x1024 pages, and decoding per block would repeat the
- * zlib inflate and the whole-texture BC decode for each one.
+ * zlib inflate and the whole-texture BC decode for each one. `pageCache` extends that reuse across calls.
  */
-export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver, sourceBytes?: Uint8Array): RgbaAnimation {
+export function decodeBamV2(
+    structure: BamV2Structure,
+    resolve: PvrzResolver,
+    sourceBytes?: Uint8Array,
+    pageCache?: PvrzPageCache,
+): RgbaAnimation {
     // The declared frames are judged before any page is decoded, as v1 judges its entry table first: a page
     // costs up to 64 MiB, all of it wasted on a structure refused afterwards. Every frame can sit under
     // MAX_FRAME_PIXELS while the animation as a whole is ruinous, and a v2 frame needs no backing bytes.
@@ -59,7 +85,7 @@ export function decodeBamV2(structure: BamV2Structure, resolve: PvrzResolver, so
                 `decodeBamV2: cannot resolve PVRZ page ${page} (${pvrzResourceName(page)}) - the file is incomplete`,
             );
         }
-        const texture = decodePvrz(bytes);
+        const texture = pageCache === undefined ? decodePvrz(bytes) : pageCache.decode(bytes);
         pagePixels += texture.width * texture.height;
         if (pagePixels > MAX_ANIMATION_PIXELS) {
             throw new Error(

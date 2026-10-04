@@ -1,13 +1,14 @@
 /**
  * The gallery worker thread: every archive read, decode and PNG encode for the thumbnail grid.
  *
- * Runs off the extension host so scrolling a game-wide grid cannot stall the UI. It holds two caches that
- * only make sense here, because both are per-thread state a pure job function cannot keep: open BIF handles,
- * and decoded PVRZ pages.
+ * Runs off the extension host so scrolling a game-wide grid cannot stall the UI. It holds the caches that
+ * only make sense here, because each is per-thread state a pure job function cannot keep: open BIF handles,
+ * PVRZ page bytes, and the latest decoded page.
  */
 import * as fs from "fs";
 import { parentPort } from "node:worker_threads";
 import { type BifArchive, type ResourceLocation, fileSource, openBif } from "@bgforge/binary";
+import { createPvrzPageCache } from "@bgforge/image";
 import { type GalleryIo, type GalleryRequest, makePageCache, runJob } from "./worker-core";
 
 /** Open archives, keyed by path. A classic install answers most of a grid from a handful of BIFs, and
@@ -46,6 +47,7 @@ const io: GalleryIo = {
         pageLocations.set(name, at);
         return pageBytes.get(name);
     },
+    pageCache: createPvrzPageCache(),
 };
 
 if (!parentPort) throw new Error("gallery worker must be spawned with a parentPort");

@@ -7,15 +7,15 @@
  */
 
 import {
+    type PvrzPageCache,
     type PvrzResolver,
-    decodeBamV1Frames,
     decodeBamV2,
     encodeIndexedPng,
     encodeTruecolourPng,
     isBamV2,
     parseFrm,
     pvrzResourceName,
-    readBamV1Tables,
+    readBamV1,
     readBamV2Structure,
     interpretIeDirections,
     readBmpRgba,
@@ -72,8 +72,17 @@ export interface Thumbnail {
     directional: boolean;
 }
 
-/** The picture plus what the decode learned about the source. */
-export function thumbnailOf(bytes: Uint8Array, ext: string, size: number, pvrz?: PvrzResolver): Thumbnail | undefined {
+/**
+ * The picture plus what the decode learned about the source. `pageCache` lets a caller drawing many v2 BAMs
+ * keep a decoded PVRZ page between them rather than decoding it once per file.
+ */
+export function thumbnailOf(
+    bytes: Uint8Array,
+    ext: string,
+    size: number,
+    pvrz?: PvrzResolver,
+    pageCache?: PvrzPageCache,
+): Thumbnail | undefined {
     if (bytes.length > MAX_SOURCE_BYTES) return;
     const how = DRAWABLE.get(ext.toLowerCase());
     if (how === undefined) return;
@@ -83,7 +92,10 @@ export function thumbnailOf(bytes: Uint8Array, ext: string, size: number, pvrz?:
             // v1 and v2 share the "BAM " tag and are entirely different formats behind it; dispatch on the
             // signature rather than the caller's extension, which cannot tell them apart.
             if (isBamV2(bytes)) {
-                return { dataUri: dataUri("image/png", bamV2FramePng(bytes, size, pvrz)), directional: false };
+                return {
+                    dataUri: dataUri("image/png", bamV2FramePng(bytes, size, pvrz, pageCache)),
+                    directional: false,
+                };
             }
             const drawn = bamFramePng(bytes, size);
             return { dataUri: dataUri("image/png", drawn.png), directional: drawn.directional };
@@ -115,8 +127,9 @@ export function thumbnailDataUri(
  */
 function bamFramePng(bytes: Uint8Array, size: number): { png: Uint8Array; directional: boolean } {
     // Only the sampled frames are decoded, not the whole animation: a creature BAM has hundreds of frames and
-    // a tile shows one or two. `decodeBamV1Frames` handles BAMC, which is what most shipped BAMs are.
-    const tables = readBamV1Tables(bytes);
+    // a tile shows one or two. One reader for both steps, so a BAMC - most shipped BAMs - inflates once.
+    const reader = readBamV1(bytes);
+    const { tables } = reader;
     // A creature animation's cycles are the same pose in every direction, so more than one of them is the
     // same picture turned round - it shows the reader nothing the marker does not say. Everything else gets
     // two, which distinguishes an animation from a still without cutting the art down to quarters.
@@ -128,7 +141,7 @@ function bamFramePng(bytes: Uint8Array, size: number): { png: Uint8Array; direct
     const directions = interpretIeDirections(tables.sequences, tables.frameCount);
     const directional = directions !== undefined && (directions.detected || directions.groups.length > 1);
     const candidates = [...new Set(firstFrameOfEachCycle(tables))].slice(0, CANDIDATE_FRAMES);
-    const frames = decodeBamV1Frames(bytes, candidates);
+    const frames = reader.decode(candidates);
     const cells = composeCells(drawable(candidates, frames), directional ? 1 : 2);
 
     const drawn = cells.flatMap((cell) => {
@@ -168,8 +181,8 @@ function bamFramePng(bytes: Uint8Array, size: number): { png: Uint8Array; direct
  * frames, of which just 9 hold art - and WHERE those nine sit differs per file, from candidate 9 in one to
  * past candidate 16 in the next. A window that stopped early drew a blank tile for the later ones.
  *
- * One decode call rather than chunks: the reader decompresses the file per call, so scanning in batches would
- * pay that repeatedly. The placeholders it decodes on the way are a pixel each.
+ * Scanning them all costs little: the file is inflated once per reader, and the placeholders it decodes on the
+ * way are a pixel each.
  */
 const CANDIDATE_FRAMES = 128;
 
@@ -230,10 +243,15 @@ export function requiredPvrzPages(bytes: Uint8Array): string[] {
  *
  * True colour, so this is the one path that cannot produce an indexed PNG.
  */
-function bamV2FramePng(bytes: Uint8Array, size: number, pvrz: PvrzResolver | undefined): Uint8Array {
+function bamV2FramePng(
+    bytes: Uint8Array,
+    size: number,
+    pvrz: PvrzResolver | undefined,
+    pageCache: PvrzPageCache | undefined,
+): Uint8Array {
     // No resolver means the caller cannot supply pages, so there is no picture to draw - not an error.
     if (pvrz === undefined) throw new Error("BAM v2 needs a PVRZ resolver");
-    const animation = decodeBamV2(readBamV2Structure(bytes), pvrz, bytes);
+    const animation = decodeBamV2(readBamV2Structure(bytes), pvrz, bytes, pageCache);
     const frame = animation.frames[0];
     if (frame === undefined) throw new Error("BAM has no frames");
     const small = downscaleRgba(frame.pixels, frame.width, frame.height, size);
@@ -287,8 +305,14 @@ function downscaleRgba(
     for (let y = 0; y < height; y++) {
         const sy = Math.min(h - 1, Math.floor((y * h) / height));
         for (let x = 0; x < width; x++) {
-            const sx = Math.min(w - 1, Math.floor((x * w) / width));
-            out.set(src.subarray((sy * w + sx) * 4, (sy * w + sx) * 4 + 4), (y * width + x) * 4);
+            // Four byte copies, not a subarray per pixel: that allocation was the cost of this loop. A Uint32
+            // view would need `src` 4-byte aligned, which a sliced buffer does not promise.
+            const s = (sy * w + Math.min(w - 1, Math.floor((x * w) / width))) * 4;
+            const o = (y * width + x) * 4;
+            out[o] = src[s]!;
+            out[o + 1] = src[s + 1]!;
+            out[o + 2] = src[s + 2]!;
+            out[o + 3] = src[s + 3]!;
         }
     }
     return { pixels: out, width, height };

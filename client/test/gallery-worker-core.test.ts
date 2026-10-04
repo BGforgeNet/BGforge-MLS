@@ -6,7 +6,8 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import { type ResourceLocation } from "@bgforge/binary";
-import { type GalleryResponse, makePageCache, runJob } from "../src/gallery/worker-core";
+import { createPvrzPageCache } from "@bgforge/image";
+import { type GalleryIo, type GalleryResponse, makePageCache, runJob } from "../src/gallery/worker-core";
 import { bam, bamV2WithPages, pngSize } from "./image-fixtures";
 
 const FILE_AT: ResourceLocation = { kind: "file", path: "/game/override/GUI.BAM" };
@@ -85,6 +86,36 @@ describe("runJob", () => {
         expect(out.kind).toBe("thumbnail");
         if (out.kind !== "thumbnail") return;
         expect(pngSize(out.dataUri!)).toEqual({ width: 8, height: 8 });
+    });
+
+    it("hands the worker's page cache the same bytes for a page two items share", () => {
+        const { bam: v2, pages } = bamV2WithPages(12);
+        const pageAt: ResourceLocation = { kind: "file", path: "/game/override/MOS0012.PVRZ" };
+        const real = createPvrzPageCache();
+        const seen: Uint8Array[] = [];
+        const io: GalleryIo = {
+            readBytes: () => v2,
+            readPage: () => pages.get(12),
+            pageCache: {
+                decode: (bytes) => {
+                    seen.push(bytes);
+                    return real.decode(bytes);
+                },
+            },
+        };
+        const job = (id: number, item: string) =>
+            runJob(
+                { id, kind: "pages", item, at: FILE_AT, ext: "bam", size: 64, pages: { "MOS0012.PVRZ": pageAt } },
+                io,
+            );
+        const [first, second] = [job(10, "A.BAM"), job(11, "B.BAM")];
+        expect(seen).toHaveLength(2);
+        expect(seen[1]).toBe(seen[0]);
+        expect(first.kind).toBe("thumbnail");
+        expect(second.kind).toBe("thumbnail");
+        if (first.kind !== "thumbnail" || second.kind !== "thumbnail") return;
+        expect(second.dataUri).toBe(first.dataUri);
+        expect(pngSize(first.dataUri!)).toEqual({ width: 8, height: 8 });
     });
 
     it("draws nothing rather than failing when a page the game lacks is reported as null", () => {
