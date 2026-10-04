@@ -62,9 +62,12 @@
     const activeQuery = $derived(filterQuery.trim().toLowerCase());
     const filteredRows = $derived(activeQuery ? filterRows(allRows, filterQuery) : undefined);
 
-    // Switching sections is a full reset (including filter state).
+    // Switching sections is a full reset (including filter state). Keyed on a derived copy, which notifies only
+    // when the id changes: the prop is read through the layout snapshot, which every changeSet replaces, so keyed
+    // on the prop itself the reset would also clear the selection on every edit.
+    const section = $derived(nodeId);
     $effect(() => {
-        void nodeId;
+        void section;
         selected = undefined;
         selectedIndex = undefined;
         lastAppliedSelection = undefined;

@@ -29,9 +29,12 @@
 
     const range = $derived(visibleRange({ scrollTop, viewportHeight, rowHeight, overscan, total }));
 
-    // Switching sections is a full reset: a different collection, no carried-over active row.
+    // Switching sections is a full reset: a different collection, no carried-over active row. Keyed on a derived
+    // copy, which notifies only when the id changes: the prop is read through the layout snapshot, which every
+    // changeSet replaces, so keyed on the prop itself the reset would also fire on every edit.
+    const section = $derived(parentId);
     $effect(() => {
-        void parentId;
+        void section;
         rowsByIndex = new Map();
         activeIndex = undefined;
     });

@@ -21,6 +21,7 @@ import { reportUnrecognizedMessage, surfaceWebviewRuntimeError } from "../webvie
 import { BinaryEditorDocument } from "./document";
 import { planSave } from "./save";
 import { withGameContext } from "./game-rows";
+import { type WorkerPool, createWorkerPool } from "./worker-pool";
 import { type HostToWebview, type WebviewToHost, isWebviewToHost } from "./webview/messages";
 
 /** The game-backed lookups the editor is handed; it never reaches for a `Game` itself. */
@@ -100,7 +101,7 @@ function structureOpLabel(op: StructureOpRequest["op"]): string {
  * the webview shell and message routing, and forwards all parse/edit/serialize work to
  * the worker via the document's bridge.
  */
-export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryEditorDocument> {
+export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryEditorDocument>, vscode.Disposable {
     static readonly viewType = "bgforge.binaryEditor";
 
     private readonly _onDidChangeCustomDocument = new vscode.EventEmitter<
@@ -118,24 +119,31 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
     private readonly extensionUri: vscode.Uri;
     private readonly gameLookups: GameResolvers;
+    private readonly pool: WorkerPool;
 
     constructor(context: vscode.ExtensionContext, gameLookups: GameResolvers) {
         this.extensionUri = context.extensionUri;
         this.gameLookups = gameLookups;
+        this.pool = createWorkerPool(path.join(this.extensionUri.fsPath, WORKER_SCRIPT));
     }
 
-    async openCustomDocument(
+    dispose(): void {
+        this.pool.dispose();
+    }
+
+    // Not awaiting the parse: VS Code builds the webview only after this returns, so the panel boots while the
+    // worker parses, and the webview's "ready" waits for `document.opened` instead.
+    openCustomDocument(
         uri: vscode.Uri,
         openContext: vscode.CustomDocumentOpenContext,
         _token: vscode.CancellationToken,
-    ): Promise<BinaryEditorDocument> {
-        const workerScript = path.join(this.extensionUri.fsPath, WORKER_SCRIPT);
+    ): BinaryEditorDocument {
         // A hot-exit restore hands back the backup written by backupCustomDocument, whose bytes carry the unsaved
         // edits; reading the file instead would silently discard them while the editor still shows as dirty.
         const backup = openContext.backupId ? vscode.Uri.parse(openContext.backupId) : undefined;
         // The engine the record's game runs, so the worker's overlay reads its opcodes the way that game
         // does. Resolved here rather than in the worker, which is handed no game.
-        const document = await BinaryEditorDocument.open(uri, workerScript, backup, this.gameLookups.engine(uri));
+        const document = BinaryEditorDocument.open(uri, this.pool, backup, this.gameLookups.engine(uri));
         document.onDidChange((event) => this._onDidChangeCustomDocument.fire(event));
         document.onDidRefresh((changeSet) => this.refreshDocumentPanels(document, changeSet));
         return document;
@@ -197,8 +205,12 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
     ): Promise<void> {
         switch (message.type) {
             case "ready":
+                // A failed open is posted too: its result carries the reason, which the webview shows in place.
+                await document.opened;
+                // The panel can close while the file parses; posting to a disposed webview throws.
+                if (!this.active.has(panel)) break;
                 this.post(panel, { type: "init", open: document.openResult });
-                await this.pushDiagnosticsToDocument(document);
+                if (document.sessionId) await this.pushDiagnosticsToDocument(document);
                 break;
             case "requestChildren": {
                 const r = await document.bridge.send({
@@ -493,6 +505,9 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
      */
     private async reproject(document: BinaryEditorDocument, panel: vscode.WebviewPanel): Promise<void> {
         try {
+            // A game can open while the document is still parsing; its init is then projected against that game.
+            await document.opened;
+            if (!document.sessionId) return;
             const r = await document.bridge.send({ type: "reproject", sessionId: document.sessionId });
             if (r.type === "structure") this.post(panel, { type: "changeSet", changeSet: r.result.changeSet });
         } catch (error) {

@@ -18,11 +18,15 @@ const BACKUP_URI = "file:///storage/backups/sw1h01.itm.bak";
 const DISK_BYTES = new Uint8Array([1, 1, 1]);
 const BACKUP_BYTES = new Uint8Array([2, 2, 2]);
 
-const { readFileMock, showWarningMock, showErrorMock, workerRequests, CHANGE_SET } = vi.hoisted(() => ({
+const { readFileMock, showWarningMock, showErrorMock, workerRequests, workers, gate, CHANGE_SET } = vi.hoisted(() => ({
     readFileMock: vi.fn(),
     showWarningMock: vi.fn(),
     showErrorMock: vi.fn(),
     workerRequests: [] as { type: string; uri?: string; bytes?: Uint8Array; engine?: string }[],
+    /** Every fake worker spawned, in order, each with the request types it was sent. */
+    workers: [] as { requests: string[]; terminated: boolean }[],
+    /** When set, `open` replies wait for it: a test holds the parse open to observe the webview meanwhile. */
+    gate: { open: undefined as Promise<void> | undefined },
     // One row is enough to tell a re-projection apart from an empty refresh.
     CHANGE_SET: { changed: [{ id: "root/0", kind: "field", label: "Name" }], diagnostics: [], dirty: false },
 }));
@@ -55,16 +59,29 @@ vi.mock("vscode", () => {
 vi.mock("node:worker_threads", () => {
     class Worker {
         private onMessage: ((msg: unknown) => void) | undefined;
+        private readonly record = { requests: [] as string[], terminated: false };
+
+        constructor() {
+            workers.push(this.record);
+        }
 
         on(event: string, cb: (msg: unknown) => void): void {
             if (event === "message") this.onMessage = cb;
         }
+
+        off(event: string, cb: (msg: unknown) => void): void {
+            if (event === "message" && this.onMessage === cb) this.onMessage = undefined;
+        }
+
+        ref(): void {}
+        unref(): void {}
 
         postMessage(msg: {
             id: number;
             request: { type: string; uri?: string; bytes?: Uint8Array; engine?: string };
         }): void {
             workerRequests.push(msg.request);
+            this.record.requests.push(msg.request.type);
             // A dead worker, for the one request only the failure test sends.
             if (msg.request.type === "getChildren") throw new Error("worker is gone");
             const response =
@@ -72,22 +89,28 @@ vi.mock("node:worker_threads", () => {
                     ? { type: "structure", result: { changeSet: CHANGE_SET } }
                     : msg.request.type === "undo"
                       ? { type: "error", message: "nothing to undo" }
-                      : {
-                            type: "opened",
-                            result: {
-                                sessionId: "session-1",
-                                format: "itm",
-                                formatName: "ITM",
-                                layout: { blocks: [] },
-                                warnings: [],
-                                errors: [],
-                                rootWindow: [],
-                            },
-                        };
-            queueMicrotask(() => this.onMessage?.({ id: msg.id, response }));
+                      : msg.request.type === "close"
+                        ? { type: "closed" }
+                        : msg.request.type === "validate"
+                          ? { type: "diagnostics", diagnostics: [] }
+                          : {
+                                type: "opened",
+                                result: {
+                                    sessionId: "session-1",
+                                    format: "itm",
+                                    formatName: "ITM",
+                                    layout: { blocks: [] },
+                                    warnings: [],
+                                    errors: [],
+                                    rootWindow: [],
+                                },
+                            };
+            const held = msg.request.type === "open" ? gate.open : undefined;
+            void (held ?? Promise.resolve()).then(() => this.onMessage?.({ id: msg.id, response }));
         }
 
         terminate(): Promise<number> {
+            this.record.terminated = true;
             return Promise.resolve(0);
         }
     }
@@ -124,6 +147,13 @@ function openContext(backupId?: string): vscode.CustomDocumentOpenContext {
 
 const token = {} as vscode.CancellationToken;
 
+/** Open the test document and wait for its parse, which `openCustomDocument` starts but does not await. */
+async function openDocument(provider: InstanceType<typeof BinaryEditorProvider>, backupId?: string) {
+    const document = provider.openCustomDocument(uri(DOC_URI), openContext(backupId), token);
+    await document.opened;
+    return document;
+}
+
 // This suite is about the restore path, not game lookups: a record outside a game resolves nothing.
 const noGame = {
     onDidChangeGame: () => ({ dispose: () => {} }),
@@ -152,7 +182,7 @@ describe("binary editor hot-exit restore", () => {
     it("parses the backup bytes, not the file on disk, when restoring a dirty document", async () => {
         const provider = new BinaryEditorProvider(context, noGame);
 
-        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(BACKUP_URI), token);
+        const document = await openDocument(provider, BACKUP_URI);
 
         expect(readFileMock.mock.calls.map(([target]) => String(target))).toEqual([BACKUP_URI]);
         expect(workerRequests).toEqual([{ type: "open", uri: DOC_URI, bytes: BACKUP_BYTES, engine: undefined }]);
@@ -163,7 +193,7 @@ describe("binary editor hot-exit restore", () => {
     it("reads the file itself when opening without a backup", async () => {
         const provider = new BinaryEditorProvider(context, noGame);
 
-        await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        await openDocument(provider);
 
         expect(readFileMock.mock.calls.map(([target]) => String(target))).toEqual([DOC_URI]);
         expect(workerRequests).toEqual([{ type: "open", uri: DOC_URI, bytes: DISK_BYTES, engine: undefined }]);
@@ -183,7 +213,7 @@ describe("binary editor hot-exit restore", () => {
         );
         const provider = new BinaryEditorProvider(context, noGame);
 
-        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(BACKUP_URI), token);
+        const document = await openDocument(provider, BACKUP_URI);
 
         expect(workerRequests).toEqual([{ type: "open", uri: DOC_URI, bytes: DISK_BYTES, engine: undefined }]);
         expect(document.uri.toString()).toBe(DOC_URI);
@@ -192,12 +222,22 @@ describe("binary editor hot-exit restore", () => {
     });
 
     // The fallback is for a broken BACKUP, not for a broken file: with no backup in play an unreadable
-    // document still fails the open, so a genuine read error is never swallowed into an empty editor.
+    // document still fails the open, so a genuine read error is never swallowed into an empty editor. The
+    // panel already exists by then, so the failure is told there, by the error it failed with.
     it("still fails the open when the file itself cannot be read", async () => {
         readFileMock.mockImplementation(() => Promise.reject(new Error("disk is gone")));
         const provider = new BinaryEditorProvider(context, noGame);
+        const document = await openDocument(provider);
+        const { panel, posted, send } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
 
-        await expect(provider.openCustomDocument(uri(DOC_URI), openContext(), token)).rejects.toThrow("disk is gone");
+        await send({ type: "ready" });
+
+        expect(workerRequests).toEqual([]);
+        expect(posted).toEqual([
+            { type: "init", open: expect.objectContaining({ sessionId: "", errors: ["disk is gone"] }) },
+        ]);
+        await expect(document.getBytes()).rejects.toThrow("disk is gone");
     });
 
     // An opcode means what its game's engine says it means, and only the host can resolve which game a record
@@ -205,7 +245,7 @@ describe("binary editor hot-exit restore", () => {
     it("sends the game's engine to the worker so the session reads its opcodes that way", async () => {
         const provider = new BinaryEditorProvider(context, { ...noGame, engine: () => "bg2" });
 
-        await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        await openDocument(provider);
 
         expect(workerRequests).toEqual([{ type: "open", uri: DOC_URI, bytes: DISK_BYTES, engine: "bg2" }]);
     });
@@ -255,7 +295,7 @@ describe("binary editor request failures", () => {
     // without one leaves the view waiting for rows that are never coming.
     it("answers a request the worker failed with an error naming the request", async () => {
         const provider = new BinaryEditorProvider(context, noGame);
-        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const document = await openDocument(provider);
         const { panel, posted, send } = fakePanel();
         await provider.resolveCustomEditor(document, panel, token);
 
@@ -267,7 +307,7 @@ describe("binary editor request failures", () => {
     // The webview and the host disagreeing about the contract is a bug; dropping the message hides it.
     it("reports a message outside the webview protocol instead of dropping it", async () => {
         const provider = new BinaryEditorProvider(context, noGame);
-        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const document = await openDocument(provider);
         const { panel, send } = fakePanel();
         await provider.resolveCustomEditor(document, panel, token);
         showErrorMock.mockClear();
@@ -283,7 +323,7 @@ describe("binary editor request failures", () => {
     // re-sync the view to whatever the session now holds.
     it("says why an undo the worker refused failed, and still refreshes the view", async () => {
         const provider = new BinaryEditorProvider(context, noGame);
-        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const document = await openDocument(provider);
         const edits: vscode.CustomDocumentEditEvent[] = [];
         document.onDidChange((edit) => edits.push(edit));
         const refreshes: unknown[] = [];
@@ -294,6 +334,60 @@ describe("binary editor request failures", () => {
 
         expect(showErrorMock).toHaveBeenCalledWith('Could not undo "Edit Name": nothing to undo');
         expect(refreshes).toEqual([undefined]);
+    });
+});
+
+describe("binary editor open lifecycle", () => {
+    beforeEach(() => {
+        workerRequests.length = 0;
+        workers.length = 0;
+        gate.open = undefined;
+        readFileMock.mockReset();
+        readFileMock.mockImplementation(() => Promise.resolve(DISK_BYTES));
+    });
+
+    // VS Code creates the panel only once openCustomDocument returns, so returning before the parse is what lets
+    // the webview boot alongside it; the webview then has to wait for the parse rather than get an empty init.
+    it("returns the document before the parse lands, and answers the webview's ready once it has", async () => {
+        let release = (): void => {};
+        gate.open = new Promise((resolve) => {
+            release = resolve;
+        });
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const { panel, posted, send } = fakePanel();
+        await provider.resolveCustomEditor(document, panel, token);
+
+        const ready = send({ type: "ready" });
+        await vi.waitFor(() => expect(workerRequests.map((r) => r.type)).toEqual(["open"]));
+        expect(posted).toEqual([]);
+
+        release();
+        await ready;
+        expect(posted[0]).toEqual({ type: "init", open: expect.objectContaining({ sessionId: "session-1" }) });
+    });
+
+    // The next file opens on a worker that already started, which is where most of a small file's open went.
+    it("opens the next document on the worker started after the first one's parse", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        await openDocument(provider);
+        expect(workers).toHaveLength(2);
+
+        await openDocument(provider);
+
+        expect(workers[1]!.requests).toEqual(["open"]);
+        expect(workers).toHaveLength(3);
+    });
+
+    it("closes a disposed document's session before handing its worker back", async () => {
+        const provider = new BinaryEditorProvider(context, noGame);
+        const document = await openDocument(provider);
+
+        document.dispose();
+
+        await vi.waitFor(() => expect(workers[0]!.requests).toEqual(["open", "close"]));
+        // A spare was already parked, so this one is ended rather than kept as a second.
+        await vi.waitFor(() => expect(workers[0]!.terminated).toBe(true));
     });
 });
 
@@ -331,7 +425,7 @@ describe("binary editor across a game change", () => {
     // was sent. Nothing re-sends on its own, so an editor open when a game opens keeps the numbers.
     it("re-projects an open panel's fields when a game opens under it", async () => {
         const { provider, gameOpened } = wired();
-        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const document = await openDocument(provider);
         const { panel, posted } = fakePanel();
         await provider.resolveCustomEditor(document, panel, token);
         posted.length = 0;
@@ -348,7 +442,7 @@ describe("binary editor across a game change", () => {
 
     it("stops telling a closed panel anything", async () => {
         const { provider, gameOpened } = wired();
-        const document = await provider.openCustomDocument(uri(DOC_URI), openContext(), token);
+        const document = await openDocument(provider);
         const { panel, posted, close } = fakePanel();
         await provider.resolveCustomEditor(document, panel, token);
         posted.length = 0;

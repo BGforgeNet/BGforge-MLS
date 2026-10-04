@@ -83,6 +83,54 @@ describe("WorkerBridge", () => {
         await expect(b).rejects.toThrow(/worker crashed/);
     });
 
+    // The pool parks a closed document's worker for the next one only on this word, so each way a worker can be
+    // left wedged or mid-request must say no.
+    describe("reusable", () => {
+        it("is true once every request has been answered", async () => {
+            const bridge = new WorkerBridge(fakePort());
+            await bridge.send({ type: "open", uri: `file://${MAP_FIXTURE}`, bytes: bytes() });
+            expect(bridge.reusable).toBe(true);
+        });
+
+        it("is false while a request is in flight", () => {
+            const bridge = new WorkerBridge(silentPort(), { timeoutMs: 10_000 });
+            void bridge.send({ type: "snapshot", sessionId: "s1" }).catch(() => {});
+            expect(bridge.reusable).toBe(false);
+            bridge.dispose();
+        });
+
+        it("stays false after a request timed out", async () => {
+            const bridge = new WorkerBridge(silentPort(), { timeoutMs: 5 });
+            await expect(bridge.send({ type: "snapshot", sessionId: "s1" })).rejects.toThrow(/within 5ms/);
+            expect(bridge.reusable).toBe(false);
+        });
+
+        it("stays false after the worker failed", () => {
+            const port = silentPort();
+            const bridge = new WorkerBridge(port);
+            port.fail(new Error("worker crashed"));
+            expect(bridge.reusable).toBe(false);
+        });
+    });
+
+    // A recycled worker can still answer the previous bridge's last request after a new bridge took it over; an
+    // id the new bridge also issued would resolve the wrong request with that stale reply.
+    it("never issues an id another bridge already used", () => {
+        const ids: number[] = [];
+        const recording = (): Port => ({
+            postMessage: (msg) => ids.push(msg.id),
+            onMessage: () => {},
+            dispose: () => {},
+        });
+        const first = new WorkerBridge(recording(), { timeoutMs: 10_000 });
+        const second = new WorkerBridge(recording(), { timeoutMs: 10_000 });
+        for (const bridge of [first, second, first])
+            void bridge.send({ type: "snapshot", sessionId: "s" }).catch(() => {});
+        first.dispose();
+        second.dispose();
+        expect(new Set(ids).size).toBe(3);
+    });
+
     it("clears the timeout once a reply arrives so a resolved request never rejects", async () => {
         vi.useFakeTimers();
         try {

@@ -80,7 +80,7 @@ Synchronous CPU-heavy work runs off the main threads:
 
 | Worker                                                 | Started from                                 | Work                                                  |
 | ------------------------------------------------------ | -------------------------------------------- | ----------------------------------------------------- |
-| `client/src/binary-editor/worker.ts`                   | `client/src/binary-editor/document.ts`       | Parsing and editing one open binary file              |
+| `client/src/binary-editor/worker.ts`                   | `client/src/binary-editor/worker-pool.ts`    | Parsing and editing one open binary file              |
 | `client/src/gallery/worker.ts`                         | `client/src/gallery/panel.ts`                | Archive reads, decodes and thumbnails                 |
 | ELK layout worker (blob URL, in the webview)           | `client/src/dialog-editor/webview/layout.ts` | Dialog graph layout                                   |
 | `server/src/worker/ts-morph-worker.ts` (two instances) | `server/src/worker/worker-client.ts`         | TSSL compile; TD/TBAF transpile; TD/TSSL dialog parse |

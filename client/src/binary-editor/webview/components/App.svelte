@@ -2,6 +2,7 @@
     import type { Diagnostic, NodeId, OpenResult } from "@bgforge/binary-editor";
     import type { Bridge } from "../state/bridge";
     import type { HostToWebview } from "../messages";
+    import { applyChangeSet } from "../state/apply-change-set";
     import { diagnosticsByNode, bannerSummary } from "../state/diagnostics";
     import { clearSelectionMemory } from "../state/list-selection-memory";
     import { DEFAULT_INIT_TIMEOUT_MS, installInitTimeout, isHostMessage } from "../../../webview-utils";
@@ -11,11 +12,10 @@
 
     const { bridge }: { bridge: Bridge } = $props();
 
-    // Deliberately DEEP, unlike the other host payloads in this editor's webviews: the changeSet branch
-    // below patches changed rows into `open.layout.layout.fields` in place, and it is that per-field
-    // reactivity which re-renders the layout. `$state.raw` here leaves an edited field showing its old
-    // value until something else replaces the document.
-    let open = $state<OpenResult | undefined>();
+    // Raw: a deep proxy put a trap on every field read of the first render (enum option maps included). A
+    // changeSet therefore REPLACES it (`applyChangeSet` copies the path to what changed) - a write into it in
+    // place would leave an edited field showing its old value.
+    let open = $state.raw<OpenResult | undefined>();
     // Raw: replaced wholesale on every init and changeSet, never written into.
     let diagnostics = $state.raw<Diagnostic[]>([]);
     let version = $state(0);
@@ -57,27 +57,10 @@
                 opError = undefined; // a changeSet means the op succeeded - clear any prior failure
                 // Undo/redo refresh via a changeSet with no selection - preserve the current selection then.
                 if (m.selection !== undefined) selection = m.selection;
-                // The layout renderer reads the resolved field snapshot directly, so patch each changed row
-                // into it (matched by node id) to reflect edits. Without this, a layout edit never re-renders.
-                const fields = open?.layout.layout?.fields;
-                if (fields) {
-                    for (const row of m.changeSet.changed) {
-                        const ref = Object.keys(fields).find((k) => fields[k]?.id === row.id);
-                        if (ref) fields[ref] = row;
-                    }
-                }
-                // Refresh tab count badges (e.g. the Spells known/memorized total) after a structure op.
-                const counts = m.changeSet.tabCounts;
-                const tabs = open?.layout.layout?.tabs;
-                if (counts && tabs) {
-                    const patch = (ts: typeof tabs): void => {
-                        for (const t of ts) {
-                            if (t.id in counts) t.count = counts[t.id];
-                            if (t.tabs) patch(t.tabs);
-                        }
-                    };
-                    patch(tabs);
-                }
+                // The layout renderer reads the resolved field snapshot directly, so the changed rows (and tab
+                // count badges, e.g. the Spells known/memorized total) go into a new snapshot. Without this, a
+                // layout edit never re-renders.
+                if (open) open = applyChangeSet(open, m.changeSet);
                 version++;
             } else if (m.type === "invalidated") {
                 version++;
