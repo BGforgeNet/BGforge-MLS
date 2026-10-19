@@ -991,7 +991,7 @@ Execute defined macros.
 
 ### Arrays
 
-#### ACTION_DEFINE_ARRAY / DEFINE_ARRAY
+#### ACTION_DEFINE_ARRAY / DEFINE_ARRAY / PATCH_DEFINE_ARRAY
 
 ```tp2
 ACTION_DEFINE_ARRAY arrayName BEGIN
@@ -1003,7 +1003,7 @@ DEFINE_ARRAY arrayName BEGIN  // patch context
 END
 ```
 
-Define indexed array.
+Define indexed array. `PATCH_DEFINE_ARRAY` is a synonym for `DEFINE_ARRAY` in patch context.
 
 #### ACTION_DEFINE_ASSOCIATIVE_ARRAY / DEFINE_ASSOCIATIVE_ARRAY
 
@@ -1276,6 +1276,16 @@ PATCH_LOG ~message~
 
 Write message to debug log.
 
+#### PATCH_TIME
+
+```tp2
+PATCH_TIME ~label~ BEGIN
+  // patches
+END
+```
+
+Run the patches and report their elapsed time under the given label.
+
 ### String Manipulation
 
 #### TEXT_SPRINT / SPRINT
@@ -1287,10 +1297,11 @@ SPRINT [GLOBAL] variable ~string~
 
 Assign evaluated string to variable. Prefer TEXT_SPRINT. GLOBAL sets the variable in a special scope accessible from any other scope.
 
-#### SNPRINT
+#### SNPRINT / OUTER_SNPRINT
 
 ```tp2
 SNPRINT length variable ~string~
+OUTER_SNPRINT length variable ~string~  // action context
 ```
 
 Assign first/last N characters to variable.

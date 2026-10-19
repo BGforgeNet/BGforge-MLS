@@ -127,6 +127,7 @@ export const CONTROL_FLOW_TYPES = [
     // Patches with BEGIN...END body
     "patch_decompile_and_patch",
     "patch_replace_evaluate",
+    "patch_time",
     // Actions with BEGIN...END body
     "action_with_tra",
     "action_with_scope",

@@ -1210,3 +1210,21 @@ SUB_COMPONENT ~Group~
         (string
           (tilde_string
             (tilde_content)))))))
+
+================================================================================
+OUTER_SNPRINT
+================================================================================
+
+OUTER_SNPRINT 1 first ~hello~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_outer_snprint
+    length: (value
+      (number))
+    var: (identifier)
+    value: (value
+      (string
+        (tilde_string
+          (tilde_content))))))

@@ -727,6 +727,7 @@ export default grammar({
                 $.patch_reraise,
                 $.patch_silent,
                 $.patch_verbose,
+                $.patch_time,
                 $.patch_compile_baf_to_bcs,
                 $.patch_decompile_bcs_to_baf,
                 $.patch_compile_d_to_dlg,
@@ -1069,7 +1070,8 @@ export default grammar({
             ),
 
         // Arrays
-        patch_define_array: ($) => seq("DEFINE_ARRAY", field("name", $.value), "BEGIN", repeat($.value), "END"),
+        patch_define_array: ($) =>
+            seq(choice("DEFINE_ARRAY", "PATCH_DEFINE_ARRAY"), field("name", $.value), "BEGIN", repeat($.value), "END"),
         patch_define_associative_array: defineAssocArray(
             kw("DEFINE_ASSOCIATIVE_ARRAY", "PATCH_DEFINE_ASSOCIATIVE_ARRAY"),
         ),
@@ -1090,6 +1092,7 @@ export default grammar({
         patch_include: ($) => prec.right(seq("PATCH_INCLUDE", repeat1(field("file", $.value)))),
         patch_reraise: ($) => "PATCH_RERAISE",
         patch_silent: ($) => "PATCH_SILENT",
+        patch_time: ($) => seq("PATCH_TIME", field("name", $.value), "BEGIN", repeat($._patch), "END"),
         patch_verbose: ($) => "PATCH_VERBOSE",
         patch_compile_baf_to_bcs: ($) => "COMPILE_BAF_TO_BCS",
         patch_decompile_bcs_to_baf: ($) => "DECOMPILE_BCS_TO_BAF",
@@ -1207,6 +1210,7 @@ export default grammar({
                 $.action_outer_sprint,
                 $.action_outer_text_sprint,
                 $.action_outer_sprintf,
+                $.action_outer_snprint,
                 $.action_with_tra,
                 $.action_with_scope,
                 $.action_add_journal,
@@ -1458,6 +1462,8 @@ export default grammar({
         action_outer_text_sprint: sprintOpGlobal("OUTER_TEXT_SPRINT"),
 
         action_outer_sprintf: sprintfOp("OUTER_SPRINTF"),
+        action_outer_snprint: ($) =>
+            seq("OUTER_SNPRINT", field("length", $.value), field("var", $.identifier), field("value", $.value)),
 
         // Local variables (only valid inside macro bodies)
         local_set: ($) => seq("LOCAL_SET", field("var", $._assignable), $._assign_op, field("value", $.value)),
@@ -1506,14 +1512,16 @@ export default grammar({
 
         _func_decl_param: ($) => choice($.int_var_decl, $.str_var_decl, $.ret_decl, $.ret_array_decl),
 
+        // Every parameter list, here and in calls, may be empty: WeiDU accepts it, and parameter-name completion
+        // right after typing `INT_VAR ` finds its context from the (still empty) list node.
         int_var_decl: ($) =>
             seq("INT_VAR", repeat(seq(choice($.identifier, $.var_name_numeric, $.string), "=", $.value))),
 
         str_var_decl: ($) =>
             seq("STR_VAR", repeat(seq(choice($.identifier, $.var_name_numeric, $.string), "=", $.value))),
 
-        ret_decl: ($) => seq("RET", repeat1($.identifier)),
-        ret_array_decl: ($) => seq("RET_ARRAY", repeat1($.identifier)),
+        ret_decl: ($) => seq("RET", repeat($.identifier)),
+        ret_array_decl: ($) => seq("RET_ARRAY", repeat($.identifier)),
 
         // Function/macro calls
         action_launch_macro: ($) =>
@@ -1535,13 +1543,12 @@ export default grammar({
         // In function calls, left-hand side of assignments is always an identifier/string, not an expression
         int_var_call: ($) => seq("INT_VAR", repeat($.int_var_call_item)),
         int_var_call_item: ($) => seq(choice($.identifier, $.var_name_numeric, $.string), optional(seq("=", $.value))),
-        str_var_call: ($) => seq("STR_VAR", repeat1($.str_var_call_item)),
+        str_var_call: ($) => seq("STR_VAR", repeat($.str_var_call_item)),
         str_var_call_item: ($) => seq(choice($.identifier, $.var_name_numeric, $.string), optional(seq("=", $.value))),
-        ret_call: ($) => seq("RET", repeat1($.ret_call_item)),
-        ret_call_item: ($) => seq(choice($.identifier, $.var_name_numeric, $.string), optional(seq("=", $.value))),
-        ret_array_call: ($) => seq("RET_ARRAY", repeat1($.ret_array_call_item)),
-        ret_array_call_item: ($) =>
-            seq(choice($.identifier, $.var_name_numeric, $.string), optional(seq("=", $.value))),
+        ret_call: ($) => seq("RET", repeat($.ret_call_item)),
+        ret_call_item: ($) => seq($._assignable, optional(seq("=", $.value))),
+        ret_array_call: ($) => seq("RET_ARRAY", repeat($.ret_array_call_item)),
+        ret_array_call_item: ($) => seq($._assignable, optional(seq("=", $.value))),
 
         // Arrays
         action_define_array: ($) =>

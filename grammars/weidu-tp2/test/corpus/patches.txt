@@ -619,3 +619,135 @@ COPY ~mymod/item.itm~ ~override~
         uncompressed_size: (value
           (variable_ref
             (identifier)))))))
+
+================================================================================
+PATCH_DEFINE_ARRAY
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  PATCH_DEFINE_ARRAY items BEGIN ~one~ ~two~ END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_define_array
+        name: (value
+          (variable_ref
+            (identifier)))
+        (value
+          (string
+            (tilde_string
+              (tilde_content))))
+        (value
+          (string
+            (tilde_string
+              (tilde_content))))))))
+
+================================================================================
+PATCH_TIME between patches and back to back
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  PATCH_PRINT ~before~
+  PATCH_TIME ~first~ BEGIN PATCH_PRINT ~a~ END
+  PATCH_TIME ~second~ BEGIN PATCH_PRINT ~b~ END
+  PATCH_PRINT ~after~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_print
+        message: (value
+          (string
+            (tilde_string
+              (tilde_content)))))
+      (patch_time
+        name: (value
+          (string
+            (tilde_string
+              (tilde_content))))
+        (patch_print
+          message: (value
+            (string
+              (tilde_string
+                (tilde_content))))))
+      (patch_time
+        name: (value
+          (string
+            (tilde_string
+              (tilde_content))))
+        (patch_print
+          message: (value
+            (string
+              (tilde_string
+                (tilde_content))))))
+      (patch_print
+        message: (value
+          (string
+            (tilde_string
+              (tilde_content))))))))
+
+================================================================================
+LPF returning into an array element and an evaluated name
+================================================================================
+
+COPY ~mymod/item.itm~ ~override~
+  LPF f RET $opcodes(~12~) = count RET_ARRAY EVAL ~opcodes_12~ = opcodes_xx END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_launch_function
+        name: (identifier)
+        (ret_call
+          (ret_call_item
+            (array_access
+              name: (identifier)
+              (value
+                (string
+                  (tilde_string
+                    (tilde_content)))))
+            (value
+              (variable_ref
+                (identifier)))))
+        (ret_array_call
+          (ret_array_call_item
+            (string
+              (tilde_string
+                (tilde_content)))
+            (value
+              (variable_ref
+                (identifier)))))))))

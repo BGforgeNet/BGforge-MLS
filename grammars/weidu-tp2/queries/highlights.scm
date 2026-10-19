@@ -75,6 +75,7 @@
 "ADD_AREA_TYPE" @function.builtin
 "OUTER_SET" @function.builtin
 "OUTER_SPRINT" @function.builtin
+"OUTER_SNPRINT" @function.builtin
 "OUTER_SPRINTF" @function.builtin
 "OUTER_TEXT_SPRINT" @function.builtin
 "OUTER_PATCH" @function.builtin
@@ -227,6 +228,8 @@
 "TO_LOWER" @function
 "TO_UPPER" @function
 "DEFINE_ARRAY" @function
+"PATCH_DEFINE_ARRAY" @function
+"PATCH_TIME" @function
 "DEFINE_ASSOCIATIVE_ARRAY" @function
 "CLEAR_ARRAY" @function
 (patch_reraise) @function

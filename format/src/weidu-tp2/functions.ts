@@ -37,6 +37,17 @@ import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 
 /** Parse assignment: name = value (handles assignment, binary_expr, ternary_expr, *_call_item nodes) */
 function parseAssignment(node: SyntaxNode): { name: string; value: string } | null {
+    // A RET destination can span several children (`EVAL ~name~`), so it is everything before `=`;
+    // the grammar always follows `=` with a value, hence the non-null assertion.
+    if (node.type === SyntaxType.RetCallItem || node.type === SyntaxType.RetArrayCallItem) {
+        const equals = node.children.findIndex((child) => !child.isNamed && child.text === "=");
+        const destination = equals === -1 ? node.children : node.children.slice(0, equals);
+        return {
+            name: destination.map((child) => child.text).join(" "),
+            value: equals === -1 ? "" : normalizeWhitespace(node.children[equals + 1]!.text),
+        };
+    }
+
     // Try standard assignment fields first
     let nameNode = node.childForFieldName("name") ?? node.childForFieldName("var");
     let valueNode = node.childForFieldName("value");
