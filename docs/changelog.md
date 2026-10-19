@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.17.0
 
 ### Transpilers
 
@@ -57,8 +57,9 @@
   bar included. Until it finishes, answers that span files can come back short.
 - TP2 hover, go to definition and completion reuse their walk of a file until it changes, so repeated requests
   on a large installer answer at once instead of re-reading the whole file each time.
-- TP2 call hierarchy reads other files as they are open in the editor, unsaved changes included, and places a
-  call correctly when accented or other non-ASCII text comes before it on its line.
+- TP2 call hierarchy, and find references on a translation entry, read other files as they are open in the
+  editor, unsaved changes included. Call hierarchy also places a call correctly when accented or other non-ASCII
+  text comes before it on its line.
 - Go to definition on an `#include` or file path written in a different letter case than the file on disk works
   when a folder above the workspace can be entered but not listed, as on shared hosts with private home folders.
 
@@ -68,9 +69,14 @@
   appears earlier in the file, instead of a line too early.
 - In a `.dlg` dialog, an action the editor refuses (Del on a state that cannot be deleted) shows a message saying
   why, as it already did for `.d` and `.ssl` dialogs, instead of doing nothing.
+- If the colouring of conditions and actions cannot start, a warning says why and the dialog stays on screen,
+  instead of the whole panel going blank.
 
 ### WeiDU
 
+- TP2 accepts `PATCH_TIME`, `OUTER_SNPRINT` and `PATCH_DEFINE_ARRAY`, a function result returned into an array
+  element or an evaluated name (`RET $opcodes(~12~) = count`, `RET_ARRAY EVAL ~name~ = list`), and an empty
+  `STR_VAR`, `RET` or `RET_ARRAY` list, as WeiDU does, instead of reporting syntax errors, and formats them.
 - Renaming a D state label edits the right ranges when other files are parsed between the rename's two requests,
   such as during a workspace scan.
 - A compile started while an earlier one of the same file was still running no longer has its temporary file
@@ -95,6 +101,7 @@
 - An error reading a game's `chitin.key`, a BIF archive or a `dialog.tlk` names the file.
 - A damaged or crafted FRM or BAM v2 file, a compressed BIF that ends early, and a DLG snapshot claiming more
   than a DLG can hold are refused with a message, instead of loading truncated data or exhausting memory.
+- A failure while building an entry's summary is reported, instead of looking like an entry with no summary.
 
 ### Other editors
 
@@ -112,6 +119,21 @@
 - A `.tra` or `.msg` file with an upper-case extension (`SETUP.TRA`) is re-read when saved, like a lower-case one.
 - Saving a dialog's text into a `.tra` or `.msg` file that exists but cannot be read says so, naming the file,
   instead of reporting nothing to save.
+
+### Performance
+
+- Binary files open faster in the binary editor: its view starts while the file is still being read.
+- The dialog editor opens faster: its graph layout and the colouring of conditions and actions load after the
+  first paint.
+- The image gallery draws thumbnails faster, and after a fast scroll the tiles where it stops are drawn first
+  instead of waiting behind the rows it passed.
+- Reopening a `.map` is faster in a mod with many `.pro` files.
+- Compiling BAF is about a fifth faster.
+
+### Data
+
+- Refreshed Infinity Engine BAF documentation from IESDP (2026-10-19). Code examples in action descriptions keep
+  their `<placeholder>` text, which was dropped before.
 
 ### Requirements
 
