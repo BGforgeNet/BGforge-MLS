@@ -2748,7 +2748,7 @@ actions:
           RESPONSE #100
             SetGlobal("Value","GLOBAL",100)
             SetTokenGlobal("Value","GLOBAL","PPOINTS")
-            DisplayStringHead(Myself,63037) //63037  is  for me
+            DisplayStringHead(Myself,63037) //63037  is <PPOINTS> for me
         END
         ```
     - name: SetTokenObject
@@ -2814,7 +2814,7 @@ actions:
         Intoxicated      A  Intoxicated      A  Intoxicated      A  Intoxicated      A
         Bad Luck         A  Bad Luck         A  Bad Luck         A
                         / Breach             E  Stats (25)       P \
-                    OR  OR
+                    OR <                                            > OR
                         \ Rest & Remem.      P Mass Raise Dead   P /
         ```
     - name: SetupWishObject
@@ -2868,7 +2868,7 @@ actions:
         Intoxicated      A  Intoxicated      A  Intoxicated      A  Intoxicated      A
         Bad Luck         A  Bad Luck         A  Bad Luck         A
                         / Breach             E  Stats (25)       P \
-                    OR  OR
+                    OR <                                            > OR
                         \ Rest & Remem.      P Mass Raise Dead   P /
         ```
     - name: Shout
@@ -3613,7 +3613,11 @@ actions:
     - name: WaitSync
       detail: WaitSync(I:Amount)
       doc: |-
-        It is likely that it behaves like a combination of [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#63) and [MultiPlayerSync()](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#183).
+        Same as [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#63), but scales `Amount` according to the "Maximum Frame Rate" option in `Baldur.lua`, so that the
+        action waits approximately the same number of seconds as [Wait()](https://gibberlings3.github.io/iesdp/scripting/actions/bgeeactions.htm#63) would at the default frame rate of 30 FPS.
+        ```
+        wait_ticks = <Maximum Frame Rate> * 15 / 30 * <Amount>
+        ```
     - name: WaitWait
       detail: WaitWait(I:Time)
       doc: |-

@@ -81,3 +81,40 @@ describe("normalizeHtmlFragment compactBlankLines: false", () => {
         expect(result).toBe("fooquux");
     });
 });
+
+describe("normalizeHtmlFragment keeps code literal", () => {
+    const options = { resolveHref: (h: string) => h };
+
+    it("keeps angle-bracket placeholders inside a fenced code block", () => {
+        // IESDP WaitSync: the fence holds a formula, not markup.
+        const desc = [
+            "Same as Wait(), but scales `Amount`.",
+            "```",
+            "wait_ticks = <Maximum Frame Rate> * 15 / 30 * <Amount>",
+            "```",
+        ].join("\n");
+        expect(normalizeHtmlFragment(desc, options)).toBe(
+            [
+                "Same as Wait(), but scales `Amount`.",
+                "```",
+                "wait_ticks = <Maximum Frame Rate> * 15 / 30 * <Amount>",
+                "```",
+            ].join("\n"),
+        );
+    });
+
+    it("keeps an escaped placeholder inside <code> as literal inline code", () => {
+        expect(normalizeHtmlFragment("Set <code>&lt;slot&gt;</code> first.", options)).toBe("Set `<slot>` first.");
+    });
+
+    it("decodes entities inside a fenced code block", () => {
+        // IESDP action 157's example writes a quote as `&quot;` inside its fence.
+        expect(normalizeHtmlFragment('```\nChangeAIScript("gbSim&quot;,DEFAULT)\n```', options)).toBe(
+            '```\nChangeAIScript("gbSim",DEFAULT)\n```',
+        );
+    });
+
+    it("still strips a tag outside code", () => {
+        expect(normalizeHtmlFragment("Set <i>this</i> `<slot>` first.", options)).toBe("Set this `<slot>` first.");
+    });
+});

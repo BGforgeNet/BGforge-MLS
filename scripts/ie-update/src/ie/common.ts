@@ -88,8 +88,27 @@ export function normalizeHtmlFragment(html: string, options: NormalizeHtmlFragme
         /<code>([\s\S]*?)<\/code>/gi,
         (_m, inner: string) => `\`${decodeHtmlEntities(inner.trim())}\``,
     );
+    // IESDP writes the line breaks of some fenced examples as `<br />`, so line breaks convert everywhere first.
     result = result.replaceAll(/<br\s*\/?>/gi, "\n");
-    result = result.replaceAll(/<\/?(?:div|p|span|strong|em)>/gi, "");
+    // Otherwise markdown code (a fenced block or an inline span) holds no tags: `<Amount>` in a formula is literal,
+    // so code only has its entities decoded (IESDP writes some quotes there as `&quot;`). The split keeps code at
+    // odd indices.
+    result = result
+        .split(/(```[\s\S]*?```|`[^`\n]*`)/g)
+        .map((segment, index) => (index % 2 === 1 ? decodeHtmlEntities(segment) : htmlProseToText(segment)))
+        .join("");
+    result = result.replaceAll(/[ \t]+\n/g, "\n");
+
+    if (options.compactBlankLines !== false) {
+        return normalizeMarkdownWhitespace(result);
+    }
+
+    return result.trim();
+}
+
+/** Turns the HTML left in non-code markdown text into plain text: wrappers, superscripts, then any other tag. */
+function htmlProseToText(text: string): string {
+    let result = text.replaceAll(/<\/?(?:div|p|span|strong|em)>/gi, "");
     result = result.replaceAll(/<sup>([\s\S]*?)<\/sup>/gi, (_m, inner: string) => decodeHtmlEntities(inner));
     // Strip remaining HTML tags. Repeat-until-stable with `[^<>]*` (forbidding
     // both brackets) handles nested tags that a single greedy pass would leave
@@ -99,14 +118,7 @@ export function normalizeHtmlFragment(html: string, options: NormalizeHtmlFragme
         prev = result;
         result = result.replaceAll(/<[^<>]*>/g, "");
     } while (result !== prev);
-    result = decodeHtmlEntities(result);
-    result = result.replaceAll(/[ \t]+\n/g, "\n");
-
-    if (options.compactBlankLines !== false) {
-        return normalizeMarkdownWhitespace(result);
-    }
-
-    return result.trim();
+    return decodeHtmlEntities(result);
 }
 
 function normalizeMarkdownWhitespace(text: string): string {
