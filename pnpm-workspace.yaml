@@ -93,6 +93,10 @@ allowBuilds:
 #     when pinned - inside the usual maturity preference, taken because the
 #     alternative was leaving two open advisories on a dev-only path. Re-verified
 #     2026-09-15: without it the resolution still keeps a 6.15.1 and all three return.
+#   - oxfmt's tinypool (GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr: prototype
+#     pollution to RCE via worker and run() options; fixed in 2.1.2). oxfmt 0.65.0 pins tinypool 2.1.0 exactly; the oxfmt
+#     release that moves it (0.73.0, tinypool 2.2.0) is a 0.x minor jump the bump
+#     policy defers, so the pin stays on tinypool's own 2.x line.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. Overrides are dropped once their
 # upstreams resolve to a patched version on their own (verified by removing the pin,
@@ -116,9 +120,14 @@ allowBuilds:
 # undici under @vscode/vsce -> cheerio (GHSA-4cwx-7wf7-3272 high, plus four moderate)
 # needed no override either: cheerio declares ^7.19.0, so re-resolving picked up the
 # patched 7.29.0 in range. A stale lockfile entry, not a range that excluded the fix.
+# braces (<=3.0.3, stack-exhaustion DoS on deeply nested brace patterns) is an accepted
+# risk: no fixed release exists (3.0.3 is the newest), and the shipped path, fast-glob in
+# server/ and client/, only ever expands patterns built from fixed extension lists;
+# the user-chosen directory is passed as `cwd`, which is not brace-expanded.
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
+  oxfmt>tinypool: ">=2.1.2 <3"
   qs: ">=6.16.0"
 
 # A version must have been published for 7 days (in minutes) before it resolves into the lockfile, and
