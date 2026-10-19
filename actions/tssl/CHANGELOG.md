@@ -2,6 +2,11 @@
 
 Notable changes to the `actions/tssl` Action. Compiler changes: `compilers/tssl/CHANGELOG.md`.
 
+## 1.0.4
+
+- Fix: when the last file in the changed list no longer exists, such as one the push deleted, the step no longer
+  fails with no message and no outputs.
+
 ## 1.0.3
 
 - Fix: `check: true` fails on a generated `.ssl` that was never committed.

@@ -2,6 +2,11 @@
 
 Notable changes to the `actions/binary` Action. CLI changes: `binary/CHANGELOG.md`.
 
+## 1.0.8
+
+- Fix: when the last file in the changed list no longer exists, such as one the push deleted, the step no longer
+  fails with no message and no outputs.
+
 ## 1.0.7
 
 - Description lists `.dlg`. Formats still come from `fgbin --extensions`.

@@ -2,6 +2,11 @@
 
 Notable changes to the `actions/format` Action. CLI changes: `format/CHANGELOG.md`.
 
+## 1.0.5
+
+- Fix: when the last file in the changed list no longer exists, such as one the push deleted, the step no longer
+  fails with no message and no outputs.
+
 ## 1.0.4
 
 - No change to the Action; README examples use `actions/checkout@v7`.

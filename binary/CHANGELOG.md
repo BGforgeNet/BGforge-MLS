@@ -2,16 +2,25 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
-## Unreleased
+## 0.9.0
 
 ### Changed
 
 - Requires Node 22 or newer, up from 20.
+- Every refusal to open or read a KEY, BIF or TLK file names the file.
+- A game table (IDS or 2DA) or an override folder that is present but unreadable is refused by name, instead of
+  being treated as absent.
 
 ### Fixed
 
 - `fgbin` refuses `--save-and-check` and `--check-idempotency` with an error instead of accepting them and
   printing the snapshot to stdout; neither was ever implemented for binary files.
+- A compressed BIF that ends early, a block past the file's end, or a filename length past it is refused,
+  instead of reading truncated data.
+- A DLG JSON snapshot whose rebuilt text block would exceed the DLG size limit is refused before the memory for it
+  is allocated.
+- `readAuxFile` refuses a name that is not a plain file name, as `writeAuxFile` already did, and the check that a
+  name stays inside the game folder treats a backslash as a separator.
 
 ## 0.8.0
 

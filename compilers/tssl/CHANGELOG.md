@@ -2,7 +2,7 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
-## Unreleased
+## 0.3.0
 
 ### Changed
 
@@ -17,6 +17,11 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
 - `tssl` refuses `--save-and-check` and `--check-idempotency` with an error. Both used to write the outputs
   like a plain run, so a check that should have left the tree alone rewrote it.
+- Integer constants fold with 32-bit wraparound and float constants in 32-bit precision, as the reference
+  compiler does, so a constant such as `2147483647 + 1` compiles to the same value in both.
+- A string holding a character wider than one byte, such as a Chinese letter, is refused instead of compiled as
+  a different character.
+- Every procedure declared but never defined is reported, not only the first.
 
 ## 0.2.0
 

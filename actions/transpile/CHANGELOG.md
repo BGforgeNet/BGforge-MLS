@@ -2,6 +2,11 @@
 
 Notable changes to the `actions/transpile` Action. CLI changes: `transpilers/CHANGELOG.md`.
 
+## 1.0.4
+
+- Fix: when the last file in the changed list no longer exists, such as one the push deleted, the step no longer
+  fails with no message and no outputs.
+
 ## 1.0.3
 
 - Breaking: `.tssl` dropped; use `actions/tssl`.
