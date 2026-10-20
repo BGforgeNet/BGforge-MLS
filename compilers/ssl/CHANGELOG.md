@@ -2,6 +2,10 @@
 
 Notable changes to `@bgforge/ssl` (the compiler library and the `ssl` CLI).
 
+## 0.1.1
+
+No changes to the library or the CLI; the first version published through npm trusted publishing.
+
 ## 0.1.0
 
 First release.
