@@ -26,6 +26,12 @@ import type { NormalizedUri } from "./core/normalized-uri";
 /** Track in-flight compilations per URI so we can cancel stale ones. */
 const activeCompiles = new Map<NormalizedUri, AbortController>();
 
+/**
+ * WeiDU paths that failed to launch during this server's lifetime. Validation runs on every edit by
+ * default, so a missing WeiDU is reported once and automatic runs stop; an explicit compile still tries.
+ */
+const missingWeidu = new Set<string>();
+
 /** Abort every in-flight WeiDU compilation. Called from server shutdown. */
 export function abortInFlightWeiduCompiles(): void {
     abortAllCompiles(activeCompiles);
@@ -159,6 +165,10 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
         return;
     }
 
+    if (!interactive && missingWeidu.has(weiduPath)) {
+        return;
+    }
+
     // parse
     conlog(`parsing ${baseName}...`);
 
@@ -183,12 +193,23 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
                 warnings: parseResult.warnings.map((w) => ({ ...w, message: w.message.replaceAll(tmpFile, baseName) })),
             };
 
-            let showedSpecificError = false;
-            if (err && parseResult.errors.length === 0) {
-                if (getErrnoCode(err) === "ENOENT") {
+            // A missing WeiDU says nothing about the file, so it gets a message rather than a diagnostic in it.
+            if (err && getErrnoCode(err) === "ENOENT") {
+                const firstMiss = !missingWeidu.has(weiduPath);
+                missingWeidu.add(weiduPath);
+                if (interactive) {
                     showError(`WeiDU not found at '${weiduPath}'. Check the bgforge.weidu.path setting.`);
-                    showedSpecificError = true;
+                } else if (firstMiss) {
+                    showWarning(
+                        `WeiDU not found at '${weiduPath}'. Automatic WeiDU checks are off until ` +
+                            "bgforge.weidu.path points at it; syntax errors are still reported.",
+                    );
                 }
+                return;
+            }
+            missingWeidu.delete(weiduPath);
+
+            if (err && parseResult.errors.length === 0) {
                 parseResult = addFallbackDiagnostic(
                     parseResult,
                     err,
@@ -197,14 +218,12 @@ export async function compile(uri: NormalizedUri, settings: WeiDUsettings, inter
                 );
             }
 
-            if (!showedSpecificError) {
-                reportCompileResult(
-                    parseResult,
-                    interactive,
-                    `Successfully parsed ${baseName}.`,
-                    `Failed to parse ${baseName}!`,
-                );
-            }
+            reportCompileResult(
+                parseResult,
+                interactive,
+                `Successfully parsed ${baseName}.`,
+                `Failed to parse ${baseName}!`,
+            );
 
             sendParseResult(parseResult, uri, tmpUri);
         },

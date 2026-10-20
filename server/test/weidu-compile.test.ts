@@ -506,19 +506,6 @@ describe("weidu-compile", () => {
             expect(parseResult.errors[0]!.message).toContain("Command failed");
         });
 
-        it("shows actionable message when WeiDU binary not found", async () => {
-            // Node sets .code on ErrnoException (string) separately from ExecFileException .code (number)
-            setupExecFile(Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" }), "");
-
-            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
-
-            expect(mockShowError).toHaveBeenCalledWith(
-                "WeiDU not found at '/usr/bin/weidu'. Check the bgforge.weidu.path setting.",
-            );
-            // Only the specific ENOENT message, not the generic "Failed to parse" on top
-            expect(mockShowError).toHaveBeenCalledTimes(1);
-        });
-
         it("does not create fallback when errors were successfully parsed", async () => {
             setupExecFile({ code: 1 }, "[test.tp2]  ERROR at line 5 column 1-10");
 
@@ -528,6 +515,78 @@ describe("weidu-compile", () => {
             // Only the parsed error, no fallback
             expect(parseResult.errors).toHaveLength(1);
             expect(parseResult.errors[0]!.line).toBe(5);
+        });
+    });
+
+    // A missing WeiDU is remembered per path for the server's lifetime, so each test uses its own path.
+    describe("compile() - WeiDU not found", () => {
+        // Node sets .code on ErrnoException (string) separately from ExecFileException .code (number)
+        const enoent = () => Object.assign(new Error("spawn weidu ENOENT"), { code: "ENOENT" });
+        const missingAt = (path: string): WeiDUsettings => ({ ...baseSettings, path });
+
+        it("shows the error on an explicit compile and puts no diagnostic in the file", async () => {
+            setupExecFile(enoent(), "");
+
+            await compile(normalizeUri("file:///test.tp2"), missingAt("/missing/explicit"), true, "content");
+
+            expect(mockShowError).toHaveBeenCalledWith(
+                "WeiDU not found at '/missing/explicit'. Check the bgforge.weidu.path setting.",
+            );
+            // Only the specific ENOENT message, not the generic "Failed to parse" on top
+            expect(mockShowError).toHaveBeenCalledTimes(1);
+            expect(mockSendParseResult).not.toHaveBeenCalled();
+        });
+
+        it("tells once, then stops running WeiDU automatically", async () => {
+            setupExecFile(enoent(), "");
+            const settings = missingAt("/missing/automatic");
+
+            await compile(normalizeUri("file:///a.tp2"), settings, false, "content");
+            await compile(normalizeUri("file:///b.tp2"), settings, false, "content");
+            await compile(normalizeUri("file:///a.tp2"), settings, false, "content");
+
+            expect(mockExecFile).toHaveBeenCalledTimes(1);
+            expect(mockShowWarning).toHaveBeenCalledTimes(1);
+            expect(mockShowWarning).toHaveBeenCalledWith(
+                "WeiDU not found at '/missing/automatic'. Automatic WeiDU checks are off until " +
+                    "bgforge.weidu.path points at it; syntax errors are still reported.",
+            );
+            expect(mockShowError).not.toHaveBeenCalled();
+            expect(mockSendParseResult).not.toHaveBeenCalled();
+        });
+
+        it("tells once when several automatic checks find it missing at the same time", async () => {
+            setupExecFile(enoent(), "");
+            const settings = missingAt("/missing/concurrent");
+
+            await Promise.all([
+                compile(normalizeUri("file:///a.tp2"), settings, false, "content"),
+                compile(normalizeUri("file:///b.tp2"), settings, false, "content"),
+            ]);
+
+            expect(mockShowWarning).toHaveBeenCalledTimes(1);
+        });
+
+        it("still runs WeiDU on an explicit compile after an automatic one found it missing", async () => {
+            setupExecFile(enoent(), "");
+            const settings = missingAt("/missing/then-explicit");
+
+            await compile(normalizeUri("file:///test.tp2"), settings, false, "content");
+            await compile(normalizeUri("file:///test.tp2"), settings, true, "content");
+
+            expect(mockExecFile).toHaveBeenCalledTimes(2);
+            expect(mockShowError).toHaveBeenCalledTimes(1);
+        });
+
+        it("checks again once bgforge.weidu.path changes", async () => {
+            setupExecFile(enoent(), "");
+            await compile(normalizeUri("file:///test.tp2"), missingAt("/missing/old"), false, "content");
+
+            setupExecFile(null, "Parsing complete");
+            await compile(normalizeUri("file:///test.tp2"), missingAt("/found/new"), false, "content");
+
+            expect(mockExecFile).toHaveBeenCalledTimes(2);
+            expect(mockSendParseResult).toHaveBeenCalledTimes(1);
         });
     });
 
