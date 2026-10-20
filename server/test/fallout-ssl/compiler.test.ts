@@ -30,6 +30,7 @@ function noSavedFile(): never {
 }
 
 const mockShowInfo = vi.fn();
+const mockShowWarning = vi.fn();
 const mockShowError = vi.fn();
 const mockShowErrorWithActions = vi.fn();
 const mockSendDiagnostics = vi.fn();
@@ -75,6 +76,7 @@ vi.mock("../../src/diagnostics", async (importOriginal) => {
 
 vi.mock("../../src/user-messages", () => ({
     showInfo: (...args: unknown[]) => mockShowInfo(...args),
+    showWarning: (...args: unknown[]) => mockShowWarning(...args),
     showError: (...args: unknown[]) => mockShowError(...args),
     showErrorWithActions: (...args: unknown[]) => mockShowErrorWithActions(...args),
 }));
@@ -856,6 +858,66 @@ describe("fallout-ssl compiler", () => {
             mockShowErrorWithActions.mockResolvedValue({ id: "cancel" });
             await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
             expect(probes()).toBe(2);
+        });
+
+        const fallbackNotice =
+            "Cannot run the Fallout SSL compiler 'compile'. Automatic checks use the extension's own compiler " +
+            "until bgforge.falloutSSL.compilePath changes.";
+
+        it("tells once that background compiles fell back to the extension's own compiler", async () => {
+            mockExecFile.mockImplementation((...args: unknown[]) => {
+                const lastArg = args[args.length - 1];
+                if (typeof lastArg === "function") (lastArg as (err: Error) => void)(new Error("not found"));
+            });
+
+            await compile(normalizeUri("file:///project/a.ssl"), externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/b.ssl"), externalSettings, false, "code");
+
+            expect(mockShowWarning).toHaveBeenCalledTimes(1);
+            expect(mockShowWarning).toHaveBeenCalledWith(fallbackNotice);
+            expect(mockWasmCompiler).toHaveBeenCalledTimes(2);
+        });
+
+        /** The check passes once, then the compiler is gone: every later launch fails as a missing program. */
+        function compilerVanishesAfterCheck(): void {
+            let checked = false;
+            mockExecFile.mockImplementation((...args: unknown[]) => {
+                const lastArg = args[args.length - 1];
+                if (typeof lastArg !== "function") return;
+                const isProbe = (args[1] as string[]).includes("--version");
+                if (isProbe && !checked) {
+                    checked = true;
+                    (lastArg as (err: null) => void)(null);
+                } else {
+                    const enoent = Object.assign(new Error("spawn compile ENOENT"), { code: "ENOENT" });
+                    (lastArg as (err: Error, stdout: string, stderr: string) => void)(enoent, "", "");
+                }
+            });
+        }
+
+        it("puts no diagnostic in the file when a checked compiler can no longer start", async () => {
+            compilerVanishesAfterCheck();
+
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
+
+            // The fallback's own clean result is published; nothing ever names the missing compiler in the file.
+            const published = mockSendParseResult.mock.calls.flatMap(([result]) => (result as { errors: [] }).errors);
+            expect(published).toEqual([]);
+            expect(mockShowWarning).toHaveBeenCalledTimes(1);
+            expect(mockShowWarning).toHaveBeenCalledWith(fallbackNotice);
+            // The second compile checks the path again, finds it missing and uses the extension's own.
+            expect(mockWasmCompiler).toHaveBeenCalledTimes(1);
+        });
+
+        it("says so on an explicit compile when a checked compiler can no longer start", async () => {
+            compilerVanishesAfterCheck();
+
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, true, "code");
+
+            expect(mockShowError).toHaveBeenCalledWith("Failed to run 'compile' (ENOENT).");
+            expect(mockSendParseResult).not.toHaveBeenCalled();
+            expect(mockShowWarning).not.toHaveBeenCalled();
         });
 
         it("bounds the probe, so a compiler that hangs on --version cannot hold every compile", async () => {

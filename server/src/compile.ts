@@ -30,6 +30,25 @@ import * as weidu from "./weidu-compile";
 import { runBafDiagnostics } from "./weidu-baf/diagnostics";
 export { LSP_COMMAND_COMPILE as COMMAND_compile } from "@bgforge/shared/protocol";
 
+/** Languages whose transpile environment failed during this server's lifetime, already told once. */
+const environmentFailureNoticed = new Set<string>();
+
+/**
+ * Reports a failure that is not about the source: anything a transpiler throws, even inside a worker,
+ * arrives as a TranspileError, so the rest is a worker that died or timed out or an output write that
+ * failed. That would sit on line 1 of every check, so automatic runs tell once per language and then log.
+ */
+function reportEnvironmentFailure(error: unknown, language: string, interactive: boolean): void {
+    const message = `${language}: ${errorMessage(error)}`;
+    conlog(message, "error");
+    if (interactive) {
+        showError(message);
+    } else if (!environmentFailureNoticed.has(language)) {
+        environmentFailureNoticed.add(language);
+        showWarning(`${message}. Repeats are only logged until the server restarts.`);
+    }
+}
+
 /**
  * Reports a failed transpile as a diagnostic on the source being edited; the popup stays for the compile
  * the user asked for, since this path also runs on save and on keystroke where only a diagnostic belongs.
@@ -41,7 +60,11 @@ export { LSP_COMMAND_COMPILE as COMMAND_compile } from "@bgforge/shared/protocol
  * under the path it was handed, which is the one derived from this URI.
  */
 function reportTranspileFailure(error: unknown, uri: string, language: string, interactive: boolean): void {
-    const located = error instanceof TranspileError ? error.location : {};
+    if (!(error instanceof TranspileError)) {
+        reportEnvironmentFailure(error, language, interactive);
+        return;
+    }
+    const located = error.location;
     const elsewhere = located.file !== undefined && located.file !== uriToPath(uri);
     const message = elsewhere ? `${located.file}:${located.line ?? 1}: ${errorMessage(error)}` : errorMessage(error);
     const line = elsewhere ? 1 : (located.line ?? 1);

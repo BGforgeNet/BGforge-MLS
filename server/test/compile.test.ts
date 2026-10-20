@@ -433,7 +433,7 @@ describe("compile dispatcher", () => {
         });
 
         it("anchors an error carrying no location at line 1 rather than guessing one", async () => {
-            mockTsslCompile.mockRejectedValue(new Error("no location on this one"));
+            mockTsslCompile.mockRejectedValue(new TranspileError("no location on this one"));
 
             await compile("file:///test.tssl", "typescript", false, "bad tssl");
 
@@ -498,6 +498,42 @@ describe("compile dispatcher", () => {
                 "file:///test.tssl",
                 "file:///test.tssl",
             );
+        });
+
+        // Anything the worker throws comes back as a TranspileError, so any other error is the environment
+        // failing (a worker that died or timed out, an output write): nothing about the file being edited.
+        // Remembered per language for the server's lifetime, so each test uses its own language.
+        it("tells about a failure of the environment once rather than putting it in the file", async () => {
+            mockTsslCompile.mockRejectedValue(new Error("The transpiler worker exited"));
+
+            await compile("file:///a.tssl", "typescript", false, "tssl content");
+            await compile("file:///b.tssl", "typescript", false, "tssl content");
+
+            expect(mockSendParseResult).not.toHaveBeenCalled();
+            expect(mockShowWarning).toHaveBeenCalledTimes(1);
+            expect(mockShowWarning).toHaveBeenCalledWith(
+                "TSSL: The transpiler worker exited. Repeats are only logged until the server restarts.",
+            );
+            // Logged both times, so a repeat stays diagnosable after the one notice.
+            const logged = vi.mocked(conlog).mock.calls.filter(([, level]) => level === "error");
+            expect(logged).toEqual([
+                ["TSSL: The transpiler worker exited", "error"],
+                ["TSSL: The transpiler worker exited", "error"],
+            ]);
+        });
+
+        it("shows a failure of the environment on every compile the user asks for", async () => {
+            mockWriteFile.mockRejectedValue(new Error("EACCES: permission denied"));
+            mockTbaf.mockResolvedValue({ output: "IF True() THEN END", sourceMap: [] });
+            mockOutputPathFor.mockReturnValue("/test.baf");
+
+            await compile("file:///test.tbaf", "typescript", true, "tbaf content");
+            await compile("file:///test.tbaf", "typescript", true, "tbaf content");
+
+            expect(mockSendParseResult).not.toHaveBeenCalled();
+            expect(mockShowError).toHaveBeenCalledTimes(2);
+            expect(mockShowError).toHaveBeenCalledWith("TBAF: EACCES: permission denied");
+            expect(mockShowWarning).not.toHaveBeenCalled();
         });
 
         it("clears the source's own diagnostics before transpiling, so a fixed error goes away", async () => {

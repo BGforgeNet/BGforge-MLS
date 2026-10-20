@@ -20,6 +20,7 @@ import { parseArgs } from "@bgforge/ssl";
 import {
     addFallbackDiagnostic,
     errorMessage,
+    getErrnoCode,
     reportCompileResult,
     sendParseResult,
     type ParseItemList,
@@ -33,7 +34,7 @@ import { intOutputPath } from "../core/int-output-path";
 import { compileOnWorker, stopCompileWorker } from "./compile-worker-client";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getDocuments } from "../lsp-connection";
-import { showError, showErrorWithActions, showInfo } from "../user-messages";
+import { showError, showErrorWithActions, showInfo, showWarning } from "../user-messages";
 import type { SSLsettings } from "../settings";
 import { ssl_compile as ssl_wasm_compiler } from "../sslc/ssl_compiler";
 import { encodeLikeFileOnDisk, UnsupportedEncodingCharacterError } from "../translation/encoding";
@@ -277,6 +278,19 @@ const disabledExternalPaths = new Set<string>();
  */
 const failedProbes = new Set<string>();
 
+/** External compiler paths whose fallback to the extension's own compiler was already told, once per path. */
+const fallbackNoticed = new Set<string>();
+
+/** Tells once per path that background compiles stopped using a configured compiler that cannot run. */
+function noticeFallback(compilePath: string): void {
+    if (fallbackNoticed.has(compilePath)) return;
+    fallbackNoticed.add(compilePath);
+    showWarning(
+        `Cannot run the Fallout SSL compiler '${compilePath}'. Automatic checks use the extension's own compiler ` +
+            "until bgforge.falloutSSL.compilePath changes.",
+    );
+}
+
 /** A hang detector for `--version`, which answers at once from any working compiler. */
 const PROBE_TIMEOUT_MS = 10_000;
 
@@ -301,6 +315,7 @@ export function _resetCompilerCache() {
     compilerPathCache.path = null;
     disabledExternalPaths.clear();
     failedProbes.clear();
+    fallbackNoticed.clear();
 }
 
 async function checkExternalCompiler(compilePath: string, interactive: boolean) {
@@ -409,6 +424,7 @@ export async function compile(
             if (!useOwnCompiler && !(await checkExternalCompiler(sslSettings.compilePath, interactive))) {
                 if (!interactive) {
                     useOwnCompiler = true;
+                    noticeFallback(sslSettings.compilePath);
                 } else {
                     const response = await showErrorWithActions(
                         `Failed to run '${sslSettings.compilePath}'! Switch to the extension's own compiler?`,
@@ -493,6 +509,21 @@ export async function compile(
                 );
 
                 if (signal.aborted) {
+                    return;
+                }
+
+                // A compiler that could not start (an OS errno such as ENOENT, not an exit code, and not one of
+                // Node's own ERR_ codes, which come from a child that did start) says nothing about the file.
+                // Its passed check no longer holds, so the next compile checks again and falls back.
+                const launchError = getErrnoCode(err);
+                if (launchError !== undefined && !launchError.startsWith("ERR_")) {
+                    compilerPathCache.path = null;
+                    failedProbes.add(sslSettings.compilePath);
+                    if (interactive) {
+                        showError(`Failed to run '${sslSettings.compilePath}' (${launchError}).`);
+                    } else {
+                        noticeFallback(sslSettings.compilePath);
+                    }
                     return;
                 }
 
