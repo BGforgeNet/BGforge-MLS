@@ -304,6 +304,38 @@ CREATE ITM ~m#sword~
           (tilde_content))))))
 
 ================================================================================
+CREATE action with a quoted type
+================================================================================
+
+CREATE ~ITM~ ~m#sword~ // "a comment with quotes"
+CREATE "SPL" VERSION ~V1~ ~m#spell~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_create
+    type: (string
+      (tilde_string
+        (tilde_content)))
+    resref: (value
+      (string
+        (tilde_string
+          (tilde_content)))))
+  (line_comment)
+  (action_create
+    type: (string
+      (double_string
+        (double_content)))
+    version: (value
+      (string
+        (tilde_string
+          (tilde_content))))
+    resref: (value
+      (string
+        (tilde_string
+          (tilde_content))))))
+
+================================================================================
 CLEAR_MEMORY action
 ================================================================================
 

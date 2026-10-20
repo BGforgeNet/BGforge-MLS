@@ -618,7 +618,7 @@ CREATE type [VERSION ~version~] ~resref~
   patch list
 ```
 
-Create new game resource. Types: ARE, CRE, EFF, ITM, SPL, STO.
+Create new game resource. Types: ARE, CRE, EFF, ITM, SPL, STO, bare or quoted (`~ITM~`).
 
 #### ADD_PROJECTILE
 

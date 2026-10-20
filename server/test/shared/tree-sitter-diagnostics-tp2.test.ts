@@ -53,6 +53,17 @@ END
         expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
     });
 
+    it("accepts a quoted CREATE type without swallowing the following actions", () => {
+        const tree = tp2.parseWithCache(`CREATE ~ITM~ ~m#book~ // "History of the Drow"
+COPY_EXISTING ~m#book.itm~ ~override~
+    WRITE_SHORT 0x1c 37 // See "laf/!_types.tpa"
+BUT_ONLY
+`)!;
+        expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
+        expect(tree.rootNode.descendantsOfType(SyntaxType.ActionCreate)).toHaveLength(1);
+        expect(tree.rootNode.descendantsOfType(SyntaxType.ActionCopyExisting)).toHaveLength(1);
+    });
+
     it("keeps a lone PATCH_TIME out of the COPY file list", () => {
         const tree = tp2.parseWithCache(`COPY_EXISTING ~test.itm~ ~override~
     PATCH_TIME ~timer~ BEGIN PATCH_PRINT ~hello~ END

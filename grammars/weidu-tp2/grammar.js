@@ -1380,7 +1380,7 @@ export default grammar({
         action_create: ($) =>
             seq(
                 "CREATE",
-                field("type", $.identifier),
+                field("type", choice($.identifier, $.string)),
                 optional(seq("VERSION", field("version", $.value))),
                 field("resref", $.value),
                 optional($.patches),
