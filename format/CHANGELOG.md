@@ -22,6 +22,8 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 - WeiDU TP2: `PATCH_TIME`, `OUTER_SNPRINT`, `PATCH_DEFINE_ARRAY`, a function result returned into an array element
   or an evaluated name, and an empty `STR_VAR`, `RET` or `RET_ARRAY` list are formatted instead of refused as
   syntax errors.
+- WeiDU TP2: a file using a quoted resource type in `CREATE` (`CREATE ~ITM~ ~m#sword~`) is no longer refused as a
+  syntax error.
 - WeiDU D: a multi-line SAY, REPLY or JOURNAL string is kept exactly as written; only trigger and action code is
   re-indented.
 - Fallout SSL: tabs inside string literals are kept, and `//` inside a `#define`'s string is not a comment.

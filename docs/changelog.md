@@ -10,6 +10,8 @@
   imports too, as it already did in one with imports.
 - TBAF inlines a function whose returned condition calls another user function, instead of failing with "a
   node that was removed or forgotten".
+- When TBAF, TD or TSSL fails for a reason outside the file, such as its background process stopping, the error
+  is shown once per language and only logged after that, instead of being reported on the first line of the file.
 
 ### Formatter
 
@@ -39,7 +41,9 @@
   it as a different character.
 - The built-in compiler reports every procedure that is declared but never defined, not only the first.
 - With `bgforge.falloutSSL.compilePath` pointing at a compiler that does not run, validation stops trying to start
-  it on every keystroke; an explicit compile still checks it again.
+  it on every keystroke and uses the extension's own compiler, with one notice saying so; an explicit compile
+  still checks it again. A compiler that fails to start during a compile is treated the same way, instead of its
+  system error being shown as a problem in the file.
 - When the built-in SSL compiler, the TSSL compiler or the transpiler stops answering, it is restarted, so the
   next compile runs instead of timing out behind the stuck one.
 - Decompiling a script prints every float constant as a plain decimal the compiler reads back, and refuses NaN
@@ -83,8 +87,11 @@
   deleted by the earlier one, and is still stopped when the editor shuts down.
 - TP2 completion inside a function call offers parameter names or values correctly when accented or other
   non-ASCII text appears earlier in the file, instead of mixing up which of the two the cursor is on.
-- When WeiDU cannot be found, the error names the `bgforge.weidu.path` setting to fix, instead of a setting that
-  does not exist.
+- TP2 accepts a quoted resource type in `CREATE` (`CREATE ~ITM~ ~m#sword~`), as WeiDU does, instead of reporting
+  syntax errors on it and the actions after it.
+- When WeiDU cannot be found, one notice per session names the `bgforge.weidu.path` setting to fix, and automatic
+  WeiDU checks stop until the setting points at it; syntax errors are still reported. An explicit compile still
+  says so each time. Before, every check showed an error naming a setting that does not exist, and marked the file.
 - A WeiDU or SSL compiler set up as a `.cmd` or `.bat` file is run through `cmd.exe` with every argument quoted,
   so a path containing a space or `&` reaches it whole. Arguments used to be joined with spaces, unquoted.
 
