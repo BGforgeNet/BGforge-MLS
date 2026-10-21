@@ -31,11 +31,15 @@ ZIZMOR_BIN="$ZIZMOR_CACHE_DIR/zizmor"
 declare -A ACTIONLINT_SHA256=(
     [linux_amd64]="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
     [linux_arm64]="325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6"
+    [darwin_amd64]="5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644"
+    [darwin_arm64]="aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f"
 )
 declare -A ZIZMOR_SHA256=(
     # keys quoted so shfmt doesn't read the hyphens as arithmetic and reformat them
     ["x86_64-unknown-linux-gnu"]="ec8c95cd800845abb9bbc5f377ec7c57d2eb8e2386a00a201d3a74ee4092e5ed"
     ["aarch64-unknown-linux-gnu"]="018a024d6b6d09733b07f6ef42838d984c23ec04bc9b2acd55f7d67826aeafe5"
+    ["x86_64-apple-darwin"]="343c85c8f709edf14bf3c8781d53574975ecbb2d23c80ed1eab4932ab0a72343"
+    ["aarch64-apple-darwin"]="c9c5d83730efb86f2cd71b487605c00a4d63903e4f9458485ed5eac3b1924ab1"
 )
 
 os="$(uname -s)"
@@ -48,12 +52,12 @@ arch="$(uname -m)"
 # --- actionlint: GitHub Actions syntax/semantics (+ embedded shellcheck on `run:` steps) ---
 actionlint_cmd=(actionlint)
 al_arch=""
-if [[ "$os" == "Linux" ]]; then
-    case "$arch" in
-        x86_64) al_arch="linux_amd64" ;;
-        aarch64 | arm64) al_arch="linux_arm64" ;;
-    esac
-fi
+case "$os/$arch" in
+    Linux/x86_64) al_arch="linux_amd64" ;;
+    Linux/aarch64 | Linux/arm64) al_arch="linux_arm64" ;;
+    Darwin/x86_64) al_arch="darwin_amd64" ;;
+    Darwin/arm64) al_arch="darwin_arm64" ;;
+esac
 if [[ -n "$al_arch" ]]; then
     ensure_verified_tool "actionlint v${ACTIONLINT_VERSION}" \
         "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_${al_arch}.tar.gz" \
@@ -67,12 +71,12 @@ fi
 # --- zizmor: security-focused static analysis (a Rust tool shipped as per-arch binaries) ---
 zizmor_cmd=(zizmor)
 zz_arch=""
-if [[ "$os" == "Linux" ]]; then
-    case "$arch" in
-        x86_64) zz_arch="x86_64-unknown-linux-gnu" ;;
-        aarch64 | arm64) zz_arch="aarch64-unknown-linux-gnu" ;;
-    esac
-fi
+case "$os/$arch" in
+    Linux/x86_64) zz_arch="x86_64-unknown-linux-gnu" ;;
+    Linux/aarch64 | Linux/arm64) zz_arch="aarch64-unknown-linux-gnu" ;;
+    Darwin/x86_64) zz_arch="x86_64-apple-darwin" ;;
+    Darwin/arm64) zz_arch="aarch64-apple-darwin" ;;
+esac
 if [[ -n "$zz_arch" ]]; then
     ensure_verified_tool "zizmor v${ZIZMOR_VERSION}" \
         "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-${zz_arch}.tar.gz" \
