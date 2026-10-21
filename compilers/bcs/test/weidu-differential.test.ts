@@ -124,8 +124,12 @@ describe(`BCS - differential against the reference implementation (${SOURCES.len
      */
     test("the fixtures still carry every rule this differential exists to guard", () => {
         const emitted = SOURCES.map((name) => decompileBcs(readBcs(stored(name)), SYMBOLS)).join("\n");
+        const sources = SOURCES.map((name) => fs.readFileSync(path.join(FIXTURE_DIR, name), "utf8")).join("\n");
 
         const coverage = {
+            // Empty parentheses on an object identifier name an implicit `Myself` inside it, nested too; only the
+            // source can show this, since the stored form is the explicit one.
+            implicitMyself: /See\(LastSeenBy\(\)\)/.test(sources) && /NearestEnemyOf\(LastSeenBy\(\)\)/.test(sources),
             // An action's stored first object is an acting-object override, not an argument.
             actionOverride: /ActionOverride\(/.test(emitted),
             // A `NextTriggerObject` record folds into the trigger after it...

@@ -213,6 +213,10 @@ Two source-level spellings are resolved rather than emitted, being the same cons
 `ActionOverride` writes the inner action's record with the override in its first object slot, and
 `TriggerOverride` writes a real `NextTriggerObject` record in front of the trigger it retargets.
 
+One more spelling has no stored form: empty parentheses on an object identifier name an implicit `Myself`
+inside it, at any depth, as the reference reads them. `LastSeenBy()` stores as `LastSeenBy(Myself)`, not as
+the bare `LastSeenBy`, and decompiles to that explicit form.
+
 ### The one list in the codec
 
 Which calls pack an `Area` in front of its partner inside one stored slot. Decompiling needs no list - it

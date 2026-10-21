@@ -11,7 +11,7 @@
  * specifier) on the evidence of the shipped scripts, and a compiler that disagreed with the editor about it
  * would compile something other than what the editor highlights.
  *
- * Three constructs are source-level spellings with no stored form of their own, so they are resolved here
+ * Four constructs are source-level spellings with no stored form of their own, so they are resolved here
  * rather than emitted:
  *
  * - `ActionOverride(<object>, <action>)` writes the INNER action's record with the override in its first
@@ -19,6 +19,7 @@
  * - `TriggerOverride(<object>, <trigger>)` is NOT that mechanism: it writes a real `NextTriggerObject` record
  *   in front of the trigger it retargets, and the pair spends one slot of an enclosing `OR(n)`.
  * - `OR(n)` is itself a stored trigger record, whose first integer is the count.
+ * - Empty parentheses on an object identifier, `LastSeenBy()`, name an implicit `Myself` inside it, at any depth.
  */
 
 import { collectParseErrors } from "@bgforge/shared/parse-errors";
@@ -644,10 +645,18 @@ class Compiler {
         // the innermost layer turns out to be - a field list, a script name, or nothing at all.
         for (let layer: SyntaxNode | undefined = node; layer !== undefined;) {
             switch (layer.type) {
-                case SyntaxType.CallExpr:
+                case SyntaxType.CallExpr: {
                     slots.push(this.identifier(layer, this.callName(layer)));
-                    layer = this.arguments(layer)[0];
-                    continue;
+                    const inner: SyntaxNode | undefined = this.arguments(layer)[0];
+                    if (inner !== undefined) {
+                        layer = inner;
+                        continue;
+                    }
+                    // Empty parentheses name an implicit `Myself` inside, as the reference reads any argument
+                    // spelled `Name()`: `LastSeenBy()` stores as `LastSeenBy(Myself)`, not as a bare `LastSeenBy`.
+                    slots.push(this.identifier(layer, "Myself"));
+                    break;
+                }
                 case SyntaxType.Identifier:
                     slots.push(this.identifier(layer, layer.text));
                     break;

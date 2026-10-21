@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### WeiDU
+
+- The built-in BAF compiler reads an object written with empty parentheses, such as `LastSeenBy()`, as
+  `LastSeenBy(Myself)`, as WeiDU does, so a compiled script matches WeiDU's. It used to store a bare `LastSeenBy`.
+
 ## 3.17.0
 
 ### Transpilers
