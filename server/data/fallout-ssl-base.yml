@@ -2157,18 +2157,18 @@ base_functions:
         Returns the tile number of a tile offset from a starting tile in a given direction (0-5, the next tile in that direction).
 
     - name: tokenize
-      type: void
+      type: string
       args:
         - name: str
           type: string
-        - name: delimiter
-          type: string
-          doc: "Delimiter character, passed as a character code"
         - name: prevToken
+          type: string
+          doc: "`0` on the first call; on later calls the token the previous call returned"
+        - name: delimiter
           type: int
-          doc: "0 on the first call; on later calls the token returned by the previous call"
+          doc: "Delimiter character, as a character code"
       doc: |-
-        Extracts the next token from a string using the given delimiter character. The prevToken parameter tracks position across successive calls to iterate through all tokens.
+        Returns the token after `prevToken` in a string split on the delimiter character, or `0` when there are no more tokens. The previous token is found by searching the string for its text, so if that text also occurs earlier (a repeated token, or part of an earlier one), the walk continues from the earlier match.
 
     - name: town_known
       type: bool

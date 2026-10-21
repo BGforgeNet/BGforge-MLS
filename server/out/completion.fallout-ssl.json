@@ -2112,7 +2112,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid tokenize(string str, string delimiter, int prevToken)\n```\n|||\n|:-|:-|\n|`delimiter`|&nbsp;&nbsp;Delimiter character, passed as a character code|\n|`prevToken`|&nbsp;&nbsp;0 on the first call; on later calls the token returned by the previous call|\n\nExtracts the next token from a string using the given delimiter character. The prevToken parameter tracks position across successive calls to iterate through all tokens."
+            "value": "```fallout-ssl-tooltip\nstring tokenize(string str, string prevToken, int delimiter)\n```\n|||\n|:-|:-|\n|`prevToken`|&nbsp;&nbsp;`0` on the first call; on later calls the token the previous call returned|\n|`delimiter`|&nbsp;&nbsp;Delimiter character, as a character code|\n\nReturns the token after `prevToken` in a string split on the delimiter character, or `0` when there are no more tokens. The previous token is found by searching the string for its text, so if that text also occurs earlier (a repeated token, or part of an earlier one), the walk continues from the earlier match."
         }
     },
     {

@@ -4701,16 +4701,16 @@
         ]
     },
     "tokenize": {
-        "label": "void tokenize(string str, string delimiter, int prevToken)",
+        "label": "string tokenize(string str, string prevToken, int delimiter)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nExtracts the next token from a string using the given delimiter character. The prevToken parameter tracks position across successive calls to iterate through all tokens."
+            "value": "---\nReturns the token after `prevToken` in a string split on the delimiter character, or `0` when there are no more tokens. The previous token is found by searching the string for its text, so if that text also occurs earlier (a repeated token, or part of an earlier one), the walk continues from the earlier match."
         },
         "parameters": [
             {
                 "label": [
-                    14,
-                    24
+                    16,
+                    26
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -4719,22 +4719,22 @@
             },
             {
                 "label": [
-                    26,
-                    42
+                    28,
+                    44
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nstring delimiter\n```\nDelimiter character, passed as a character code"
+                    "value": "```fallout-ssl-tooltip\nstring prevToken\n```\n`0` on the first call; on later calls the token the previous call returned"
                 }
             },
             {
                 "label": [
-                    44,
-                    57
+                    46,
+                    59
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nint prevToken\n```\n0 on the first call; on later calls the token returned by the previous call"
+                    "value": "```fallout-ssl-tooltip\nint delimiter\n```\nDelimiter character, as a character code"
                 }
             }
         ]

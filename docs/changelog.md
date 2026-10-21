@@ -13,6 +13,8 @@
 - `ActivateRegion` is documented as what it does - it simulates a mouse event on a region, with the event numbers
   listed - instead of as enabling or disabling the region. `AddButtonProc` and `AddRegionProc` name their
   procedures in the order the engine uses: enter, exit, press, release.
+- `tokenize` shows its real signature, `string tokenize(str, prevToken, delimiter)`: it returns the next token, and
+  the previous token comes before the delimiter.
 
 ### WeiDU
 
