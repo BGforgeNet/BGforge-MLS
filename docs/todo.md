@@ -105,27 +105,9 @@ consumer with committed snapshots even if the library API is unchanged.
 Until this lands, any change to `createBinaryJsonSnapshot` output should be
 treated as a breaking change to all snapshot consumers.
 
-## Fallout SSL: argument declarations for signature help
+## Fallout SSL: per-parameter descriptions in signature help
 
-Signature help is wired end to end for Fallout SSL and works, but the data behind it covers almost
-nothing. `generateSignatures` (`scripts/utils/src/generate-data.ts`) emits an entry for every item
-declaring an `args:` block and skips the rest, and almost no item in `server/data/fallout-ssl-base.yml` or
-`fallout-ssl-sfall.yml` declares one - so `server/out/signature.fallout-ssl.json` stays nearly empty while the
-completion file built from the same source in the same run covers every function. WeiDU TP2 declares far
-more `args` blocks by comparison.
-
-Nothing is broken: the generator, the loader (`server/src/fallout-ssl/provider.ts`) and the LSP
-surface all behave correctly. The gap is that the data was never filled in, and because the
-pipeline works exactly as written no test or gate reports it.
-
-### Approach
-
-Prefer deriving the argument lists from a source that already carries them - the engine-procedure
-JSON the TSSL plugin consumes (`shared/data/fallout-ssl-engine-procedures.json`) is the obvious
-candidate - and hand-author only the prose. That turns authoring every function into a mapping
-pass plus incremental documentation. Authoring `args` by hand, most-used functions first, is the
-fallback if no existing source lines up; either way each entry improves the feature the moment it
-lands, with no code change.
-
-A coverage assertion over the generated signature file would keep this visible once it starts
-moving - nothing reports the count today.
+Every Fallout SSL function whose `detail` line lists parameters gets signature help, with the parameter under
+the cursor marked. A description of that parameter shows only where the item declares an `args:` block, which
+almost none in `server/data/fallout-ssl-base.yml` and `fallout-ssl-sfall.yml` do. Adding one, most-used
+functions first, is a data-only change: `args` takes precedence over `detail` in the generator.

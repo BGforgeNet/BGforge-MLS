@@ -88,8 +88,9 @@ interface CompletionResult {
 }
 
 interface SignatureParam {
-    readonly label: string;
-    readonly documentation: MarkupContent;
+    /** A name, or the `[start, end)` offsets of the parameter's text inside the signature label. */
+    readonly label: string | readonly [number, number];
+    readonly documentation?: MarkupContent;
 }
 
 interface SignatureResult {
@@ -414,7 +415,7 @@ export function generateCompletion(data: DataFile, tooltipLangId: string): reado
 }
 
 /**
- * Generates signature help data for items with args.
+ * Generates signature help data for items with args, and for items whose detail line lists parameters.
  * WeiDU items include INT_VAR/STR_VAR category prefix in parameter docs.
  */
 export function generateSignatures(data: DataFile, langId: string): Record<string, SignatureResult> {
@@ -423,6 +424,8 @@ export function generateSignatures(data: DataFile, langId: string): Record<strin
     for (const [, stanza] of Object.entries(sortedData)) {
         for (const item of stanza.items) {
             if (item.args === undefined) {
+                const derived = signatureFromDetail(item);
+                if (derived !== undefined) result[item.name] = derived;
                 continue;
             }
 
@@ -445,6 +448,36 @@ export function generateSignatures(data: DataFile, langId: string): Record<strin
         }
     }
     return result;
+}
+
+/**
+ * A signature read off an item's `detail` line, for the items that declare no `args`.
+ *
+ * Parameters are the detail's own comma-separated pieces, marked by offset rather than split into a type and a name:
+ * the data writes some untyped (`delay`), some unnamed (`CritterPtr`) and some with alternatives (`int/float value`).
+ * A quoted piece is the function name an `sfall_funcN` wrapper passes first, not an argument of the call it documents.
+ */
+function signatureFromDetail(item: DataItem): SignatureResult | undefined {
+    const detail = item.detail;
+    if (detail === undefined || !/^[A-Za-z_]\w*$/.test(item.name)) return undefined;
+    const open = detail.indexOf("(");
+    if (open === -1) return undefined;
+    if (!detail.endsWith(")")) {
+        throw new Error(`${item.name}: detail "${detail}" does not end its parameter list`);
+    }
+
+    const parameters: SignatureParam[] = [];
+    let start = open + 1;
+    for (const piece of detail.slice(start, -1).split(",")) {
+        const leading = piece.length - piece.trimStart().length;
+        const text = piece.trim();
+        if (text !== "" && !/^".*"$/.test(text)) {
+            parameters.push({ label: [start + leading, start + leading + text.length] });
+        }
+        start += piece.length + 1;
+    }
+    if (parameters.length === 0) return undefined;
+    return { label: detail, documentation: markdown(`---\n${item.doc ?? ""}`), parameters };
 }
 
 /** Returns "INT_VAR " or "STR_VAR " prefix based on WeiDU type category. */

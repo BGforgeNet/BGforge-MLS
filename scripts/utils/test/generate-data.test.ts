@@ -366,9 +366,9 @@ describe("generateSignatures (WeiDU)", () => {
         expect(result["SUBSTRING"]).toBeDefined();
         expect(result["SUBSTRING"]!.label).toBe("SUBSTRING");
         // INT_VAR prefix for int arg
-        expect(result["SUBSTRING"]!.parameters[0]!.documentation.value).toContain("INT_VAR int start");
+        expect(result["SUBSTRING"]!.parameters[0]!.documentation?.value).toContain("INT_VAR int start");
         // STR_VAR prefix for string arg
-        expect(result["SUBSTRING"]!.parameters[1]!.documentation.value).toContain("STR_VAR string text");
+        expect(result["SUBSTRING"]!.parameters[1]!.documentation?.value).toContain("STR_VAR string text");
     });
 });
 
@@ -392,8 +392,8 @@ describe("generateSignatures", () => {
         expect(result["f"]!.label).toBe("f(x)");
         expect(result["f"]!.parameters).toHaveLength(1);
         expect(result["f"]!.parameters[0]!.label).toBe("x");
-        expect(result["f"]!.parameters[0]!.documentation.value).toContain("int x");
-        expect(result["f"]!.documentation.value).toContain("A function.");
+        expect(result["f"]!.parameters[0]!.documentation?.value).toContain("int x");
+        expect(result["f"]!.documentation?.value).toContain("A function.");
     });
 
     it("skips items without args", () => {
@@ -423,6 +423,102 @@ describe("generateSignatures", () => {
         };
         const result = generateSignatures(data, "lang");
         expect(Object.keys(result)).toEqual(["beta", "zulu", "alpha", "zed"]);
+    });
+});
+
+describe("generateSignatures (Fallout SSL, parameters from detail)", () => {
+    type Signatures = ReturnType<typeof generateSignatures>;
+    /** The text each parameter label marks in its signature label, which is what the editor highlights. */
+    const marked = (result: Signatures, name: string): string[] => {
+        const sig = result[name]!;
+        return sig.parameters.map((p) =>
+            typeof p.label === "string" ? p.label : sig.label.slice(p.label[0], p.label[1]),
+        );
+    };
+    const one = (item: { name: string; detail?: string; doc?: string }) =>
+        generateSignatures({ funcs: { type: 3, items: [item] } }, "lang");
+
+    it("takes the parameters from the detail line, which is also the label", () => {
+        const result = one({
+            name: "get_critter_stat",
+            detail: "int get_critter_stat(ObjectPtr who, int stat)",
+            doc: "Returns a stat.",
+        });
+
+        expect(result["get_critter_stat"]!.label).toBe("int get_critter_stat(ObjectPtr who, int stat)");
+        expect(marked(result, "get_critter_stat")).toEqual(["ObjectPtr who", "int stat"]);
+        expect(result["get_critter_stat"]!.documentation?.value).toContain("Returns a stat.");
+    });
+
+    it("marks each parameter by position, so a repeated text marks its own occurrence", () => {
+        const result = one({ name: "pair", detail: "void pair(int x, int x)" });
+
+        expect(result["pair"]!.parameters.map((p) => p.label)).toEqual([
+            [10, 15],
+            [17, 22],
+        ]);
+    });
+
+    it("drops the quoted function name an sfall_funcN wrapper passes first", () => {
+        // Scripts call `get_terrain_name(x, y)` through a header macro, so the literal is not an argument and
+        // counting it would highlight the parameter before the one being typed.
+        const result = one({
+            name: "get_terrain_name",
+            detail: 'string sfall_func2("get_terrain_name", int x, int y)',
+        });
+
+        expect(marked(result, "get_terrain_name")).toEqual(["int x", "int y"]);
+    });
+
+    it("keeps a parameter written without a type or name as it is written", () => {
+        const result = one({
+            name: "reg_anim_turn_towards",
+            detail: "void reg_anim_turn_towards(ObjectPtr, int tile/target, delay)",
+        });
+
+        expect(marked(result, "reg_anim_turn_towards")).toEqual(["ObjectPtr", "int tile/target", "delay"]);
+    });
+
+    it("gives no signature to a call with no parameters, or to an item no call can name", () => {
+        expect(one({ name: "get_day", detail: "int get_day" })).toEqual({});
+        expect(one({ name: "hide_window", detail: 'void sfall_func0("hide_window")' })).toEqual({});
+        expect(
+            one({
+                name: 'sfall_func2("string_compare", string a, string b)',
+                detail: "bool sfall_func2(string a, string b)",
+            }),
+        ).toEqual({});
+    });
+
+    it("refuses a detail line whose parameter list does not close it", () => {
+        expect(() => one({ name: "set_light_level", detail: "void set_light_level(int level)." })).toThrow(
+            /set_light_level: detail "void set_light_level\(int level\)\." does not end its parameter list/,
+        );
+    });
+
+    it("covers every function the shipped data declares parameters for", () => {
+        const files = ["fallout-ssl-base.yml", "fallout-ssl-sfall.yml"].map((name) =>
+            path.join(import.meta.dirname, "../../../server/data", name),
+        );
+        const data = loadData(files);
+        const result = generateSignatures(data, "fallout-ssl-tooltip");
+
+        // Read independently of the generator: an identifier name, and a detail with something other than
+        // quoted literals between its parentheses.
+        const declared = Object.values(data)
+            .flatMap((stanza) => stanza.items)
+            .filter((item) => /^[A-Za-z_]\w*$/.test(item.name))
+            .filter(
+                (item) =>
+                    item.args !== undefined || /\(.*[^\s,].*\)$/.test(item.detail?.replaceAll(/"[^"]*"/g, "") ?? ""),
+            )
+            .map((item) => item.name)
+            .sort();
+        expect(declared.length).toBeGreaterThan(500);
+        expect(Object.keys(result).sort()).toEqual(declared);
+        for (const name of declared) {
+            for (const text of marked(result, name)) expect(text, name).toMatch(/^[^,\s](.*[^,\s])?$/);
+        }
     });
 });
 
@@ -578,9 +674,9 @@ describe("generateSignatures getCategoryPrefix", () => {
         };
         const result = generateSignatures(data, "weidu-tp2-tooltip");
         // No INT_VAR or STR_VAR prefix for unknown type
-        expect(result["MY_FUNC"]!.parameters[0]!.documentation.value).toContain("unknowntype x");
-        expect(result["MY_FUNC"]!.parameters[0]!.documentation.value).not.toContain("INT_VAR");
-        expect(result["MY_FUNC"]!.parameters[0]!.documentation.value).not.toContain("STR_VAR");
+        expect(result["MY_FUNC"]!.parameters[0]!.documentation?.value).toContain("unknowntype x");
+        expect(result["MY_FUNC"]!.parameters[0]!.documentation?.value).not.toContain("INT_VAR");
+        expect(result["MY_FUNC"]!.parameters[0]!.documentation?.value).not.toContain("STR_VAR");
     });
 });
 

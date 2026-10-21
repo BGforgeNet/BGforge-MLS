@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fallout SSL
+
+- Signature help covers the built-in and sfall functions, about 580 of them, marking the argument being typed.
+  It used to show for one function only.
+
 ### WeiDU
 
 - The built-in BAF compiler reads an object written with empty parentheses, such as `LastSeenBy()`, as

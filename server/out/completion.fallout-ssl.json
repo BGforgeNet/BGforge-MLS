@@ -1842,7 +1842,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_light_level(int level).\n```\nSets the ambient light level (1-100). The range is Full Darkness to Full Daylight. NOTE: level is NOT percentange, full darkness is not black screen. set_light_level(0) actually corresponds to 25% brightness, and as level increases, brightness makes 2 huge jumps in the middle (49-51). Thus, certain brightness levels simply cannot be set."
+            "value": "```fallout-ssl-tooltip\nvoid set_light_level(int level)\n```\nSets the ambient light level (1-100). The range is Full Darkness to Full Daylight. NOTE: level is NOT percentange, full darkness is not black screen. set_light_level(0) actually corresponds to 25% brightness, and as level increases, brightness makes 2 huge jumps in the middle (49-51). Thus, certain brightness levels simply cannot be set."
         }
     },
     {
@@ -1862,7 +1862,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_map_music(int mapID, string sound_path);\n```\nSets the map background music to the sound file at path."
+            "value": "```fallout-ssl-tooltip\nvoid set_map_music(int mapID, string sound_path)\n```\nSets the map background music to the sound file at path."
         }
     },
     {
