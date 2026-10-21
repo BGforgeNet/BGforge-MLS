@@ -11,11 +11,25 @@ import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 import { bundle } from "../common/bundle";
+import { getSharedProject } from "../common/shared-project";
 import { REPO_ROOT } from "./repo-root";
 
 const FIXTURE = path.join(REPO_ROOT, "transpilers/test/fixtures/iets-shape");
 const ENTRY = path.join(FIXTURE, "main.tbaf");
 const source = fs.readFileSync(ENTRY, "utf-8");
+
+/**
+ * Every `declare` modifier in the bundle, by the statement it opens. Parsed rather than searched for: a kept
+ * comment or a string holding the word is not a declaration, and a substring check would fail on either.
+ */
+function declarations(code: string): string[] {
+    const file = getSharedProject().createSourceFile("bundle-iets-shape.ts", code, { overwrite: true });
+    // By kind name: ts-morph is not a declared dependency of this package, so its SyntaxKind cannot be imported.
+    return file
+        .getDescendants()
+        .filter((node) => node.getKindName() === "DeclareKeyword")
+        .map((keyword) => keyword.getParentOrThrow().getText());
+}
 
 describe("bundling a dependency that mixes declarations with runtime values", () => {
     it("inlines the runtime half, so the transpiler sees the value bodies", async () => {
@@ -34,8 +48,8 @@ describe("bundling a dependency that mixes declarations with runtime values", ()
 
         // engine.d.ts is externalised, and cleanupEsbuildOutput then strips the import line, so the
         // engine names survive as free identifiers - which is the form the TBAF transpiler turns into
-        // triggers and actions. Nothing of the declaration file's own text may appear.
-        expect(code).not.toContain("declare");
+        // triggers and actions. None of the declaration file's declarations may appear.
+        expect(declarations(code)).toEqual([]);
         expect(code).not.toContain("engine.d.ts");
         expect(code).toMatch(/if \(See\(Player1\)\)/);
         expect(code).toMatch(/Attack\(Player1\)/);
