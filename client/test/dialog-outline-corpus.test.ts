@@ -73,5 +73,7 @@ describe.skipIf(files.length === 0)("the outline over the real SSL corpus", () =
         // The count guards the guard: a projection that silently stopped producing rows would otherwise pass.
         expect(dialogs).toBeGreaterThan(100);
         expect(collisions).toEqual([]);
-    });
+        // One test parses every script in the corpus: about a sixth of the suite budget alone, but over it when the
+        // full gate runs coverage beside other packages' suites.
+    }, 180_000);
 });
