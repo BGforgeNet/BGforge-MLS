@@ -7,6 +7,11 @@
 - The built-in BAF compiler reads an object written with empty parentheses, such as `LastSeenBy()`, as
   `LastSeenBy(Myself)`, as WeiDU does, so a compiled script matches WeiDU's. It used to store a bare `LastSeenBy`.
 
+### Icons
+
+- `weidu.log` shows the WeiDU TP2 icon and Fallout's `scripts.lst` the SSL icon, under any file icon theme. In the
+  bundled bgforge theme they used to show a generic info and CSV icon.
+
 ## 3.17.0
 
 ### Transpilers

@@ -251,7 +251,11 @@
                 ],
                 "filenames": [
                     "scripts.lst"
-                ]
+                ],
+                "icon": {
+                    "light": "./themes/icons/fallout-ssl.svg",
+                    "dark": "./themes/icons/fallout-ssl.svg"
+                }
             },
             {
                 "id": "fallout-worldmap-txt",
@@ -370,7 +374,11 @@
                 ],
                 "filenames": [
                     "weidu.log"
-                ]
+                ],
+                "icon": {
+                    "light": "./themes/icons/weidu-tp2.png",
+                    "dark": "./themes/icons/weidu-tp2.png"
+                }
             },
             {
                 "id": "bgforge-mls-comment"

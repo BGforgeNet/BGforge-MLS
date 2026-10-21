@@ -31,6 +31,9 @@
 		"fallout-int": {
 			"iconPath": "./icons/fallout-int.svg"
 		},
+		"fallout-ssl": {
+			"iconPath": "./icons/fallout-ssl.svg"
+		},
 		"weidu-bcs": {
 			"iconPath": "./icons/weidu-bcs.png"
 		},
@@ -1871,6 +1874,7 @@
 		"ds_store": "_ignored"
 	},
 	"fileNames": {
+		"scripts.lst": "fallout-ssl",
 		"mix": "_hex",
 		"karma.conf.js": "_karma",
 		"karma.conf.cjs": "_karma",
@@ -1888,7 +1892,6 @@
 		"version.md": "_clock",
 		"version.txt": "_clock",
 		"version": "_clock",
-		"weidu.log": "_info",
 		"mvnw": "_maven",
 		"pom.xml": "_maven",
 		"tsconfig.json": "_tsconfig",
@@ -2428,7 +2431,6 @@
 			"version.md": "_clock_light",
 			"version.txt": "_clock_light",
 			"version": "_clock_light",
-			"weidu.log": "_info_light",
 			"mvnw": "_maven_light",
 			"pom.xml": "_maven_light",
 			"tsconfig.json": "_tsconfig_light",

@@ -40,7 +40,7 @@ const fileBearing: ContributedLanguage[] = (pkg.contributes.languages as Contrib
  * The file-bearing languages this manifest declares no icon for. Listed so an addition is a deliberate
  * edit here rather than a silent omission; a new language must either ship an icon or join this list.
  */
-const WITHOUT_ICON = new Set(["fallout-scripts-lst", "weidu-log"]);
+const WITHOUT_ICON = new Set<string>();
 
 describe("language file icons (contributes.languages[].icon)", () => {
     it("covers every language that owns files, so a new one cannot be added unnoticed", () => {
@@ -77,6 +77,36 @@ describe("language file icons (contributes.languages[].icon)", () => {
             if (WITHOUT_ICON.has(id)) continue;
             expect(theme.languageIds?.[id], `${id} still mapped in theme.languageIds`).toBeUndefined();
             expect(theme.light?.languageIds?.[id], `${id} still mapped in theme.light.languageIds`).toBeUndefined();
+        }
+    });
+
+    it("shows a language's own icon for its file names under the bundled theme", () => {
+        // A theme fileNames or fileExtensions entry outranks the contributed language icon, so a generic one
+        // (`.lst` -> csv, `weidu.log` -> info) would hide it under bgforge's theme. Where the theme needs an
+        // entry to beat such a mapping, that entry has to point at the same image the language contributes.
+        const themed = (name: string, variant: "dark" | "light"): string | undefined => {
+            const extension = name.split(".").pop() ?? "";
+            const light = variant === "light" ? theme.light : undefined;
+            return (
+                light?.fileNames?.[name] ??
+                theme.fileNames?.[name] ??
+                light?.fileExtensions?.[extension] ??
+                theme.fileExtensions?.[extension]
+            );
+        };
+        for (const { id, filenames, icon } of fileBearing) {
+            if (WITHOUT_ICON.has(id)) continue;
+            for (const name of filenames ?? []) {
+                for (const variant of ["dark", "light"] as const) {
+                    const definition = themed(name.toLowerCase(), variant);
+                    if (definition === undefined) continue;
+                    const iconPath: string | undefined = theme.iconDefinitions?.[definition]?.iconPath;
+                    expect(
+                        iconPath === undefined ? definition : path.join("./themes", iconPath),
+                        `${id}: ${name} shows theme icon ${definition} instead of its own (${variant})`,
+                    ).toBe(path.join(icon?.[variant] ?? ""));
+                }
+            }
         }
     });
 });
