@@ -15,6 +15,9 @@ filtering, runtime type injection, and completion filtering.
   manual declarations. Filters completions: hides ES2020 lib names in `.td` files, hides TD-specific names in non-`.td`
   files.
 
+TBAF has no plugin: a `.tbaf` file imports its actions, triggers and objects from `@bgforge/iets`, so tsserver
+already has their types.
+
 ## Loading them
 
 VS Code loads them automatically.
