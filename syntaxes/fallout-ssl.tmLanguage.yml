@@ -147,7 +147,6 @@ repository:
       - match: \b(?i)(SelectWin)\b
       - match: \b(?i)(SetFont)\b
       - match: \b(?i)(SetHighlightColor)\b
-      - match: \b(?i)(SetOneOptPause)\b
       - match: \b(?i)(SetTextColor)\b
       - match: \b(?i)(SetTextFlags)\b
       - match: \b(?i)(ShowMouse)\b

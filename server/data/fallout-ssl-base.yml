@@ -2783,13 +2783,14 @@ say_functions:
 sound_functions:
   type: 3
   items:
-    - name: SetOneOptPause
-      type: void
-      args:
-        - name: flag
-          type: int
-      doc: |-
-        Toggles the pause-on-focus-loss behavior for media playback. When flag is non-zero, media pauses when the game loses focus.
+    # No observable effect: the engine only sets a dialog flag (when flag is 0) or clears it (non-zero), and
+    # nothing in the engine reads that flag. The old description (pausing media on focus loss) matched neither.
+    # The compiler still accepts the call.
+    # - name: SetOneOptPause
+    #   type: void
+    #   args:
+    #     - name: flag
+    #       type: int
 
     - name: SoundDelete
       type: void

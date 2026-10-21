@@ -7500,16 +7500,6 @@
         }
     },
     {
-        "label": "SetOneOptPause",
-        "kind": 3,
-        "source": "builtin",
-        "category": "sound_functions",
-        "documentation": {
-            "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SetOneOptPause(int flag)\n```\nToggles the pause-on-focus-loss behavior for media playback. When flag is non-zero, media pauses when the game loses focus."
-        }
-    },
-    {
         "label": "SoundDelete",
         "kind": 3,
         "source": "builtin",

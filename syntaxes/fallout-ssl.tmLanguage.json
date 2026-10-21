@@ -487,10 +487,6 @@
           "name": "support.function.fallout-ssl.base"
         },
         {
-          "match": "\\b(?i)(SetOneOptPause)\\b",
-          "name": "support.function.fallout-ssl.base"
-        },
-        {
           "match": "\\b(?i)(SetTextColor)\\b",
           "name": "support.function.fallout-ssl.base"
         },

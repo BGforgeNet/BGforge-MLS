@@ -12625,25 +12625,6 @@
             }
         ]
     },
-    "SetOneOptPause": {
-        "label": "void SetOneOptPause(int flag)",
-        "documentation": {
-            "kind": "markdown",
-            "value": "---\nToggles the pause-on-focus-loss behavior for media playback. When flag is non-zero, media pauses when the game loses focus."
-        },
-        "parameters": [
-            {
-                "label": [
-                    20,
-                    28
-                ],
-                "documentation": {
-                    "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nint flag\n```\n"
-                }
-            }
-        ]
-    },
     "SoundDelete": {
         "label": "void SoundDelete(int handle)",
         "documentation": {

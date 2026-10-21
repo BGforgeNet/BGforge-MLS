@@ -8,6 +8,8 @@
   It used to show for one function only.
 - Built-in functions describe their arguments - the constants an argument takes, its units, special values - in
   signature help and in the completion tooltip.
+- `SetOneOptPause` is no longer offered in completion or highlighted: it has no effect in the engine, and its
+  description promised one. Scripts using it still compile.
 
 ### WeiDU
 

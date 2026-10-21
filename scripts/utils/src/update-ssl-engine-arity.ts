@@ -55,6 +55,14 @@ const OBSERVED_ARITY: Readonly<Record<string, { args: number; sites: number }>> 
     scr_return: { args: 1, sites: 25 },
 };
 
+/**
+ * Engine functions deliberately left out of the signature data, with the count the reference compiler parses them
+ * with. Without one the decompiler cannot read a call back; the data comment at each says why it is left out.
+ */
+const UNDOCUMENTED_ARITY: Readonly<Record<string, Signature>> = {
+    setoneoptpause: { args: 1, returns: false },
+};
+
 interface DataItem {
     readonly name: string;
     readonly detail?: string;
@@ -94,6 +102,13 @@ function main(): void {
             const signature = signatureOf(item);
             if (signature !== undefined) signatures.set(item.name.toLowerCase(), signature);
         }
+    }
+
+    for (const [name, signature] of Object.entries(UNDOCUMENTED_ARITY)) {
+        if (signatures.has(name)) {
+            throw new Error(`'${name}' is in the signature data again; drop its UNDOCUMENTED_ARITY entry`);
+        }
+        signatures.set(name, signature);
     }
 
     const corrected: string[] = [];
