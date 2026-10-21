@@ -117,6 +117,46 @@ describe("generateCompletion", () => {
         expect(result[0]!.documentation).toBeUndefined();
     });
 
+    it("documents a function the same whether its signature is a detail line or undescribed args", () => {
+        const doc = "Returns a stat.";
+        const fromDetail = generateCompletion(
+            { funcs: { type: 3, items: [{ name: "f", detail: "int f(ObjectPtr who)", doc }] } },
+            "test-lang",
+        );
+        const fromArgs = generateCompletion(
+            {
+                funcs: {
+                    type: 3,
+                    items: [{ name: "f", type: "int", args: [{ name: "who", type: "ObjectPtr" }], doc }],
+                },
+            },
+            "test-lang",
+        );
+
+        expect(fromArgs[0]!.documentation).toEqual(fromDetail[0]!.documentation);
+    });
+
+    it("puts the parameter table above the description, a blank line apart", () => {
+        const result = generateCompletion(
+            {
+                funcs: {
+                    type: 3,
+                    items: [
+                        {
+                            name: "f",
+                            type: "int",
+                            args: [{ name: "who", type: "ObjectPtr", doc: "A critter." }],
+                            doc: "Returns.",
+                        },
+                    ],
+                },
+            },
+            "test-lang",
+        );
+
+        expect(result[0]!.documentation!.value).toContain("|`who`|&nbsp;&nbsp;A critter.|\n\nReturns.");
+    });
+
     it("includes documentation when doc is present even if detail equals name", () => {
         const data = {
             kw: { type: 14, items: [{ name: "begin", doc: "Start a block." }] },
@@ -389,11 +429,14 @@ describe("generateSignatures", () => {
         };
         const result = generateSignatures(data, "lang");
         expect(result["f"]).toBeDefined();
-        expect(result["f"]!.label).toBe("f(x)");
+        // Typed, the same shape a signature read off a detail line has; the parameter is marked by offset
+        // because a bare name can occur earlier in the label (`stat` inside `get_critter_stat`).
+        expect(result["f"]!.label).toBe("int f(int x)");
         expect(result["f"]!.parameters).toHaveLength(1);
-        expect(result["f"]!.parameters[0]!.label).toBe("x");
+        expect(result["f"]!.parameters[0]!.label).toEqual([6, 11]);
         expect(result["f"]!.parameters[0]!.documentation?.value).toContain("int x");
-        expect(result["f"]!.documentation?.value).toContain("A function.");
+        expect(result["f"]!.parameters[0]!.documentation?.value).toContain("the value");
+        expect(result["f"]!.documentation.value).toContain("A function.");
     });
 
     it("skips items without args", () => {

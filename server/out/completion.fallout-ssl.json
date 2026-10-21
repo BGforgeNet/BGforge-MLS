@@ -6,7 +6,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddNamedEvent(ObjectPtr name, Procedure proc)\n```\nAdds named handler (proc) for event (name). Can be signaled only once, and removed afterwards."
+            "value": "```fallout-ssl-tooltip\nvoid AddNamedEvent(ObjectPtr name, Procedure proc)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Event name; signaled once, then removed|\n|`proc`|&nbsp;&nbsp;Procedure called when the event is signaled|\n\nAdds named handler (proc) for event (name). Can be signaled only once, and removed afterwards."
         }
     },
     {
@@ -16,7 +16,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddNamedHandler(ObjectPtr name, Procedure proc)\n```\nAdds named handler (proc) for event (name). Can be signaled many times."
+            "value": "```fallout-ssl-tooltip\nvoid AddNamedHandler(ObjectPtr name, Procedure proc)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Event name; the handler can be signaled many times|\n|`proc`|&nbsp;&nbsp;Procedure called each time the event is signaled|\n\nAdds named handler (proc) for event (name). Can be signaled many times."
         }
     },
     {
@@ -26,7 +26,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid ClearNamed(string event)\n```\nRemoves all handlers for named event."
+            "value": "```fallout-ssl-tooltip\nvoid ClearNamed(string event)\n```\n|||\n|:-|:-|\n|`event`|&nbsp;&nbsp;Event name whose handlers are all removed|\n\nRemoves all handlers for named event."
         }
     },
     {
@@ -36,7 +36,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SignalNamed(string event)\n```\nCalls events and/or handler for given name (event). See AddNamedEvent and AddNamedHandler to add handlers. This basically just calls the appropriate procedures."
+            "value": "```fallout-ssl-tooltip\nvoid SignalNamed(string event)\n```\n|||\n|:-|:-|\n|`event`|&nbsp;&nbsp;Event name whose handlers and events are called|\n\nCalls events and/or handler for given name (event). See AddNamedEvent and AddNamedHandler to add handlers. This basically just calls the appropriate procedures."
         }
     },
     {
@@ -56,7 +56,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid add_mult_objs_to_inven(ObjectPtr who, ObjectPtr item, int count)\n```\nAdds (count) instances of an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item."
+            "value": "```fallout-ssl-tooltip\nvoid add_mult_objs_to_inven(ObjectPtr who, ObjectPtr item, int count)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose inventory receives the items|\n|`item`|&nbsp;&nbsp;Item object to add; must be of type Item|\n|`count`|&nbsp;&nbsp;Number of instances to add|\n\nAdds (count) instances of an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item."
         }
     },
     {
@@ -66,7 +66,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid add_obj_to_inven(ObjectPtr who, ObjectPtr item)\n```\nAdds an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item."
+            "value": "```fallout-ssl-tooltip\nvoid add_obj_to_inven(ObjectPtr who, ObjectPtr item)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose inventory receives the item|\n|`item`|&nbsp;&nbsp;Item object to add; must be of type Item|\n\nAdds an object (item) to another object's (who's) inventory. Note that this only works with objects of type Item."
         }
     },
     {
@@ -76,7 +76,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid add_timer_event(ObjectPtr obj, int time, int info)\n```\nAdds a timed event call to the queue, at a given time offset, to call an object's (obj) script. Info is used to let scripts differentiate between timed event calls so that they can be hooked in multiple times. Info is read back by the script using the fixed_param operator. Note that time is in ticks (you can use game_ticks(seconds_num) to get the time in ticks from time in seconds)."
+            "value": "```fallout-ssl-tooltip\nvoid add_timer_event(ObjectPtr obj, int time, int info)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose script is called when the timer fires|\n|`time`|&nbsp;&nbsp;Delay in game ticks; `game_ticks(seconds)` converts seconds|\n|`info`|&nbsp;&nbsp;Value that tells timed calls apart; read back in the script with `fixed_param`|\n\nAdds a timed event call to the queue, at a given time offset, to call an object's (obj) script. Info is used to let scripts differentiate between timed event calls so that they can be hooked in multiple times. Info is read back by the script using the fixed_param operator. Note that time is in ticks (you can use game_ticks(seconds_num) to get the time in ticks from time in seconds)."
         }
     },
     {
@@ -86,7 +86,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid anim(ObjectPtr who, int anim, int direction)\n```\nSets up a single-frame animation (anim) for the object (who) that runs in the given direction."
+            "value": "```fallout-ssl-tooltip\nvoid anim(ObjectPtr who, int anim, int direction)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object to animate|\n|`anim`|&nbsp;&nbsp;Single-frame animation to play|\n|`direction`|&nbsp;&nbsp;Direction the animation runs in|\n\nSets up a single-frame animation (anim) for the object (who) that runs in the given direction."
         }
     },
     {
@@ -96,7 +96,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint anim_action_frame(ObjectPtr who, int frame)\n```\nReturns the action frame of the given art frame on a given object (who). This can be used as the delay in an animation registration sequence."
+            "value": "```fallout-ssl-tooltip\nint anim_action_frame(ObjectPtr who, int frame)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose art is queried|\n|`frame`|&nbsp;&nbsp;Art frame whose action frame is returned|\n\nReturns the action frame of the given art frame on a given object (who). This can be used as the delay in an animation registration sequence."
         }
     },
     {
@@ -106,7 +106,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool anim_busy(ObjectPtr who)\n```\nReturns True if object (who) is currently animating, otherwise False. This can be used to determine if a given object has completed an animation."
+            "value": "```fallout-ssl-tooltip\nbool anim_busy(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object checked for a running animation|\n\nReturns True if object (who) is currently animating, otherwise False. This can be used to determine if a given object has completed an animation."
         }
     },
     {
@@ -116,7 +116,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid animate_move_obj_to_tile(ObjectPtr who, int tile, int speed)\n```\nSets up an animation for a critter (who) to walk to a given tile (hex) at a given speed (speed). Speed (walk/run) can also have a flag attached (see define.h) to force the object (who) to stop it's current animation (for instance, if it was already walking somewhere) and then walk/run to the new location (tile)."
+            "value": "```fallout-ssl-tooltip\nvoid animate_move_obj_to_tile(ObjectPtr who, int tile, int speed)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that walks or runs|\n|`tile`|&nbsp;&nbsp;Destination hex tile number|\n|`speed`|&nbsp;&nbsp;`ANIMATE_WALK` or `ANIMATE_RUN` from `animcomd.h`; add `ANIMATE_INTERRUPT` (or use `ANIMATE_RUN_FORCE`) to cancel the current animation first|\n\nSets up an animation for a critter (who) to walk to a given tile (hex) at a given speed (speed). Speed (walk/run) can also have a flag attached (see define.h) to force the object (who) to stop it's current animation (for instance, if it was already walking somewhere) and then walk/run to the new location (tile)."
         }
     },
     {
@@ -126,7 +126,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid animate_rotation(int direction)\n```\n(Fallout 2 only) Changes the orientation (facing) of the self-object to the given direction (0-5)."
+            "value": "```fallout-ssl-tooltip\nvoid animate_rotation(int direction)\n```\n|||\n|:-|:-|\n|`direction`|&nbsp;&nbsp;Direction to face, 0-5|\n\n(Fallout 2 only) Changes the orientation (facing) of the self-object to the given direction (0-5)."
         }
     },
     {
@@ -136,7 +136,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid animate_run_to_tile(int tile)\n```\n(Fallout 2 only) Sets up an animation for the self-object to RUN to a given tile (hex)."
+            "value": "```fallout-ssl-tooltip\nvoid animate_run_to_tile(int tile)\n```\n|||\n|:-|:-|\n|`tile`|&nbsp;&nbsp;Destination hex tile number|\n\n(Fallout 2 only) Sets up an animation for the self-object to RUN to a given tile (hex)."
         }
     },
     {
@@ -146,7 +146,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid animate_set_frame(int newFrame)\n```\nChanges the current animation frame of the self-object to the given frame # (newFrame). This can be used to make lights go to broken lights or to alarm/siren lights, for example. Should be used in place of animate_stand for 2-frame anims."
+            "value": "```fallout-ssl-tooltip\nvoid animate_set_frame(int newFrame)\n```\n|||\n|:-|:-|\n|`newFrame`|&nbsp;&nbsp;Animation frame number to switch to|\n\nChanges the current animation frame of the self-object to the given frame # (newFrame). This can be used to make lights go to broken lights or to alarm/siren lights, for example. Should be used in place of animate_stand for 2-frame anims."
         }
     },
     {
@@ -186,7 +186,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid animate_stand_reverse_obj(ObjectPtr obj)\n```\nSets up an animation for an object (obj) to run it's stand animation in reverse. This is used only for non-critters, to cause them to close (close doors, open containers, etc.)"
+            "value": "```fallout-ssl-tooltip\nvoid animate_stand_reverse_obj(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Non-critter object (door, container) to animate closing|\n\nSets up an animation for an object (obj) to run it's stand animation in reverse. This is used only for non-critters, to cause them to close (close doors, open containers, etc.)"
         }
     },
     {
@@ -196,7 +196,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint art_anim(int fid)\n```\nReturns the animation that this fid represents (ANIM_stand, ANIM_pickup, etc.)"
+            "value": "```fallout-ssl-tooltip\nint art_anim(int fid)\n```\n|||\n|:-|:-|\n|`fid`|&nbsp;&nbsp;Frame ID (FID) of the art|\n\nReturns the animation that this fid represents (ANIM_stand, ANIM_pickup, etc.)"
         }
     },
     {
@@ -206,7 +206,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid attack(ObjectPtr who)\n```\nCauses the focused object (self) to attempt to attack an object (who). This is a macro to attack_complex()."
+            "value": "```fallout-ssl-tooltip\nvoid attack(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object to attack|\n\nCauses the focused object (self) to attempt to attack an object (who). This is a macro to attack_complex()."
         }
     },
     {
@@ -216,7 +216,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results)\n```\nCauses the current object (self - must be a critter) to attempt to attack a critter (who) with various parameters modifying the combat: called_shot - 0/1/specific means none/random/specific (head, torso, etc.) num_attacks - the # of extra attacks the self object gets before the target bonus - the bonus to hit the target on the first turn only min_damage - the minimum damage that will be done the first attack max_damage - the maximum damage that will be done the first attack attacker_results - what state the attacker ends in after the first attack target_results - what state the target ends in after the first attack"
+            "value": "```fallout-ssl-tooltip\nvoid attack_complex(ObjectPtr who, int called_shot, int num_attacks, int bonus, int min_damage, int max_damage, int attacker_results, int target_results)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to attack|\n|`called_shot`|&nbsp;&nbsp;0 = none, 1 = random, otherwise a specific body part|\n|`num_attacks`|&nbsp;&nbsp;Extra attacks the self object gets before the target|\n|`bonus`|&nbsp;&nbsp;Bonus to hit the target on the first turn only|\n|`min_damage`|&nbsp;&nbsp;Minimum damage of the first attack|\n|`max_damage`|&nbsp;&nbsp;Maximum damage of the first attack|\n|`attacker_results`|&nbsp;&nbsp;State the attacker ends in after the first attack|\n|`target_results`|&nbsp;&nbsp;State the target ends in after the first attack|\n\nCauses the current object (self - must be a critter) to attempt to attack a critter (who) with various parameters modifying the combat: called_shot - 0/1/specific means none/random/specific (head, torso, etc.) num_attacks - the # of extra attacks the self object gets before the target bonus - the bonus to hit the target on the first turn only min_damage - the minimum damage that will be done the first attack max_damage - the maximum damage that will be done the first attack attacker_results - what state the attacker ends in after the first attack target_results - what state the target ends in after the first attack"
         }
     },
     {
@@ -226,7 +226,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid attack_setup(ObjectPtr who, ObjectPtr victim)\n```\nSets up an attack from who on victim, without expecting this script to be involved. Can be used to setup attacks on critters from the map script."
+            "value": "```fallout-ssl-tooltip\nvoid attack_setup(ObjectPtr who, ObjectPtr victim)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Attacking critter|\n|`victim`|&nbsp;&nbsp;Critter being attacked|\n\nSets up an attack from who on victim, without expecting this script to be involved. Can be used to setup attacks on critters from the map script."
         }
     },
     {
@@ -246,7 +246,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint car_give_gas(int amount)\n```\n(Fallout 2 only) Gives the car a given amount of gas."
+            "value": "```fallout-ssl-tooltip\nint car_give_gas(int amount)\n```\n|||\n|:-|:-|\n|`amount`|&nbsp;&nbsp;Amount of gas added to the car|\n\n(Fallout 2 only) Gives the car a given amount of gas."
         }
     },
     {
@@ -286,7 +286,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr create_object(int pid, int tile_num, int elev)\n```\nCreates a new object of prototype (pid), placing it at a given tile number and at a given elevation (0-2). If the prototype indicates a script should be attached, then it will be."
+            "value": "```fallout-ssl-tooltip\nObjectPtr create_object(int pid, int tile_num, int elev)\n```\n|||\n|:-|:-|\n|`pid`|&nbsp;&nbsp;Prototype ID of the object to create|\n|`tile_num`|&nbsp;&nbsp;Hex tile number to place it at|\n|`elev`|&nbsp;&nbsp;Elevation, 0-2|\n\nCreates a new object of prototype (pid), placing it at a given tile number and at a given elevation (0-2). If the prototype indicates a script should be attached, then it will be."
         }
     },
     {
@@ -296,7 +296,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr create_object_sid(int pid, int tile_num, int elev, int sid)\n```\nCreates a new object of prototype (pid), placing it at a given tile # and at a given elevation (0-2). If sid is not -1, then it indicates that the default script should be overriden by this new script #."
+            "value": "```fallout-ssl-tooltip\nObjectPtr create_object_sid(int pid, int tile_num, int elev, int sid)\n```\n|||\n|:-|:-|\n|`pid`|&nbsp;&nbsp;Prototype ID of the object to create|\n|`tile_num`|&nbsp;&nbsp;Hex tile number to place it at|\n|`elev`|&nbsp;&nbsp;Elevation, 0-2|\n|`sid`|&nbsp;&nbsp;Script ID overriding the prototype's default script; -1 keeps the default|\n\nCreates a new object of prototype (pid), placing it at a given tile # and at a given elevation (0-2). If sid is not -1, then it indicates that the default script should be overriden by this new script #."
         }
     },
     {
@@ -306,7 +306,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_add_trait(ObjectPtr who, int trait_type, int trait, int amount)\n```\nAdds a particular trait (trait) of a given type (trait_type) to a particular critter (who). Possible traits under the SPECIAL system are limited to Perks, Traits, Object-instance information (such as team #'s, ai-packet #'s, etc.)"
+            "value": "```fallout-ssl-tooltip\nint critter_add_trait(ObjectPtr who, int trait_type, int trait, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter receiving the trait|\n|`trait_type`|&nbsp;&nbsp;`TRAIT_PERK` or `TRAIT_OBJECT` from `define_pre.h`|\n|`trait`|&nbsp;&nbsp;For `TRAIT_PERK` a perk id; for `TRAIT_OBJECT` `OBJECT_AI_PACKET` or `OBJECT_TEAM_NUM` from `define.h`|\n\nAdds a particular trait (trait) of a given type (trait_type) to a particular critter (who). Possible traits under the SPECIAL system are limited to Perks, Traits, Object-instance information (such as team #'s, ai-packet #'s, etc.)"
         }
     },
     {
@@ -316,7 +316,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_attempt_placement(ObjectPtr who, int hex, int elev)\n```\nAttempts to place a critter at a given destination hex & elevation (0-2), if it fails, then it tries to find a nearby hex that is that is as near as possible to the start hex. No LONGER checks to see if the hex is visible on-screen."
+            "value": "```fallout-ssl-tooltip\nint critter_attempt_placement(ObjectPtr who, int hex, int elev)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to place|\n|`hex`|&nbsp;&nbsp;Destination hex tile number; a nearby free hex is used if it is blocked|\n|`elev`|&nbsp;&nbsp;Destination elevation, 0-2|\n\nAttempts to place a critter at a given destination hex & elevation (0-2), if it fails, then it tries to find a nearby hex that is that is as near as possible to the start hex. No LONGER checks to see if the hex is visible on-screen."
         }
     },
     {
@@ -326,7 +326,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid critter_damage(ObjectPtr who, int dmg_amount)\n```\n- Macro: `critter_dmg(who, amount, (DMG_normal_dam BWOR DMG_NOANIMATE))`\n- Inflicts damage on a critter (who) of a given amount, killing it if necessary. Normal damage, no animation."
+            "value": "```fallout-ssl-tooltip\nvoid critter_damage(ObjectPtr who, int dmg_amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to damage|\n|`dmg_amount`|&nbsp;&nbsp;Amount of damage|\n\n- Macro: `critter_dmg(who, amount, (DMG_normal_dam BWOR DMG_NOANIMATE))`\n- Inflicts damage on a critter (who) of a given amount, killing it if necessary. Normal damage, no animation."
         }
     },
     {
@@ -336,7 +336,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid critter_dmg(ObjectPtr who, int dmg_amount, int flags)\n```\nInflicts damage on a critter (who) of a given amount, killing it if necessary. Use `DMG_*` flags to customize behaviour."
+            "value": "```fallout-ssl-tooltip\nvoid critter_dmg(ObjectPtr who, int dmg_amount, int flags)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to damage|\n|`dmg_amount`|&nbsp;&nbsp;Amount of damage|\n|`flags`|&nbsp;&nbsp;`DMG_*` damage type and flags from `define.h`, e.g. `DMG_NOANIMATE`|\n\nInflicts damage on a critter (who) of a given amount, killing it if necessary. Use `DMG_*` flags to customize behaviour."
         }
     },
     {
@@ -346,7 +346,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_heal(ObjectPtr who, int amount)\n```\nHeals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds"
+            "value": "```fallout-ssl-tooltip\nint critter_heal(ObjectPtr who, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to heal|\n|`amount`|&nbsp;&nbsp;Hit points restored, capped at max HP; negative hurts, bypassing resistances and thresholds|\n\nHeals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds"
         }
     },
     {
@@ -356,7 +356,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_injure(ObjectPtr who, int how)\n```\nInjures a given critter (who) by crippling given limbs/body parts (defined by DAM_CRIP_ARM_LEFT, DAM_BLIND, etc. in define.h)"
+            "value": "```fallout-ssl-tooltip\nint critter_injure(ObjectPtr who, int how)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to injure|\n|`how`|&nbsp;&nbsp;`DAM_CRIP_*` and `DAM_BLIND` flags from `define.h`|\n\nInjures a given critter (who) by crippling given limbs/body parts (defined by DAM_CRIP_ARM_LEFT, DAM_BLIND, etc. in define.h)"
         }
     },
     {
@@ -366,7 +366,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr critter_inven_obj(ObjectPtr who, int where)\n```\nReturns a pointer to an object that is in a given spot (NULL if none).\nThe appropriate values for where are: `INVEN_TYPE_WORN`, `INVEN_TYPE_RIGHT_HAND`, and `INVEN_TYPE_LEFT_HAND`.\n\n**Deprecated:** Use `critter_inven_obj2` instead"
+            "value": "```fallout-ssl-tooltip\nObjectPtr critter_inven_obj(ObjectPtr who, int where)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose inventory is read|\n|`where`|&nbsp;&nbsp;`INVEN_TYPE_WORN`, `INVEN_TYPE_RIGHT_HAND` or `INVEN_TYPE_LEFT_HAND` from `define.h`|\n\nReturns a pointer to an object that is in a given spot (NULL if none).\nThe appropriate values for where are: `INVEN_TYPE_WORN`, `INVEN_TYPE_RIGHT_HAND`, and `INVEN_TYPE_LEFT_HAND`.\n\n**Deprecated:** Use `critter_inven_obj2` instead"
         },
         "tags": [
             1
@@ -379,7 +379,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_is_fleeing(ObjectPtr who)\n```\nReturns True if the critter object (who) has its FLEE flag set."
+            "value": "```fallout-ssl-tooltip\nint critter_is_fleeing(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter checked for the FLEE flag|\n\nReturns True if the critter object (who) has its FLEE flag set."
         }
     },
     {
@@ -399,7 +399,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_rm_trait(ObjectPtr who, int trait_type, int trait, int amount)\n```\nRemoves a particular trait (trait) of a given type (trait_type) from a particular critter (who)."
+            "value": "```fallout-ssl-tooltip\nint critter_rm_trait(ObjectPtr who, int trait_type, int trait, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter losing the trait|\n|`trait_type`|&nbsp;&nbsp;`TRAIT_PERK` from `define_pre.h`; other kinds are not supported|\n|`trait`|&nbsp;&nbsp;Perk id to remove (all ranks are removed)|\n\nRemoves a particular trait (trait) of a given type (trait_type) from a particular critter (who)."
         }
     },
     {
@@ -409,7 +409,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_set_flee_state(ObjectPtr who, bool flee_on)\n```\nSets the FLEE flag on or off. This controls whether the critter flees during combat."
+            "value": "```fallout-ssl-tooltip\nint critter_set_flee_state(ObjectPtr who, bool flee_on)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose FLEE flag is set|\n|`flee_on`|&nbsp;&nbsp;1 sets the FLEE flag, 0 clears it|\n\nSets the FLEE flag on or off. This controls whether the critter flees during combat."
         }
     },
     {
@@ -419,7 +419,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_skill_level(ObjectPtr who, int skillNum)\n```\nReturns the current skill level of a particular object's (who) skill (skillNum)."
+            "value": "```fallout-ssl-tooltip\nint critter_skill_level(ObjectPtr who, int skillNum)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose skill is read|\n|`skillNum`|&nbsp;&nbsp;`SKILL_*` from `define.h`|\n\nReturns the current skill level of a particular object's (who) skill (skillNum)."
         }
     },
     {
@@ -429,7 +429,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_state(ObjectPtr who)\n```\nReturns the state of a given critter object (from combat data), used to determine if a critter is dead, unconscious, etc."
+            "value": "```fallout-ssl-tooltip\nint critter_state(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose combat state is read|\n\nReturns the state of a given critter object (from combat data), used to determine if a critter is dead, unconscious, etc."
         }
     },
     {
@@ -439,7 +439,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_stop_attacking(ObjectPtr who)\n```\nFlags the critter object (who) as no longer wishing to be active in combat."
+            "value": "```fallout-ssl-tooltip\nint critter_stop_attacking(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter taken out of active combat|\n\nFlags the critter object (who) as no longer wishing to be active in combat."
         }
     },
     {
@@ -479,7 +479,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid debug_msg(string text)\n```\nPrints a string to the debug monitor. Should be used exclusively for debug information, instead of display_msg()! The user will never see these messages unless they have debugging enabled and activated. If they have debugging enabled and DEBUGLOG set, the messages will only show up in debug.log file."
+            "value": "```fallout-ssl-tooltip\nvoid debug_msg(string text)\n```\n|||\n|:-|:-|\n|`text`|&nbsp;&nbsp;Text sent to the debug monitor; shown only with debugging enabled|\n\nPrints a string to the debug monitor. Should be used exclusively for debug information, instead of display_msg()! The user will never see these messages unless they have debugging enabled and activated. If they have debugging enabled and DEBUGLOG set, the messages will only show up in debug.log file."
         }
     },
     {
@@ -489,7 +489,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint destroy_mult_objs(ObjectPtr item, int count)\n```\nDestroys count number of instances of an item object. This function will figure out which inventory this item is in (if it isn't on the ground). If it is on the ground, of course, there is only one instance of this object, so only one will be destroyed."
+            "value": "```fallout-ssl-tooltip\nint destroy_mult_objs(ObjectPtr item, int count)\n```\n|||\n|:-|:-|\n|`item`|&nbsp;&nbsp;Item object whose instances are destroyed|\n|`count`|&nbsp;&nbsp;Number of instances to destroy|\n\nDestroys count number of instances of an item object. This function will figure out which inventory this item is in (if it isn't on the ground). If it is on the ground, of course, there is only one instance of this object, so only one will be destroyed."
         }
     },
     {
@@ -499,7 +499,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint destroy_object(ObjectPtr obj)\n```\nDestroys an object (obj), which will call its script in the destroy_proc section if the object is *NOT* the calling object."
+            "value": "```fallout-ssl-tooltip\nint destroy_object(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object to destroy; its `destroy_proc` runs unless it is the calling object|\n\nDestroys an object (obj), which will call its script in the destroy_proc section if the object is *NOT* the calling object."
         }
     },
     {
@@ -539,7 +539,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid display_msg(string message)\n```\nDisplays a string on the in-game PDA display (lower-left hand corner)."
+            "value": "```fallout-ssl-tooltip\nvoid display_msg(string message)\n```\n|||\n|:-|:-|\n|`message`|&nbsp;&nbsp;Text shown in the message display in the lower-left|\n\nDisplays a string on the in-game PDA display (lower-left hand corner)."
         }
     },
     {
@@ -549,7 +549,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint do_check(ObjectPtr who, int check, int modifier)\n```\nDo a check/test-roll versus one of the various basic traits (strength, perception, etc.). Note: these cannot generate Critical Success or Critical Failure as they are a basic X==Y check."
+            "value": "```fallout-ssl-tooltip\nint do_check(ObjectPtr who, int check, int modifier)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose stat is tested|\n|`check`|&nbsp;&nbsp;Base stat to test, `STAT_st` to `STAT_lu` from `define.h`|\n|`modifier`|&nbsp;&nbsp;Bonus or penalty added to the stat value before the roll|\n\nDo a check/test-roll versus one of the various basic traits (strength, perception, etc.). Note: these cannot generate Critical Success or Critical Failure as they are a basic X==Y check."
         }
     },
     {
@@ -569,7 +569,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint drug_influence(ObjectPtr who)\n```\nReturns True if a given critter object (who) is currently under any drug influences, False otherwise."
+            "value": "```fallout-ssl-tooltip\nint drug_influence(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter checked for active drug effects|\n\nReturns True if a given critter object (who) is currently under any drug influences, False otherwise."
         }
     },
     {
@@ -589,7 +589,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint elevation(ObjectPtr obj)\n```\nReturns object's elevation"
+            "value": "```fallout-ssl-tooltip\nint elevation(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose elevation is returned|\n\nReturns object's elevation"
         }
     },
     {
@@ -649,7 +649,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid float_msg(ObjectPtr who, string message, int type)\n```\nAttempts to create a floating-text message (str) attached to an object (who) using colors dictated by type. There are two special types, WARNING and SEQUENTIAL. WARNING is used to print a message centered on the screen (such as for end-of-quest notifications), and SEQUENTIAL will cycle through the colors, in an attempt to give critters different-colored messages to differentiate them."
+            "value": "```fallout-ssl-tooltip\nvoid float_msg(ObjectPtr who, string message, int type)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object the floating text is attached to|\n|`message`|&nbsp;&nbsp;Text to float|\n|`type`|&nbsp;&nbsp;`FLOAT_MSG_*` color from `define.h`; `FLOAT_MSG_WARNING` centers it on screen, `FLOAT_MSG_SEQUENTIAL` cycles colors|\n\nAttempts to create a floating-text message (str) attached to an object (who) using colors dictated by type. There are two special types, WARNING and SEQUENTIAL. WARNING is used to print a message centered on the screen (such as for end-of-quest notifications), and SEQUENTIAL will cycle through the colors, in an attempt to give critters different-colored messages to differentiate them."
         }
     },
     {
@@ -659,7 +659,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint floor(int/float value)\n```\nWorks properly for positive values, but for negative ones functions like `ceil` (rounds up instead of down).\n\n**Deprecated:** Use `floor2` instead"
+            "value": "```fallout-ssl-tooltip\nint floor(int/float value)\n```\n|||\n|:-|:-|\n|`value`|&nbsp;&nbsp;Number to round down|\n\nWorks properly for positive values, but for negative ones functions like `ceil` (rounds up instead of down).\n\n**Deprecated:** Use `floor2` instead"
         },
         "tags": [
             1
@@ -682,7 +682,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid gSay_Message(int msg_list, int msg_num, int reaction)\n```\nSets up a sayMessage, which is a reply with just a [Done] option. The msg_list determines which message file to look in, and the msg_num determines which line to use from the file."
+            "value": "```fallout-ssl-tooltip\nvoid gSay_Message(int msg_list, int msg_num, int reaction)\n```\n|||\n|:-|:-|\n|`msg_list`|&nbsp;&nbsp;Message file number to read from|\n|`msg_num`|&nbsp;&nbsp;Line number in that message file|\n|`reaction`|&nbsp;&nbsp;`GOOD_REACTION`, `NEUTRAL_REACTION` or `BAD_REACTION` from `define.h`|\n\nSets up a sayMessage, which is a reply with just a [Done] option. The msg_list determines which message file to look in, and the msg_num determines which line to use from the file."
         }
     },
     {
@@ -692,7 +692,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\ngSay_Option(int msg_list, int msg_num, procedure target,  int reaction)\n```\nSets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure."
+            "value": "```fallout-ssl-tooltip\ngSay_Option(int msg_list, int msg_num, procedure target, int reaction)\n```\nSets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure."
         }
     },
     {
@@ -722,7 +722,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint game_ticks(int seconds)\n```\nReturns the number of game ticks equal to a given # of seconds."
+            "value": "```fallout-ssl-tooltip\nint game_ticks(int seconds)\n```\n|||\n|:-|:-|\n|`seconds`|&nbsp;&nbsp;Time in seconds; 1 second is 10 ticks|\n\nReturns the number of game ticks equal to a given # of seconds."
         }
     },
     {
@@ -742,7 +742,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid game_time_advance(int amount)\n```\nAdvances the current game time by (amount) ticks."
+            "value": "```fallout-ssl-tooltip\nvoid game_time_advance(int amount)\n```\n|||\n|:-|:-|\n|`amount`|&nbsp;&nbsp;Time to advance, in game ticks|\n\nAdvances the current game time by (amount) ticks."
         }
     },
     {
@@ -812,7 +812,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint gdialog_mod_barter(int modifier)\n```\nTells the dialog system to switch to the barter screen, using a given modifier (+/- percent)."
+            "value": "```fallout-ssl-tooltip\nint gdialog_mod_barter(int modifier)\n```\n|||\n|:-|:-|\n|`modifier`|&nbsp;&nbsp;Barter price modifier in percent (+/-)|\n\nTells the dialog system to switch to the barter screen, using a given modifier (+/- percent)."
         }
     },
     {
@@ -822,7 +822,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid gdialog_set_barter_mod(int modifier)\n```\nSets the current modifier for barter to a given percentage (modifier). Used to make barter easier/harder, even if the player initiates barter (as opposed to the script starting it.)"
+            "value": "```fallout-ssl-tooltip\nvoid gdialog_set_barter_mod(int modifier)\n```\n|||\n|:-|:-|\n|`modifier`|&nbsp;&nbsp;Barter price modifier in percent; makes barter easier or harder|\n\nSets the current modifier for barter to a given percentage (modifier). Used to make barter easier/harder, even if the player initiates barter (as opposed to the script starting it.)"
         }
     },
     {
@@ -832,7 +832,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_critter_stat(ObjectPtr who, int stat)\n```\nReturns the value of a desired attribute/stat in a critter object (who)."
+            "value": "```fallout-ssl-tooltip\nint get_critter_stat(ObjectPtr who, int stat)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose stat is read|\n|`stat`|&nbsp;&nbsp;`STAT_*` from `define.h`|\n\nReturns the value of a desired attribute/stat in a critter object (who)."
         }
     },
     {
@@ -872,7 +872,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint get_poison(ObjectPtr who)\n```\n(Fallout 2 only) Returns the value of a given critters' (who) poison level."
+            "value": "```fallout-ssl-tooltip\nint get_poison(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose poison level is read|\n\n(Fallout 2 only) Returns the value of a given critters' (who) poison level."
         }
     },
     {
@@ -882,7 +882,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid gfade_in(int time)\n```\nDoes a palette fade to black. The time parameter is currently not actually used."
+            "value": "```fallout-ssl-tooltip\nvoid gfade_in(int time)\n```\n|||\n|:-|:-|\n|`time`|&nbsp;&nbsp;Not used as a duration, but must be non-zero: 0 is a script error and skips the fade|\n\nDoes a palette fade to black. The time parameter is currently not actually used."
         }
     },
     {
@@ -892,7 +892,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid gfade_out(int time)\n```\nDoes a palette fade from black to the game palette. The time parameter is currently not actually used."
+            "value": "```fallout-ssl-tooltip\nvoid gfade_out(int time)\n```\n|||\n|:-|:-|\n|`time`|&nbsp;&nbsp;Not used as a duration, but must be non-zero: 0 is a script error and skips the fade|\n\nDoes a palette fade from black to the game palette. The time parameter is currently not actually used."
         }
     },
     {
@@ -902,7 +902,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid giQ_Option(int iq_test, int msg_list, int msg_num, procedure target, int reaction)\n```\nSets up an option-choice for a reply block if the player's IQ statistic is equal to or greater than a given value (iq_test), getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.\nThis is the only function that automatically accounts for Smooth Talker perk."
+            "value": "```fallout-ssl-tooltip\nvoid giQ_Option(int iq_test, int msg_list, int msg_num, procedure target, int reaction)\n```\n|||\n|:-|:-|\n|`iq_test`|&nbsp;&nbsp;Minimum Intelligence the player needs for the option to appear|\n|`msg_list`|&nbsp;&nbsp;Message file number to read from|\n|`msg_num`|&nbsp;&nbsp;Line number in that message file|\n|`target`|&nbsp;&nbsp;Procedure jumped to when the option is chosen|\n|`reaction`|&nbsp;&nbsp;`GOOD_REACTION`, `NEUTRAL_REACTION` or `BAD_REACTION` from `define.h`|\n\nSets up an option-choice for a reply block if the player's IQ statistic is equal to or greater than a given value (iq_test), getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.\nThis is the only function that automatically accounts for Smooth Talker perk."
         }
     },
     {
@@ -922,7 +922,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint global_var(int var_index)\n```\nReturns the value of a global variable # (var_index)."
+            "value": "```fallout-ssl-tooltip\nint global_var(int var_index)\n```\n|||\n|:-|:-|\n|`var_index`|&nbsp;&nbsp;Index of the global variable (`GVAR_*`)|\n\nReturns the value of a global variable # (var_index)."
         }
     },
     {
@@ -942,7 +942,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint has_skill(ObjectPtr who, int skill)\n```\nReturns the level of the skill (0-17) of the target critter. (0 to 200 for Fallout 1), (0 to 300 for Fallout 2)"
+            "value": "```fallout-ssl-tooltip\nint has_skill(ObjectPtr who, int skill)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose skill is read; 0 is returned for a non-critter|\n|`skill`|&nbsp;&nbsp;`SKILL_*` from `define.h`|\n\nReturns the level of the skill (0-17) of the target critter. (0 to 200 for Fallout 1), (0 to 300 for Fallout 2)"
         }
     },
     {
@@ -952,7 +952,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint has_trait(int trait_type, ObjectPtr who, int trait)\n```\nReturns the value of a given critter object's (who) trait of a given trait_type (see define.h). This can be used to determine if the player has a particular Perk, AI Packet, team num, current rotation, or Trait (finesse, bruiser, etc.)."
+            "value": "```fallout-ssl-tooltip\nint has_trait(int trait_type, ObjectPtr who, int trait)\n```\n|||\n|:-|:-|\n|`trait_type`|&nbsp;&nbsp;What to query: `TRAIT_PERK`, `TRAIT_OBJECT` or `TRAIT_TRAIT` (`define_pre.h`)|\n|`who`|&nbsp;&nbsp;Critter (or object) queried|\n|`trait`|&nbsp;&nbsp;Depends on `trait_type`: a `PERK_*` (rank returned), an `OBJECT_*` (`OBJECT_AI_PACKET`, `OBJECT_TEAM_NUM`, `OBJECT_CUR_ROT`) or a `TRAIT_*` (character trait, from `define.h`)|\n\nReturns the value of a given critter object's (who) trait of a given trait_type (see define.h). This can be used to determine if the player has a particular Perk, AI Packet, team num, current rotation, or Trait (finesse, bruiser, etc.)."
         }
     },
     {
@@ -972,7 +972,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr inven_cmds(ObjectPtr who, int inven_cmd, int slotNum)\n```\nReturns a pointer to the object in the inventory."
+            "value": "```fallout-ssl-tooltip\nObjectPtr inven_cmds(ObjectPtr who, int inven_cmd, int slotNum)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose inventory is read|\n|`inven_cmd`|&nbsp;&nbsp;Command; only `INVEN_CMD_INDEX_PTR` (13) is supported, from `define.h`|\n|`slotNum`|&nbsp;&nbsp;0-based index into the inventory; out of range returns `NULL`|\n\nReturns a pointer to the object in the inventory."
         }
     },
     {
@@ -982,7 +982,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint inven_count(ObjectPtr what)\n```\nReturns the count of how many inventory slots are filled on a given object (what)."
+            "value": "```fallout-ssl-tooltip\nint inven_count(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object whose inventory is counted|\n\nReturns the count of how many inventory slots are filled on a given object (what)."
         }
     },
     {
@@ -992,7 +992,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr inven(ObjectPtr what, int slotNum)\n```\nReturns a pointer to the object in slot # (slotNum) in a given object (what)."
+            "value": "```fallout-ssl-tooltip\nObjectPtr inven_ptr(ObjectPtr what, int slotNum)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object whose inventory is read|\n|`slotNum`|&nbsp;&nbsp;0-based index into the inventory; out of range returns `NULL`|\n\nReturns a pointer to the object in slot # (slotNum) in a given object (what)."
         }
     },
     {
@@ -1002,7 +1002,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid inven_unwield(ObjectPtr who)\n```\nAttempts to cause a critter to unwield any wielded weapons/items. If animations are currently disabled, it will just instantly change the art."
+            "value": "```fallout-ssl-tooltip\nvoid inven_unwield(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that unwields its items|\n\nAttempts to cause a critter to unwield any wielded weapons/items. If animations are currently disabled, it will just instantly change the art."
         }
     },
     {
@@ -1012,7 +1012,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool is_critical(int rollResult)\n```\nReturns `True` if a given contest roll result is a critical result, otherwise `False`."
+            "value": "```fallout-ssl-tooltip\nbool is_critical(int rollResult)\n```\n|||\n|:-|:-|\n|`rollResult`|&nbsp;&nbsp;Result of a contest roll; critical if `ROLL_CRITICAL_SUCCESS` or `ROLL_CRITICAL_FAILURE`|\n\nReturns `True` if a given contest roll result is a critical result, otherwise `False`."
         }
     },
     {
@@ -1032,7 +1032,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool is_skill_tagged(int skillNum)\n```\nReturns True if a given skill is tagged."
+            "value": "```fallout-ssl-tooltip\nbool is_skill_tagged(int skillNum)\n```\n|||\n|:-|:-|\n|`skillNum`|&nbsp;&nbsp;`SKILL_*` from `define.h`|\n\nReturns True if a given skill is tagged."
         }
     },
     {
@@ -1042,7 +1042,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint is_success(int rollResult)\n```\nReturn `True` if a given contest roll result value is a success (including critical success), otherwise `False`."
+            "value": "```fallout-ssl-tooltip\nint is_success(int rollResult)\n```\n|||\n|:-|:-|\n|`rollResult`|&nbsp;&nbsp;Result of a contest roll: `ROLL_*` (`ROLL_SUCCESS` and `ROLL_CRITICAL_SUCCESS` count as success)|\n\nReturn `True` if a given contest roll result value is a success (including critical success), otherwise `False`."
         }
     },
     {
@@ -1052,7 +1052,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint item_caps_adjust(ObjectPtr obj, int amount)\n```\nModifies the current caps count in an object (obj) by a given amount (amount). Can be positive or negative."
+            "value": "```fallout-ssl-tooltip\nint item_caps_adjust(ObjectPtr obj, int amount)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose caps count changes|\n|`amount`|&nbsp;&nbsp;Caps to add; negative removes|\n\nModifies the current caps count in an object (obj) by a given amount (amount). Can be positive or negative."
         }
     },
     {
@@ -1062,7 +1062,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint item_caps_total(ObjectPtr obj)\n```\nReturns the current caps total in a given object's (obj) inventory."
+            "value": "```fallout-ssl-tooltip\nint item_caps_total(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose inventory caps are totaled|\n\nReturns the current caps total in a given object's (obj) inventory."
         }
     },
     {
@@ -1072,7 +1072,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint jam_lock(ObjectPtr lockableObj)\n```\nJams a lock, which prevents the player from picking the lock for approximately 24 hours. Meant to be used when a player critically fails to pick a lock."
+            "value": "```fallout-ssl-tooltip\nint jam_lock(ObjectPtr lockableObj)\n```\n|||\n|:-|:-|\n|`lockableObj`|&nbsp;&nbsp;Door or container whose lock is jammed|\n\nJams a lock, which prevents the player from picking the lock for approximately 24 hours. Meant to be used when a player critically fails to pick a lock."
         }
     },
     {
@@ -1082,7 +1082,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid kill_critter(ObjectPtr who, int death_frame)\n```\nKills a critter (obj) outright, placing it in the chosen death frame. Note: this does NOT animate the critter, and does NOT refresh the screen! It is meant to be used in scripts run when entering/exiting a map (map_init/map_exit)."
+            "value": "```fallout-ssl-tooltip\nvoid kill_critter(ObjectPtr who, int death_frame)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to kill|\n|`death_frame`|&nbsp;&nbsp;Death animation, an `ANIM_*` death frame from `animcomd.h` (e.g. `ANIM_fall_back_blood_sf`)|\n\nKills a critter (obj) outright, placing it in the chosen death frame. Note: this does NOT animate the critter, and does NOT refresh the screen! It is meant to be used in scripts run when entering/exiting a map (map_init/map_exit)."
         }
     },
     {
@@ -1092,7 +1092,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid kill_critter_type(int pid)\n```\nKills all critters of a given type (pid) outright. NOTE: This can result in the 'frozen bodies' issue! kill_critter should always be used instead if possible, for this reason. Frozen bodies causes no actual gameplay issues, but it looks unrealistic and ridiculous."
+            "value": "```fallout-ssl-tooltip\nvoid kill_critter_type(int pid)\n```\n|||\n|:-|:-|\n|`pid`|&nbsp;&nbsp;Prototype id of the critter type to kill|\n\nKills all critters of a given type (pid) outright. NOTE: This can result in the 'frozen bodies' issue! kill_critter should always be used instead if possible, for this reason. Frozen bodies causes no actual gameplay issues, but it looks unrealistic and ridiculous."
         }
     },
     {
@@ -1112,7 +1112,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid load_map(string map_name, int start_location)\n```\nLoads a new map (map_name), removing all scripts currently running and passing on the entrance location (start_location) to the new map's map_init script. Can also use the number representing the map in the map list (for example, between 0 to 64 in Fallout 1)"
+            "value": "```fallout-ssl-tooltip\nvoid load_map(string map_name, int start_location)\n```\n|||\n|:-|:-|\n|`map_name`|&nbsp;&nbsp;Map name string, or the map's index number|\n|`start_location`|&nbsp;&nbsp;Entrance location passed to the new map's `map_init`|\n\nLoads a new map (map_name), removing all scripts currently running and passing on the entrance location (start_location) to the new map's map_init script. Can also use the number representing the map in the map list (for example, between 0 to 64 in Fallout 1)"
         }
     },
     {
@@ -1122,7 +1122,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint local_var(uint var_index)\n```\nReturns the value of a local variable of given index # (var_index). If the user is not allowed local vars up to this number in the list of critters, this can generate errors."
+            "value": "```fallout-ssl-tooltip\nint local_var(uint var_index)\n```\n|||\n|:-|:-|\n|`var_index`|&nbsp;&nbsp;Index of the script's local variable|\n\nReturns the value of a local variable of given index # (var_index). If the user is not allowed local vars up to this number in the list of critters, this can generate errors."
         }
     },
     {
@@ -1142,7 +1142,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool map_is_known(int mapIndex)\n```\nReturns True if a given map index is known, False otherwise."
+            "value": "```fallout-ssl-tooltip\nbool map_is_known(int mapIndex)\n```\n|||\n|:-|:-|\n|`mapIndex`|&nbsp;&nbsp;Map index|\n\nReturns True if a given map index is known, False otherwise."
         }
     },
     {
@@ -1152,7 +1152,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool map_known(int mapNum)\n```\nReturns True if a given map # (mapNum) is known, False otherwise."
+            "value": "```fallout-ssl-tooltip\nbool map_known(int mapNum)\n```\n|||\n|:-|:-|\n|`mapNum`|&nbsp;&nbsp;Map number|\n\nReturns True if a given map # (mapNum) is known, False otherwise."
         }
     },
     {
@@ -1162,7 +1162,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint map_var(uint var_index)\n```\nReturns the value of a map-global variable of a given index # (var_index)."
+            "value": "```fallout-ssl-tooltip\nint map_var(uint var_index)\n```\n|||\n|:-|:-|\n|`var_index`|&nbsp;&nbsp;Index of the map variable|\n\nReturns the value of a map-global variable of a given index # (var_index)."
         }
     },
     {
@@ -1172,7 +1172,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid mark_area_known(int areaType, int areaIndex, int known)\n```\nMarks a town area or map location on the world map. The areaType parameter selects whether to mark by area (MARK_TYPE_TOWN) or by map index (MARK_TYPE_MAP). The areaIndex identifies the area or map, and known sets the state (MARK_STATE_KNOWN or MARK_STATE_VISITED)."
+            "value": "```fallout-ssl-tooltip\nvoid mark_area_known(int areaType, int areaIndex, int known)\n```\n|||\n|:-|:-|\n|`areaType`|&nbsp;&nbsp;`MARK_TYPE_TOWN` or `MARK_TYPE_MAP` from `define.h`|\n|`areaIndex`|&nbsp;&nbsp;Town area index (for `MARK_TYPE_TOWN`) or map index (for `MARK_TYPE_MAP`)|\n|`known`|&nbsp;&nbsp;`MARK_STATE_*` from `define.h` (`MARK_STATE_KNOWN`, `MARK_STATE_VISITED`; `MARK_STATE_INVISIBLE` hides a town); ignored for maps|\n\nMarks a town area or map location on the world map. The areaType parameter selects whether to mark by area (MARK_TYPE_TOWN) or by map index (MARK_TYPE_MAP). The areaIndex identifies the area or map, and known sets the state (MARK_STATE_KNOWN or MARK_STATE_VISITED)."
         }
     },
     {
@@ -1182,7 +1182,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nchar* message_str(int list, int msg_num)\n```\nReturns a string from the message module for a given list and a given # (msg_num)."
+            "value": "```fallout-ssl-tooltip\nchar* message_str(int list, int msg_num)\n```\n|||\n|:-|:-|\n|`list`|&nbsp;&nbsp;Message file (list) number|\n|`msg_num`|&nbsp;&nbsp;Message number within the list; a negative value yields \"Error\"|\n\nReturns a string from the message module for a given list and a given # (msg_num)."
         }
     },
     {
@@ -1192,7 +1192,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint metarule(int rule, int param)\n```\nGeneral engine query function supporting ~27 different rules. The rule parameter selects the operation (e.g. METARULE_SIGNAL_END_GAME, METARULE_TEST_FIRSTRUN, METARULE_IS_LOADGAME, METARULE_PARTY_COUNT, etc.), and param provides additional data for that rule. Returns an integer result depending on the rule."
+            "value": "```fallout-ssl-tooltip\nint metarule(int rule, int param)\n```\n|||\n|:-|:-|\n|`rule`|&nbsp;&nbsp;`METARULE_*` from `define.h`|\n|`param`|&nbsp;&nbsp;Argument for the chosen `rule`; meaning depends on it|\n\nGeneral engine query function supporting ~27 different rules. The rule parameter selects the operation (e.g. METARULE_SIGNAL_END_GAME, METARULE_TEST_FIRSTRUN, METARULE_IS_LOADGAME, METARULE_PARTY_COUNT, etc.), and param provides additional data for that rule. Returns an integer result depending on the rule."
         }
     },
     {
@@ -1202,7 +1202,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint metarule3(int rule, int param1, int param2, int param3)\n```\nExtended engine query function supporting ~12 rules that require multiple parameters. Used for operations like clearing timed events (METARULE3_CLR_FIXED_TIMED_EVENTS), querying kill counts (METARULE3_KILL_COUNT), worldmap subtile operations, and critter iteration."
+            "value": "```fallout-ssl-tooltip\nint metarule3(int rule, int param1, int param2, int param3)\n```\n|||\n|:-|:-|\n|`rule`|&nbsp;&nbsp;`METARULE3_*` from `define.h`|\n|`param1`|&nbsp;&nbsp;First argument of the chosen `rule`; meaning depends on it|\n|`param2`|&nbsp;&nbsp;Second argument of the chosen `rule`; meaning depends on it|\n|`param3`|&nbsp;&nbsp;Third argument of the chosen `rule`; meaning depends on it|\n\nExtended engine query function supporting ~12 rules that require multiple parameters. Used for operations like clearing timed events (METARULE3_CLR_FIXED_TIMED_EVENTS), querying kill counts (METARULE3_KILL_COUNT), worldmap subtile operations, and critter iteration."
         }
     },
     {
@@ -1222,7 +1222,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint move_to(ObjectPtr obj, int tile_num, int elev)\n```\nImmediately moves object `obj` to the given tile number and elevation (0-2) on the current map.\nUsing this to change elevations during loading an in-combat save will lead to a crash. If `move_to` called in `map_enter_p_proc`, wrap in `not_is_loading_game` to avoid the crash."
+            "value": "```fallout-ssl-tooltip\nint move_to(ObjectPtr obj, int tile_num, int elev)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object to move|\n|`tile_num`|&nbsp;&nbsp;Destination tile number|\n|`elev`|&nbsp;&nbsp;Destination elevation, 0-2|\n\nImmediately moves object `obj` to the given tile number and elevation (0-2) on the current map.\nUsing this to change elevations during loading an in-combat save will lead to a crash. If `move_to` called in `map_enter_p_proc`, wrap in `not_is_loading_game` to avoid the crash."
         }
     },
     {
@@ -1232,7 +1232,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint obj_art_fid(ObjectPtr obj)\n```\nReturns the fid # (used to index art) of a given object (obj)."
+            "value": "```fallout-ssl-tooltip\nint obj_art_fid(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose art id is read|\n\nReturns the fid # (used to index art) of a given object (obj)."
         }
     },
     {
@@ -1252,7 +1252,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool obj_can_hear_obj(ObjectPtr src_obj, ObjectPtr dst_obj)\n```\nReturns True if the source object (src_obj) is capable of hearing the destination object (dst_obj). This includes distance factors, current activity (standing/walking/running), and skill use (stealth/etc.)."
+            "value": "```fallout-ssl-tooltip\nbool obj_can_hear_obj(ObjectPtr src_obj, ObjectPtr dst_obj)\n```\n|||\n|:-|:-|\n|`src_obj`|&nbsp;&nbsp;Listener|\n|`dst_obj`|&nbsp;&nbsp;Object that may be heard|\n\nReturns True if the source object (src_obj) is capable of hearing the destination object (dst_obj). This includes distance factors, current activity (standing/walking/running), and skill use (stealth/etc.)."
         }
     },
     {
@@ -1262,7 +1262,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool obj_can_see_obj(ObjectPtr src_obj, ObjectPtr dst_obj)\n```\nReturns True if the source object (src_obj) has line-of-sight (LOS) with the destination object (dst_obj). This also takes into account perception & stealth rolls of the objects are critters."
+            "value": "```fallout-ssl-tooltip\nbool obj_can_see_obj(ObjectPtr src_obj, ObjectPtr dst_obj)\n```\n|||\n|:-|:-|\n|`src_obj`|&nbsp;&nbsp;Viewer|\n|`dst_obj`|&nbsp;&nbsp;Object that may be seen|\n\nReturns True if the source object (src_obj) has line-of-sight (LOS) with the destination object (dst_obj). This also takes into account perception & stealth rolls of the objects are critters."
         }
     },
     {
@@ -1272,7 +1272,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr obj_carrying_pid_obj(ObjectPtr who, int pid)\n```\nReturns an Object pointer to an instance of an object of type pid if an object (who) is carrying an object of that type."
+            "value": "```fallout-ssl-tooltip\nObjectPtr obj_carrying_pid_obj(ObjectPtr who, int pid)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose inventory is searched|\n|`pid`|&nbsp;&nbsp;Prototype id to look for|\n\nReturns an Object pointer to an instance of an object of type pid if an object (who) is carrying an object of that type."
         }
     },
     {
@@ -1282,7 +1282,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid obj_close(ObjectPtr what)\n```\nAttempts to close a given object (what) if it is of an openable type."
+            "value": "```fallout-ssl-tooltip\nvoid obj_close(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Door or container to close|\n\nAttempts to close a given object (what) if it is of an openable type."
         }
     },
     {
@@ -1292,7 +1292,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid obj_drop_everything(ObjectPtr who)\n```\nCauses a critter object (who) to drop all objects in it's inventory and drop it on the ground at its feet."
+            "value": "```fallout-ssl-tooltip\nvoid obj_drop_everything(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that drops its inventory|\n\nCauses a critter object (who) to drop all objects in it's inventory and drop it on the ground at its feet."
         }
     },
     {
@@ -1302,7 +1302,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint obj_is_carrying_obj_pid(ObjectPtr obj, in pid)\n```\nReturns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj)."
+            "value": "```fallout-ssl-tooltip\nint obj_is_carrying_obj_pid(ObjectPtr obj, in pid)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose inventory is searched|\n|`pid`|&nbsp;&nbsp;Prototype id to count|\n\nReturns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj)."
         }
     },
     {
@@ -1312,7 +1312,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool obj_is_locked(ObjectPtr what)\n```\nReturns True if a given object (what) is a locked object, False if it is unlocked or not a lockable object."
+            "value": "```fallout-ssl-tooltip\nbool obj_is_locked(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object tested|\n\nReturns True if a given object (what) is a locked object, False if it is unlocked or not a lockable object."
         }
     },
     {
@@ -1322,7 +1322,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool obj_is_open(ObjectPtr what)\n```\nReturns True if a given object (what) is an open object, False if it is closed or not an openable object."
+            "value": "```fallout-ssl-tooltip\nbool obj_is_open(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object tested|\n\nReturns True if a given object (what) is an open object, False if it is closed or not an openable object."
         }
     },
     {
@@ -1332,7 +1332,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool obj_is_visible_flag(ObjectPtr who)\n```\n(Fallout 2 only) Returns True if a given object (who) is turned on (visible), False otherwise."
+            "value": "```fallout-ssl-tooltip\nbool obj_is_visible_flag(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object tested|\n\n(Fallout 2 only) Returns True if a given object (who) is turned on (visible), False otherwise."
         }
     },
     {
@@ -1342,7 +1342,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint obj_item_subtype(ObjectPtr item_obj)\n```\nReturns the subtype of an object of type 'item'. Examples would be food, armor, weapons, etc."
+            "value": "```fallout-ssl-tooltip\nint obj_item_subtype(ObjectPtr item_obj)\n```\n|||\n|:-|:-|\n|`item_obj`|&nbsp;&nbsp;Item whose subtype (`item_type_*` from `define.h`) is read|\n\nReturns the subtype of an object of type 'item'. Examples would be food, armor, weapons, etc."
         }
     },
     {
@@ -1352,7 +1352,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid obj_lock(ObjectPtr what)\n```\nAttempts to lock a given object (what) if it is of a lockable type."
+            "value": "```fallout-ssl-tooltip\nvoid obj_lock(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Door or container to lock|\n\nAttempts to lock a given object (what) if it is of a lockable type."
         }
     },
     {
@@ -1362,7 +1362,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nstring obj_name(ObjectPtr obj)\n```\nReturns a string representing the name of the given object (what)."
+            "value": "```fallout-ssl-tooltip\nstring obj_name(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose name is returned|\n\nReturns a string representing the name of the given object (what)."
         }
     },
     {
@@ -1372,7 +1372,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool obj_on_screen(ObjectPtr what)\n```\nReturns True if a given object (what) is currently being drawn on-screen, False if it is not."
+            "value": "```fallout-ssl-tooltip\nbool obj_on_screen(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object tested|\n\nReturns True if a given object (what) is currently being drawn on-screen, False if it is not."
         }
     },
     {
@@ -1382,7 +1382,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid obj_open(ObjectPtr what)\n```\nAttempts to open a given object (what) if it is of an openable type."
+            "value": "```fallout-ssl-tooltip\nvoid obj_open(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Door or container to open|\n\nAttempts to open a given object (what) if it is of an openable type."
         }
     },
     {
@@ -1392,7 +1392,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint obj_pid(ObjectPtr obj)\n```\nReturns the prototype id # (pid) of an object (obj)."
+            "value": "```fallout-ssl-tooltip\nint obj_pid(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose prototype id is read|\n\nReturns the prototype id # (pid) of an object (obj)."
         }
     },
     {
@@ -1402,7 +1402,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid obj_set_light_level(ObjectPtr obj, int intensity, int distance)\n```\nSet the light level for an object to a given intensity (0-100, percentage of possible maximum intensity), and distance of light in hexes (0-8)."
+            "value": "```fallout-ssl-tooltip\nvoid obj_set_light_level(ObjectPtr obj, int intensity, int distance)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object that emits the light|\n|`intensity`|&nbsp;&nbsp;Light intensity, 0-100 (percent of maximum)|\n|`distance`|&nbsp;&nbsp;Light radius in hexes, 0-8|\n\nSet the light level for an object to a given intensity (0-100, percentage of possible maximum intensity), and distance of light in hexes (0-8)."
         }
     },
     {
@@ -1412,7 +1412,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint obj_type(ObjectPtr obj)\n```\nReturns the type of an object (obj). This would be 'Item', 'Wall', 'Scenery', etc."
+            "value": "```fallout-ssl-tooltip\nint obj_type(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose type is read|\n\nReturns the type of an object (obj). This would be 'Item', 'Wall', 'Scenery', etc."
         }
     },
     {
@@ -1422,7 +1422,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid obj_unlock(ObjectPtr what)\n```\nAttempts to unlock a given object (what) if it is of a lockable type."
+            "value": "```fallout-ssl-tooltip\nvoid obj_unlock(ObjectPtr what)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Door or container to unlock|\n\nAttempts to unlock a given object (what) if it is of a lockable type."
         }
     },
     {
@@ -1432,7 +1432,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid override_map_start(int x, int y, int elev, int rot)\n```\nUsed when loading a new map, this forces the player (obj_dude) to start at a particular location (x/y), elevation (0-2) and rotation (0-5) when first coming up."
+            "value": "```fallout-ssl-tooltip\nvoid override_map_start(int x, int y, int elev, int rot)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;Start hex column; start tile is 200 * y + x|\n|`y`|&nbsp;&nbsp;Start hex row; start tile is 200 * y + x|\n|`elev`|&nbsp;&nbsp;Start elevation, 0-2|\n|`rot`|&nbsp;&nbsp;Start rotation, 0-5|\n\nUsed when loading a new map, this forces the player (obj_dude) to start at a particular location (x/y), elevation (0-2) and rotation (0-5) when first coming up."
         }
     },
     {
@@ -1442,7 +1442,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid party_add(ObjectPtr who)\n```\nAdds a given critter (who) into the list of party members. This will also setup those objects so that they will not be saved in maps, and certain other things."
+            "value": "```fallout-ssl-tooltip\nvoid party_add(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to add to the party|\n\nAdds a given critter (who) into the list of party members. This will also setup those objects so that they will not be saved in maps, and certain other things."
         }
     },
     {
@@ -1452,7 +1452,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint party_member_count(bool countHidden)\n```\nReturns the count of the currently in-party party members. (countHidden) determines whether or not to count the hidden members (hangers-on)."
+            "value": "```fallout-ssl-tooltip\nint party_member_count(bool countHidden)\n```\n|||\n|:-|:-|\n|`countHidden`|&nbsp;&nbsp;Also count hidden members (hangers-on)|\n\nReturns the count of the currently in-party party members. (countHidden) determines whether or not to count the hidden members (hangers-on)."
         }
     },
     {
@@ -1462,7 +1462,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr party_member_obj(int pid)\n```\nReturns an ObjectPtr to a party member that matches a given pid. If that critter isn't currently a member of the party, then it will return NULL."
+            "value": "```fallout-ssl-tooltip\nObjectPtr party_member_obj(int pid)\n```\n|||\n|:-|:-|\n|`pid`|&nbsp;&nbsp;Prototype id of the party member|\n\nReturns an ObjectPtr to a party member that matches a given pid. If that critter isn't currently a member of the party, then it will return NULL."
         }
     },
     {
@@ -1472,7 +1472,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid party_remove(ObjectPtr who)\n```\nRemoves a given critter (who) from the list of party members. This will also change those objects so that certain object- and map-level things will respond differently to them."
+            "value": "```fallout-ssl-tooltip\nvoid party_remove(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to remove from the party|\n\nRemoves a given critter (who) from the list of party members. This will also change those objects so that certain object- and map-level things will respond differently to them."
         }
     },
     {
@@ -1482,7 +1482,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid pickup_obj(ObjectPtr obj)\n```\nCauses the critter self-object to animate and attempt to pick up a given object (obj). If used in regard to a critter, this flag is pinged when a steal detect fails. In other words when detected stealing, pickup_obj is called for the person you were stealing from."
+            "value": "```fallout-ssl-tooltip\nvoid pickup_obj(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object to pick up|\n\nCauses the critter self-object to animate and attempt to pick up a given object (obj). If used in regard to a critter, this flag is pinged when a steal detect fails. In other words when detected stealing, pickup_obj is called for the person you were stealing from."
         }
     },
     {
@@ -1502,7 +1502,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nplay_sfx (string sfxFileName)\n```\nStarts a new sound effect to be played on the queue."
+            "value": "```fallout-ssl-tooltip\nplay_sfx(string sfxFileName)\n```\nStarts a new sound effect to be played on the queue."
         }
     },
     {
@@ -1512,7 +1512,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid poison(ObjectPtr who, int amount)\n```\nModifies the critter's poison level by a given amount, which can be negative"
+            "value": "```fallout-ssl-tooltip\nvoid poison(ObjectPtr who, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose poison level changes|\n|`amount`|&nbsp;&nbsp;Change to the poison level; negative reduces it|\n\nModifies the critter's poison level by a given amount, which can be negative"
         }
     },
     {
@@ -1522,7 +1522,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint proto_data(int pid, int data_member)\n```\nReturns the value (can be int or string) of a data-member of a given prototype (pid)."
+            "value": "```fallout-ssl-tooltip\nint proto_data(int pid, int data_member)\n```\n|||\n|:-|:-|\n|`pid`|&nbsp;&nbsp;Prototype id to read|\n|`data_member`|&nbsp;&nbsp;Prototype field offset, a `PROTO_*` constant from `define_extra.h`|\n\nReturns the value (can be int or string) of a data-member of a given prototype (pid)."
         }
     },
     {
@@ -1532,7 +1532,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid radiation_dec(ObjectPtr who, int amount)\n```\nDecrements a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!"
+            "value": "```fallout-ssl-tooltip\nvoid radiation_dec(ObjectPtr who, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose radiation counter drops; should only be `dude_obj`|\n|`amount`|&nbsp;&nbsp;Radiation to remove|\n\nDecrements a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!"
         }
     },
     {
@@ -1542,7 +1542,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid radiation_inc(ObjectPtr who, int amount)\n```\nIncrements a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!"
+            "value": "```fallout-ssl-tooltip\nvoid radiation_inc(ObjectPtr who, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose radiation counter rises; should only be `dude_obj`|\n|`amount`|&nbsp;&nbsp;Radiation to add|\n\nIncrements a critter's radiation counter by a given amount. NOTE: This should only be done to the player (obj_dude) in Fallout due to design restrictions!"
         }
     },
     {
@@ -1552,7 +1552,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint random(int min, int max)\n```\nReturns a random value between (min) and (max), inclusive."
+            "value": "```fallout-ssl-tooltip\nint random(int min, int max)\n```\n|||\n|:-|:-|\n|`min`|&nbsp;&nbsp;Lowest value returned (inclusive)|\n|`max`|&nbsp;&nbsp;Highest value returned (inclusive)|\n\nReturns a random value between (min) and (max), inclusive."
         }
     },
     {
@@ -1572,7 +1572,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate(ObjectPtr what, int anim, int delay)\n```\nAdds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)!"
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate(ObjectPtr what, int anim, int delay)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object to animate|\n|`anim`|&nbsp;&nbsp;Animation, an `ANIM_*` constant from `animcomd.h`|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation in the sequence; should always be -1|\n\nAdds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)!"
         }
     },
     {
@@ -1582,7 +1582,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate_forever(ObjectPtr what, int anim, int delay)\n```\nAdds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the 'pray' signs in the children of the cathedral (which will have to be toned down)."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate_forever(ObjectPtr what, int anim, int delay)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object to animate|\n|`anim`|&nbsp;&nbsp;Animation, an `ANIM_*` constant from `animcomd.h`|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation in the sequence; should always be -1|\n\nAdds a single, in-place animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! This animation will animate continuously until something in the system interrupts it. To be used *very* sparingly, for instance Gizmo's sign and the 'pray' signs in the children of the cathedral (which will have to be toned down)."
         }
     },
     {
@@ -1592,7 +1592,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate_reverse(ObjectPtr what, int anim, int delay)\n```\nAdds a single, in-place reversed animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! reg_anim_begin void Anim Tells the system to start an animation sequence-list."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_animate_reverse(ObjectPtr what, int anim, int delay)\n```\n|||\n|:-|:-|\n|`what`|&nbsp;&nbsp;Object animated in place|\n|`anim`|&nbsp;&nbsp;`ANIM_*` from `animcomd.h`|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation; always pass -1|\n\nAdds a single, in-place reversed animation on an object (what) to an animation sequence-list, at a given delay from the previous animation (delay should always be -1)! reg_anim_begin void Anim Tells the system to start an animation sequence-list."
         }
     },
     {
@@ -1612,7 +1612,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_clear(ObjectPtr object)\n```\nTerminates all animations that are currently registered for a given object."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_clear(ObjectPtr object)\n```\n|||\n|:-|:-|\n|`object`|&nbsp;&nbsp;Object whose registered animations are terminated|\n\nTerminates all animations that are currently registered for a given object."
         }
     },
     {
@@ -1632,7 +1632,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_func(int par1, int par2)\n```\nWorks with a list of animations."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_func(int par1, int par2)\n```\n|||\n|:-|:-|\n|`par1`|&nbsp;&nbsp;Sub-command: begin a sequence, clear an object's animations, or end the sequence|\n|`par2`|&nbsp;&nbsp;Sub-command argument: the sequence options for begin, the object for clear|\n\nWorks with a list of animations."
         }
     },
     {
@@ -1642,7 +1642,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_move_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)\n```\nAdds an animation to cause a critter object (who) to attempt to walk to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!"
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_move_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that walks|\n|`dest_obj`|&nbsp;&nbsp;Object to walk to|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation; always pass -1|\n\nAdds an animation to cause a critter object (who) to attempt to walk to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!"
         }
     },
     {
@@ -1652,7 +1652,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_move_to_tile(ObjectPtr who, int dest_tile, int delay)\n```\nAdds an animation to cause a critter object (who) to attempt to walk to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!"
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_move_to_tile(ObjectPtr who, int dest_tile, int delay)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that walks|\n|`dest_tile`|&nbsp;&nbsp;Destination tile number|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation; always pass -1|\n\nAdds an animation to cause a critter object (who) to attempt to walk to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!"
         }
     },
     {
@@ -1662,7 +1662,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_run_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)\n```\nAdds an animation to cause a critter object (who) to attempt to run to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!"
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_run_to_obj(ObjectPtr who, ObjectPtr dest_obj, int delay)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that runs|\n|`dest_obj`|&nbsp;&nbsp;Object to run to|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation; always pass -1|\n\nAdds an animation to cause a critter object (who) to attempt to run to another object (dest_obj) at a given delay from the previous animation (delay should always be -1)!"
         }
     },
     {
@@ -1672,7 +1672,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_run_to_tile(ObjectPtr who, int dest_tile, int delay)\n```\nAdds an animation to cause a critter object (who) to attempt to run to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!"
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_obj_run_to_tile(ObjectPtr who, int dest_tile, int delay)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that runs|\n|`dest_tile`|&nbsp;&nbsp;Destination tile number|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation; always pass -1|\n\nAdds an animation to cause a critter object (who) to attempt to run to a given destination tile number (dest_tile) at a given delay from the previous animation (delay should always be -1)!"
         }
     },
     {
@@ -1682,7 +1682,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid reg_anim_play_sfx(ObjectPtr who, string sfx_name, int delay)\n```\nAdds an animation to cause an object (who) to attempt to play a given sound effect (sfx_name) at a given delay from the previous animation."
+            "value": "```fallout-ssl-tooltip\nvoid reg_anim_play_sfx(ObjectPtr who, string sfx_name, int delay)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object that plays the sound|\n|`sfx_name`|&nbsp;&nbsp;Name of the sound effect to play|\n|`delay`|&nbsp;&nbsp;Delay from the previous animation|\n\nAdds an animation to cause an object (who) to attempt to play a given sound effect (sfx_name) at a given delay from the previous animation."
         }
     },
     {
@@ -1692,7 +1692,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid rm_fixed_timer_event(ObjectPtr who, int fixed_val)\n```\nRemoves (clears) all timer events hooked to a given object's (obj) script that have a given fixed_value (fixed_val)."
+            "value": "```fallout-ssl-tooltip\nvoid rm_fixed_timer_event(ObjectPtr who, int fixed_val)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose script's timer events are searched|\n|`fixed_val`|&nbsp;&nbsp;Only timer events added with this fixed value are removed|\n\nRemoves (clears) all timer events hooked to a given object's (obj) script that have a given fixed_value (fixed_val)."
         }
     },
     {
@@ -1702,7 +1702,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint rm_mult_objs_from_inven(ObjectPtr who, ObjectPtr obj, int count)\n```\nRemoves (count) instances of an object (obj) from another object's (who's) inventory. Note: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map. NOTE: This function returns the actual count that was removed (if you attempted to remove more instances than existed). You *MUST* store this value in a variable (though you don't have to actually do anything with it)."
+            "value": "```fallout-ssl-tooltip\nint rm_mult_objs_from_inven(ObjectPtr who, ObjectPtr obj, int count)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose inventory is changed|\n|`obj`|&nbsp;&nbsp;Object to remove|\n|`count`|&nbsp;&nbsp;Number of instances to remove; the function returns how many were actually removed|\n\nRemoves (count) instances of an object (obj) from another object's (who's) inventory. Note: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map. NOTE: This function returns the actual count that was removed (if you attempted to remove more instances than existed). You *MUST* store this value in a variable (though you don't have to actually do anything with it)."
         }
     },
     {
@@ -1712,7 +1712,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid rm_obj_from_inven(ObjectPtr who, ObjectPtr obj)\n```\nRemoves an object (obj) from another object's (who's) inventory. NOTE: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map."
+            "value": "```fallout-ssl-tooltip\nvoid rm_obj_from_inven(ObjectPtr who, ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose inventory is changed|\n|`obj`|&nbsp;&nbsp;Object to remove|\n\nRemoves an object (obj) from another object's (who's) inventory. NOTE: this leaves the removed object in at location (0,1) on the map! You must call move_to(...) to place it back on the map."
         }
     },
     {
@@ -1722,7 +1722,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid rm_timer_event(ObjectPtr obj)\n```\nRemoves (clears) all timer events hooked to a given object's (obj) script."
+            "value": "```fallout-ssl-tooltip\nvoid rm_timer_event(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose script's timer events are removed|\n\nRemoves (clears) all timer events hooked to a given object's (obj) script."
         }
     },
     {
@@ -1742,7 +1742,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint roll_vs_skill(ObjectPtr who, int skill, int modifier)\n```\nReturns the value of a completed skill roll made upon an object's (who's) skill level with a given skill, and modified by a given amount (may be zero). This value may then be passed to is_success and is_critical to determine the appropriate states, and the how_much call can be used to determine the difference succeeded or failed by."
+            "value": "```fallout-ssl-tooltip\nint roll_vs_skill(ObjectPtr who, int skill, int modifier)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Object whose skill level is rolled against|\n|`skill`|&nbsp;&nbsp;`SKILL_*` from `define.h`|\n|`modifier`|&nbsp;&nbsp;Amount added to the skill value before rolling; may be zero|\n\nReturns the value of a completed skill roll made upon an object's (who's) skill level with a given skill, and modified by a given amount (may be zero). This value may then be passed to is_success and is_critical to determine the appropriate states, and the how_much call can be used to determine the difference succeeded or failed by."
         }
     },
     {
@@ -1752,7 +1752,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint rotation_to_tile(int srcTile, int destTile)\n```\nReturns the rotation (0...5) to face a particular tile (destTile) from a particular tile (srcTile)."
+            "value": "```fallout-ssl-tooltip\nint rotation_to_tile(int srcTile, int destTile)\n```\n|||\n|:-|:-|\n|`srcTile`|&nbsp;&nbsp;Tile to face from|\n|`destTile`|&nbsp;&nbsp;Tile to face|\n\nReturns the rotation (0...5) to face a particular tile (destTile) from a particular tile (srcTile)."
         }
     },
     {
@@ -1812,7 +1812,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint set_critter_stat(ObjectPtr who, int stat, int mod)\n```\nDOES NOT SET THE STAT.\n\n**Modifies** attribute `stat` in critter `who` by value `mod`."
+            "value": "```fallout-ssl-tooltip\nint set_critter_stat(ObjectPtr who, int stat, int mod)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Must be `dude_obj`; any other critter is rejected and the call returns -1|\n|`stat`|&nbsp;&nbsp;`STAT_*` from `define.h`|\n|`mod`|&nbsp;&nbsp;Amount added to the current stat value, not the new value|\n\nDOES NOT SET THE STAT.\n\n**Modifies** attribute `stat` in critter `who` by value `mod`."
         }
     },
     {
@@ -1822,7 +1822,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_exit_grids(elevation markElev, int mapID, int elevation, int tileNum, int rotation)\n```\nSets all exit grids on a given elevation (markElev) to point to a destination mapID (may be -1 which means stay on this map), elevation, tileNum, and rotation."
+            "value": "```fallout-ssl-tooltip\nvoid set_exit_grids(elevation markElev, int mapID, int elevation, int tileNum, int rotation)\n```\n|||\n|:-|:-|\n|`markElev`|&nbsp;&nbsp;Elevation whose exit grids are changed|\n|`mapID`|&nbsp;&nbsp;Destination map; -1 stays on this map|\n|`elevation`|&nbsp;&nbsp;Destination elevation|\n|`tileNum`|&nbsp;&nbsp;Destination tile number|\n\nSets all exit grids on a given elevation (markElev) to point to a destination mapID (may be -1 which means stay on this map), elevation, tileNum, and rotation."
         }
     },
     {
@@ -1842,7 +1842,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_light_level(int level)\n```\nSets the ambient light level (1-100). The range is Full Darkness to Full Daylight. NOTE: level is NOT percentange, full darkness is not black screen. set_light_level(0) actually corresponds to 25% brightness, and as level increases, brightness makes 2 huge jumps in the middle (49-51). Thus, certain brightness levels simply cannot be set."
+            "value": "```fallout-ssl-tooltip\nvoid set_light_level(int level)\n```\n|||\n|:-|:-|\n|`level`|&nbsp;&nbsp;Ambient light from Full Darkness to Full Daylight; not a linear percentage, and some levels cannot be set|\n\nSets the ambient light level (1-100). The range is Full Darkness to Full Daylight. NOTE: level is NOT percentange, full darkness is not black screen. set_light_level(0) actually corresponds to 25% brightness, and as level increases, brightness makes 2 huge jumps in the middle (49-51). Thus, certain brightness levels simply cannot be set."
         }
     },
     {
@@ -1872,7 +1872,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_map_start(int x, int y, int elev, int rot)\n```\nSets the start location & rotation (0-5) for the next time this map is entered (loaded & run)."
+            "value": "```fallout-ssl-tooltip\nvoid set_map_start(int x, int y, int elev, int rot)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;Tile column of the start position (0-199)|\n|`y`|&nbsp;&nbsp;Tile row of the start position (0-199)|\n|`elev`|&nbsp;&nbsp;Start elevation|\n|`rot`|&nbsp;&nbsp;Start rotation, 0-5|\n\nSets the start location & rotation (0-5) for the next time this map is entered (loaded & run)."
         }
     },
     {
@@ -1892,7 +1892,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_obj_visibility(ObjectPtr obj, bool visibility)\n```\nSets the `OBJ_OFF` flag for an object (makes it not drawn).\nNotes:\n  - Visibility arg is _inverted_: `set_obj_visibility(who, true)` makes object invisible.\n  - Does not work when loading game."
+            "value": "```fallout-ssl-tooltip\nvoid set_obj_visibility(ObjectPtr obj, bool visibility)\n```\n|||\n|:-|:-|\n|`visibility`|&nbsp;&nbsp;Inverted: `true` makes the object invisible, `false` shows it|\n\nSets the `OBJ_OFF` flag for an object (makes it not drawn).\nNotes:\n  - Visibility arg is _inverted_: `set_obj_visibility(who, true)` makes object invisible.\n  - Does not work when loading game."
         }
     },
     {
@@ -2002,7 +2002,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid start_gdialog(int msgFileNum, ObjectPtr who, int mood, int headNum, int backgroundIdx)\n```\nStart the dialogue system focusing on a critter `who` and in a given `mood`.\nThis call sets up the appropriate dialog windows, head art, etc.\nIf this call is not made before the normal dialog calls (`sayReply`, `sayMessage`, `sayOption`, etc.) then the dialog windows will not come up, and only grey boxes will appear with the text.\n\n`mood` argument is unused in vanilla. Instead, the function checks LVAR 0 of the script:\n- `LVAR > 10` - good reaction (happy head).\n- `-10 > LVAR >= 10` - neutral.\n- Else, angry head.\n\nIf sfall is installed, and `StartGDialogFix` is enabled, argument `mood` does work:\n- If `mood == -1`, use vanilla behaviour (check LVAR 0).\n- Else, use argument value. Same thresholds apply."
+            "value": "```fallout-ssl-tooltip\nvoid start_gdialog(int msgFileNum, ObjectPtr who, int mood, int headNum, int backgroundIdx)\n```\n|||\n|:-|:-|\n|`msgFileNum`|&nbsp;&nbsp;Message file number; ignored by the engine|\n|`who`|&nbsp;&nbsp;Critter the dialog focuses on|\n|`mood`|&nbsp;&nbsp;Reaction level; unused in vanilla (LVAR 0 decides). With sfall `StartGDialogFix`, -1 keeps the LVAR 0 behaviour|\n|`headNum`|&nbsp;&nbsp;`HEAD_*` from `define.h`; -1 is commonly passed|\n|`backgroundIdx`|&nbsp;&nbsp;`BACKGROUND*` from `define.h`; -1 is commonly passed|\n\nStart the dialogue system focusing on a critter `who` and in a given `mood`.\nThis call sets up the appropriate dialog windows, head art, etc.\nIf this call is not made before the normal dialog calls (`sayReply`, `sayMessage`, `sayOption`, etc.) then the dialog windows will not come up, and only grey boxes will appear with the text.\n\n`mood` argument is unused in vanilla. Instead, the function checks LVAR 0 of the script:\n- `LVAR > 10` - good reaction (happy head).\n- `-10 > LVAR >= 10` - neutral.\n- Else, angry head.\n\nIf sfall is installed, and `StartGDialogFix` is enabled, argument `mood` does work:\n- If `mood == -1`, use vanilla behaviour (check LVAR 0).\n- Else, use argument value. Same thresholds apply."
         }
     },
     {
@@ -2032,7 +2032,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool tile_contains_obj_pid(int tile, int elev, int pid)\n```\nReturns True if a particular tile contains an object with a matching prototype index # (obj pid)."
+            "value": "```fallout-ssl-tooltip\nbool tile_contains_obj_pid(int tile, int elev, int pid)\n```\n|||\n|:-|:-|\n|`tile`|&nbsp;&nbsp;Tile number to search|\n|`elev`|&nbsp;&nbsp;Elevation of the tile|\n|`pid`|&nbsp;&nbsp;Prototype index of the object to look for|\n\nReturns True if a particular tile contains an object with a matching prototype index # (obj pid)."
         }
     },
     {
@@ -2042,7 +2042,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr tile_contains_pid_obj(int tile, int elev, int pid)\n```\nReturns a pointer to the first object that matches a particular pid # that is on a particular tile and elevation."
+            "value": "```fallout-ssl-tooltip\nObjectPtr tile_contains_pid_obj(int tile, int elev, int pid)\n```\n|||\n|:-|:-|\n|`tile`|&nbsp;&nbsp;Tile number to search|\n|`elev`|&nbsp;&nbsp;Elevation of the tile|\n|`pid`|&nbsp;&nbsp;Prototype index of the object to look for|\n\nReturns a pointer to the first object that matches a particular pid # that is on a particular tile and elevation."
         }
     },
     {
@@ -2072,7 +2072,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint tile_in_tile_rect(int tile1, int tile2, int tile3, int tile4, int tile5)\n```\nTests whether a tile falls within a rectangular region defined by the coordinate parameters. Returns 1 if the tile is inside the rectangle, 0 otherwise."
+            "value": "```fallout-ssl-tooltip\nint tile_in_tile_rect(int tile1, int tile2, int tile3, int tile4, int tile5)\n```\n|||\n|:-|:-|\n|`tile1`|&nbsp;&nbsp;One corner of the rectangle: its column is the right edge and its row the top edge|\n|`tile4`|&nbsp;&nbsp;Opposite corner: its column is the left edge and its row the bottom edge|\n|`tile5`|&nbsp;&nbsp;Tile tested for being inside the rectangle|\n\nTests whether a tile falls within a rectangular region defined by the coordinate parameters. Returns 1 if the tile is inside the rectangle, 0 otherwise."
         }
     },
     {
@@ -2102,7 +2102,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint tile_num_in_direction(int start_tile, int direction, int distance)\n```\nReturns the tile number of a tile offset from a starting tile in a given direction (0-5, the next tile in that direction)."
+            "value": "```fallout-ssl-tooltip\nint tile_num_in_direction(int start_tile, int direction, int distance)\n```\n|||\n|:-|:-|\n|`direction`|&nbsp;&nbsp;Direction, 0-5|\n|`distance`|&nbsp;&nbsp;Number of tiles to offset in that direction|\n\nReturns the tile number of a tile offset from a starting tile in a given direction (0-5, the next tile in that direction)."
         }
     },
     {
@@ -2112,7 +2112,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid tokenize(string str, string delimiter, int prevToken)\n```\nExtracts the next token from a string using the given delimiter character. The prevToken parameter tracks position across successive calls to iterate through all tokens."
+            "value": "```fallout-ssl-tooltip\nvoid tokenize(string str, string delimiter, int prevToken)\n```\n|||\n|:-|:-|\n|`delimiter`|&nbsp;&nbsp;Delimiter character, passed as a character code|\n|`prevToken`|&nbsp;&nbsp;0 on the first call; on later calls the token returned by the previous call|\n\nExtracts the next token from a string using the given delimiter character. The prevToken parameter tracks position across successive calls to iterate through all tokens."
         }
     },
     {
@@ -2122,7 +2122,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool town_known(int townArea)\n```\nReturns True if a given town area (townArea) is known, False otherwise."
+            "value": "```fallout-ssl-tooltip\nbool town_known(int townArea)\n```\n|||\n|:-|:-|\n|`townArea`|&nbsp;&nbsp;`AREA_*` from `maps.h`|\n\nReturns True if a given town area (townArea) is known, False otherwise."
         }
     },
     {
@@ -2152,7 +2152,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)\n```\nAttempt to use an item object on a target object (targetObj). This could be used to have a critter use a Stimpack on the player, for instance, or to use a key on a door."
+            "value": "```fallout-ssl-tooltip\nObjectPtr use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)\n```\n|||\n|:-|:-|\n|`item`|&nbsp;&nbsp;Item object to use|\n|`targetObj`|&nbsp;&nbsp;Object the item is used on|\n\nAttempt to use an item object on a target object (targetObj). This could be used to have a critter use a Stimpack on the player, for instance, or to use a key on a door."
         }
     },
     {
@@ -2162,7 +2162,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nbool using_skill(ObjectPtr who, int skill)\n```\nReturns True if an active skill is being used, False otherwise. Examples of active skills are Stealth and First Aid."
+            "value": "```fallout-ssl-tooltip\nbool using_skill(ObjectPtr who, int skill)\n```\n|||\n|:-|:-|\n|`skill`|&nbsp;&nbsp;`SKILL_*` from `define.h`|\n\nReturns True if an active skill is being used, False otherwise. Examples of active skills are Stealth and First Aid."
         }
     },
     {
@@ -2182,7 +2182,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid wield_obj(ObjectPtr obj)\n```\nSets up an animation causing a critter (self_obj) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand."
+            "value": "```fallout-ssl-tooltip\nvoid wield_obj(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object in the critter's inventory to put in its hand|\n\nSets up an animation causing a critter (self_obj) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand."
         }
     },
     {
@@ -2192,7 +2192,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid wield_obj_critter(ObjectPtr who, ObjectPtr obj)\n```\nSets up an animation causing a critter (who) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand."
+            "value": "```fallout-ssl-tooltip\nvoid wield_obj_critter(ObjectPtr who, ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter that wields the object|\n|`obj`|&nbsp;&nbsp;Object in the critter's inventory to put in its hand|\n\nSets up an animation causing a critter (who) to wield an object (obj) in that critters' inventory. This puts that object in the critter's hand."
         }
     },
     {
@@ -2202,7 +2202,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid wm_area_set_pos(int areaIdx, int xPos, int yPos)\n```\nSets the World Map coordinates for a given area/town (areaIdx) to a given x and y position."
+            "value": "```fallout-ssl-tooltip\nvoid wm_area_set_pos(int areaIdx, int xPos, int yPos)\n```\n|||\n|:-|:-|\n|`areaIdx`|&nbsp;&nbsp;`AREA_*` from `maps.h`|\n\nSets the World Map coordinates for a given area/town (areaIdx) to a given x and y position."
         }
     },
     {
@@ -2982,7 +2982,7 @@
         "category": "key_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddKey(int key, Procedure proc)\n```\nRegisters a keyboard handler procedure for a given key. When the key is pressed, the associated procedure is called."
+            "value": "```fallout-ssl-tooltip\nvoid AddKey(int key, Procedure proc)\n```\n|||\n|:-|:-|\n|`key`|&nbsp;&nbsp;Key to handle; -1 registers a handler for every key|\n|`proc`|&nbsp;&nbsp;Procedure called when the key is pressed|\n\nRegisters a keyboard handler procedure for a given key. When the key is pressed, the associated procedure is called."
         }
     },
     {
@@ -3064,7 +3064,7 @@
         "category": "movie_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid PlayMovieRect(string filename, int x, int y, int width, int height)\n```\nPlays a movie file within a specified rectangular area on screen."
+            "value": "```fallout-ssl-tooltip\nvoid PlayMovieRect(string filename, int x, int y, int width, int height)\n```\n|||\n|:-|:-|\n|`filename`|&nbsp;&nbsp;Movie file name; `.mve` is appended when it has no extension|\n\nPlays a movie file within a specified rectangular area on screen."
         }
     },
     {
@@ -3176,7 +3176,7 @@
         "category": "say_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SayMessageTimeout(int timeout)\n```\nSets the display duration in milliseconds for dialog messages shown with SayMessage."
+            "value": "```fallout-ssl-tooltip\nvoid SayMessageTimeout(int timeout)\n```\n|||\n|:-|:-|\n|`timeout`|&nbsp;&nbsp;Display duration in milliseconds|\n\nSets the display duration in milliseconds for dialog messages shown with SayMessage."
         }
     },
     {
@@ -3186,7 +3186,7 @@
         "category": "say_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SayOption(string text, string proc)\n```\nAdds a selectable dialog option with the given text and callback procedure name."
+            "value": "```fallout-ssl-tooltip\nvoid SayOption(string text, string proc)\n```\n|||\n|:-|:-|\n|`proc`|&nbsp;&nbsp;Name of the procedure called when the option is chosen|\n\nAdds a selectable dialog option with the given text and callback procedure name."
         }
     },
     {
@@ -3216,7 +3216,7 @@
         "category": "say_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SayOptionWindow(int x, int y, int width, int height, string filename)\n```\nConfigures the display window for dialog options with position, size, and background image."
+            "value": "```fallout-ssl-tooltip\nvoid SayOptionWindow(int x, int y, int width, int height, string filename)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;X position of the options window|\n|`y`|&nbsp;&nbsp;Y position of the options window|\n|`width`|&nbsp;&nbsp;Width of the options window|\n|`height`|&nbsp;&nbsp;Height of the options window|\n|`filename`|&nbsp;&nbsp;Background image file, or 0 for none|\n\nConfigures the display window for dialog options with position, size, and background image."
         }
     },
     {
@@ -3276,7 +3276,7 @@
         "category": "say_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SayReplyWindow(int x, int y, int width, int height, string filename)\n```\nConfigures the display window for dialog replies with position, size, and background image."
+            "value": "```fallout-ssl-tooltip\nvoid SayReplyWindow(int x, int y, int width, int height, string filename)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;X position of the reply window|\n|`y`|&nbsp;&nbsp;Y position of the reply window|\n|`width`|&nbsp;&nbsp;Width of the reply window|\n|`height`|&nbsp;&nbsp;Height of the reply window|\n|`filename`|&nbsp;&nbsp;Background image file, or 0 for none|\n\nConfigures the display window for dialog replies with position, size, and background image."
         }
     },
     {
@@ -3296,7 +3296,7 @@
         "category": "say_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SayScrollDown(int x, int y, string normal, string hover, string pressed, string disabled)\n```\nConfigures the scroll-down button for the dialog window with position and graphics for each button state."
+            "value": "```fallout-ssl-tooltip\nvoid SayScrollDown(int x, int y, string normal, string hover, string pressed, string disabled)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;X position of the scroll-down button|\n|`y`|&nbsp;&nbsp;Y position of the scroll-down button|\n\nConfigures the scroll-down button for the dialog window with position and graphics for each button state."
         }
     },
     {
@@ -3306,7 +3306,7 @@
         "category": "say_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SayScrollUp(int x, int y, string normal, string hover, string pressed, string disabled)\n```\nConfigures the scroll-up button for the dialog window with position and graphics for each button state."
+            "value": "```fallout-ssl-tooltip\nvoid SayScrollUp(int x, int y, string normal, string hover, string pressed, string disabled)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;X position of the scroll-up button|\n|`y`|&nbsp;&nbsp;Y position of the scroll-up button|\n\nConfigures the scroll-up button for the dialog window with position and graphics for each button state."
         }
     },
     {
@@ -3316,7 +3316,7 @@
         "category": "say_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SaySetSpacing(int spacing)\n```\nSets the vertical line spacing in pixels between dialog entries."
+            "value": "```fallout-ssl-tooltip\nvoid SaySetSpacing(int spacing)\n```\n|||\n|:-|:-|\n|`spacing`|&nbsp;&nbsp;Vertical spacing between dialog entries, in pixels|\n\nSets the vertical line spacing in pixels between dialog entries."
         }
     },
     {
@@ -7516,7 +7516,7 @@
         "category": "sound_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SoundDelete(int handle)\n```\nFrees and releases a sound resource identified by the given handle."
+            "value": "```fallout-ssl-tooltip\nvoid SoundDelete(int handle)\n```\n|||\n|:-|:-|\n|`handle`|&nbsp;&nbsp;Handle returned by `SoundPlay`|\n\nFrees and releases a sound resource identified by the given handle."
         }
     },
     {
@@ -7526,7 +7526,7 @@
         "category": "sound_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SoundPause(int handle)\n```\nPauses playback of the sound identified by the given handle."
+            "value": "```fallout-ssl-tooltip\nvoid SoundPause(int handle)\n```\n|||\n|:-|:-|\n|`handle`|&nbsp;&nbsp;Handle returned by `SoundPlay`|\n\nPauses playback of the sound identified by the given handle."
         }
     },
     {
@@ -7536,7 +7536,7 @@
         "category": "sound_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint SoundPlay(string filename, int flags)\n```\nPlays a sound file with the specified flags and returns a handle that can be used with SoundPause, SoundResume, SoundStop, SoundRewind, and SoundDelete."
+            "value": "```fallout-ssl-tooltip\nint SoundPlay(string filename, int flags)\n```\n|||\n|:-|:-|\n|`flags`|&nbsp;&nbsp;Bit flags: `0x01` loop (otherwise fire-and-forget), `0x02` 16-bit samples (otherwise 8-bit), `0x100` load into memory, `0x200` stream|\n\nPlays a sound file with the specified flags and returns a handle that can be used with SoundPause, SoundResume, SoundStop, SoundRewind, and SoundDelete."
         }
     },
     {
@@ -7546,7 +7546,7 @@
         "category": "sound_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SoundResume(int handle)\n```\nResumes playback of a previously paused sound identified by the given handle."
+            "value": "```fallout-ssl-tooltip\nvoid SoundResume(int handle)\n```\n|||\n|:-|:-|\n|`handle`|&nbsp;&nbsp;Handle returned by `SoundPlay`|\n\nResumes playback of a previously paused sound identified by the given handle."
         }
     },
     {
@@ -7556,7 +7556,7 @@
         "category": "sound_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SoundRewind(int handle)\n```\nRewinds the sound identified by the given handle back to the beginning."
+            "value": "```fallout-ssl-tooltip\nvoid SoundRewind(int handle)\n```\n|||\n|:-|:-|\n|`handle`|&nbsp;&nbsp;Handle returned by `SoundPlay`|\n\nRewinds the sound identified by the given handle back to the beginning."
         }
     },
     {
@@ -7566,7 +7566,7 @@
         "category": "sound_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SoundStop(int handle)\n```\nStops playback of the sound identified by the given handle."
+            "value": "```fallout-ssl-tooltip\nvoid SoundStop(int handle)\n```\n|||\n|:-|:-|\n|`handle`|&nbsp;&nbsp;Handle returned by `SoundPlay`|\n\nStops playback of the sound identified by the given handle."
         }
     },
     {
@@ -7586,7 +7586,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddButton(string name, int x, int y, int width, int height)\n```\nCreates a button with the given name at the specified position and size in the currently selected window."
+            "value": "```fallout-ssl-tooltip\nvoid AddButton(string name, int x, int y, int width, int height)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name for the new button; used by the other `AddButton*` functions and `DeleteButton`|\n|`x`|&nbsp;&nbsp;X position in the currently selected window|\n|`y`|&nbsp;&nbsp;Y position in the currently selected window|\n|`width`|&nbsp;&nbsp;Width|\n|`height`|&nbsp;&nbsp;Height|\n\nCreates a button with the given name at the specified position and size in the currently selected window."
         }
     },
     {
@@ -7596,7 +7596,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddButtonFlag(string name, int flag)\n```\nSets a flag attribute on the named button."
+            "value": "```fallout-ssl-tooltip\nvoid AddButtonFlag(string name, int flag)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n\nSets a flag attribute on the named button."
         }
     },
     {
@@ -7606,7 +7606,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddButtonGFX(string name, string hover, string normal, string pressed)\n```\nSets the graphics for button states: hover, normal, and pressed appearances."
+            "value": "```fallout-ssl-tooltip\nvoid AddButtonGFX(string name, string hover, string normal, string pressed)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n\nSets the graphics for button states: hover, normal, and pressed appearances."
         }
     },
     {
@@ -7616,7 +7616,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddButtonProc(string name, Procedure hover, Procedure press, Procedure release, Procedure move)\n```\nAssigns callback procedures to a button for hover, press, release, and mouse-move events."
+            "value": "```fallout-ssl-tooltip\nvoid AddButtonProc(string name, Procedure hover, Procedure press, Procedure release, Procedure move)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n\nAssigns callback procedures to a button for hover, press, release, and mouse-move events."
         }
     },
     {
@@ -7626,7 +7626,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddButtonRightProc(string name, Procedure press, Procedure release)\n```\nAssigns right-click callback procedures to a button for press and release events."
+            "value": "```fallout-ssl-tooltip\nvoid AddButtonRightProc(string name, Procedure press, Procedure release)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n\nAssigns right-click callback procedures to a button for press and release events."
         }
     },
     {
@@ -7636,7 +7636,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddButtonText(string name, string text)\n```\nSets the text label displayed on the named button."
+            "value": "```fallout-ssl-tooltip\nvoid AddButtonText(string name, string text)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n|`text`|&nbsp;&nbsp;Label shown on the button|\n\nSets the text label displayed on the named button."
         }
     },
     {
@@ -7686,7 +7686,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint CheckRegion(string name)\n```\nReturns whether a named region exists in the current window."
+            "value": "```fallout-ssl-tooltip\nint CheckRegion(string name)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a region in the current window|\n\nReturns whether a named region exists in the current window."
         }
     },
     {
@@ -7696,7 +7696,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid CreateWin(string name, int x, int y, int width, int height)\n```\nCreates a new window with the given name at the specified position and size. Coordinates are scaled to the current screen resolution."
+            "value": "```fallout-ssl-tooltip\nvoid CreateWin(string name, int x, int y, int width, int height)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name for the new window; pass it to `SelectWin` and `DeleteWin`|\n|`x`|&nbsp;&nbsp;X position; scaled to the current screen resolution|\n|`y`|&nbsp;&nbsp;Y position; scaled to the current screen resolution|\n|`width`|&nbsp;&nbsp;Width; scaled to the current screen resolution|\n|`height`|&nbsp;&nbsp;Height; scaled to the current screen resolution|\n\nCreates a new window with the given name at the specified position and size. Coordinates are scaled to the current screen resolution."
         }
     },
     {
@@ -7706,7 +7706,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid DeleteButton(string name)\n```\nRemoves the named button from the current window."
+            "value": "```fallout-ssl-tooltip\nvoid DeleteButton(string name)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n\nRemoves the named button from the current window."
         }
     },
     {
@@ -7716,7 +7716,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid DeleteRegion(string name)\n```\nRemoves the named region from the current window."
+            "value": "```fallout-ssl-tooltip\nvoid DeleteRegion(string name)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a region in the current window|\n\nRemoves the named region from the current window."
         }
     },
     {
@@ -7726,7 +7726,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid DeleteWin(string name)\n```\nDeletes the named window and frees its resources."
+            "value": "```fallout-ssl-tooltip\nvoid DeleteWin(string name)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a window created with `CreateWin`|\n\nDeletes the named window and frees its resources."
         }
     },
     {
@@ -7736,7 +7736,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid DisplayGFX(string filename, int x, int y, int width, int height)\n```\nDisplays an image file at the specified position and size within the current window."
+            "value": "```fallout-ssl-tooltip\nvoid DisplayGFX(string filename, int x, int y, int width, int height)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;X position in the current window|\n|`y`|&nbsp;&nbsp;Y position in the current window|\n|`width`|&nbsp;&nbsp;Width the image is drawn at|\n|`height`|&nbsp;&nbsp;Height the image is drawn at|\n\nDisplays an image file at the specified position and size within the current window."
         }
     },
     {
@@ -7776,7 +7776,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid FillRect(int x, int y, int width, int height, int r, int g, int b)\n```\nFills a rectangle at the specified position and size with the given RGB color in the current window."
+            "value": "```fallout-ssl-tooltip\nvoid FillRect(int x, int y, int width, int height, int r, int g, int b)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;X position in the current window|\n|`y`|&nbsp;&nbsp;Y position in the current window|\n|`width`|&nbsp;&nbsp;Width|\n|`height`|&nbsp;&nbsp;Height|\n\nFills a rectangle at the specified position and size with the given RGB color in the current window."
         }
     },
     {
@@ -7806,7 +7806,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid GotoXY(int x, int y)\n```\nSets the text cursor position within the current window."
+            "value": "```fallout-ssl-tooltip\nvoid GotoXY(int x, int y)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;Text cursor X position in the current window|\n|`y`|&nbsp;&nbsp;Text cursor Y position in the current window|\n\nSets the text cursor position within the current window."
         }
     },
     {
@@ -7836,7 +7836,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid MouseShape(string filename, int x, int y)\n```\nLoads a custom mouse cursor graphic from the specified file and sets the hotspot offset."
+            "value": "```fallout-ssl-tooltip\nvoid MouseShape(string filename, int x, int y)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;Hotspot X offset of the cursor|\n|`y`|&nbsp;&nbsp;Hotspot Y offset of the cursor|\n\nLoads a custom mouse cursor graphic from the specified file and sets the hotspot offset."
         }
     },
     {
@@ -7846,7 +7846,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid PrintRect(string value, int param, int alignment)\n```\nPrints a value within a rectangle in the current window with the specified alignment."
+            "value": "```fallout-ssl-tooltip\nvoid PrintRect(string value, int param, int alignment)\n```\n|||\n|:-|:-|\n|`param`|&nbsp;&nbsp;Width in pixels at which the text wraps; scaled to the window|\n|`alignment`|&nbsp;&nbsp;Text alignment: `0` left, `1` right, `2` center|\n\nPrints a value within a rectangle in the current window with the specified alignment."
         }
     },
     {
@@ -7866,7 +7866,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid ResizeWin(string name, int x, int y, int width, int height)\n```\nResizes the named window to the specified position and dimensions. Coordinates are scaled to the current screen resolution."
+            "value": "```fallout-ssl-tooltip\nvoid ResizeWin(string name, int x, int y, int width, int height)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a window created with `CreateWin`|\n|`x`|&nbsp;&nbsp;X position; scaled to the current screen resolution|\n|`y`|&nbsp;&nbsp;Y position; scaled to the current screen resolution|\n|`width`|&nbsp;&nbsp;Width; scaled to the current screen resolution|\n|`height`|&nbsp;&nbsp;Height; scaled to the current screen resolution|\n\nResizes the named window to the specified position and dimensions. Coordinates are scaled to the current screen resolution."
         }
     },
     {
@@ -7876,7 +7876,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid ScaleWin(string name, int x, int y, int width, int height)\n```\nScales the named window to the specified position and dimensions."
+            "value": "```fallout-ssl-tooltip\nvoid ScaleWin(string name, int x, int y, int width, int height)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a window created with `CreateWin`|\n|`x`|&nbsp;&nbsp;X position|\n|`y`|&nbsp;&nbsp;Y position|\n|`width`|&nbsp;&nbsp;Width|\n|`height`|&nbsp;&nbsp;Height|\n\nScales the named window to the specified position and dimensions."
         }
     },
     {
@@ -7886,7 +7886,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SelectFileList(string pattern, string title)\n```\nOpens a file picker dialog with the given file pattern and title."
+            "value": "```fallout-ssl-tooltip\nvoid SelectFileList(string pattern, string title)\n```\n|||\n|:-|:-|\n|`pattern`|&nbsp;&nbsp;File pattern to list|\n\nOpens a file picker dialog with the given file pattern and title."
         }
     },
     {
@@ -7896,7 +7896,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid SelectWin(string name)\n```\nSelects the named window as the current target for subsequent drawing and widget operations."
+            "value": "```fallout-ssl-tooltip\nvoid SelectWin(string name)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a window created with `CreateWin`|\n\nSelects the named window as the current target for subsequent drawing and widget operations."
         }
     },
     {
@@ -7976,7 +7976,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid format(string text, int x, int y, int width, int height, int alignment)\n```\nFormats and displays text within a specified rectangle in the current window, with the given alignment."
+            "value": "```fallout-ssl-tooltip\nvoid format(string text, int x, int y, int width, int height, int alignment)\n```\n|||\n|:-|:-|\n|`x`|&nbsp;&nbsp;X position in the current window|\n|`y`|&nbsp;&nbsp;Y position in the current window|\n|`width`|&nbsp;&nbsp;Width of the text rectangle in pixels|\n|`height`|&nbsp;&nbsp;Height of the text rectangle in pixels|\n|`alignment`|&nbsp;&nbsp;Text alignment: `0` left, `1` right, `2` center|\n\nFormats and displays text within a specified rectangle in the current window, with the given alignment."
         }
     },
     {

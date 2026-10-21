@@ -259,10 +259,9 @@ function getFalloutDoc(item: DataItem): string {
         const table = buildFalloutArgsTable(item.args.map((a) => ({ name: a.name, description: a.doc })));
         if (table) {
             doc += table + "\n";
+            // A blank line ends the table; with no table it would only push the description down.
+            if (item.doc !== undefined) doc += "\n";
         }
-    }
-    if (item.args !== undefined && item.doc !== undefined) {
-        doc += "\n";
     }
     if (item.doc !== undefined) {
         doc += item.doc;
@@ -431,12 +430,15 @@ export function generateSignatures(data: DataFile, langId: string): Record<strin
 
             const name = item.name;
             const weidu = isWeiduFormat(item);
-            const label = getDetail(item, false);
-            const parameters: SignatureParam[] = item.args.map((arg) => {
+            // WeiDU labels name the call alone; a Fallout one is the typed signature, the same shape a signature
+            // read off a detail line has, with each parameter marked by its offset in it.
+            const label = weidu ? getDetail(item, false) : getDetail(item);
+            const offsets = weidu ? undefined : parameterOffsets(label);
+            const parameters: SignatureParam[] = item.args.map((arg, index) => {
                 const categoryPrefix = weidu ? getCategoryPrefix(arg.type) : "";
                 const docStr = arg.doc ?? "";
                 return {
-                    label: arg.name,
+                    label: offsets?.[index] ?? arg.name,
                     documentation: markdown(
                         `${buildSignatureBlock(`${categoryPrefix}${arg.type} ${arg.name}`, langId)}\n${docStr}`,
                     ),
@@ -466,18 +468,23 @@ function signatureFromDetail(item: DataItem): SignatureResult | undefined {
         throw new Error(`${item.name}: detail "${detail}" does not end its parameter list`);
     }
 
-    const parameters: SignatureParam[] = [];
-    let start = open + 1;
-    for (const piece of detail.slice(start, -1).split(",")) {
-        const leading = piece.length - piece.trimStart().length;
-        const text = piece.trim();
-        if (text !== "" && !/^".*"$/.test(text)) {
-            parameters.push({ label: [start + leading, start + leading + text.length] });
-        }
-        start += piece.length + 1;
-    }
+    const parameters: SignatureParam[] = parameterOffsets(detail).map((label) => ({ label }));
     if (parameters.length === 0) return undefined;
     return { label: detail, documentation: markdown(`---\n${item.doc ?? ""}`), parameters };
+}
+
+/** The `[start, end)` offsets of each parameter in a `name(a, b)` signature, quoted literals left out. */
+function parameterOffsets(signature: string): [number, number][] {
+    const offsets: [number, number][] = [];
+    let start = signature.indexOf("(") + 1;
+    if (start === 0) return offsets;
+    for (const piece of signature.slice(start, -1).split(",")) {
+        const leading = piece.length - piece.trimStart().length;
+        const text = piece.trim();
+        if (text !== "" && !/^".*"$/.test(text)) offsets.push([start + leading, start + leading + text.length]);
+        start += piece.length + 1;
+    }
+    return offsets;
 }
 
 /** Returns "INT_VAR " or "STR_VAR " prefix based on WeiDU type category. */

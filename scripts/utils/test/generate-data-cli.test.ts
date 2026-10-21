@@ -84,6 +84,6 @@ describe("generate-data CLI", () => {
 
         const sig = JSON.parse(fs.readFileSync(signatureFile, "utf8"));
         expect(sig["f"]).toBeDefined();
-        expect(sig["f"].label).toBe("f(x)");
+        expect(sig["f"].label).toBe("int f(int x)");
     });
 });

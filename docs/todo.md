@@ -105,9 +105,10 @@ consumer with committed snapshots even if the library API is unchanged.
 Until this lands, any change to `createBinaryJsonSnapshot` output should be
 treated as a breaking change to all snapshot consumers.
 
-## Fallout SSL: per-parameter descriptions in signature help
+## Fallout SSL: per-parameter descriptions for sfall functions
 
-Every Fallout SSL function whose `detail` line lists parameters gets signature help, with the parameter under
-the cursor marked. A description of that parameter shows only where the item declares an `args:` block, which
-almost none in `server/data/fallout-ssl-base.yml` and `fallout-ssl-sfall.yml` do. Adding one, most-used
-functions first, is a data-only change: `args` takes precedence over `detail` in the generator.
+Base functions in `server/data/fallout-ssl-base.yml` declare `args:` blocks with per-parameter descriptions. The
+sfall functions do not: `server/data/fallout-ssl-sfall.yml` is generated from sfall's own `functions.yml`, which has
+no per-argument field, so a description written here is overwritten on the next sfall update. The importer already
+carries an `args:` block through (`scripts/fallout-update/src/fallout/sfall-data.ts`), so the descriptions belong
+upstream.

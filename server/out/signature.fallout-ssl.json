@@ -10,13 +10,21 @@
                 "label": [
                     19,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr name\n```\nEvent name; signaled once, then removed"
+                }
             },
             {
                 "label": [
                     35,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure proc\n```\nProcedure called when the event is signaled"
+                }
             }
         ]
     },
@@ -31,13 +39,21 @@
                 "label": [
                     21,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr name\n```\nEvent name; the handler can be signaled many times"
+                }
             },
             {
                 "label": [
                     37,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure proc\n```\nProcedure called each time the event is signaled"
+                }
             }
         ]
     },
@@ -52,7 +68,11 @@
                 "label": [
                     16,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring event\n```\nEvent name whose handlers are all removed"
+                }
             }
         ]
     },
@@ -67,7 +87,11 @@
                 "label": [
                     17,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring event\n```\nEvent name whose handlers and events are called"
+                }
             }
         ]
     },
@@ -82,19 +106,31 @@
                 "label": [
                     28,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose inventory receives the items"
+                }
             },
             {
                 "label": [
                     43,
                     57
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr item\n```\nItem object to add; must be of type Item"
+                }
             },
             {
                 "label": [
                     59,
                     68
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint count\n```\nNumber of instances to add"
+                }
             }
         ]
     },
@@ -109,13 +145,21 @@
                 "label": [
                     22,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose inventory receives the item"
+                }
             },
             {
                 "label": [
                     37,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr item\n```\nItem object to add; must be of type Item"
+                }
             }
         ]
     },
@@ -130,19 +174,31 @@
                 "label": [
                     21,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose script is called when the timer fires"
+                }
             },
             {
                 "label": [
                     36,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint time\n```\nDelay in game ticks; `game_ticks(seconds)` converts seconds"
+                }
             },
             {
                 "label": [
                     46,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint info\n```\nValue that tells timed calls apart; read back in the script with `fixed_param`"
+                }
             }
         ]
     },
@@ -157,19 +213,31 @@
                 "label": [
                     10,
                     23
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject to animate"
+                }
             },
             {
                 "label": [
                     25,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint anim\n```\nSingle-frame animation to play"
+                }
             },
             {
                 "label": [
                     35,
                     48
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint direction\n```\nDirection the animation runs in"
+                }
             }
         ]
     },
@@ -184,13 +252,21 @@
                 "label": [
                     22,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose art is queried"
+                }
             },
             {
                 "label": [
                     37,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint frame\n```\nArt frame whose action frame is returned"
+                }
             }
         ]
     },
@@ -205,7 +281,11 @@
                 "label": [
                     15,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject checked for a running animation"
+                }
             }
         ]
     },
@@ -220,19 +300,31 @@
                 "label": [
                     30,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that walks or runs"
+                }
             },
             {
                 "label": [
                     45,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile\n```\nDestination hex tile number"
+                }
             },
             {
                 "label": [
                     55,
                     64
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint speed\n```\n`ANIMATE_WALK` or `ANIMATE_RUN` from `animcomd.h`; add `ANIMATE_INTERRUPT` (or use `ANIMATE_RUN_FORCE`) to cancel the current animation first"
+                }
             }
         ]
     },
@@ -247,7 +339,11 @@
                 "label": [
                     22,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint direction\n```\nDirection to face, 0-5"
+                }
             }
         ]
     },
@@ -262,7 +358,11 @@
                 "label": [
                     25,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile\n```\nDestination hex tile number"
+                }
             }
         ]
     },
@@ -277,7 +377,11 @@
                 "label": [
                     23,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint newFrame\n```\nAnimation frame number to switch to"
+                }
             }
         ]
     },
@@ -292,7 +396,11 @@
                 "label": [
                     31,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nNon-critter object (door, container) to animate closing"
+                }
             }
         ]
     },
@@ -307,7 +415,11 @@
                 "label": [
                     13,
                     20
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint fid\n```\nFrame ID (FID) of the art"
+                }
             }
         ]
     },
@@ -322,7 +434,11 @@
                 "label": [
                     12,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject to attack"
+                }
             }
         ]
     },
@@ -337,49 +453,81 @@
                 "label": [
                     20,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to attack"
+                }
             },
             {
                 "label": [
                     35,
                     50
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint called_shot\n```\n0 = none, 1 = random, otherwise a specific body part"
+                }
             },
             {
                 "label": [
                     52,
                     67
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint num_attacks\n```\nExtra attacks the self object gets before the target"
+                }
             },
             {
                 "label": [
                     69,
                     78
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint bonus\n```\nBonus to hit the target on the first turn only"
+                }
             },
             {
                 "label": [
                     80,
                     94
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint min_damage\n```\nMinimum damage of the first attack"
+                }
             },
             {
                 "label": [
                     96,
                     110
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint max_damage\n```\nMaximum damage of the first attack"
+                }
             },
             {
                 "label": [
                     112,
                     132
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint attacker_results\n```\nState the attacker ends in after the first attack"
+                }
             },
             {
                 "label": [
                     134,
                     152
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint target_results\n```\nState the target ends in after the first attack"
+                }
             }
         ]
     },
@@ -394,13 +542,21 @@
                 "label": [
                     18,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nAttacking critter"
+                }
             },
             {
                 "label": [
                     33,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr victim\n```\nCritter being attacked"
+                }
             }
         ]
     },
@@ -415,7 +571,11 @@
                 "label": [
                     17,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\nAmount of gas added to the car"
+                }
             }
         ]
     },
@@ -430,19 +590,31 @@
                 "label": [
                     24,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype ID of the object to create"
+                }
             },
             {
                 "label": [
                     33,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile_num\n```\nHex tile number to place it at"
+                }
             },
             {
                 "label": [
                     47,
                     55
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nElevation, 0-2"
+                }
             }
         ]
     },
@@ -457,25 +629,41 @@
                 "label": [
                     28,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype ID of the object to create"
+                }
             },
             {
                 "label": [
                     37,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile_num\n```\nHex tile number to place it at"
+                }
             },
             {
                 "label": [
                     51,
                     59
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nElevation, 0-2"
+                }
             },
             {
                 "label": [
                     61,
                     68
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint sid\n```\nScript ID overriding the prototype's default script; -1 keeps the default"
+                }
             }
         ]
     },
@@ -490,25 +678,41 @@
                 "label": [
                     22,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter receiving the trait"
+                }
             },
             {
                 "label": [
                     37,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint trait_type\n```\n`TRAIT_PERK` or `TRAIT_OBJECT` from `define_pre.h`"
+                }
             },
             {
                 "label": [
                     53,
                     62
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint trait\n```\nFor `TRAIT_PERK` a perk id; for `TRAIT_OBJECT` `OBJECT_AI_PACKET` or `OBJECT_TEAM_NUM` from `define.h`"
+                }
             },
             {
                 "label": [
                     64,
                     74
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\n"
+                }
             }
         ]
     },
@@ -523,19 +727,31 @@
                 "label": [
                     30,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to place"
+                }
             },
             {
                 "label": [
                     45,
                     52
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint hex\n```\nDestination hex tile number; a nearby free hex is used if it is blocked"
+                }
             },
             {
                 "label": [
                     54,
                     62
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nDestination elevation, 0-2"
+                }
             }
         ]
     },
@@ -550,13 +766,21 @@
                 "label": [
                     20,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to damage"
+                }
             },
             {
                 "label": [
                     35,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint dmg_amount\n```\nAmount of damage"
+                }
             }
         ]
     },
@@ -571,19 +795,31 @@
                 "label": [
                     17,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to damage"
+                }
             },
             {
                 "label": [
                     32,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint dmg_amount\n```\nAmount of damage"
+                }
             },
             {
                 "label": [
                     48,
                     57
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flags\n```\n`DMG_*` damage type and flags from `define.h`, e.g. `DMG_NOANIMATE`"
+                }
             }
         ]
     },
@@ -598,13 +834,21 @@
                 "label": [
                     17,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to heal"
+                }
             },
             {
                 "label": [
                     32,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\nHit points restored, capped at max HP; negative hurts, bypassing resistances and thresholds"
+                }
             }
         ]
     },
@@ -619,13 +863,21 @@
                 "label": [
                     19,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to injure"
+                }
             },
             {
                 "label": [
                     34,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint how\n```\n`DAM_CRIP_*` and `DAM_BLIND` flags from `define.h`"
+                }
             }
         ]
     },
@@ -640,13 +892,21 @@
                 "label": [
                     28,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose inventory is read"
+                }
             },
             {
                 "label": [
                     43,
                     52
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint where\n```\n`INVEN_TYPE_WORN`, `INVEN_TYPE_RIGHT_HAND` or `INVEN_TYPE_LEFT_HAND` from `define.h`"
+                }
             }
         ]
     },
@@ -661,33 +921,46 @@
                 "label": [
                     23,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter checked for the FLEE flag"
+                }
             }
         ]
     },
     "critter_mod_skill": {
-        "label": "critter_mod_skill(who, skill, amount)",
+        "label": "int critter_mod_skill(ObjectPtr who, int skill, int amount)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nModifies a given skill in a given critter object by a given amount.\n\nNote that for tagged skills, the amount will be rounded down to the closest even number."
         },
         "parameters": [
             {
-                "label": "who",
+                "label": [
+                    22,
+                    35
+                ],
                 "documentation": {
                     "kind": "markdown",
                     "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nMust be `dude_obj`. Will not work on other critters."
                 }
             },
             {
-                "label": "skill",
+                "label": [
+                    37,
+                    46
+                ],
                 "documentation": {
                     "kind": "markdown",
                     "value": "```fallout-ssl-tooltip\nint skill\n```\n`SKILL_*` from `define.h`"
                 }
             },
             {
-                "label": "amount",
+                "label": [
+                    48,
+                    58
+                ],
                 "documentation": {
                     "kind": "markdown",
                     "value": "```fallout-ssl-tooltip\nint amount\n```\nCan be negative."
@@ -706,25 +979,41 @@
                 "label": [
                     21,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter losing the trait"
+                }
             },
             {
                 "label": [
                     36,
                     50
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint trait_type\n```\n`TRAIT_PERK` from `define_pre.h`; other kinds are not supported"
+                }
             },
             {
                 "label": [
                     52,
                     61
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint trait\n```\nPerk id to remove (all ranks are removed)"
+                }
             },
             {
                 "label": [
                     63,
                     73
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\n"
+                }
             }
         ]
     },
@@ -739,13 +1028,21 @@
                 "label": [
                     27,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose FLEE flag is set"
+                }
             },
             {
                 "label": [
                     42,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nbool flee_on\n```\n1 sets the FLEE flag, 0 clears it"
+                }
             }
         ]
     },
@@ -760,13 +1057,21 @@
                 "label": [
                     24,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose skill is read"
+                }
             },
             {
                 "label": [
                     39,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint skillNum\n```\n`SKILL_*` from `define.h`"
+                }
             }
         ]
     },
@@ -781,7 +1086,11 @@
                 "label": [
                     18,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose combat state is read"
+                }
             }
         ]
     },
@@ -796,7 +1105,11 @@
                 "label": [
                     27,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter taken out of active combat"
+                }
             }
         ]
     },
@@ -811,7 +1124,11 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring text\n```\nText sent to the debug monitor; shown only with debugging enabled"
+                }
             }
         ]
     },
@@ -826,13 +1143,21 @@
                 "label": [
                     22,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr item\n```\nItem object whose instances are destroyed"
+                }
             },
             {
                 "label": [
                     38,
                     47
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint count\n```\nNumber of instances to destroy"
+                }
             }
         ]
     },
@@ -847,7 +1172,11 @@
                 "label": [
                     19,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject to destroy; its `destroy_proc` runs unless it is the calling object"
+                }
             }
         ]
     },
@@ -862,7 +1191,11 @@
                 "label": [
                     23,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint mood\n```\n"
+                }
             }
         ]
     },
@@ -877,7 +1210,11 @@
                 "label": [
                     17,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring message\n```\nText shown in the message display in the lower-left"
+                }
             }
         ]
     },
@@ -892,19 +1229,31 @@
                 "label": [
                     13,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose stat is tested"
+                }
             },
             {
                 "label": [
                     28,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint check\n```\nBase stat to test, `STAT_st` to `STAT_lu` from `define.h`"
+                }
             },
             {
                 "label": [
                     39,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint modifier\n```\nBonus or penalty added to the stat value before the roll"
+                }
             }
         ]
     },
@@ -934,7 +1283,11 @@
                 "label": [
                     19,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter checked for active drug effects"
+                }
             }
         ]
     },
@@ -949,7 +1302,11 @@
                 "label": [
                     14,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose elevation is returned"
+                }
             }
         ]
     },
@@ -964,19 +1321,31 @@
                 "label": [
                     15,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject the floating text is attached to"
+                }
             },
             {
                 "label": [
                     30,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring message\n```\nText to float"
+                }
             },
             {
                 "label": [
                     46,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint type\n```\n`FLOAT_MSG_*` color from `define.h`; `FLOAT_MSG_WARNING` centers it on screen, `FLOAT_MSG_SEQUENTIAL` cycles colors"
+                }
             }
         ]
     },
@@ -991,7 +1360,11 @@
                 "label": [
                     10,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint/float value\n```\nNumber to round down"
+                }
             }
         ]
     },
@@ -1006,7 +1379,11 @@
                 "label": [
                     14,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nuint var_index\n```\n"
+                }
             }
         ]
     },
@@ -1021,24 +1398,36 @@
                 "label": [
                     18,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint msg_list\n```\nMessage file number to read from"
+                }
             },
             {
                 "label": [
                     32,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint msg_num\n```\nLine number in that message file"
+                }
             },
             {
                 "label": [
                     45,
                     57
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint reaction\n```\n`GOOD_REACTION`, `NEUTRAL_REACTION` or `BAD_REACTION` from `define.h`"
+                }
             }
         ]
     },
     "gSay_Option": {
-        "label": "gSay_Option(int msg_list, int msg_num, procedure target,  int reaction)",
+        "label": "gSay_Option(int msg_list, int msg_num, procedure target, int reaction)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nSets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure."
@@ -1064,8 +1453,8 @@
             },
             {
                 "label": [
-                    58,
-                    70
+                    57,
+                    69
                 ]
             }
         ]
@@ -1102,7 +1491,11 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint seconds\n```\nTime in seconds; 1 second is 10 ticks"
+                }
             }
         ]
     },
@@ -1117,7 +1510,11 @@
                 "label": [
                     23,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\nTime to advance, in game ticks"
+                }
             }
         ]
     },
@@ -1132,7 +1529,11 @@
                 "label": [
                     23,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint modifier\n```\nBarter price modifier in percent (+/-)"
+                }
             }
         ]
     },
@@ -1147,7 +1548,11 @@
                 "label": [
                     28,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint modifier\n```\nBarter price modifier in percent; makes barter easier or harder"
+                }
             }
         ]
     },
@@ -1162,13 +1567,21 @@
                 "label": [
                     21,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose stat is read"
+                }
             },
             {
                 "label": [
                     36,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint stat\n```\n`STAT_*` from `define.h`"
+                }
             }
         ]
     },
@@ -1198,7 +1611,11 @@
                 "label": [
                     15,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose poison level is read"
+                }
             }
         ]
     },
@@ -1213,7 +1630,11 @@
                 "label": [
                     14,
                     22
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint time\n```\nNot used as a duration, but must be non-zero: 0 is a script error and skips the fade"
+                }
             }
         ]
     },
@@ -1228,7 +1649,11 @@
                 "label": [
                     15,
                     23
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint time\n```\nNot used as a duration, but must be non-zero: 0 is a script error and skips the fade"
+                }
             }
         ]
     },
@@ -1243,31 +1668,51 @@
                 "label": [
                     16,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint iq_test\n```\nMinimum Intelligence the player needs for the option to appear"
+                }
             },
             {
                 "label": [
                     29,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint msg_list\n```\nMessage file number to read from"
+                }
             },
             {
                 "label": [
                     43,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint msg_num\n```\nLine number in that message file"
+                }
             },
             {
                 "label": [
                     56,
                     72
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nprocedure target\n```\nProcedure jumped to when the option is chosen"
+                }
             },
             {
                 "label": [
                     74,
                     86
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint reaction\n```\n`GOOD_REACTION`, `NEUTRAL_REACTION` or `BAD_REACTION` from `define.h`"
+                }
             }
         ]
     },
@@ -1282,7 +1727,11 @@
                 "label": [
                     15,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint var_index\n```\nIndex of the global variable (`GVAR_*`)"
+                }
             }
         ]
     },
@@ -1297,7 +1746,11 @@
                 "label": [
                     13,
                     20
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint map\n```\n"
+                }
             }
         ]
     },
@@ -1312,13 +1765,21 @@
                 "label": [
                     14,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose skill is read; 0 is returned for a non-critter"
+                }
             },
             {
                 "label": [
                     29,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint skill\n```\n`SKILL_*` from `define.h`"
+                }
             }
         ]
     },
@@ -1333,19 +1794,31 @@
                 "label": [
                     14,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint trait_type\n```\nWhat to query: `TRAIT_PERK`, `TRAIT_OBJECT` or `TRAIT_TRAIT` (`define_pre.h`)"
+                }
             },
             {
                 "label": [
                     30,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter (or object) queried"
+                }
             },
             {
                 "label": [
                     45,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint trait\n```\nDepends on `trait_type`: a `PERK_*` (rank returned), an `OBJECT_*` (`OBJECT_AI_PACKET`, `OBJECT_TEAM_NUM`, `OBJECT_CUR_ROT`) or a `TRAIT_*` (character trait, from `define.h`)"
+                }
             }
         ]
     },
@@ -1360,7 +1833,11 @@
                 "label": [
                     13,
                     20
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint val\n```\n"
+                }
             }
         ]
     },
@@ -1375,19 +1852,31 @@
                 "label": [
                     21,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose inventory is read"
+                }
             },
             {
                 "label": [
                     36,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint inven_cmd\n```\nCommand; only `INVEN_CMD_INDEX_PTR` (13) is supported, from `define.h`"
+                }
             },
             {
                 "label": [
                     51,
                     62
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint slotNum\n```\n0-based index into the inventory; out of range returns `NULL`"
+                }
             }
         ]
     },
@@ -1402,12 +1891,16 @@
                 "label": [
                     16,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject whose inventory is counted"
+                }
             }
         ]
     },
     "inven_ptr": {
-        "label": "ObjectPtr inven(ObjectPtr what, int slotNum)",
+        "label": "ObjectPtr inven_ptr(ObjectPtr what, int slotNum)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nReturns a pointer to the object in slot # (slotNum) in a given object (what)."
@@ -1415,15 +1908,23 @@
         "parameters": [
             {
                 "label": [
-                    16,
-                    30
-                ]
+                    20,
+                    34
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject whose inventory is read"
+                }
             },
             {
                 "label": [
-                    32,
-                    43
-                ]
+                    36,
+                    47
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint slotNum\n```\n0-based index into the inventory; out of range returns `NULL`"
+                }
             }
         ]
     },
@@ -1438,7 +1939,11 @@
                 "label": [
                     19,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that unwields its items"
+                }
             }
         ]
     },
@@ -1453,7 +1958,11 @@
                 "label": [
                     17,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint rollResult\n```\nResult of a contest roll; critical if `ROLL_CRITICAL_SUCCESS` or `ROLL_CRITICAL_FAILURE`"
+                }
             }
         ]
     },
@@ -1468,7 +1977,11 @@
                 "label": [
                     21,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint skillNum\n```\n`SKILL_*` from `define.h`"
+                }
             }
         ]
     },
@@ -1483,7 +1996,11 @@
                 "label": [
                     15,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint rollResult\n```\nResult of a contest roll: `ROLL_*` (`ROLL_SUCCESS` and `ROLL_CRITICAL_SUCCESS` count as success)"
+                }
             }
         ]
     },
@@ -1498,13 +2015,21 @@
                 "label": [
                     21,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose caps count changes"
+                }
             },
             {
                 "label": [
                     36,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\nCaps to add; negative removes"
+                }
             }
         ]
     },
@@ -1519,7 +2044,11 @@
                 "label": [
                     20,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose inventory caps are totaled"
+                }
             }
         ]
     },
@@ -1534,7 +2063,11 @@
                 "label": [
                     13,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr lockableObj\n```\nDoor or container whose lock is jammed"
+                }
             }
         ]
     },
@@ -1549,13 +2082,21 @@
                 "label": [
                     18,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to kill"
+                }
             },
             {
                 "label": [
                     33,
                     48
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint death_frame\n```\nDeath animation, an `ANIM_*` death frame from `animcomd.h` (e.g. `ANIM_fall_back_blood_sf`)"
+                }
             }
         ]
     },
@@ -1570,7 +2111,11 @@
                 "label": [
                     23,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype id of the critter type to kill"
+                }
             }
         ]
     },
@@ -1585,13 +2130,21 @@
                 "label": [
                     14,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring map_name\n```\nMap name string, or the map's index number"
+                }
             },
             {
                 "label": [
                     31,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint start_location\n```\nEntrance location passed to the new map's `map_init`"
+                }
             }
         ]
     },
@@ -1606,7 +2159,11 @@
                 "label": [
                     14,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nuint var_index\n```\nIndex of the script's local variable"
+                }
             }
         ]
     },
@@ -1621,7 +2178,11 @@
                 "label": [
                     18,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint mapIndex\n```\nMap index"
+                }
             }
         ]
     },
@@ -1636,7 +2197,11 @@
                 "label": [
                     15,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint mapNum\n```\nMap number"
+                }
             }
         ]
     },
@@ -1651,7 +2216,11 @@
                 "label": [
                     12,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nuint var_index\n```\nIndex of the map variable"
+                }
             }
         ]
     },
@@ -1666,19 +2235,31 @@
                 "label": [
                     21,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint areaType\n```\n`MARK_TYPE_TOWN` or `MARK_TYPE_MAP` from `define.h`"
+                }
             },
             {
                 "label": [
                     35,
                     48
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint areaIndex\n```\nTown area index (for `MARK_TYPE_TOWN`) or map index (for `MARK_TYPE_MAP`)"
+                }
             },
             {
                 "label": [
                     50,
                     59
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint known\n```\n`MARK_STATE_*` from `define.h` (`MARK_STATE_KNOWN`, `MARK_STATE_VISITED`; `MARK_STATE_INVISIBLE` hides a town); ignored for maps"
+                }
             }
         ]
     },
@@ -1693,13 +2274,21 @@
                 "label": [
                     18,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint list\n```\nMessage file (list) number"
+                }
             },
             {
                 "label": [
                     28,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint msg_num\n```\nMessage number within the list; a negative value yields \"Error\""
+                }
             }
         ]
     },
@@ -1714,13 +2303,21 @@
                 "label": [
                     13,
                     21
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint rule\n```\n`METARULE_*` from `define.h`"
+                }
             },
             {
                 "label": [
                     23,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param\n```\nArgument for the chosen `rule`; meaning depends on it"
+                }
             }
         ]
     },
@@ -1735,25 +2332,41 @@
                 "label": [
                     14,
                     22
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint rule\n```\n`METARULE3_*` from `define.h`"
+                }
             },
             {
                 "label": [
                     24,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param1\n```\nFirst argument of the chosen `rule`; meaning depends on it"
+                }
             },
             {
                 "label": [
                     36,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param2\n```\nSecond argument of the chosen `rule`; meaning depends on it"
+                }
             },
             {
                 "label": [
                     48,
                     58
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param3\n```\nThird argument of the chosen `rule`; meaning depends on it"
+                }
             }
         ]
     },
@@ -1789,19 +2402,31 @@
                 "label": [
                     12,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject to move"
+                }
             },
             {
                 "label": [
                     27,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile_num\n```\nDestination tile number"
+                }
             },
             {
                 "label": [
                     41,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nDestination elevation, 0-2"
+                }
             }
         ]
     },
@@ -1816,7 +2441,11 @@
                 "label": [
                     16,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose art id is read"
+                }
             }
         ]
     },
@@ -1831,13 +2460,21 @@
                 "label": [
                     22,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr src_obj\n```\nListener"
+                }
             },
             {
                 "label": [
                     41,
                     58
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr dst_obj\n```\nObject that may be heard"
+                }
             }
         ]
     },
@@ -1852,13 +2489,21 @@
                 "label": [
                     21,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr src_obj\n```\nViewer"
+                }
             },
             {
                 "label": [
                     40,
                     57
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr dst_obj\n```\nObject that may be seen"
+                }
             }
         ]
     },
@@ -1873,13 +2518,21 @@
                 "label": [
                     31,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose inventory is searched"
+                }
             },
             {
                 "label": [
                     46,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype id to look for"
+                }
             }
         ]
     },
@@ -1894,7 +2547,11 @@
                 "label": [
                     15,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nDoor or container to close"
+                }
             }
         ]
     },
@@ -1909,7 +2566,11 @@
                 "label": [
                     25,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that drops its inventory"
+                }
             }
         ]
     },
@@ -1924,13 +2585,21 @@
                 "label": [
                     28,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose inventory is searched"
+                }
             },
             {
                 "label": [
                     43,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nin pid\n```\nPrototype id to count"
+                }
             }
         ]
     },
@@ -1945,7 +2614,11 @@
                 "label": [
                     19,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject tested"
+                }
             }
         ]
     },
@@ -1960,7 +2633,11 @@
                 "label": [
                     17,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject tested"
+                }
             }
         ]
     },
@@ -1975,7 +2652,11 @@
                 "label": [
                     25,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject tested"
+                }
             }
         ]
     },
@@ -1990,7 +2671,11 @@
                 "label": [
                     21,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr item_obj\n```\nItem whose subtype (`item_type_*` from `define.h`) is read"
+                }
             }
         ]
     },
@@ -2005,7 +2690,11 @@
                 "label": [
                     14,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nDoor or container to lock"
+                }
             }
         ]
     },
@@ -2020,7 +2709,11 @@
                 "label": [
                     16,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose name is returned"
+                }
             }
         ]
     },
@@ -2035,7 +2728,11 @@
                 "label": [
                     19,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject tested"
+                }
             }
         ]
     },
@@ -2050,7 +2747,11 @@
                 "label": [
                     14,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nDoor or container to open"
+                }
             }
         ]
     },
@@ -2065,7 +2766,11 @@
                 "label": [
                     12,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose prototype id is read"
+                }
             }
         ]
     },
@@ -2080,19 +2785,31 @@
                 "label": [
                     25,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject that emits the light"
+                }
             },
             {
                 "label": [
                     40,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint intensity\n```\nLight intensity, 0-100 (percent of maximum)"
+                }
             },
             {
                 "label": [
                     55,
                     67
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint distance\n```\nLight radius in hexes, 0-8"
+                }
             }
         ]
     },
@@ -2107,7 +2824,11 @@
                 "label": [
                     13,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose type is read"
+                }
             }
         ]
     },
@@ -2122,7 +2843,11 @@
                 "label": [
                     16,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nDoor or container to unlock"
+                }
             }
         ]
     },
@@ -2137,25 +2862,41 @@
                 "label": [
                     24,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nStart hex column; start tile is 200 * y + x"
+                }
             },
             {
                 "label": [
                     31,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nStart hex row; start tile is 200 * y + x"
+                }
             },
             {
                 "label": [
                     38,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nStart elevation, 0-2"
+                }
             },
             {
                 "label": [
                     48,
                     55
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint rot\n```\nStart rotation, 0-5"
+                }
             }
         ]
     },
@@ -2170,7 +2911,11 @@
                 "label": [
                     15,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to add to the party"
+                }
             }
         ]
     },
@@ -2185,7 +2930,11 @@
                 "label": [
                     23,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nbool countHidden\n```\nAlso count hidden members (hangers-on)"
+                }
             }
         ]
     },
@@ -2200,7 +2949,11 @@
                 "label": [
                     27,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype id of the party member"
+                }
             }
         ]
     },
@@ -2215,7 +2968,11 @@
                 "label": [
                     18,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter to remove from the party"
+                }
             }
         ]
     },
@@ -2230,7 +2987,11 @@
                 "label": [
                     16,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject to pick up"
+                }
             }
         ]
     },
@@ -2245,12 +3006,16 @@
                 "label": [
                     17,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint movieNum\n```\n"
+                }
             }
         ]
     },
     "play_sfx": {
-        "label": "play_sfx (string sfxFileName)",
+        "label": "play_sfx(string sfxFileName)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nStarts a new sound effect to be played on the queue."
@@ -2258,8 +3023,8 @@
         "parameters": [
             {
                 "label": [
-                    10,
-                    28
+                    9,
+                    27
                 ]
             }
         ]
@@ -2275,13 +3040,21 @@
                 "label": [
                     12,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose poison level changes"
+                }
             },
             {
                 "label": [
                     27,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\nChange to the poison level; negative reduces it"
+                }
             }
         ]
     },
@@ -2296,13 +3069,21 @@
                 "label": [
                     15,
                     22
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype id to read"
+                }
             },
             {
                 "label": [
                     24,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint data_member\n```\nPrototype field offset, a `PROTO_*` constant from `define_extra.h`"
+                }
             }
         ]
     },
@@ -2317,13 +3098,21 @@
                 "label": [
                     19,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose radiation counter drops; should only be `dude_obj`"
+                }
             },
             {
                 "label": [
                     34,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\nRadiation to remove"
+                }
             }
         ]
     },
@@ -2338,13 +3127,21 @@
                 "label": [
                     19,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter whose radiation counter rises; should only be `dude_obj`"
+                }
             },
             {
                 "label": [
                     34,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint amount\n```\nRadiation to add"
+                }
             }
         ]
     },
@@ -2359,13 +3156,21 @@
                 "label": [
                     11,
                     18
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint min\n```\nLowest value returned (inclusive)"
+                }
             },
             {
                 "label": [
                     20,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint max\n```\nHighest value returned (inclusive)"
+                }
             }
         ]
     },
@@ -2380,19 +3185,31 @@
                 "label": [
                     23,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param1\n```\n"
+                }
             },
             {
                 "label": [
                     35,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param2\n```\n"
+                }
             },
             {
                 "label": [
                     47,
                     57
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param3\n```\n"
+                }
             }
         ]
     },
@@ -2407,19 +3224,31 @@
                 "label": [
                     22,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject to animate"
+                }
             },
             {
                 "label": [
                     38,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint anim\n```\nAnimation, an `ANIM_*` constant from `animcomd.h`"
+                }
             },
             {
                 "label": [
                     48,
                     57
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation in the sequence; should always be -1"
+                }
             }
         ]
     },
@@ -2434,19 +3263,31 @@
                 "label": [
                     30,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject to animate"
+                }
             },
             {
                 "label": [
                     46,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint anim\n```\nAnimation, an `ANIM_*` constant from `animcomd.h`"
+                }
             },
             {
                 "label": [
                     56,
                     65
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation in the sequence; should always be -1"
+                }
             }
         ]
     },
@@ -2461,19 +3302,31 @@
                 "label": [
                     30,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr what\n```\nObject animated in place"
+                }
             },
             {
                 "label": [
                     46,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint anim\n```\n`ANIM_*` from `animcomd.h`"
+                }
             },
             {
                 "label": [
                     56,
                     65
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation; always pass -1"
+                }
             }
         ]
     },
@@ -2488,7 +3341,11 @@
                 "label": [
                     20,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr object\n```\nObject whose registered animations are terminated"
+                }
             }
         ]
     },
@@ -2503,13 +3360,21 @@
                 "label": [
                     19,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint par1\n```\nSub-command: begin a sequence, clear an object's animations, or end the sequence"
+                }
             },
             {
                 "label": [
                     29,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint par2\n```\nSub-command argument: the sequence options for begin, the object for clear"
+                }
             }
         ]
     },
@@ -2524,19 +3389,31 @@
                 "label": [
                     30,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that walks"
+                }
             },
             {
                 "label": [
                     45,
                     63
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr dest_obj\n```\nObject to walk to"
+                }
             },
             {
                 "label": [
                     65,
                     74
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation; always pass -1"
+                }
             }
         ]
     },
@@ -2551,19 +3428,31 @@
                 "label": [
                     31,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that walks"
+                }
             },
             {
                 "label": [
                     46,
                     59
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint dest_tile\n```\nDestination tile number"
+                }
             },
             {
                 "label": [
                     61,
                     70
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation; always pass -1"
+                }
             }
         ]
     },
@@ -2578,19 +3467,31 @@
                 "label": [
                     29,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that runs"
+                }
             },
             {
                 "label": [
                     44,
                     62
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr dest_obj\n```\nObject to run to"
+                }
             },
             {
                 "label": [
                     64,
                     73
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation; always pass -1"
+                }
             }
         ]
     },
@@ -2605,19 +3506,31 @@
                 "label": [
                     30,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that runs"
+                }
             },
             {
                 "label": [
                     45,
                     58
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint dest_tile\n```\nDestination tile number"
+                }
             },
             {
                 "label": [
                     60,
                     69
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation; always pass -1"
+                }
             }
         ]
     },
@@ -2632,19 +3545,31 @@
                 "label": [
                     23,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject that plays the sound"
+                }
             },
             {
                 "label": [
                     38,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring sfx_name\n```\nName of the sound effect to play"
+                }
             },
             {
                 "label": [
                     55,
                     64
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint delay\n```\nDelay from the previous animation"
+                }
             }
         ]
     },
@@ -2659,13 +3584,21 @@
                 "label": [
                     26,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose script's timer events are searched"
+                }
             },
             {
                 "label": [
                     41,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint fixed_val\n```\nOnly timer events added with this fixed value are removed"
+                }
             }
         ]
     },
@@ -2680,19 +3613,31 @@
                 "label": [
                     28,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose inventory is changed"
+                }
             },
             {
                 "label": [
                     43,
                     56
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject to remove"
+                }
             },
             {
                 "label": [
                     58,
                     67
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint count\n```\nNumber of instances to remove; the function returns how many were actually removed"
+                }
             }
         ]
     },
@@ -2707,13 +3652,21 @@
                 "label": [
                     23,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose inventory is changed"
+                }
             },
             {
                 "label": [
                     38,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject to remove"
+                }
             }
         ]
     },
@@ -2728,7 +3681,11 @@
                 "label": [
                     20,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject whose script's timer events are removed"
+                }
             }
         ]
     },
@@ -2743,13 +3700,21 @@
                 "label": [
                     18,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nobj Critter\n```\n"
+                }
             },
             {
                 "label": [
                     31,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint skill\n```\n"
+                }
             }
         ]
     },
@@ -2764,19 +3729,31 @@
                 "label": [
                     18,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nObject whose skill level is rolled against"
+                }
             },
             {
                 "label": [
                     33,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint skill\n```\n`SKILL_*` from `define.h`"
+                }
             },
             {
                 "label": [
                     44,
                     56
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint modifier\n```\nAmount added to the skill value before rolling; may be zero"
+                }
             }
         ]
     },
@@ -2791,13 +3768,21 @@
                 "label": [
                     21,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint srcTile\n```\nTile to face from"
+                }
             },
             {
                 "label": [
                     34,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint destTile\n```\nTile to face"
+                }
             }
         ]
     },
@@ -2812,19 +3797,31 @@
                 "label": [
                     21,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nMust be `dude_obj`; any other critter is rejected and the call returns -1"
+                }
             },
             {
                 "label": [
                     36,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint stat\n```\n`STAT_*` from `define.h`"
+                }
             },
             {
                 "label": [
                     46,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint mod\n```\nAmount added to the current stat value, not the new value"
+                }
             }
         ]
     },
@@ -2839,31 +3836,51 @@
                 "label": [
                     20,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nelevation markElev\n```\nElevation whose exit grids are changed"
+                }
             },
             {
                 "label": [
                     40,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint mapID\n```\nDestination map; -1 stays on this map"
+                }
             },
             {
                 "label": [
                     51,
                     64
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elevation\n```\nDestination elevation"
+                }
             },
             {
                 "label": [
                     66,
                     77
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tileNum\n```\nDestination tile number"
+                }
             },
             {
                 "label": [
                     79,
                     91
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint rotation\n```\n"
+                }
             }
         ]
     },
@@ -2878,13 +3895,21 @@
                 "label": [
                     20,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nuint var_index\n```\n"
+                }
             },
             {
                 "label": [
                     36,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint value\n```\n"
+                }
             }
         ]
     },
@@ -2899,7 +3924,11 @@
                 "label": [
                     21,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint level\n```\nAmbient light from Full Darkness to Full Daylight; not a linear percentage, and some levels cannot be set"
+                }
             }
         ]
     },
@@ -2914,13 +3943,21 @@
                 "label": [
                     19,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nuint var_index\n```\n"
+                }
             },
             {
                 "label": [
                     35,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint value\n```\n"
+                }
             }
         ]
     },
@@ -2935,13 +3972,21 @@
                 "label": [
                     19,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint mapID\n```\n"
+                }
             },
             {
                 "label": [
                     30,
                     47
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring sound_path\n```\n"
+                }
             }
         ]
     },
@@ -2956,25 +4001,41 @@
                 "label": [
                     19,
                     24
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nTile column of the start position (0-199)"
+                }
             },
             {
                 "label": [
                     26,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nTile row of the start position (0-199)"
+                }
             },
             {
                 "label": [
                     33,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nStart elevation"
+                }
             },
             {
                 "label": [
                     43,
                     50
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint rot\n```\nStart rotation, 0-5"
+                }
             }
         ]
     },
@@ -2989,13 +4050,21 @@
                 "label": [
                     17,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nuint var_index\n```\n"
+                }
             },
             {
                 "label": [
                     33,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint value\n```\n"
+                }
             }
         ]
     },
@@ -3010,13 +4079,21 @@
                 "label": [
                     24,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\n"
+                }
             },
             {
                 "label": [
                     39,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nbool visibility\n```\nInverted: `true` makes the object invisible, `false` shows it"
+                }
             }
         ]
     },
@@ -3031,13 +4108,21 @@
                 "label": [
                     30,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint ambientType\n```\n"
+                }
             },
             {
                 "label": [
                     47,
                     65
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint ambientSubtype\n```\n"
+                }
             }
         ]
     },
@@ -3052,19 +4137,31 @@
                 "label": [
                     27,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint charType\n```\n"
+                }
             },
             {
                 "label": [
                     41,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint animType\n```\n"
+                }
             },
             {
                 "label": [
                     55,
                     68
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint animFrame\n```\n"
+                }
             }
         ]
     },
@@ -3079,13 +4176,21 @@
                 "label": [
                     32,
                     47
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint interfaceId\n```\n"
+                }
             },
             {
                 "label": [
                     49,
                     63
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint actionType\n```\n"
+                }
             }
         ]
     },
@@ -3100,19 +4205,31 @@
                 "label": [
                     27,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint itemType\n```\n"
+                }
             },
             {
                 "label": [
                     41,
                     55
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint actionType\n```\n"
+                }
             },
             {
                 "label": [
                     57,
                     72
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint itemVariant\n```\n"
+                }
             }
         ]
     },
@@ -3127,13 +4244,21 @@
                 "label": [
                     27,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint openType\n```\n"
+                }
             },
             {
                 "label": [
                     41,
                     55
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint actionType\n```\n"
+                }
             }
         ]
     },
@@ -3148,19 +4273,31 @@
                 "label": [
                     30,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint sceneryType\n```\n"
+                }
             },
             {
                 "label": [
                     47,
                     61
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint actionType\n```\n"
+                }
             },
             {
                 "label": [
                     63,
                     81
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint sceneryVariant\n```\n"
+                }
             }
         ]
     },
@@ -3175,25 +4312,41 @@
                 "label": [
                     29,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint weaponType\n```\n"
+                }
             },
             {
                 "label": [
                     45,
                     59
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint actionType\n```\n"
+                }
             },
             {
                 "label": [
                     61,
                     70
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint range\n```\n"
+                }
             },
             {
                 "label": [
                     72,
                     79
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint hit\n```\n"
+                }
             }
         ]
     },
@@ -3208,7 +4361,11 @@
                 "label": [
                     18,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint skill\n```\n"
+                }
             }
         ]
     },
@@ -3223,31 +4380,51 @@
                 "label": [
                     19,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint msgFileNum\n```\nMessage file number; ignored by the engine"
+                }
             },
             {
                 "label": [
                     35,
                     48
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter the dialog focuses on"
+                }
             },
             {
                 "label": [
                     50,
                     58
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint mood\n```\nReaction level; unused in vanilla (LVAR 0 decides). With sfall `StartGDialogFix`, -1 keeps the LVAR 0 behaviour"
+                }
             },
             {
                 "label": [
                     60,
                     71
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint headNum\n```\n`HEAD_*` from `define.h`; -1 is commonly passed"
+                }
             },
             {
                 "label": [
                     73,
                     90
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint backgroundIdx\n```\n`BACKGROUND*` from `define.h`; -1 is commonly passed"
+                }
             }
         ]
     },
@@ -3262,19 +4439,31 @@
                 "label": [
                     27,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile\n```\nTile number to search"
+                }
             },
             {
                 "label": [
                     37,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nElevation of the tile"
+                }
             },
             {
                 "label": [
                     47,
                     54
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype index of the object to look for"
+                }
             }
         ]
     },
@@ -3289,19 +4478,31 @@
                 "label": [
                     32,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile\n```\nTile number to search"
+                }
             },
             {
                 "label": [
                     42,
                     50
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint elev\n```\nElevation of the tile"
+                }
             },
             {
                 "label": [
                     52,
                     59
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype index of the object to look for"
+                }
             }
         ]
     },
@@ -3316,13 +4517,21 @@
                 "label": [
                     18,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile1\n```\n"
+                }
             },
             {
                 "label": [
                     29,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile2\n```\n"
+                }
             }
         ]
     },
@@ -3337,13 +4546,21 @@
                 "label": [
                     23,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj1\n```\n"
+                }
             },
             {
                 "label": [
                     39,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj2\n```\n"
+                }
             }
         ]
     },
@@ -3358,31 +4575,51 @@
                 "label": [
                     22,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile1\n```\nOne corner of the rectangle: its column is the right edge and its row the top edge"
+                }
             },
             {
                 "label": [
                     33,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile2\n```\n"
+                }
             },
             {
                 "label": [
                     44,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile3\n```\n"
+                }
             },
             {
                 "label": [
                     55,
                     64
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile4\n```\nOpposite corner: its column is the left edge and its row the bottom edge"
+                }
             },
             {
                 "label": [
                     66,
                     75
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile5\n```\nTile tested for being inside the rectangle"
+                }
             }
         ]
     },
@@ -3397,7 +4634,11 @@
                 "label": [
                     21,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint tile\n```\n"
+                }
             }
         ]
     },
@@ -3412,7 +4653,11 @@
                 "label": [
                     13,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\n"
+                }
             }
         ]
     },
@@ -3427,19 +4672,31 @@
                 "label": [
                     26,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint start_tile\n```\n"
+                }
             },
             {
                 "label": [
                     42,
                     55
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint direction\n```\nDirection, 0-5"
+                }
             },
             {
                 "label": [
                     57,
                     69
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint distance\n```\nNumber of tiles to offset in that direction"
+                }
             }
         ]
     },
@@ -3454,19 +4711,31 @@
                 "label": [
                     14,
                     24
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring str\n```\n"
+                }
             },
             {
                 "label": [
                     26,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring delimiter\n```\nDelimiter character, passed as a character code"
+                }
             },
             {
                 "label": [
                     44,
                     57
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint prevToken\n```\n0 on the first call; on later calls the token returned by the previous call"
+                }
             }
         ]
     },
@@ -3481,7 +4750,11 @@
                 "label": [
                     16,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint townArea\n```\n`AREA_*` from `maps.h`"
+                }
             }
         ]
     },
@@ -3496,7 +4769,11 @@
                 "label": [
                     13,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\n"
+                }
             }
         ]
     },
@@ -3511,13 +4788,21 @@
                 "label": [
                     25,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr item\n```\nItem object to use"
+                }
             },
             {
                 "label": [
                     41,
                     60
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr targetObj\n```\nObject the item is used on"
+                }
             }
         ]
     },
@@ -3532,13 +4817,21 @@
                 "label": [
                     17,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\n"
+                }
             },
             {
                 "label": [
                     32,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint skill\n```\n`SKILL_*` from `define.h`"
+                }
             }
         ]
     },
@@ -3553,7 +4846,11 @@
                 "label": [
                     15,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject in the critter's inventory to put in its hand"
+                }
             }
         ]
     },
@@ -3568,13 +4865,21 @@
                 "label": [
                     23,
                     36
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr who\n```\nCritter that wields the object"
+                }
             },
             {
                 "label": [
                     38,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nObjectPtr obj\n```\nObject in the critter's inventory to put in its hand"
+                }
             }
         ]
     },
@@ -3589,19 +4894,31 @@
                 "label": [
                     21,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint areaIdx\n```\n`AREA_*` from `maps.h`"
+                }
             },
             {
                 "label": [
                     34,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint xPos\n```\n"
+                }
             },
             {
                 "label": [
                     44,
                     52
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint yPos\n```\n"
+                }
             }
         ]
     },
@@ -3616,13 +4933,21 @@
                 "label": [
                     12,
                     19
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint key\n```\nKey to handle; -1 registers a handler for every key"
+                }
             },
             {
                 "label": [
                     21,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure proc\n```\nProcedure called when the key is pressed"
+                }
             }
         ]
     },
@@ -3637,7 +4962,11 @@
                 "label": [
                     15,
                     22
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint key\n```\n"
+                }
             }
         ]
     },
@@ -3652,7 +4981,11 @@
                 "label": [
                     16,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flags\n```\n"
+                }
             }
         ]
     },
@@ -3667,7 +5000,11 @@
                 "label": [
                     15,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\n"
+                }
             }
         ]
     },
@@ -3682,31 +5019,51 @@
                 "label": [
                     19,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\nMovie file name; `.mve` is appended when it has no extension"
+                }
             },
             {
                 "label": [
                     36,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\n"
+                }
             },
             {
                 "label": [
                     43,
                     48
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\n"
+                }
             },
             {
                 "label": [
                     50,
                     59
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\n"
+                }
             },
             {
                 "label": [
                     61,
                     71
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\n"
+                }
             }
         ]
     },
@@ -3721,13 +5078,21 @@
                 "label": [
                     15,
                     20
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\n"
+                }
             },
             {
                 "label": [
                     22,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\n"
+                }
             }
         ]
     },
@@ -3742,7 +5107,11 @@
                 "label": [
                     18,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring label\n```\n"
+                }
             }
         ]
     },
@@ -3757,13 +5126,21 @@
                 "label": [
                     16,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring text1\n```\n"
+                }
             },
             {
                 "label": [
                     30,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring text2\n```\n"
+                }
             }
         ]
     },
@@ -3778,7 +5155,11 @@
                 "label": [
                     23,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint timeout\n```\nDisplay duration in milliseconds"
+                }
             }
         ]
     },
@@ -3793,13 +5174,21 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring text\n```\n"
+                }
             },
             {
                 "label": [
                     28,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring proc\n```\nName of the procedure called when the option is chosen"
+                }
             }
         ]
     },
@@ -3814,19 +5203,31 @@
                 "label": [
                     20,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint r\n```\n"
+                }
             },
             {
                 "label": [
                     27,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint g\n```\n"
+                }
             },
             {
                 "label": [
                     34,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint b\n```\n"
+                }
             }
         ]
     },
@@ -3841,7 +5242,11 @@
                 "label": [
                     20,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flags\n```\n"
+                }
             }
         ]
     },
@@ -3856,31 +5261,51 @@
                 "label": [
                     21,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position of the options window"
+                }
             },
             {
                 "label": [
                     28,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position of the options window"
+                }
             },
             {
                 "label": [
                     35,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth of the options window"
+                }
             },
             {
                 "label": [
                     46,
                     56
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight of the options window"
+                }
             },
             {
                 "label": [
                     58,
                     73
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\nBackground image file, or 0 for none"
+                }
             }
         ]
     },
@@ -3895,13 +5320,21 @@
                 "label": [
                     14,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring label\n```\n"
+                }
             },
             {
                 "label": [
                     28,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring text\n```\n"
+                }
             }
         ]
     },
@@ -3916,19 +5349,31 @@
                 "label": [
                     19,
                     24
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint r\n```\n"
+                }
             },
             {
                 "label": [
                     26,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint g\n```\n"
+                }
             },
             {
                 "label": [
                     33,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint b\n```\n"
+                }
             }
         ]
     },
@@ -3943,7 +5388,11 @@
                 "label": [
                     19,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flags\n```\n"
+                }
             }
         ]
     },
@@ -3958,7 +5407,11 @@
                 "label": [
                     19,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring title\n```\n"
+                }
             }
         ]
     },
@@ -3973,31 +5426,51 @@
                 "label": [
                     20,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position of the reply window"
+                }
             },
             {
                 "label": [
                     27,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position of the reply window"
+                }
             },
             {
                 "label": [
                     34,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth of the reply window"
+                }
             },
             {
                 "label": [
                     45,
                     55
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight of the reply window"
+                }
             },
             {
                 "label": [
                     57,
                     72
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\nBackground image file, or 0 for none"
+                }
             }
         ]
     },
@@ -4012,37 +5485,61 @@
                 "label": [
                     19,
                     24
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position of the scroll-down button"
+                }
             },
             {
                 "label": [
                     26,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position of the scroll-down button"
+                }
             },
             {
                 "label": [
                     33,
                     46
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring normal\n```\n"
+                }
             },
             {
                 "label": [
                     48,
                     60
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring hover\n```\n"
+                }
             },
             {
                 "label": [
                     62,
                     76
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring pressed\n```\n"
+                }
             },
             {
                 "label": [
                     78,
                     93
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring disabled\n```\n"
+                }
             }
         ]
     },
@@ -4057,37 +5554,61 @@
                 "label": [
                     17,
                     22
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position of the scroll-up button"
+                }
             },
             {
                 "label": [
                     24,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position of the scroll-up button"
+                }
             },
             {
                 "label": [
                     31,
                     44
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring normal\n```\n"
+                }
             },
             {
                 "label": [
                     46,
                     58
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring hover\n```\n"
+                }
             },
             {
                 "label": [
                     60,
                     74
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring pressed\n```\n"
+                }
             },
             {
                 "label": [
                     76,
                     91
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring disabled\n```\n"
+                }
             }
         ]
     },
@@ -4102,7 +5623,11 @@
                 "label": [
                     19,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint spacing\n```\nVertical spacing between dialog entries, in pixels"
+                }
             }
         ]
     },
@@ -4117,7 +5642,11 @@
                 "label": [
                     17,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint position\n```\n"
+                }
             }
         ]
     },
@@ -11107,7 +12636,11 @@
                 "label": [
                     20,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flag\n```\n"
+                }
             }
         ]
     },
@@ -11122,7 +12655,11 @@
                 "label": [
                     17,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint handle\n```\nHandle returned by `SoundPlay`"
+                }
             }
         ]
     },
@@ -11137,7 +12674,11 @@
                 "label": [
                     16,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint handle\n```\nHandle returned by `SoundPlay`"
+                }
             }
         ]
     },
@@ -11152,13 +12693,21 @@
                 "label": [
                     14,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\n"
+                }
             },
             {
                 "label": [
                     31,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flags\n```\nBit flags: `0x01` loop (otherwise fire-and-forget), `0x02` 16-bit samples (otherwise 8-bit), `0x100` load into memory, `0x200` stream"
+                }
             }
         ]
     },
@@ -11173,7 +12722,11 @@
                 "label": [
                     17,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint handle\n```\nHandle returned by `SoundPlay`"
+                }
             }
         ]
     },
@@ -11188,7 +12741,11 @@
                 "label": [
                     17,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint handle\n```\nHandle returned by `SoundPlay`"
+                }
             }
         ]
     },
@@ -11203,7 +12760,11 @@
                 "label": [
                     15,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint handle\n```\nHandle returned by `SoundPlay`"
+                }
             }
         ]
     },
@@ -11218,13 +12779,21 @@
                 "label": [
                     20,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\n"
+                }
             },
             {
                 "label": [
                     33,
                     41
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flag\n```\n"
+                }
             }
         ]
     },
@@ -11239,31 +12808,51 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName for the new button; used by the other `AddButton*` functions and `DeleteButton`"
+                }
             },
             {
                 "label": [
                     28,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position in the currently selected window"
+                }
             },
             {
                 "label": [
                     35,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position in the currently selected window"
+                }
             },
             {
                 "label": [
                     42,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth"
+                }
             },
             {
                 "label": [
                     53,
                     63
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight"
+                }
             }
         ]
     },
@@ -11278,13 +12867,21 @@
                 "label": [
                     19,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a button created with `AddButton`"
+                }
             },
             {
                 "label": [
                     32,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flag\n```\n"
+                }
             }
         ]
     },
@@ -11299,25 +12896,41 @@
                 "label": [
                     18,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a button created with `AddButton`"
+                }
             },
             {
                 "label": [
                     31,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring hover\n```\n"
+                }
             },
             {
                 "label": [
                     45,
                     58
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring normal\n```\n"
+                }
             },
             {
                 "label": [
                     60,
                     74
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring pressed\n```\n"
+                }
             }
         ]
     },
@@ -11332,31 +12945,51 @@
                 "label": [
                     19,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a button created with `AddButton`"
+                }
             },
             {
                 "label": [
                     32,
                     47
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure hover\n```\n"
+                }
             },
             {
                 "label": [
                     49,
                     64
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure press\n```\n"
+                }
             },
             {
                 "label": [
                     66,
                     83
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure release\n```\n"
+                }
             },
             {
                 "label": [
                     85,
                     99
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure move\n```\n"
+                }
             }
         ]
     },
@@ -11371,19 +13004,31 @@
                 "label": [
                     24,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a button created with `AddButton`"
+                }
             },
             {
                 "label": [
                     37,
                     52
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure press\n```\n"
+                }
             },
             {
                 "label": [
                     54,
                     71
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure release\n```\n"
+                }
             }
         ]
     },
@@ -11398,13 +13043,21 @@
                 "label": [
                     19,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a button created with `AddButton`"
+                }
             },
             {
                 "label": [
                     32,
                     43
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring text\n```\nLabel shown on the button"
+                }
             }
         ]
     },
@@ -11440,13 +13093,21 @@
                 "label": [
                     19,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\n"
+                }
             },
             {
                 "label": [
                     32,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flag\n```\n"
+                }
             }
         ]
     },
@@ -11461,31 +13122,51 @@
                 "label": [
                     19,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\n"
+                }
             },
             {
                 "label": [
                     32,
                     47
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure enter\n```\n"
+                }
             },
             {
                 "label": [
                     49,
                     63
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure exit\n```\n"
+                }
             },
             {
                 "label": [
                     65,
                     80
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure hover\n```\n"
+                }
             },
             {
                 "label": [
                     82,
                     97
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure click\n```\n"
+                }
             }
         ]
     },
@@ -11500,19 +13181,31 @@
                 "label": [
                     24,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\n"
+                }
             },
             {
                 "label": [
                     37,
                     52
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure press\n```\n"
+                }
             },
             {
                 "label": [
                     54,
                     71
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure release\n```\n"
+                }
             }
         ]
     },
@@ -11527,7 +13220,11 @@
                 "label": [
                     16,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a region in the current window"
+                }
             }
         ]
     },
@@ -11542,31 +13239,51 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName for the new window; pass it to `SelectWin` and `DeleteWin`"
+                }
             },
             {
                 "label": [
                     28,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position; scaled to the current screen resolution"
+                }
             },
             {
                 "label": [
                     35,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position; scaled to the current screen resolution"
+                }
             },
             {
                 "label": [
                     42,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth; scaled to the current screen resolution"
+                }
             },
             {
                 "label": [
                     53,
                     63
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight; scaled to the current screen resolution"
+                }
             }
         ]
     },
@@ -11581,7 +13298,11 @@
                 "label": [
                     18,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a button created with `AddButton`"
+                }
             }
         ]
     },
@@ -11596,7 +13317,11 @@
                 "label": [
                     18,
                     29
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a region in the current window"
+                }
             }
         ]
     },
@@ -11611,7 +13336,11 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a window created with `CreateWin`"
+                }
             }
         ]
     },
@@ -11626,31 +13355,51 @@
                 "label": [
                     16,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\n"
+                }
             },
             {
                 "label": [
                     33,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position in the current window"
+                }
             },
             {
                 "label": [
                     40,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position in the current window"
+                }
             },
             {
                 "label": [
                     47,
                     56
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth the image is drawn at"
+                }
             },
             {
                 "label": [
                     58,
                     68
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight the image is drawn at"
+                }
             }
         ]
     },
@@ -11665,7 +13414,11 @@
                 "label": [
                     16,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\n"
+                }
             }
         ]
     },
@@ -11680,7 +13433,11 @@
                 "label": [
                     12,
                     24
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint duration\n```\n"
+                }
             }
         ]
     },
@@ -11695,7 +13452,11 @@
                 "label": [
                     13,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint duration\n```\n"
+                }
             }
         ]
     },
@@ -11710,43 +13471,71 @@
                 "label": [
                     14,
                     19
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position in the current window"
+                }
             },
             {
                 "label": [
                     21,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position in the current window"
+                }
             },
             {
                 "label": [
                     28,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth"
+                }
             },
             {
                 "label": [
                     39,
                     49
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight"
+                }
             },
             {
                 "label": [
                     51,
                     56
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint r\n```\n"
+                }
             },
             {
                 "label": [
                     58,
                     63
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint g\n```\n"
+                }
             },
             {
                 "label": [
                     65,
                     70
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint b\n```\n"
+                }
             }
         ]
     },
@@ -11761,19 +13550,31 @@
                 "label": [
                     13,
                     18
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint r\n```\n"
+                }
             },
             {
                 "label": [
                     20,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint g\n```\n"
+                }
             },
             {
                 "label": [
                     27,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint b\n```\n"
+                }
             }
         ]
     },
@@ -11788,7 +13589,11 @@
                 "label": [
                     16,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\n"
+                }
             }
         ]
     },
@@ -11803,13 +13608,21 @@
                 "label": [
                     12,
                     17
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nText cursor X position in the current window"
+                }
             },
             {
                 "label": [
                     19,
                     24
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nText cursor Y position in the current window"
+                }
             }
         ]
     },
@@ -11824,7 +13637,11 @@
                 "label": [
                     22,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring path\n```\n"
+                }
             }
         ]
     },
@@ -11839,19 +13656,31 @@
                 "label": [
                     16,
                     31
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\n"
+                }
             },
             {
                 "label": [
                     33,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nHotspot X offset of the cursor"
+                }
             },
             {
                 "label": [
                     40,
                     45
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nHotspot Y offset of the cursor"
+                }
             }
         ]
     },
@@ -11866,19 +13695,31 @@
                 "label": [
                     15,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring value\n```\n"
+                }
             },
             {
                 "label": [
                     29,
                     38
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint param\n```\nWidth in pixels at which the text wraps; scaled to the window"
+                }
             },
             {
                 "label": [
                     40,
                     53
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint alignment\n```\nText alignment: `0` left, `1` right, `2` center"
+                }
             }
         ]
     },
@@ -11893,7 +13734,11 @@
                 "label": [
                     18,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure proc\n```\n"
+                }
             }
         ]
     },
@@ -11908,31 +13753,51 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a window created with `CreateWin`"
+                }
             },
             {
                 "label": [
                     28,
                     33
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position; scaled to the current screen resolution"
+                }
             },
             {
                 "label": [
                     35,
                     40
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position; scaled to the current screen resolution"
+                }
             },
             {
                 "label": [
                     42,
                     51
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth; scaled to the current screen resolution"
+                }
             },
             {
                 "label": [
                     53,
                     63
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight; scaled to the current screen resolution"
+                }
             }
         ]
     },
@@ -11947,31 +13812,51 @@
                 "label": [
                     14,
                     25
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a window created with `CreateWin`"
+                }
             },
             {
                 "label": [
                     27,
                     32
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position"
+                }
             },
             {
                 "label": [
                     34,
                     39
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position"
+                }
             },
             {
                 "label": [
                     41,
                     50
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth"
+                }
             },
             {
                 "label": [
                     52,
                     62
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight"
+                }
             }
         ]
     },
@@ -11986,13 +13871,21 @@
                 "label": [
                     20,
                     34
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring pattern\n```\nFile pattern to list"
+                }
             },
             {
                 "label": [
                     36,
                     48
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring title\n```\n"
+                }
             }
         ]
     },
@@ -12007,7 +13900,11 @@
                 "label": [
                     15,
                     26
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring name\n```\nName of a window created with `CreateWin`"
+                }
             }
         ]
     },
@@ -12022,7 +13919,11 @@
                 "label": [
                     13,
                     23
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint fontId\n```\n"
+                }
             }
         ]
     },
@@ -12037,19 +13938,31 @@
                 "label": [
                     23,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint r\n```\n"
+                }
             },
             {
                 "label": [
                     30,
                     35
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint g\n```\n"
+                }
             },
             {
                 "label": [
                     37,
                     42
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint b\n```\n"
+                }
             }
         ]
     },
@@ -12064,19 +13977,31 @@
                 "label": [
                     18,
                     23
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint r\n```\n"
+                }
             },
             {
                 "label": [
                     25,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint g\n```\n"
+                }
             },
             {
                 "label": [
                     32,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint b\n```\n"
+                }
             }
         ]
     },
@@ -12091,7 +14016,11 @@
                 "label": [
                     18,
                     27
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint flags\n```\n"
+                }
             }
         ]
     },
@@ -12106,7 +14035,11 @@
                 "label": [
                     13,
                     28
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring filename\n```\n"
+                }
             }
         ]
     },
@@ -12121,37 +14054,61 @@
                 "label": [
                     12,
                     23
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring text\n```\n"
+                }
             },
             {
                 "label": [
                     25,
                     30
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint x\n```\nX position in the current window"
+                }
             },
             {
                 "label": [
                     32,
                     37
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint y\n```\nY position in the current window"
+                }
             },
             {
                 "label": [
                     39,
                     48
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint width\n```\nWidth of the text rectangle in pixels"
+                }
             },
             {
                 "label": [
                     50,
                     60
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint height\n```\nHeight of the text rectangle in pixels"
+                }
             },
             {
                 "label": [
                     62,
                     75
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nint alignment\n```\nText alignment: `0` left, `1` right, `2` center"
+                }
             }
         ]
     },
@@ -12166,7 +14123,11 @@
                 "label": [
                     11,
                     23
-                ]
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nstring value\n```\n"
+                }
             }
         ]
     }

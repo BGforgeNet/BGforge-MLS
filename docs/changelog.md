@@ -6,6 +6,8 @@
 
 - Signature help covers the built-in and sfall functions, about 580 of them, marking the argument being typed.
   It used to show for one function only.
+- Built-in functions describe their arguments - the constants an argument takes, its units, special values - in
+  signature help and in the completion tooltip.
 
 ### WeiDU
 
