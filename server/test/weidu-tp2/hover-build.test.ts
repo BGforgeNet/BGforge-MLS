@@ -2,7 +2,7 @@
  * Unit tests for hover-content.ts buildVariableHover and buildFunctionHover.
  *
  * Covers:
- *  - extractFilename: URI with slashes vs. no slashes after stripping file://
+ *  - the file name shown when no displayPath is given: URI with a directory vs. without one
  *  - truncateDesc: cut point inside a markdown link (moved before link)
  *  - truncateDesc: cut point at/before start of first link (return desc as-is)
  *
@@ -58,15 +58,15 @@ beforeAll(async () => {
 
 describe("weidu-tp2/hover buildVariableHover()", () => {
     it("uses extractFilename when displayPath is undefined - URI with slashes", () => {
-        // extractFilename: strip file://, find last slash -> "setup.tp2"
+        // The URI's last path segment -> "setup.tp2"
         const hover = buildVariableHover(makeVarInfo());
         const value = (hover.contents as { kind: string; value: string }).value;
         expect(hover.contents).toHaveProperty("kind", MarkupKind.Markdown);
         expect(value).toContain("setup.tp2");
     });
 
-    it("uses extractFilename for URI with no slashes after stripping file:// prefix", () => {
-        // extractFilename: strip file:// -> "nopath.tp2"; lastSlash = -1 -> return whole string
+    it("uses extractFilename for a URI with no directory after the scheme", () => {
+        // No directory after the scheme: the name after `file://` -> "nopath.tp2"
         const varInfo = makeVarInfo({
             location: {
                 uri: "file://nopath.tp2",

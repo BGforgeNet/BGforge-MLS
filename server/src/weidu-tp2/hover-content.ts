@@ -11,6 +11,7 @@ import { looksLikeConstant } from "./tree-utils";
 import { buildWeiduTable, type VarRow, type VarSection } from "@bgforge/shared/tooltip-table";
 import { buildWeiduHoverContent } from "@bgforge/shared/tooltip-format";
 import { LANG_WEIDU_TP2_TOOLTIP } from "../core/languages";
+import { extractFilename } from "../core/location-utils";
 
 /** Maximum length for parameter descriptions in hover table. */
 const DESC_MAX_LENGTH = 80;
@@ -172,15 +173,6 @@ function truncateDesc(desc: string): string {
     }
 
     return desc.slice(0, cutPoint).trimEnd() + "...";
-}
-
-/**
- * Extract filename from a file URI.
- */
-function extractFilename(uri: string): string {
-    const path = uri.replace(/^file:\/\//, "");
-    const lastSlash = path.lastIndexOf("/");
-    return lastSlash !== -1 ? path.slice(lastSlash + 1) : path;
 }
 
 /**
