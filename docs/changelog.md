@@ -10,6 +10,9 @@
   signature help and in the completion tooltip.
 - `SetOneOptPause` is no longer offered in completion or highlighted: it has no effect in the engine, and its
   description promised one. Scripts using it still compile.
+- `ActivateRegion` is documented as what it does - it simulates a mouse event on a region, with the event numbers
+  listed - instead of as enabling or disabling the region. `AddButtonProc` and `AddRegionProc` name their
+  procedures in the order the engine uses: enter, exit, press, release.
 
 ### WeiDU
 

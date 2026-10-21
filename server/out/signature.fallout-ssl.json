@@ -12750,10 +12750,10 @@
         ]
     },
     "ActivateRegion": {
-        "label": "void ActivateRegion(string name, int flag)",
+        "label": "void ActivateRegion(string name, int event)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nEnables or disables a named screen region. When flag is non-zero, the region is activated; when zero, it is deactivated."
+            "value": "---\nRuns a named region's procedure as if the given mouse event happened on it."
         },
         "parameters": [
             {
@@ -12769,11 +12769,11 @@
             {
                 "label": [
                     33,
-                    41
+                    42
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nint flag\n```\n"
+                    "value": "```fallout-ssl-tooltip\nint event\n```\nMouse event to simulate: `0` press, `1` release, `2` enter, `3` exit (the procedures set with `AddRegionProc`); `5` right press, `6` right release"
                 }
             }
         ]
@@ -12916,10 +12916,10 @@
         ]
     },
     "AddButtonProc": {
-        "label": "void AddButtonProc(string name, Procedure hover, Procedure press, Procedure release, Procedure move)",
+        "label": "void AddButtonProc(string name, Procedure enter, Procedure exit, Procedure press, Procedure release)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nAssigns callback procedures to a button for hover, press, release, and mouse-move events."
+            "value": "---\nAssigns callback procedures to a button for mouse enter, mouse exit, button press and button release."
         },
         "parameters": [
             {
@@ -12939,13 +12939,23 @@
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nProcedure hover\n```\n"
+                    "value": "```fallout-ssl-tooltip\nProcedure enter\n```\n"
                 }
             },
             {
                 "label": [
                     49,
-                    64
+                    63
+                ],
+                "documentation": {
+                    "kind": "markdown",
+                    "value": "```fallout-ssl-tooltip\nProcedure exit\n```\n"
+                }
+            },
+            {
+                "label": [
+                    65,
+                    80
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -12954,22 +12964,12 @@
             },
             {
                 "label": [
-                    66,
-                    83
-                ],
-                "documentation": {
-                    "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nProcedure release\n```\n"
-                }
-            },
-            {
-                "label": [
-                    85,
+                    82,
                     99
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nProcedure move\n```\n"
+                    "value": "```fallout-ssl-tooltip\nProcedure release\n```\n"
                 }
             }
         ]
@@ -13093,10 +13093,10 @@
         ]
     },
     "AddRegionProc": {
-        "label": "void AddRegionProc(string name, Procedure enter, Procedure exit, Procedure hover, Procedure click)",
+        "label": "void AddRegionProc(string name, Procedure enter, Procedure exit, Procedure press, Procedure release)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nAssigns callback procedures to a region for mouse enter, exit, hover, and click events."
+            "value": "---\nAssigns callback procedures to a region for mouse enter, mouse exit, button press and button release."
         },
         "parameters": [
             {
@@ -13136,17 +13136,17 @@
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nProcedure hover\n```\n"
+                    "value": "```fallout-ssl-tooltip\nProcedure press\n```\n"
                 }
             },
             {
                 "label": [
                     82,
-                    97
+                    99
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nProcedure click\n```\n"
+                    "value": "```fallout-ssl-tooltip\nProcedure release\n```\n"
                 }
             }
         ]

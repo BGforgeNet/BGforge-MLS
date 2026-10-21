@@ -2856,10 +2856,11 @@ window_functions:
       args:
         - name: name
           type: string
-        - name: flag
+        - name: event
           type: int
+          doc: "Mouse event to simulate: `0` press, `1` release, `2` enter, `3` exit (the procedures set with `AddRegionProc`); `5` right press, `6` right release"
       doc: |-
-        Enables or disables a named screen region. When flag is non-zero, the region is activated; when zero, it is deactivated.
+        Runs a named region's procedure as if the given mouse event happened on it.
 
     - name: AddButton
       type: void
@@ -2914,16 +2915,16 @@ window_functions:
         - name: name
           type: string
           doc: "Name of a button created with `AddButton`"
-        - name: hover
+        - name: enter
+          type: Procedure
+        - name: exit
           type: Procedure
         - name: press
           type: Procedure
         - name: release
           type: Procedure
-        - name: move
-          type: Procedure
       doc: |-
-        Assigns callback procedures to a button for hover, press, release, and mouse-move events.
+        Assigns callback procedures to a button for mouse enter, mouse exit, button press and button release.
 
     - name: AddButtonRightProc
       type: void
@@ -2974,12 +2975,12 @@ window_functions:
           type: Procedure
         - name: exit
           type: Procedure
-        - name: hover
+        - name: press
           type: Procedure
-        - name: click
+        - name: release
           type: Procedure
       doc: |-
-        Assigns callback procedures to a region for mouse enter, exit, hover, and click events.
+        Assigns callback procedures to a region for mouse enter, mouse exit, button press and button release.
 
     - name: AddRegionRightProc
       type: void
