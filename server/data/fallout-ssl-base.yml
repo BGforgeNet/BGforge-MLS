@@ -597,7 +597,7 @@ base_functions:
         Do a check/test-roll versus one of the various basic traits (strength, perception, etc.). Note: these cannot generate Critical Success or Critical Failure as they are a basic X==Y check.
 
     - name: drop_obj
-      detail: drop_obj(ObjectPtr obj)
+      detail: void drop_obj(ObjectPtr obj)
       doc: |-
         Causes the critter self-object to remove a given object (obj) from it's inventory and place it on the ground at its hex. This animates the self_obj.
 
@@ -698,12 +698,12 @@ base_functions:
         Sets up a sayMessage, which is a reply with just a [Done] option. The msg_list determines which message file to look in, and the msg_num determines which line to use from the file.
 
     - name: gSay_Option
-      detail: gSay_Option(int msg_list, int msg_num, procedure target, int reaction)
+      detail: void gSay_Option(int msg_list, int msg_num, procedure target, int reaction)
       doc: |-
         Sets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.
 
     - name: gSay_Reply
-      detail: gSay_Reply(int msg_list, int msg_num)
+      detail: void gSay_Reply(int msg_list, int msg_num)
       doc: |-
         Sets up a reply block (what the *CRITTER* says).
 
@@ -806,7 +806,7 @@ base_functions:
         Returns the current month of the year.
 
     - name: get_pc_stat
-      detail: get_pc_stat(int pcStat)
+      detail: int get_pc_stat(int pcStat)
       doc: |-
         Returns the value of a desired pc-only stat of the obj_dude. These are found in define.h all starting with 'PCSTAT_'.
 
@@ -850,7 +850,7 @@ base_functions:
           type: int
           doc: "Line number in that message file"
         - name: target
-          type: procedure
+          type: Procedure
           doc: "Procedure jumped to when the option is chosen"
         - name: reaction
           type: int
@@ -1126,7 +1126,7 @@ base_functions:
         Marks a town area or map location on the world map. The areaType parameter selects whether to mark by area (MARK_TYPE_TOWN) or by map index (MARK_TYPE_MAP). The areaIndex identifies the area or map, and known sets the state (MARK_STATE_KNOWN or MARK_STATE_VISITED).
 
     - name: message_str
-      type: char*
+      type: string
       args:
         - name: list
           type: int
@@ -1168,7 +1168,7 @@ base_functions:
         Extended engine query function supporting ~12 rules that require multiple parameters. Used for operations like clearing timed events (METARULE3_CLR_FIXED_TIMED_EVENTS), querying kill counts (METARULE3_KILL_COUNT), worldmap subtile operations, and critter iteration.
 
     - name: move_obj_inven_to_obj
-      detail: move_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)
+      detail: void move_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)
       doc: |-
         Moves an object's (srcObj) entire inventory into another object's (destObj) inventory.
 
@@ -1263,7 +1263,7 @@ base_functions:
           type: ObjectPtr
           doc: "Object whose inventory is searched"
         - name: pid
-          type: in
+          type: int
           doc: "Prototype id to count"
       doc: |-
         Returns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj).
@@ -1454,7 +1454,7 @@ base_functions:
         Plays one of the Fallout movies (full-screen, compressed, etc.).
 
     - name: play_sfx
-      detail: play_sfx(string sfxFileName)
+      detail: void play_sfx(string sfxFileName)
       doc: |-
         Starts a new sound effect to be played on the queue.
 
@@ -1735,15 +1735,13 @@ base_functions:
       doc: |-
         Removes (clears) all timer events hooked to a given object's (obj) script.
 
-    - name: roll_dice
-      type: Critter
-      args:
-        - name: Critter
-          type: obj
-        - name: skill
-          type: int
-      doc: |-
-        Returns the value of the completed dice roll. NOTE: Avellone says this is unimplemented.
+    # Not implemented in the engine: it ignores both arguments, reports a "not implemented" script error and returns 0.
+    # The compiler still accepts the call.
+    # - name: roll_dice
+    #   type: int
+    #   args:
+    #     - type: int
+    #     - type: int
 
     - name: roll_vs_skill
       type: int
@@ -1818,7 +1816,7 @@ base_functions:
       type: void
       args:
         - name: markElev
-          type: elevation
+          type: int
           doc: "Elevation whose exit grids are changed"
         - name: mapID
           type: int
@@ -2900,14 +2898,14 @@ window_functions:
         - name: name
           type: string
           doc: "Name of a button created with `AddButton`"
-        - name: hover
+        - name: pressed
           type: string
         - name: normal
           type: string
-        - name: pressed
+        - name: hover
           type: string
       doc: |-
-        Sets the graphics for button states: hover, normal, and pressed appearances.
+        Sets the graphics for button states: pressed, normal, and hover appearances.
 
     - name: AddButtonProc
       type: void

@@ -332,7 +332,6 @@ repository:
       - match: \b(?i)(rm_mult_objs_from_inven)\b
       - match: \b(?i)(rm_obj_from_inven)\b
       - match: \b(?i)(rm_timer_event)\b
-      - match: \b(?i)(roll_dice)\b
       - match: \b(?i)(roll_vs_skill)\b
       - match: \b(?i)(rotation_to_tile)\b
       - match: \b(?i)(running_burning_guy)\b

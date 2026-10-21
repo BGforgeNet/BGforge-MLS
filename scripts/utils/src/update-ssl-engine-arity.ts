@@ -28,6 +28,8 @@ const ENTRY = /^(\s+)([a-z_0-9]+): \{ opcode: ([^,}]+?)(, args: \d+)?(, returns:
 interface Signature {
     args: number;
     returns: boolean;
+    /** The detail names no return type, so `returns` is a guess. */
+    untyped?: true;
 }
 
 /**
@@ -60,6 +62,7 @@ const OBSERVED_ARITY: Readonly<Record<string, { args: number; sites: number }>> 
  * with. Without one the decompiler cannot read a call back; the data comment at each says why it is left out.
  */
 const UNDOCUMENTED_ARITY: Readonly<Record<string, Signature>> = {
+    roll_dice: { args: 2, returns: true },
     setoneoptpause: { args: 1, returns: false },
 };
 
@@ -79,6 +82,8 @@ interface DataItem {
  */
 function signatureOf(item: DataItem): Signature | undefined {
     const returnType = item.type ?? item.detail?.trimStart().split(/[\s(]/)[0];
+    // A detail that opens with the name itself has no return type, and the name would read as one: non-void.
+    const untyped = returnType !== undefined && returnType.toLowerCase() === item.name.toLowerCase();
     const returns = returnType !== undefined && returnType.toLowerCase() !== "void";
     if (item.args) return { args: item.args.length, returns };
     if (item.detail === undefined) return undefined;
@@ -89,9 +94,9 @@ function signatureOf(item: DataItem): Signature | undefined {
     if (!parameters && item.detail.includes("(")) {
         throw new Error(`signature for '${item.name}' has no closing parenthesis: ${item.detail}`);
     }
-    if (!parameters) return { args: 0, returns };
-    const inner = parameters[1]!.trim();
-    return { args: inner === "" || inner.toLowerCase() === "void" ? 0 : inner.split(",").length, returns };
+    const inner = parameters?.[1]?.trim() ?? "";
+    const args = inner === "" || inner.toLowerCase() === "void" ? 0 : inner.split(",").length;
+    return untyped ? { args, returns, untyped } : { args, returns };
 }
 
 function main(): void {
@@ -140,6 +145,8 @@ function main(): void {
             unknown.push(name!);
             return `${indent}${name}: { opcode: ${opcode}${rest ?? ""} },`;
         }
+        // Only an engine function's guess reaches the decompiler; untyped sfall-only entries are left to upstream.
+        if (signature.untyped) throw new Error(`signature for '${name}' has no return type; add one to the data`);
         // `popsResult` is oracle-verified against the reference's own output, so where the documented
         // return type disagrees the data is the suspect. Report rather than overwrite either one.
         if ((rest ?? "").includes("popsResult") && !signature.returns) disagreements.push(name!);

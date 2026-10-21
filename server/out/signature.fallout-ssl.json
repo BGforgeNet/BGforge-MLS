@@ -1258,7 +1258,7 @@
         ]
     },
     "drop_obj": {
-        "label": "drop_obj(ObjectPtr obj)",
+        "label": "void drop_obj(ObjectPtr obj)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nCauses the critter self-object to remove a given object (obj) from it's inventory and place it on the ground at its hex. This animates the self_obj."
@@ -1266,8 +1266,8 @@
         "parameters": [
             {
                 "label": [
-                    9,
-                    22
+                    14,
+                    27
                 ]
             }
         ]
@@ -1427,7 +1427,7 @@
         ]
     },
     "gSay_Option": {
-        "label": "gSay_Option(int msg_list, int msg_num, procedure target, int reaction)",
+        "label": "void gSay_Option(int msg_list, int msg_num, procedure target, int reaction)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nSets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure."
@@ -1435,32 +1435,32 @@
         "parameters": [
             {
                 "label": [
-                    12,
-                    24
+                    17,
+                    29
                 ]
             },
             {
                 "label": [
-                    26,
-                    37
+                    31,
+                    42
                 ]
             },
             {
                 "label": [
-                    39,
-                    55
+                    44,
+                    60
                 ]
             },
             {
                 "label": [
-                    57,
-                    69
+                    62,
+                    74
                 ]
             }
         ]
     },
     "gSay_Reply": {
-        "label": "gSay_Reply(int msg_list, int msg_num)",
+        "label": "void gSay_Reply(int msg_list, int msg_num)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nSets up a reply block (what the *CRITTER* says)."
@@ -1468,14 +1468,14 @@
         "parameters": [
             {
                 "label": [
-                    11,
-                    23
+                    16,
+                    28
                 ]
             },
             {
                 "label": [
-                    25,
-                    36
+                    30,
+                    41
                 ]
             }
         ]
@@ -1586,7 +1586,7 @@
         ]
     },
     "get_pc_stat": {
-        "label": "get_pc_stat(int pcStat)",
+        "label": "int get_pc_stat(int pcStat)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nReturns the value of a desired pc-only stat of the obj_dude. These are found in define.h all starting with 'PCSTAT_'."
@@ -1594,8 +1594,8 @@
         "parameters": [
             {
                 "label": [
-                    12,
-                    22
+                    16,
+                    26
                 ]
             }
         ]
@@ -1658,7 +1658,7 @@
         ]
     },
     "giQ_Option": {
-        "label": "void giQ_Option(int iq_test, int msg_list, int msg_num, procedure target, int reaction)",
+        "label": "void giQ_Option(int iq_test, int msg_list, int msg_num, Procedure target, int reaction)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nSets up an option-choice for a reply block if the player's IQ statistic is equal to or greater than a given value (iq_test), getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.\nThis is the only function that automatically accounts for Smooth Talker perk."
@@ -1701,7 +1701,7 @@
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nprocedure target\n```\nProcedure jumped to when the option is chosen"
+                    "value": "```fallout-ssl-tooltip\nProcedure target\n```\nProcedure jumped to when the option is chosen"
                 }
             },
             {
@@ -2264,7 +2264,7 @@
         ]
     },
     "message_str": {
-        "label": "char* message_str(int list, int msg_num)",
+        "label": "string message_str(int list, int msg_num)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nReturns a string from the message module for a given list and a given # (msg_num)."
@@ -2272,8 +2272,8 @@
         "parameters": [
             {
                 "label": [
-                    18,
-                    26
+                    19,
+                    27
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -2282,8 +2282,8 @@
             },
             {
                 "label": [
-                    28,
-                    39
+                    29,
+                    40
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -2371,7 +2371,7 @@
         ]
     },
     "move_obj_inven_to_obj": {
-        "label": "move_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)",
+        "label": "void move_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nMoves an object's (srcObj) entire inventory into another object's (destObj) inventory."
@@ -2379,14 +2379,14 @@
         "parameters": [
             {
                 "label": [
-                    22,
-                    38
+                    27,
+                    43
                 ]
             },
             {
                 "label": [
-                    40,
-                    57
+                    45,
+                    62
                 ]
             }
         ]
@@ -2575,7 +2575,7 @@
         ]
     },
     "obj_is_carrying_obj_pid": {
-        "label": "int obj_is_carrying_obj_pid(ObjectPtr obj, in pid)",
+        "label": "int obj_is_carrying_obj_pid(ObjectPtr obj, int pid)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nReturns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj)."
@@ -2594,11 +2594,11 @@
             {
                 "label": [
                     43,
-                    49
+                    50
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nin pid\n```\nPrototype id to count"
+                    "value": "```fallout-ssl-tooltip\nint pid\n```\nPrototype id to count"
                 }
             }
         ]
@@ -3015,7 +3015,7 @@
         ]
     },
     "play_sfx": {
-        "label": "play_sfx(string sfxFileName)",
+        "label": "void play_sfx(string sfxFileName)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nStarts a new sound effect to be played on the queue."
@@ -3023,8 +3023,8 @@
         "parameters": [
             {
                 "label": [
-                    9,
-                    27
+                    14,
+                    32
                 ]
             }
         ]
@@ -3689,35 +3689,6 @@
             }
         ]
     },
-    "roll_dice": {
-        "label": "Critter roll_dice(obj Critter, int skill)",
-        "documentation": {
-            "kind": "markdown",
-            "value": "---\nReturns the value of the completed dice roll. NOTE: Avellone says this is unimplemented."
-        },
-        "parameters": [
-            {
-                "label": [
-                    18,
-                    29
-                ],
-                "documentation": {
-                    "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nobj Critter\n```\n"
-                }
-            },
-            {
-                "label": [
-                    31,
-                    40
-                ],
-                "documentation": {
-                    "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nint skill\n```\n"
-                }
-            }
-        ]
-    },
     "roll_vs_skill": {
         "label": "int roll_vs_skill(ObjectPtr who, int skill, int modifier)",
         "documentation": {
@@ -3826,7 +3797,7 @@
         ]
     },
     "set_exit_grids": {
-        "label": "void set_exit_grids(elevation markElev, int mapID, int elevation, int tileNum, int rotation)",
+        "label": "void set_exit_grids(int markElev, int mapID, int elevation, int tileNum, int rotation)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nSets all exit grids on a given elevation (markElev) to point to a destination mapID (may be -1 which means stay on this map), elevation, tileNum, and rotation."
@@ -3835,17 +3806,17 @@
             {
                 "label": [
                     20,
-                    38
+                    32
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nelevation markElev\n```\nElevation whose exit grids are changed"
+                    "value": "```fallout-ssl-tooltip\nint markElev\n```\nElevation whose exit grids are changed"
                 }
             },
             {
                 "label": [
-                    40,
-                    49
+                    34,
+                    43
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -3854,8 +3825,8 @@
             },
             {
                 "label": [
-                    51,
-                    64
+                    45,
+                    58
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -3864,8 +3835,8 @@
             },
             {
                 "label": [
-                    66,
-                    77
+                    60,
+                    71
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -3874,8 +3845,8 @@
             },
             {
                 "label": [
-                    79,
-                    91
+                    73,
+                    85
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -12867,10 +12838,10 @@
         ]
     },
     "AddButtonGFX": {
-        "label": "void AddButtonGFX(string name, string hover, string normal, string pressed)",
+        "label": "void AddButtonGFX(string name, string pressed, string normal, string hover)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nSets the graphics for button states: hover, normal, and pressed appearances."
+            "value": "---\nSets the graphics for button states: pressed, normal, and hover appearances."
         },
         "parameters": [
             {
@@ -12886,17 +12857,17 @@
             {
                 "label": [
                     31,
-                    43
+                    45
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nstring hover\n```\n"
+                    "value": "```fallout-ssl-tooltip\nstring pressed\n```\n"
                 }
             },
             {
                 "label": [
-                    45,
-                    58
+                    47,
+                    60
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -12905,12 +12876,12 @@
             },
             {
                 "label": [
-                    60,
+                    62,
                     74
                 ],
                 "documentation": {
                     "kind": "markdown",
-                    "value": "```fallout-ssl-tooltip\nstring pressed\n```\n"
+                    "value": "```fallout-ssl-tooltip\nstring hover\n```\n"
                 }
             }
         ]

@@ -15,6 +15,12 @@
   procedures in the order the engine uses: enter, exit, press, release.
 - `tokenize` shows its real signature, `string tokenize(str, prevToken, delimiter)`: it returns the next token, and
   the previous token comes before the delimiter.
+- `roll_dice` is no longer offered in completion or highlighted: the engine never implemented it, and the call
+  only reports a script error and returns 0. Scripts using it still compile.
+- Corrected signatures: `AddButtonGFX` takes its images as pressed, normal, hover; `drop_obj`, `gSay_Option`,
+  `gSay_Reply`, `move_obj_inven_to_obj` and `play_sfx` return nothing and `get_pc_stat` returns an int;
+  `message_str` returns a string; misspelled argument types in `obj_is_carrying_obj_pid`, `set_exit_grids` and
+  `giQ_Option` are fixed.
 
 ### WeiDU
 

@@ -559,7 +559,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\ndrop_obj(ObjectPtr obj)\n```\nCauses the critter self-object to remove a given object (obj) from it's inventory and place it on the ground at its hex. This animates the self_obj."
+            "value": "```fallout-ssl-tooltip\nvoid drop_obj(ObjectPtr obj)\n```\nCauses the critter self-object to remove a given object (obj) from it's inventory and place it on the ground at its hex. This animates the self_obj."
         }
     },
     {
@@ -692,7 +692,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\ngSay_Option(int msg_list, int msg_num, procedure target, int reaction)\n```\nSets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure."
+            "value": "```fallout-ssl-tooltip\nvoid gSay_Option(int msg_list, int msg_num, procedure target, int reaction)\n```\nSets up an option-choice for a reply block, getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure."
         }
     },
     {
@@ -702,7 +702,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\ngSay_Reply(int msg_list, int msg_num)\n```\nSets up a reply block (what the *CRITTER* says)."
+            "value": "```fallout-ssl-tooltip\nvoid gSay_Reply(int msg_list, int msg_num)\n```\nSets up a reply block (what the *CRITTER* says)."
         }
     },
     {
@@ -862,7 +862,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nget_pc_stat(int pcStat)\n```\nReturns the value of a desired pc-only stat of the obj_dude. These are found in define.h all starting with 'PCSTAT_'."
+            "value": "```fallout-ssl-tooltip\nint get_pc_stat(int pcStat)\n```\nReturns the value of a desired pc-only stat of the obj_dude. These are found in define.h all starting with 'PCSTAT_'."
         }
     },
     {
@@ -902,7 +902,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid giQ_Option(int iq_test, int msg_list, int msg_num, procedure target, int reaction)\n```\n|||\n|:-|:-|\n|`iq_test`|&nbsp;&nbsp;Minimum Intelligence the player needs for the option to appear|\n|`msg_list`|&nbsp;&nbsp;Message file number to read from|\n|`msg_num`|&nbsp;&nbsp;Line number in that message file|\n|`target`|&nbsp;&nbsp;Procedure jumped to when the option is chosen|\n|`reaction`|&nbsp;&nbsp;`GOOD_REACTION`, `NEUTRAL_REACTION` or `BAD_REACTION` from `define.h`|\n\nSets up an option-choice for a reply block if the player's IQ statistic is equal to or greater than a given value (iq_test), getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.\nThis is the only function that automatically accounts for Smooth Talker perk."
+            "value": "```fallout-ssl-tooltip\nvoid giQ_Option(int iq_test, int msg_list, int msg_num, Procedure target, int reaction)\n```\n|||\n|:-|:-|\n|`iq_test`|&nbsp;&nbsp;Minimum Intelligence the player needs for the option to appear|\n|`msg_list`|&nbsp;&nbsp;Message file number to read from|\n|`msg_num`|&nbsp;&nbsp;Line number in that message file|\n|`target`|&nbsp;&nbsp;Procedure jumped to when the option is chosen|\n|`reaction`|&nbsp;&nbsp;`GOOD_REACTION`, `NEUTRAL_REACTION` or `BAD_REACTION` from `define.h`|\n\nSets up an option-choice for a reply block if the player's IQ statistic is equal to or greater than a given value (iq_test), getting the string from the message file (msg_list) and message number (msg_num), which will cause a given reaction (reaction), and if chosen will jump to the given (target) procedure.\nThis is the only function that automatically accounts for Smooth Talker perk."
         }
     },
     {
@@ -1182,7 +1182,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nchar* message_str(int list, int msg_num)\n```\n|||\n|:-|:-|\n|`list`|&nbsp;&nbsp;Message file (list) number|\n|`msg_num`|&nbsp;&nbsp;Message number within the list; a negative value yields \"Error\"|\n\nReturns a string from the message module for a given list and a given # (msg_num)."
+            "value": "```fallout-ssl-tooltip\nstring message_str(int list, int msg_num)\n```\n|||\n|:-|:-|\n|`list`|&nbsp;&nbsp;Message file (list) number|\n|`msg_num`|&nbsp;&nbsp;Message number within the list; a negative value yields \"Error\"|\n\nReturns a string from the message module for a given list and a given # (msg_num)."
         }
     },
     {
@@ -1212,7 +1212,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nmove_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)\n```\nMoves an object's (srcObj) entire inventory into another object's (destObj) inventory."
+            "value": "```fallout-ssl-tooltip\nvoid move_obj_inven_to_obj(ObjectPtr srcObj, ObjectPtr destObj)\n```\nMoves an object's (srcObj) entire inventory into another object's (destObj) inventory."
         }
     },
     {
@@ -1302,7 +1302,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint obj_is_carrying_obj_pid(ObjectPtr obj, in pid)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose inventory is searched|\n|`pid`|&nbsp;&nbsp;Prototype id to count|\n\nReturns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj)."
+            "value": "```fallout-ssl-tooltip\nint obj_is_carrying_obj_pid(ObjectPtr obj, int pid)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object whose inventory is searched|\n|`pid`|&nbsp;&nbsp;Prototype id to count|\n\nReturns the quantity of objects with matching prototype index #'s (pid) carried in the inventory of another object (obj)."
         }
     },
     {
@@ -1502,7 +1502,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nplay_sfx(string sfxFileName)\n```\nStarts a new sound effect to be played on the queue."
+            "value": "```fallout-ssl-tooltip\nvoid play_sfx(string sfxFileName)\n```\nStarts a new sound effect to be played on the queue."
         }
     },
     {
@@ -1726,16 +1726,6 @@
         }
     },
     {
-        "label": "roll_dice",
-        "kind": 3,
-        "source": "builtin",
-        "category": "base_functions",
-        "documentation": {
-            "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nCritter roll_dice(obj Critter, int skill)\n```\nReturns the value of the completed dice roll. NOTE: Avellone says this is unimplemented."
-        }
-    },
-    {
         "label": "roll_vs_skill",
         "kind": 3,
         "source": "builtin",
@@ -1822,7 +1812,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid set_exit_grids(elevation markElev, int mapID, int elevation, int tileNum, int rotation)\n```\n|||\n|:-|:-|\n|`markElev`|&nbsp;&nbsp;Elevation whose exit grids are changed|\n|`mapID`|&nbsp;&nbsp;Destination map; -1 stays on this map|\n|`elevation`|&nbsp;&nbsp;Destination elevation|\n|`tileNum`|&nbsp;&nbsp;Destination tile number|\n\nSets all exit grids on a given elevation (markElev) to point to a destination mapID (may be -1 which means stay on this map), elevation, tileNum, and rotation."
+            "value": "```fallout-ssl-tooltip\nvoid set_exit_grids(int markElev, int mapID, int elevation, int tileNum, int rotation)\n```\n|||\n|:-|:-|\n|`markElev`|&nbsp;&nbsp;Elevation whose exit grids are changed|\n|`mapID`|&nbsp;&nbsp;Destination map; -1 stays on this map|\n|`elevation`|&nbsp;&nbsp;Destination elevation|\n|`tileNum`|&nbsp;&nbsp;Destination tile number|\n\nSets all exit grids on a given elevation (markElev) to point to a destination mapID (may be -1 which means stay on this map), elevation, tileNum, and rotation."
         }
     },
     {
@@ -7596,7 +7586,7 @@
         "category": "window_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nvoid AddButtonGFX(string name, string hover, string normal, string pressed)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n\nSets the graphics for button states: hover, normal, and pressed appearances."
+            "value": "```fallout-ssl-tooltip\nvoid AddButtonGFX(string name, string pressed, string normal, string hover)\n```\n|||\n|:-|:-|\n|`name`|&nbsp;&nbsp;Name of a button created with `AddButton`|\n\nSets the graphics for button states: pressed, normal, and hover appearances."
         }
     },
     {

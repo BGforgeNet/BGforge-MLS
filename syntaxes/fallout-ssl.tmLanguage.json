@@ -1219,10 +1219,6 @@
           "name": "support.function.fallout-ssl.base"
         },
         {
-          "match": "\\b(?i)(roll_dice)\\b",
-          "name": "support.function.fallout-ssl.base"
-        },
-        {
           "match": "\\b(?i)(roll_vs_skill)\\b",
           "name": "support.function.fallout-ssl.base"
         },
