@@ -978,10 +978,6 @@
           "name": "entity.name.function.weidu-tp2.patch"
         },
         {
-          "match": "\\b(ADD_STORE_PURCHASE)\\b",
-          "name": "entity.name.function.weidu-tp2.patch"
-        },
-        {
           "match": "\\b(APPEND_FILE)\\b",
           "name": "entity.name.function.weidu-tp2.patch"
         },
@@ -1334,23 +1330,7 @@
           "name": "entity.name.function.weidu-tp2.patch"
         },
         {
-          "match": "\\b(REMOVE_STORE_CURE)\\b",
-          "name": "entity.name.function.weidu-tp2.patch"
-        },
-        {
-          "match": "\\b(REMOVE_STORE_DRINK)\\b",
-          "name": "entity.name.function.weidu-tp2.patch"
-        },
-        {
           "match": "\\b(REMOVE_STORE_ITEM)\\b",
-          "name": "entity.name.function.weidu-tp2.patch"
-        },
-        {
-          "match": "\\b(REMOVE_STORE_ITEM_EX)\\b",
-          "name": "entity.name.function.weidu-tp2.patch"
-        },
-        {
-          "match": "\\b(REMOVE_STORE_PURCHASE)\\b",
           "name": "entity.name.function.weidu-tp2.patch"
         },
         {
@@ -1618,6 +1598,10 @@
           "name": "support.function.weidu-tp2.patch-function"
         },
         {
+          "match": "\\b(ADD_STORE_PURCHASE)\\b",
+          "name": "support.function.weidu-tp2.patch-function"
+        },
+        {
           "match": "\\b(ADD_WORLDMAP_LINKS)\\b",
           "name": "support.function.weidu-tp2.patch-function"
         },
@@ -1779,6 +1763,22 @@
         },
         {
           "match": "\\b(REMOVE_CRE_ITEM_FLAGS)\\b",
+          "name": "support.function.weidu-tp2.patch-function"
+        },
+        {
+          "match": "\\b(REMOVE_STORE_CURE)\\b",
+          "name": "support.function.weidu-tp2.patch-function"
+        },
+        {
+          "match": "\\b(REMOVE_STORE_DRINK)\\b",
+          "name": "support.function.weidu-tp2.patch-function"
+        },
+        {
+          "match": "\\b(REMOVE_STORE_ITEM_EX)\\b",
+          "name": "support.function.weidu-tp2.patch-function"
+        },
+        {
+          "match": "\\b(REMOVE_STORE_PURCHASE)\\b",
           "name": "support.function.weidu-tp2.patch-function"
         },
         {

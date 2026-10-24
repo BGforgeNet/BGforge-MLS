@@ -1539,22 +1539,6 @@ patch:
         Add the item itemName to the current STO file. An optional + signifies that the new instance of the item should overwrite any existing instance of the same item. The item's number of charges are given by the respective charge argument, which must take the form of #integer or ( value ). The optional position argument must be one of AFTER String, BEFORE String, LAST, FIRST or AT value. AFTER will place the new item behind the item given by String. BEFORE will place the item before the item provided by String. LAST will place the new item after all existing items. FIRST will place the new item as the first item in the store. AT will place the new item at the position given by value, with the first item having position 0. If no position argument is given, ADD_STORE_ITEM defaults to FIRST. The argument flags must be a string consisting of one of none, identified, unstealable, stolen, identified&stolen or identified&unstealable. The argument stack sets the number of item the store carries in the stack and must take the form of #integer or ( value ). The optional argument unlimited should be one of the strings limited or unlimited and controls whether the store should carry an inexhaustible stack of the new item, or not. limited is the default behaviour. See the ADD_STORE_ITEM tutorial for more information.
 
     # Store-related functions (WeiDU v247+)
-    - name: ADD_STORE_PURCHASE
-      doc: |-
-        Adds one or more item categories the store will buy to the current STO file. Existing categories will be skipped.
-      type: patch
-      args:
-        - name: category
-          type: int
-          doc: "the item category to add. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
-      rets:
-        - name: index
-          type: int
-          doc: "the index of the added purchase. Returns `-1` if the purchase could not be added."
-        - name: offset
-          type: int
-          doc: "the offset of the added purchase. Returns `-1` if the purchase could not be added."
-
     - name: APPEND_FILE
       detail: APPEND_FILE [ TEXT ] filename
       doc: |-
@@ -2089,73 +2073,10 @@ patch:
       doc: |-
         Remove all memorized spells from the current creature.
 
-    - name: REMOVE_STORE_CURE
-      doc: Removes all cure instances matching the specified spell name from the current STO file. This is a patch function.
-      type: patch
-      args:
-        - name: spell_name
-          type: string
-          doc: the resource name (resref) of the spell to remove. Regular expression syntax is supported.
-      rets:
-        - name: index
-          type: int
-          doc: "the index of the first removed entry matching the spell name, returns `-1` otherwise"
-        - name: offset
-          type: int
-          doc: "the offset of the first removed entry matching the spell name, returns `-1` otherwise"
-
-    - name: REMOVE_STORE_DRINK
-      doc: |-
-        Removes all drink instances matching the specified drink name from the current STO file. This is a patch function.
-
-        `drink_name` supports: literal strings (regexp supported), strref values (`#1234`), or translation references (`@1000`).
-      type: patch
-      args:
-        - name: drink_name
-          type: string
-          doc: the name of the drink
-      rets:
-        - name: index
-          type: int
-          doc: "the index of the first removed entry matching the drink name, returns `-1` otherwise"
-        - name: offset
-          type: int
-          doc: "the offset of the first removed entry matching the drink name, returns `-1` otherwise"
-
     - name: REMOVE_STORE_ITEM
       detail: REMOVE_STORE_ITEM itmName list
       doc: |-
         Remove the listed items from the current store. Does nothing if an item is not for sale. 	Multiple instances are removed.
-
-    - name: REMOVE_STORE_ITEM_EX
-      doc: Removes all sale instances matching the specified item name from the current STO file. This is a patch function.
-      type: patch
-      args:
-        - name: item_name
-          type: string
-          doc: the resource name (resref) of the item to remove. Regular expression syntax is supported.
-      rets:
-        - name: index
-          type: int
-          doc: "the index of the first removed entry matching the item name, returns `-1` otherwise"
-        - name: offset
-          type: int
-          doc: "the offset of the first removed entry matching the item name, returns `-1` otherwise"
-
-    - name: REMOVE_STORE_PURCHASE
-      doc: Removes the specified item category from the current STO file. This is a patch function.
-      type: patch
-      args:
-        - name: category
-          type: int
-          doc: "the item category to remove. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
-      rets:
-        - name: index
-          type: int
-          doc: "the index of the first removed entry matching the category, returns `-1` otherwise"
-        - name: offset
-          type: int
-          doc: "the offset of the first removed entry matching the category, returns `-1` otherwise"
 
     - name: REPLACE
       detail: REPLACE optcase optexact regexp text
@@ -3030,6 +2951,22 @@ patch_functions:
         - name: offset
           type: int
           doc: "the offset of the added item or the last matching offset when overwriting. Returns `-1` if the item could not be added or updated."
+
+    - name: ADD_STORE_PURCHASE
+      doc: |-
+        Adds one or more item categories the store will buy to the current STO file. Existing categories will be skipped.
+      type: patch
+      args:
+        - name: category
+          type: int
+          doc: "the item category to add. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
+      rets:
+        - name: index
+          type: int
+          doc: "the index of the added purchase. Returns `-1` if the purchase could not be added."
+        - name: offset
+          type: int
+          doc: "the offset of the added purchase. Returns `-1` if the purchase could not be added."
 
     - name: ADD_WORLDMAP_LINKS
       doc: |-
@@ -4619,6 +4556,69 @@ patch_functions:
         - name: flags
           type: string
           doc: "flags you need to remove (usual weidu syntax: STOLEN, IDENTIFIEDSTOLEN, etc)"
+
+    - name: REMOVE_STORE_CURE
+      doc: Removes all cure instances matching the specified spell name from the current STO file. This is a patch function.
+      type: patch
+      args:
+        - name: spell_name
+          type: string
+          doc: the resource name (resref) of the spell to remove. Regular expression syntax is supported.
+      rets:
+        - name: index
+          type: int
+          doc: "the index of the first removed entry matching the spell name, returns `-1` otherwise"
+        - name: offset
+          type: int
+          doc: "the offset of the first removed entry matching the spell name, returns `-1` otherwise"
+
+    - name: REMOVE_STORE_DRINK
+      doc: |-
+        Removes all drink instances matching the specified drink name from the current STO file. This is a patch function.
+
+        `drink_name` supports: literal strings (regexp supported), strref values (`#1234`), or translation references (`@1000`).
+      type: patch
+      args:
+        - name: drink_name
+          type: string
+          doc: the name of the drink
+      rets:
+        - name: index
+          type: int
+          doc: "the index of the first removed entry matching the drink name, returns `-1` otherwise"
+        - name: offset
+          type: int
+          doc: "the offset of the first removed entry matching the drink name, returns `-1` otherwise"
+
+    - name: REMOVE_STORE_ITEM_EX
+      doc: Removes all sale instances matching the specified item name from the current STO file. This is a patch function.
+      type: patch
+      args:
+        - name: item_name
+          type: string
+          doc: the resource name (resref) of the item to remove. Regular expression syntax is supported.
+      rets:
+        - name: index
+          type: int
+          doc: "the index of the first removed entry matching the item name, returns `-1` otherwise"
+        - name: offset
+          type: int
+          doc: "the offset of the first removed entry matching the item name, returns `-1` otherwise"
+
+    - name: REMOVE_STORE_PURCHASE
+      doc: Removes the specified item category from the current STO file. This is a patch function.
+      type: patch
+      args:
+        - name: category
+          type: int
+          doc: "the item category to remove. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
+      rets:
+        - name: index
+          type: int
+          doc: "the index of the first removed entry matching the category, returns `-1` otherwise"
+        - name: offset
+          type: int
+          doc: "the offset of the first removed entry matching the category, returns `-1` otherwise"
 
     - name: REPLACE_AREA_ITEM
       doc: |-

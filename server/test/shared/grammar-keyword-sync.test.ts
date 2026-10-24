@@ -98,9 +98,10 @@ interface GrammarCfg {
     data: string;
     /**
      * Data blocks whose every entry must be a real grammar token. `keywords:` is the completion keyword list;
-     * tp2 additionally documents its top-level directives under `flag:` and its component flags under
-     * `component_flag:`. Those two are where drift hurts most: a directive documented and offered in
-     * completion but absent from the grammar turns into a false "Syntax error" on every file that uses it.
+     * tp2 additionally documents its top-level directives under `flag:`, its component flags under
+     * `component_flag:`, its commands under `action:` and `patch:`, its value functions under
+     * `value_function:` and its when clauses under `when:`. A name documented and offered in completion but
+     * absent from the grammar turns into a false "Syntax error" on every file that uses it.
      * Empty for weidu-baf and weidu-d, whose `keywords:` list intentionally includes WeiDU scope/construct
      * words (GLOBAL/LOCALS/MYAREA/...) that the grammar parses as identifiers, not reserved tokens - a subset
      * check there would be mostly-allowlist.
@@ -133,7 +134,7 @@ const GRAMMARS: GrammarCfg[] = [
         id: "weidu-tp2",
         tm: "weidu-tp2.tmLanguage.yml",
         data: "weidu-tp2-base.yml",
-        dataSubsetBlocks: ["keywords", "flag", "component_flag"],
+        dataSubsetBlocks: ["keywords", "flag", "component_flag", "action", "patch", "value_function", "when"],
         caseInsensitive: false,
         textmateAbsenceAllow: {
             DEFINE_FUNCTION_ACTION: LEGACY_ALIAS,

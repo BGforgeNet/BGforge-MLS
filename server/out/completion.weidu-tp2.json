@@ -2826,31 +2826,6 @@
         }
     },
     {
-        "label": "ADD_STORE_PURCHASE",
-        "kind": 3,
-        "source": "builtin",
-        "category": "patch",
-        "documentation": {
-            "kind": "markdown",
-            "value": "```weidu-tp2-tooltip\npatch function ADD_STORE_PURCHASE\n```\n\n---\n\nAdds one or more item categories the store will buy to the current STO file. Existing categories will be skipped.\n\n| | | | |\n|-:|:-|:-|:-|\n|**INT**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|category||&nbsp;&nbsp;the item category to add. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType).|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the added purchase. Returns `-1` if the purchase could not be added.|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the added purchase. Returns `-1` if the purchase could not be added.|"
-        },
-        "params": {
-            "intVar": [
-                {
-                    "name": "category",
-                    "type": "int",
-                    "description": "the item category to add. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
-                }
-            ],
-            "strVar": [],
-            "ret": [
-                "index",
-                "offset"
-            ],
-            "retArray": []
-        }
-    },
-    {
         "label": "APPEND_FILE",
         "kind": 3,
         "source": "builtin",
@@ -3744,56 +3719,6 @@
         }
     },
     {
-        "label": "REMOVE_STORE_CURE",
-        "kind": 3,
-        "source": "builtin",
-        "category": "patch",
-        "documentation": {
-            "kind": "markdown",
-            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_CURE\n```\n\n---\n\nRemoves all cure instances matching the specified spell name from the current STO file. This is a patch function.\n\n| | | | |\n|-:|:-|:-|:-|\n|**STR**|**vars**|||\n|[string](https://ielib.bgforge.net/types#string)|spell_name||&nbsp;&nbsp;the resource name (resref) of the spell to remove. Regular expression syntax is supported.|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the spell name, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the spell name, returns `-1` otherwise|"
-        },
-        "params": {
-            "intVar": [],
-            "strVar": [
-                {
-                    "name": "spell_name",
-                    "type": "string",
-                    "description": "the resource name (resref) of the spell to remove. Regular expression syntax is supported."
-                }
-            ],
-            "ret": [
-                "index",
-                "offset"
-            ],
-            "retArray": []
-        }
-    },
-    {
-        "label": "REMOVE_STORE_DRINK",
-        "kind": 3,
-        "source": "builtin",
-        "category": "patch",
-        "documentation": {
-            "kind": "markdown",
-            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_DRINK\n```\n\n---\n\nRemoves all drink instances matching the specified drink name from the current STO file. This is a patch function.\n\n`drink_name` supports: literal strings (regexp supported), strref values (`#1234`), or translation references (`@1000`).\n\n| | | | |\n|-:|:-|:-|:-|\n|**STR**|**vars**|||\n|[string](https://ielib.bgforge.net/types#string)|drink_name||&nbsp;&nbsp;the name of the drink|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the drink name, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the drink name, returns `-1` otherwise|"
-        },
-        "params": {
-            "intVar": [],
-            "strVar": [
-                {
-                    "name": "drink_name",
-                    "type": "string",
-                    "description": "the name of the drink"
-                }
-            ],
-            "ret": [
-                "index",
-                "offset"
-            ],
-            "retArray": []
-        }
-    },
-    {
         "label": "REMOVE_STORE_ITEM",
         "kind": 3,
         "source": "builtin",
@@ -3801,56 +3726,6 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nREMOVE_STORE_ITEM itmName list\n```\nRemove the listed items from the current store. Does nothing if an item is not for sale. \tMultiple instances are removed."
-        }
-    },
-    {
-        "label": "REMOVE_STORE_ITEM_EX",
-        "kind": 3,
-        "source": "builtin",
-        "category": "patch",
-        "documentation": {
-            "kind": "markdown",
-            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_ITEM_EX\n```\n\n---\n\nRemoves all sale instances matching the specified item name from the current STO file. This is a patch function.\n\n| | | | |\n|-:|:-|:-|:-|\n|**STR**|**vars**|||\n|[string](https://ielib.bgforge.net/types#string)|item_name||&nbsp;&nbsp;the resource name (resref) of the item to remove. Regular expression syntax is supported.|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the item name, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the item name, returns `-1` otherwise|"
-        },
-        "params": {
-            "intVar": [],
-            "strVar": [
-                {
-                    "name": "item_name",
-                    "type": "string",
-                    "description": "the resource name (resref) of the item to remove. Regular expression syntax is supported."
-                }
-            ],
-            "ret": [
-                "index",
-                "offset"
-            ],
-            "retArray": []
-        }
-    },
-    {
-        "label": "REMOVE_STORE_PURCHASE",
-        "kind": 3,
-        "source": "builtin",
-        "category": "patch",
-        "documentation": {
-            "kind": "markdown",
-            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_PURCHASE\n```\n\n---\n\nRemoves the specified item category from the current STO file. This is a patch function.\n\n| | | | |\n|-:|:-|:-|:-|\n|**INT**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|category||&nbsp;&nbsp;the item category to remove. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType).|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the category, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the category, returns `-1` otherwise|"
-        },
-        "params": {
-            "intVar": [
-                {
-                    "name": "category",
-                    "type": "int",
-                    "description": "the item category to remove. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
-                }
-            ],
-            "strVar": [],
-            "ret": [
-                "index",
-                "offset"
-            ],
-            "retArray": []
         }
     },
     {
@@ -5303,6 +5178,31 @@
                     "defaultValue": "#-1"
                 }
             ],
+            "ret": [
+                "index",
+                "offset"
+            ],
+            "retArray": []
+        }
+    },
+    {
+        "label": "ADD_STORE_PURCHASE",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch_functions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\npatch function ADD_STORE_PURCHASE\n```\n\n---\n\nAdds one or more item categories the store will buy to the current STO file. Existing categories will be skipped.\n\n| | | | |\n|-:|:-|:-|:-|\n|**INT**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|category||&nbsp;&nbsp;the item category to add. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType).|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the added purchase. Returns `-1` if the purchase could not be added.|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the added purchase. Returns `-1` if the purchase could not be added.|"
+        },
+        "params": {
+            "intVar": [
+                {
+                    "name": "category",
+                    "type": "int",
+                    "description": "the item category to add. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
+                }
+            ],
+            "strVar": [],
             "ret": [
                 "index",
                 "offset"
@@ -7937,6 +7837,106 @@
                 }
             ],
             "ret": [],
+            "retArray": []
+        }
+    },
+    {
+        "label": "REMOVE_STORE_CURE",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch_functions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_CURE\n```\n\n---\n\nRemoves all cure instances matching the specified spell name from the current STO file. This is a patch function.\n\n| | | | |\n|-:|:-|:-|:-|\n|**STR**|**vars**|||\n|[string](https://ielib.bgforge.net/types#string)|spell_name||&nbsp;&nbsp;the resource name (resref) of the spell to remove. Regular expression syntax is supported.|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the spell name, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the spell name, returns `-1` otherwise|"
+        },
+        "params": {
+            "intVar": [],
+            "strVar": [
+                {
+                    "name": "spell_name",
+                    "type": "string",
+                    "description": "the resource name (resref) of the spell to remove. Regular expression syntax is supported."
+                }
+            ],
+            "ret": [
+                "index",
+                "offset"
+            ],
+            "retArray": []
+        }
+    },
+    {
+        "label": "REMOVE_STORE_DRINK",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch_functions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_DRINK\n```\n\n---\n\nRemoves all drink instances matching the specified drink name from the current STO file. This is a patch function.\n\n`drink_name` supports: literal strings (regexp supported), strref values (`#1234`), or translation references (`@1000`).\n\n| | | | |\n|-:|:-|:-|:-|\n|**STR**|**vars**|||\n|[string](https://ielib.bgforge.net/types#string)|drink_name||&nbsp;&nbsp;the name of the drink|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the drink name, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the drink name, returns `-1` otherwise|"
+        },
+        "params": {
+            "intVar": [],
+            "strVar": [
+                {
+                    "name": "drink_name",
+                    "type": "string",
+                    "description": "the name of the drink"
+                }
+            ],
+            "ret": [
+                "index",
+                "offset"
+            ],
+            "retArray": []
+        }
+    },
+    {
+        "label": "REMOVE_STORE_ITEM_EX",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch_functions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_ITEM_EX\n```\n\n---\n\nRemoves all sale instances matching the specified item name from the current STO file. This is a patch function.\n\n| | | | |\n|-:|:-|:-|:-|\n|**STR**|**vars**|||\n|[string](https://ielib.bgforge.net/types#string)|item_name||&nbsp;&nbsp;the resource name (resref) of the item to remove. Regular expression syntax is supported.|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the item name, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the item name, returns `-1` otherwise|"
+        },
+        "params": {
+            "intVar": [],
+            "strVar": [
+                {
+                    "name": "item_name",
+                    "type": "string",
+                    "description": "the resource name (resref) of the item to remove. Regular expression syntax is supported."
+                }
+            ],
+            "ret": [
+                "index",
+                "offset"
+            ],
+            "retArray": []
+        }
+    },
+    {
+        "label": "REMOVE_STORE_PURCHASE",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch_functions",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\npatch function REMOVE_STORE_PURCHASE\n```\n\n---\n\nRemoves the specified item category from the current STO file. This is a patch function.\n\n| | | | |\n|-:|:-|:-|:-|\n|**INT**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|category||&nbsp;&nbsp;the item category to remove. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType).|\n|**RET**|**vars**|||\n|[int](https://ielib.bgforge.net/types#int)|index||&nbsp;&nbsp;the index of the first removed entry matching the category, returns `-1` otherwise|\n|[int](https://ielib.bgforge.net/types#int)|offset||&nbsp;&nbsp;the offset of the first removed entry matching the category, returns `-1` otherwise|"
+        },
+        "params": {
+            "intVar": [
+                {
+                    "name": "category",
+                    "type": "int",
+                    "description": "the item category to remove. A nearly complete list of supported item category codes can be found [here](https://gibberlings3.github.io/iesdp/file_formats/ie_formats/sto_v1.htm#tableItemType)."
+                }
+            ],
+            "strVar": [],
+            "ret": [
+                "index",
+                "offset"
+            ],
             "retArray": []
         }
     },

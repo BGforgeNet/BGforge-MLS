@@ -353,7 +353,6 @@ repository:
       - match: \b(ADD_MAP_NOTE)\b
       - match: \b(ADD_MEMORIZED_SPELL)\b
       - match: \b(ADD_STORE_ITEM)\b
-      - match: \b(ADD_STORE_PURCHASE)\b
       - match: \b(APPEND_FILE)\b
       - match: \b(APPEND_FILE_EVALUATE)\b
       - match: \b(APPLY_BCS_PATCH)\b
@@ -446,11 +445,7 @@ repository:
       - match: \b(REMOVE_KNOWN_SPELLS)\b
       - match: \b(REMOVE_MEMORIZED_SPELL)\b
       - match: \b(REMOVE_MEMORIZED_SPELLS)\b
-      - match: \b(REMOVE_STORE_CURE)\b
-      - match: \b(REMOVE_STORE_DRINK)\b
       - match: \b(REMOVE_STORE_ITEM)\b
-      - match: \b(REMOVE_STORE_ITEM_EX)\b
-      - match: \b(REMOVE_STORE_PURCHASE)\b
       - match: \b(REPLACE)\b
       - match: \b(REPLACE_BCS_BLOCK)\b
       - match: \b(REPLACE_BCS_BLOCK_REGEXP)\b
@@ -544,6 +539,8 @@ repository:
         name: support.function.weidu-tp2.patch-function
       - match: \b(ADD_STORE_ITEM_EX)\b
         name: support.function.weidu-tp2.patch-function
+      - match: \b(ADD_STORE_PURCHASE)\b
+        name: support.function.weidu-tp2.patch-function
       - match: \b(ADD_WORLDMAP_LINKS)\b
         name: support.function.weidu-tp2.patch-function
       - match: \b(ALTER_AREA_ACTOR)\b
@@ -625,6 +622,14 @@ repository:
       - match: \b(READ_SOUNDSET)\b
         name: support.function.weidu-tp2.action-macro
       - match: \b(REMOVE_CRE_ITEM_FLAGS)\b
+        name: support.function.weidu-tp2.patch-function
+      - match: \b(REMOVE_STORE_CURE)\b
+        name: support.function.weidu-tp2.patch-function
+      - match: \b(REMOVE_STORE_DRINK)\b
+        name: support.function.weidu-tp2.patch-function
+      - match: \b(REMOVE_STORE_ITEM_EX)\b
+        name: support.function.weidu-tp2.patch-function
+      - match: \b(REMOVE_STORE_PURCHASE)\b
         name: support.function.weidu-tp2.patch-function
       - match: \b(REPLACE_AREA_ITEM)\b
         name: support.function.weidu-tp2.patch-function
