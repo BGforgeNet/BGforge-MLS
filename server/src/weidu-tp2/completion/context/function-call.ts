@@ -7,6 +7,7 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "../../syntax-type";
 import { stripStringDelimiters } from "../../tree-utils";
+import { CallableContext } from "../../../core/symbol";
 import { ParamSection, CompletionContext, type FuncParamsContext } from "../types";
 import { findBeginEndBoundaries } from "./position";
 
@@ -29,7 +30,7 @@ export function resetFuncParamsContext(): void {
     lastFuncParamsContext = null;
 }
 
-const CALL_HEAD = /^\s*(?:LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION)\s+(\S+)([\s\S]*)$/i;
+const CALL_HEAD = /^\s*(LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION)\s+(\S+)([\s\S]*)$/i;
 const SECTION_KEYWORD = /\b(INT_VAR|STR_VAR|RET_ARRAY|RET)\b/g;
 const SECTIONS: Readonly<Record<string, ParamSection>> = {
     INT_VAR: ParamSection.IntVar,
@@ -46,14 +47,15 @@ const SECTIONS: Readonly<Record<string, ParamSection>> = {
 export function setFuncParamsContextFromText(prefix: string): void {
     const head = CALL_HEAD.exec(prefix);
     if (!head) return;
-    const rest = head[2] ?? "";
+    const rest = head[3] ?? "";
     const sections = [...rest.matchAll(SECTION_KEYWORD)];
     const last = sections.at(-1);
     const paramSection = last ? SECTIONS[last[1]!.toUpperCase()] : undefined;
     if (!last || !paramSection) return;
     const afterSection = rest.slice((last.index ?? 0) + last[0].length);
     lastFuncParamsContext = {
-        functionName: stripStringDelimiters(head[1]!),
+        functionName: stripStringDelimiters(head[2]!),
+        callContext: /^(LAF|LAUNCH_ACTION_FUNCTION)$/i.test(head[1]!) ? CallableContext.Action : CallableContext.Patch,
         paramSection,
         usedParams: [...afterSection.matchAll(/(\S+?)\s*=/g)].map((match) => match[1]!),
     };
@@ -220,6 +222,7 @@ function extractFuncParamsContext(node: SyntaxNode, cursorOffset: number): void 
         const usedParams = extractUsedParamsAfter(sectionNode, keywordPosition, cursorOffset);
         lastFuncParamsContext = {
             functionName,
+            callContext: node.type === SyntaxType.PatchLaunchFunction ? CallableContext.Patch : CallableContext.Action,
             paramSection: sectionType,
             usedParams,
         };

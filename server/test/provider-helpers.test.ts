@@ -168,13 +168,29 @@ describe("formatWithValidation", () => {
         expect(result.edits).toEqual([]);
     });
 
+    it("skips a tree with a syntax error without a warning or a formatter call", () => {
+        const formatAst = vi.fn(() => ({ text: "x" }));
+        const result = formatWithValidation({
+            text: "code",
+            uri: "file:///a.ts",
+            languageName: "TEST",
+            isInitialized: () => true,
+            parse: () => ({ rootNode: { hasError: true } }),
+            formatAst,
+            getFormatOptions: () => ({}),
+            normalizeForCompare: (t: string) => t,
+        });
+        expect(result).toEqual({ edits: [] });
+        expect(formatAst).not.toHaveBeenCalled();
+    });
+
     it("returns edits on successful format", () => {
         const result = formatWithValidation({
             text: "  code  ",
             uri: "file:///a.ts",
             languageName: "TEST",
             isInitialized: () => true,
-            parse: () => ({ rootNode: {} }),
+            parse: () => ({ rootNode: { hasError: false } }),
             formatAst: () => ({ text: "code" }),
             getFormatOptions: () => ({}),
             normalizeForCompare: (t: string) => t,
@@ -188,7 +204,7 @@ describe("formatWithValidation", () => {
             uri: "file:///a.ts",
             languageName: "TEST",
             isInitialized: () => true,
-            parse: () => ({ rootNode: {} }),
+            parse: () => ({ rootNode: { hasError: false } }),
             formatAst: () => {
                 throw new Error("parse fail");
             },
@@ -205,7 +221,7 @@ describe("formatWithValidation", () => {
             uri: "file:///a.ts",
             languageName: "TEST",
             isInitialized: () => true,
-            parse: () => ({ rootNode: {} }),
+            parse: () => ({ rootNode: { hasError: false } }),
             formatAst: () => ({ text: "xyz" }),
             getFormatOptions: () => ({}),
             normalizeForCompare: (t: string) => t,

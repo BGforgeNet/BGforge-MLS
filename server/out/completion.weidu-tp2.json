@@ -1592,6 +1592,16 @@
         }
     },
     {
+        "label": "END",
+        "kind": 14,
+        "source": "builtin",
+        "category": "block_end",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nBEGIN ... END\n```\nCloses a BEGIN block, a function call's parameter list (LAF name ... END), an ALWAYS block and the like."
+        }
+    },
+    {
         "label": "CACHE",
         "kind": 14,
         "source": "builtin",
@@ -2649,6 +2659,16 @@
         }
     },
     {
+        "label": "ELSE",
+        "kind": 14,
+        "source": "builtin",
+        "category": "keywords",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nACTION_IF value [ THEN ] BEGIN action list END [ ELSE BEGIN action list END ]\n```"
+        }
+    },
+    {
         "label": "IF_EXISTING",
         "kind": 14,
         "source": "builtin",
@@ -2676,6 +2696,16 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nAPPEND_FILE [ TEXT ] filename\n```\nIf TEXT is specified, the contents of filename and the current file is separated by a newline character (LF) unless the first character of filename or the last character of the current file is a newline character."
+        }
+    },
+    {
+        "label": "THEN",
+        "kind": 14,
+        "source": "builtin",
+        "category": "keywords",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nACTION_IF value [ THEN ] BEGIN action list END\n```"
         }
     },
     {

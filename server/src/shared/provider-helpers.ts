@@ -82,7 +82,10 @@ export function getStaticCompletions(symbols: Symbols | undefined): CompletionIt
 // ============================================
 
 /** Options for the formatWithValidation helper. Generic parameters allow type-safe usage without `any`. */
-interface FormatWithValidationOptions<TRoot = unknown, TOpts = unknown> {
+interface FormatWithValidationOptions<
+    TRoot extends { readonly hasError: boolean } = { readonly hasError: boolean },
+    TOpts = unknown,
+> {
     /** Current document text */
     text: string;
     /** Document URI */
@@ -105,13 +108,22 @@ interface FormatWithValidationOptions<TRoot = unknown, TOpts = unknown> {
  * Shared format method with parse, format, validate, and error handling.
  * Used by BAF, D, and TP2 providers.
  */
-export function formatWithValidation<TRoot, TOpts>(opts: FormatWithValidationOptions<TRoot, TOpts>): FormatResult {
+export function formatWithValidation<TRoot extends { readonly hasError: boolean }, TOpts>(
+    opts: FormatWithValidationOptions<TRoot, TOpts>,
+): FormatResult {
     if (!opts.isInitialized()) {
         return { edits: [] };
     }
 
     const tree = opts.parse(opts.text);
     if (!tree) {
+        return { edits: [] };
+    }
+
+    // A file with a syntax error is not formatted, and says nothing about it: the error is already a diagnostic,
+    // and format-on-save mid-edit would otherwise raise a warning on every save.
+    if (tree.rootNode.hasError) {
+        conlog(`${opts.languageName} formatter: skipped, the document has a syntax error`, "debug");
         return { edits: [] };
     }
 

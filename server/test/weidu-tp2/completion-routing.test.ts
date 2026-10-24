@@ -38,6 +38,31 @@ beforeAll(async () => {
     });
 });
 
+describe("weidu-tp2: formatting a file with a syntax error", () => {
+    it("leaves it unchanged without a warning: the error is already a diagnostic", () => {
+        const result = weiduTp2Provider.format!(
+            "ACTION_IF a BEGIN\n  PRINT ~x~\n",
+            normalizeUri("file:///mid-edit.tp2"),
+        );
+        expect(result).toEqual({ edits: [] });
+    });
+});
+
+describe("weidu-tp2: functions defined in the file being edited", () => {
+    it.each(["file:///lib.tpa", "file:///setup-x.tp2"])("are offered after LAF in %s", (file) => {
+        const uri = normalizeUri(file);
+        const text = `DEFINE_ACTION_FUNCTION own_fn BEGIN END\nBEGIN ~c~\nDEFINE_ACTION_FUNCTION nested_fn BEGIN END\nLAF |\n`;
+        const at = text.indexOf("|");
+        const before = text.slice(0, at).split("\n");
+        const position = { line: before.length - 1, character: before.at(-1)!.length };
+        const clean = text.replace("|", "");
+        weiduTp2Provider.reloadFileData!(uri, clean);
+        const items = weiduTp2Provider.filterCompletions!(weiduTp2Provider.getCompletions!(uri), clean, position, uri);
+        expect(items.map((item) => item.label)).toEqual(expect.arrayContaining(["own_fn", "nested_fn"]));
+        weiduTp2Provider.onWatchedFileDeleted!(uri);
+    });
+});
+
 describe("weidu-tp2: workspace completions", () => {
     it("offers a name defined in several headers once", () => {
         const first = normalizeUri("file:///ids-a.tph");
@@ -50,6 +75,19 @@ describe("weidu-tp2: workspace completions", () => {
 
         weiduTp2Provider.onWatchedFileDeleted!(first);
         weiduTp2Provider.onWatchedFileDeleted!(second);
+    });
+
+    it("keeps one entry per differing definition, each with its header", () => {
+        const bgee = normalizeUri("file:///ids-bgee.tph");
+        const bg2ee = normalizeUri("file:///ids-bg2ee.tph");
+        weiduTp2Provider.reloadFileData!(bgee, `OUTER_SET DIFFERING_IDS_NAME = 1\n`);
+        weiduTp2Provider.reloadFileData!(bg2ee, `OUTER_SET DIFFERING_IDS_NAME = 2\n`);
+
+        const items = weiduTp2Provider.getCompletions!(normalizeUri("file:///user.tp2"));
+        expect(items.filter((item) => item.label === "DIFFERING_IDS_NAME")).toHaveLength(2);
+
+        weiduTp2Provider.onWatchedFileDeleted!(bgee);
+        weiduTp2Provider.onWatchedFileDeleted!(bg2ee);
     });
 
     it("keeps an action and a patch function that share a name", () => {

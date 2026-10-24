@@ -134,7 +134,16 @@ const GRAMMARS: GrammarCfg[] = [
         id: "weidu-tp2",
         tm: "weidu-tp2.tmLanguage.yml",
         data: "weidu-tp2-base.yml",
-        dataSubsetBlocks: ["keywords", "flag", "component_flag", "action", "patch", "value_function", "when"],
+        dataSubsetBlocks: [
+            "keywords",
+            "block_end",
+            "flag",
+            "component_flag",
+            "action",
+            "patch",
+            "value_function",
+            "when",
+        ],
         caseInsensitive: false,
         textmateAbsenceAllow: {
             DEFINE_FUNCTION_ACTION: LEGACY_ALIAS,

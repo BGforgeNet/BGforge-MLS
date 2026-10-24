@@ -13,6 +13,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { getContextAtPosition, getFuncParamsContext } from "../../src/weidu-tp2/completion/context";
 import { CompletionContext, ParamSection } from "../../src/weidu-tp2/completion/types";
+import { CallableContext } from "../../src/core/symbol";
 
 beforeAll(async () => {
     await initParser();
@@ -296,6 +297,7 @@ describe("unfinished calls while typing", () => {
         expect(contexts).toEqual([CompletionContext.FuncParamName]);
         expect(getFuncParamsContext()).toEqual({
             functionName: "second_fn",
+            callContext: CallableContext.Patch,
             paramSection: ParamSection.IntVar,
             usedParams: ["opcode"],
         });
@@ -358,6 +360,7 @@ describe("unfinished calls while typing", () => {
         expect(contexts).toEqual([CompletionContext.FuncParamName]);
         expect(getFuncParamsContext()).toEqual({
             functionName: "CLONE_EFFECT",
+            callContext: CallableContext.Patch,
             paramSection: ParamSection.IntVar,
             usedParams: ["match_opcode"],
         });

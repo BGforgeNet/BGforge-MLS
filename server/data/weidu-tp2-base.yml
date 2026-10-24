@@ -885,6 +885,14 @@ array_sort_type:
       doc: |-
         The sorting is in ascending numerical order. This requires that the first column of indices can be interpreted as numbers; any strings will raise a warning and the sort order will be undefined.
 
+block_end:
+  type: 14 # keyword
+  items:
+    - name: END
+      detail: BEGIN ... END
+      doc: |-
+        Closes a BEGIN block, a function call's parameter list (LAF name ... END), an ALWAYS block and the like.
+
 caching:
   type: 14 # keyword
   items:
@@ -1378,6 +1386,9 @@ keywords:
       doc: |-
         The value is case-insensitively matched against the guard values. If value matches one of the guard values, the associated patch list is executed. If there is a condition, it additionally needs to evaluate to true for the values to match. If none of the values match, the DEFAULT patch list is executed. See the MATCH and TRY tutorial for additional information.
 
+    - name: ELSE
+      detail: ACTION_IF value [ THEN ] BEGIN action list END [ ELSE BEGIN action list END ]
+
     - name: IF_EXISTING
       detail: ADD_SPELL newSPLfile type level idsName patch list [ IF_EXISTING patch list END ] [ ON_DISABLE patch list END ]
       doc: |-
@@ -1392,6 +1403,9 @@ keywords:
       detail: APPEND_FILE [ TEXT ] filename
       doc: |-
         If TEXT is specified, the contents of filename and the current file is separated by a newline character (LF) unless the first character of filename or the last character of the current file is a newline character.
+
+    - name: THEN
+      detail: ACTION_IF value [ THEN ] BEGIN action list END
 
     - name: USING
 

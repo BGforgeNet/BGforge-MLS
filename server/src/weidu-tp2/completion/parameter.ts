@@ -4,7 +4,13 @@
  */
 
 import { CompletionItemKind, InsertTextFormat, MarkupKind } from "vscode-languageserver/node";
-import { isCallableSymbol, type CallableParam } from "../../core/symbol";
+import {
+    CallableContext,
+    isCallableSymbol,
+    type CallableParam,
+    type CallableSymbol,
+    type IndexedSymbol,
+} from "../../core/symbol";
 import type { Symbols } from "../../core/symbol-index";
 import { CompletionCategory, ParamSection, type FuncParamsContext, type Tp2CompletionItem } from "./types";
 import { LANG_WEIDU_TP2_TOOLTIP } from "../../core/languages";
@@ -13,17 +19,39 @@ import { LANG_WEIDU_TP2_TOOLTIP } from "../../core/languages";
  * Generate parameter completions for a function call.
  * Looks up the function definition and returns completions for unused parameters.
  */
-export function getParamCompletions(context: FuncParamsContext, symbols?: Symbols): Tp2CompletionItem[] {
-    const { functionName, paramSection, usedParams } = context;
+/**
+ * The definition whose parameters a call takes, when several share its name: one in the file being edited first,
+ * then one of the call's own kind (a patch function for LPF, an action function for LAF, a dimorphic one for
+ * either), then any, each in the index's scope order.
+ */
+function definitionFor(
+    context: FuncParamsContext,
+    symbols: Symbols | undefined,
+    local: ReadonlyMap<string, IndexedSymbol> | undefined,
+    uri: string | undefined,
+): CallableSymbol | undefined {
+    const candidates = [local?.get(context.functionName), ...(symbols?.lookupAll(context.functionName, { uri }) ?? [])]
+        .filter((symbol): symbol is CallableSymbol => symbol !== undefined && isCallableSymbol(symbol))
+        .filter((symbol) => symbol.callable.params !== undefined);
+    const ofKind = (symbol: CallableSymbol): boolean =>
+        symbol.callable.context === context.callContext || symbol.callable.context === CallableContext.Dimorphic;
+    const own = candidates.find((symbol) => symbol.location?.uri === uri && ofKind(symbol));
+    return own ?? candidates.find((symbol) => ofKind(symbol)) ?? candidates[0];
+}
 
-    // Look up function definition from unified symbol storage
-    const symbol = symbols?.lookup(functionName);
-    if (!symbol || !isCallableSymbol(symbol) || !symbol.callable.params) {
-        // Function not found or has no params (it's a macro)
+export function getParamCompletions(
+    context: FuncParamsContext,
+    symbols?: Symbols,
+    local?: ReadonlyMap<string, IndexedSymbol>,
+    uri?: string,
+): Tp2CompletionItem[] {
+    const { paramSection, usedParams } = context;
+
+    // A macro has no parameter list; an unknown function has none to offer
+    const params = definitionFor(context, symbols, local, uri)?.callable.params;
+    if (!params) {
         return [];
     }
-
-    const params = symbol.callable.params;
     const usedSet = new Set(usedParams);
     const completions: Tp2CompletionItem[] = [];
 

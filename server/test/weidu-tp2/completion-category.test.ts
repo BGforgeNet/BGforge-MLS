@@ -6,11 +6,41 @@
  * appear in all contexts.
  */
 
+import { readFileSync } from "fs";
+import path from "path";
+import { parse as parseYaml } from "yaml";
 import { describe, it, expect } from "vitest";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { filterItemsByContext } from "../../src/weidu-tp2/completion/filter";
 import { CompletionContext, type Tp2CompletionItem } from "../../src/weidu-tp2/completion/types";
 import { CompletionCategory } from "../../src/shared/completion-context";
+
+/** Item names of one stanza of the TP2 completion data (the stanza name is the items' category). */
+function stanzaNames(stanza: string): string[] {
+    const data = parseYaml(readFileSync(path.resolve(__dirname, "../../data/weidu-tp2-base.yml"), "utf8")) as Record<
+        string,
+        { items: { name: string }[] } | undefined
+    >;
+    return (data[stanza]?.items ?? []).map((item) => item.name);
+}
+
+describe("block keywords", () => {
+    it("offers END, ELSE and THEN", () => {
+        expect(stanzaNames(CompletionCategory.BlockEnd)).toEqual(["END"]);
+        expect(stanzaNames(CompletionCategory.Keywords)).toEqual(expect.arrayContaining(["ELSE", "THEN"]));
+    });
+
+    it("offers END where a call's parameters go, and in plain code, but not as a function name", () => {
+        const end: Tp2CompletionItem = {
+            label: "END",
+            kind: CompletionItemKind.Keyword,
+            category: CompletionCategory.BlockEnd,
+        };
+        expect(filterItemsByContext([end], [CompletionContext.FuncParamName])).toHaveLength(1);
+        expect(filterItemsByContext([end], [])).toHaveLength(1);
+        expect(filterItemsByContext([end], [CompletionContext.LafName])).toHaveLength(0);
+    });
+});
 
 describe("Completion Category Safeguards", () => {
     describe("category exclusion rules", () => {

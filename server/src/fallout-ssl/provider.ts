@@ -80,6 +80,7 @@ import {
 import { SyntaxType } from "./syntax-type";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import type { SemanticTokenSpan } from "../shared/semantic-tokens";
+import { uniqueCompletions } from "../shared/unique-completions";
 
 /** SSL block-level node types for code folding. */
 const SSL_FOLDABLE_TYPES = new Set([
@@ -380,9 +381,7 @@ class FalloutSslProvider
     }
 
     getCompletions(uri: NormalizedUri): CompletionItem[] {
-        return this.fileIndex
-            ? this.fileIndex.symbols.query({ excludeUri: uri }).map((s: IndexedSymbol) => s.completion)
-            : [];
+        return this.fileIndex ? uniqueCompletions(this.fileIndex.symbols.query({ excludeUri: uri })) : [];
     }
 
     getSignature(_uri: NormalizedUri, symbolName: string, paramIndex: number): SignatureHelp | null {

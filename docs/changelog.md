@@ -26,6 +26,26 @@
 
 - The built-in BAF compiler reads an object written with empty parentheses, such as `LastSeenBy()`, as
   `LastSeenBy(Myself)`, as WeiDU does, so a compiled script matches WeiDU's. It used to store a bare `LastSeenBy`.
+- TP2 no longer reports syntax errors on TP2 code WeiDU accepts: the remaining actions, patches, values, operators,
+  text arguments and keyword-named variables.
+- TP2 reads code the way WeiDU does: `1 + 2 * 3` multiplies first, `FILE_EXISTS ~a~ AND FILE_EXISTS ~b~` is two
+  checks, a `count = 1` after a list such as `REMOVE_STORE_ITEM` is its own assignment, `/* ... */` inside a string
+  is text, and a component keeps all its actions.
+- A TP2 file being edited keeps its structure: a block, function or `%variable%` not closed yet no longer turns the
+  rest of the file into one syntax error, so the outline, folding and completion keep working while you type.
+- TP2 completion inside a function call that has no `END` yet offers that function's own parameters, across lines,
+  and variables after `=`. `END`, `ELSE` and `THEN` are offered, `PHP_EACH` offers its array again, and an `LPF`
+  call gets the patch function's parameters when an action function shares its name.
+- TP2 functions defined inside a component or a block appear in the outline, completion and the call hierarchy.
+- Formatting TP2 no longer drops the name in `INNER_PATCH_SAVE EVAL`, and hover pairs every function parameter
+  with its own default.
+
+### All languages
+
+- A name several headers define identically is offered once in completion; definitions that differ each show
+  with their header.
+- Formatting a file that has a syntax error leaves it unchanged without a warning on every save: the error is
+  already marked in the file.
 
 ### Icons
 

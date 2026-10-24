@@ -422,30 +422,44 @@ end`;
         });
     });
 
-    it("getCompletions should return duplicates from multiple headers", async () => {
+    it("getCompletions lists a name once per differing definition, each with its header", async () => {
         const mockContext: ProviderContext = {
             workspaceRoot: "/mymod",
             settings: {} as MLSsettings,
         };
         await falloutSslProvider.init(mockContext);
 
-        // Two headers define the same constant
+        // Two headers define the same constant with different values
+        const headerA = normalizeUri("file:///mymod/headers/a.h");
+        const headerB = normalizeUri("file:///mymod/headers/b.h");
+
+        falloutSslProvider.reloadFileData!(headerA, "#define PIPBOY (0x400)");
+        falloutSslProvider.reloadFileData!(headerB, "#define PIPBOY (0x800)");
+
+        const completions = falloutSslProvider.getCompletions!(normalizeUri("file:///mymod/scripts/test.ssl"));
+        const pipboyCompletions = completions.filter((c) => c.label === "PIPBOY");
+
+        // Each definition stays, its labelDetails.description showing which header it comes from
+        expect(pipboyCompletions.map((c) => c.labelDetails?.description).sort()).toEqual([
+            "headers/a.h",
+            "headers/b.h",
+        ]);
+    });
+
+    it("getCompletions merges identical definitions from multiple headers", async () => {
+        const mockContext: ProviderContext = {
+            workspaceRoot: "/mymod",
+            settings: {} as MLSsettings,
+        };
+        await falloutSslProvider.init(mockContext);
+
         const headerA = normalizeUri("file:///mymod/headers/a.h");
         const headerB = normalizeUri("file:///mymod/headers/b.h");
 
         falloutSslProvider.reloadFileData!(headerA, "#define PIPBOY (0x400)");
         falloutSslProvider.reloadFileData!(headerB, "#define PIPBOY (0x400)");
 
-        // getCompletions should return BOTH symbols
         const completions = falloutSslProvider.getCompletions!(normalizeUri("file:///mymod/scripts/test.ssl"));
-        const pipboyCompletions = completions.filter((c) => c.label === "PIPBOY");
-
-        // Both duplicates should be present
-        expect(pipboyCompletions).toHaveLength(2);
-
-        // Each should have different labelDetails.description showing source path
-        const descriptions = pipboyCompletions.map((c) => c.labelDetails?.description);
-        expect(descriptions).toContain("headers/a.h");
-        expect(descriptions).toContain("headers/b.h");
+        expect(completions.filter((c) => c.label === "PIPBOY")).toHaveLength(1);
     });
 });

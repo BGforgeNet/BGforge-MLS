@@ -90,4 +90,18 @@ describe("SSL getCompletions excludeUri", () => {
         expect(labels).toContain("builtin_func");
         expect(labels).not.toContain("func_a");
     });
+
+    it("offers a name several headers define once", () => {
+        const fileIndex = new FileIndex(LANG_FALLOUT_SSL);
+        const headerA = "file:///headers/a.h";
+        const headerB = "file:///headers/b.h";
+        fileIndex.symbols.updateFile(normalizeUri(headerA), [createSymbol("SHARED_DEFINE", headerA)]);
+        fileIndex.symbols.updateFile(normalizeUri(headerB), [createSymbol("SHARED_DEFINE", headerB)]);
+
+        // No public seam for fileIndex injection (see above).
+        (provider as any).fileIndex = fileIndex;
+
+        const labels = provider.getCompletions("file:///scripts/user.ssl").map((c) => c.label);
+        expect(labels.filter((label) => label === "SHARED_DEFINE")).toHaveLength(1);
+    });
 });

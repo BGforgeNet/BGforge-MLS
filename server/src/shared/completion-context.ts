@@ -52,6 +52,8 @@ export const CompletionCategory = {
     Patch: "patch",
     // Clause words inside statements (AS, BEGIN, USING, ...)
     Keywords: "keywords",
+    // END, which closes a block or a call's parameter list, so it belongs where parameters go too
+    BlockEnd: "block_end",
     // Value items (not commands)
     Constants: "constants",
     Vars: "vars",

@@ -95,6 +95,7 @@ import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { SyntaxType } from "./syntax-type";
 import { getSemanticTokenSpans } from "./semantic-tokens";
 import { JSDOC_TYPE_TO_TOKEN, type SemanticTokenSpan } from "../shared/semantic-tokens";
+import { uniqueCompletions } from "../shared/unique-completions";
 
 /**
  * Resolve a variable symbol's JSDoc type to a semantic token type, if applicable.
@@ -147,7 +148,9 @@ const tp2SelectionRanges = createSelectionRangesProvider(isInitialized, parseWit
 function addParamCompletions(
     items: Tp2CompletionItem[],
     contexts: CompletionContext[],
-    symbolStore?: Symbols,
+    symbolStore: Symbols | undefined,
+    localByName: ReadonlyMap<string, IndexedSymbol>,
+    uri: NormalizedUri,
 ): Tp2CompletionItem[] {
     if (!contexts.includes(CompletionContext.FuncParamName)) {
         return items;
@@ -156,7 +159,7 @@ function addParamCompletions(
     if (!funcContext) {
         return items;
     }
-    const paramCompletions = getParamCompletions(funcContext, symbolStore);
+    const paramCompletions = getParamCompletions(funcContext, symbolStore, localByName, uri);
     if (paramCompletions.length === 0) {
         return items;
     }
@@ -342,18 +345,7 @@ class WeiduTp2Provider
         if (!this.fileIndex) {
             return [];
         }
-        // A name several headers define (IDS constants per game, shared helpers) is one completion; the first
-        // definition supplies its detail, as the local-symbol path already does. Only the same kind of symbol
-        // collapses: an action and a patch function may share a name, and each is offered where it is callable.
-        const unique = new Map<string, CompletionItem>();
-        for (const symbol of this.fileIndex.symbols.query({ excludeUri: uri })) {
-            const kind = isCallableSymbol(symbol)
-                ? `${symbol.callable.context ?? ""}:${symbol.callable.dtype ?? ""}`
-                : String(symbol.kind);
-            const key = `${symbol.completion.label}\u0000${kind}`;
-            if (!unique.has(key)) unique.set(key, symbol.completion);
-        }
-        return [...unique.values()];
+        return uniqueCompletions(this.fileIndex.symbols.query({ excludeUri: uri }));
     }
 
     filterCompletions(
@@ -429,7 +421,7 @@ class WeiduTp2Provider
             return baseItems.filter((item) => item.category === CompletionCategory.Vars);
         }
 
-        const withParams = addParamCompletions(baseItems, contexts, this.fileIndex?.symbols);
+        const withParams = addParamCompletions(baseItems, contexts, this.fileIndex?.symbols, local.byName, uri);
         // A .tpp file is all patches, even while its tree is still too empty to say so.
         const inPatch = ext === ".tpp" || isPatchPosition(text, position.line, position.character);
         const withSnippets = applySnippets(withParams, contexts, local.byName, inPatch, this.fileIndex?.symbols);

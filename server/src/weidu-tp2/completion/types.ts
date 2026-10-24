@@ -3,6 +3,8 @@
  * Used by context.ts and filter.ts.
  */
 
+import type { CallableContext } from "../../core/symbol";
+
 /**
  * Parameter section types for WeiDU function calls.
  */
@@ -19,6 +21,8 @@ export enum ParamSection {
  */
 export interface FuncParamsContext {
     functionName: string;
+    /** Whether the call launches an action function (LAF) or a patch function (LPF). */
+    callContext: CallableContext.Action | CallableContext.Patch;
     paramSection: ParamSection;
     usedParams: string[];
 }

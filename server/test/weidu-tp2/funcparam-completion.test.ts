@@ -38,6 +38,43 @@ beforeAll(async () => {
     });
 });
 
+/** Parameter completions at the `|` in `marked`, a file with no END after the cursor's call. */
+function paramLabels(marked: string, file: string): string[] {
+    const at = marked.indexOf("|");
+    const lines = marked.slice(0, at).split("\n");
+    const position: Position = { line: lines.length - 1, character: lines.at(-1)!.length };
+    const text = marked.replace("|", "");
+    const uri = normalizeUri(file);
+    const all = weiduTp2Provider.getCompletions?.(uri) ?? [];
+    return (weiduTp2Provider.filterCompletions?.(all, text, position, uri) ?? [])
+        .filter((item) => item.insertText?.endsWith(" = "))
+        .map((item) => item.label);
+}
+
+describe("weidu-tp2: which definition supplies the parameters", () => {
+    it("prefers the definition in the file being edited over a header's", () => {
+        weiduTp2Provider.reloadFileData?.(
+            normalizeUri("file:///other.tph"),
+            "DEFINE_ACTION_FUNCTION shared_def INT_VAR header_param = 0 BEGIN END\n",
+        );
+        const labels = paramLabels(
+            "DEFINE_ACTION_FUNCTION shared_def INT_VAR own_param = 0 BEGIN END\nLAF shared_def INT_VAR |",
+            "file:///user.tpa",
+        );
+        expect(labels).toEqual(["own_param"]);
+    });
+
+    it("gives an LPF call the patch function's parameters when an action function shares the name", () => {
+        weiduTp2Provider.reloadFileData?.(
+            normalizeUri("file:///twins.tph"),
+            "DEFINE_ACTION_FUNCTION twin_def INT_VAR action_param = 0 BEGIN END\n" +
+                "DEFINE_PATCH_FUNCTION twin_def INT_VAR patch_param = 0 BEGIN END\n",
+        );
+        expect(paramLabels("COPY ~a~ ~b~\n  LPF twin_def INT_VAR |", "file:///user.tp2")).toEqual(["patch_param"]);
+        expect(paramLabels("LAF twin_def INT_VAR |", "file:///user.tp2")).toEqual(["action_param"]);
+    });
+});
+
 describe("weidu-tp2: function parameter completion", () => {
     it("provides INT_VAR parameter completions for LAF", () => {
         // Define a function in header file
