@@ -152,21 +152,14 @@ function extractAll(root: SyntaxNode, uri: string): ExtractAllResult {
         locs.push(loc);
     };
 
-    // Top-level function and macro defs (direct root children only).
-    for (let i = 0; i < root.childCount; i++) {
-        const node = root.child(i);
-        if (!node) continue;
-        if (FUNCTION_DEF_TYPES.has(node.type as SyntaxType)) {
-            const info = extractFunctionInfo(node, uri);
-            if (info) functions.push(info);
-        }
-    }
-
-    // Recursive visit for variables and refs.
+    // Recursive visit for function and macro definitions, variables and refs. A definition is global wherever it
+    // is written (inside a component, an ACTION_IF, another function), so it is collected at any depth.
     function visit(node: SyntaxNode, inFunctionBody: boolean): void {
         const type = node.type as SyntaxType;
 
         if (FUNCTION_DEF_TYPES.has(type)) {
+            const info = extractFunctionInfo(node, uri);
+            if (info) functions.push(info);
             const nameNode = node.childForFieldName("name");
             if (nameNode) {
                 const name = stripStringDelimiters(nameNode.text);

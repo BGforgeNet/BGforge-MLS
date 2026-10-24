@@ -51,6 +51,19 @@ describe("weidu-tp2: workspace completions", () => {
         weiduTp2Provider.onWatchedFileDeleted!(first);
         weiduTp2Provider.onWatchedFileDeleted!(second);
     });
+
+    it("keeps an action and a patch function that share a name", () => {
+        const header = normalizeUri("file:///twins.tph");
+        weiduTp2Provider.reloadFileData!(
+            header,
+            `DEFINE_PATCH_FUNCTION twin_fn BEGIN END\nDEFINE_ACTION_FUNCTION twin_fn BEGIN END\n`,
+        );
+
+        const items = weiduTp2Provider.getCompletions!(normalizeUri("file:///user.tp2"));
+        expect(items.filter((item) => item.label === "twin_fn")).toHaveLength(2);
+
+        weiduTp2Provider.onWatchedFileDeleted!(header);
+    });
 });
 
 describe("weidu-tp2: completion routing by file extension", () => {

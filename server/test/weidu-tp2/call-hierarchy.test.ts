@@ -71,6 +71,24 @@ function allRefs(name: string): Location[] {
     return locs;
 }
 
+describe("TP2 call hierarchy for a function defined inside a component", () => {
+    const nested = `BEGIN ~First~
+DEFINE_ACTION_FUNCTION inner BEGIN
+  LAF other END
+END
+LAF inner END
+DEFINE_ACTION_FUNCTION other BEGIN END
+`;
+    const nestedText: TextLookup = (uri) => (uri === URI ? nested : null);
+    const at = (line: number, character: number): Position => ({ line, character });
+
+    it("resolves a launch to the definition and lists the definition's own launches", () => {
+        const items = prepareCallHierarchy(nested, at(4, 5), URI, noCrossFile);
+        expect(items?.map((item) => [item.name, item.selectionRange.start.line])).toEqual([["inner", 1]]);
+        expect(outgoingCalls(items![0]!, nestedText, noCrossFile).map((o) => o.to.name)).toEqual(["other"]);
+    });
+});
+
 describe("TP2 call hierarchy", () => {
     it("prepare on a definition name yields the function item at its definition", () => {
         const items = prepareCallHierarchy(TEXT, posOf("helper", 1), URI, noCrossFile);

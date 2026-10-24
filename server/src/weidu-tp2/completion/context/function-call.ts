@@ -29,6 +29,36 @@ export function resetFuncParamsContext(): void {
     lastFuncParamsContext = null;
 }
 
+const CALL_HEAD = /^\s*(?:LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION)\s+(\S+)([\s\S]*)$/i;
+const SECTION_KEYWORD = /\b(INT_VAR|STR_VAR|RET_ARRAY|RET)\b/g;
+const SECTIONS: Readonly<Record<string, ParamSection>> = {
+    INT_VAR: ParamSection.IntVar,
+    STR_VAR: ParamSection.StrVar,
+    RET: ParamSection.Ret,
+    RET_ARRAY: ParamSection.RetArray,
+};
+
+/**
+ * The enriched params context read off the text of a call recovery could not build as a node: the function name,
+ * the last section keyword and the names given values after it. Leaves the context unset when no section has
+ * started yet, as the tree path does.
+ */
+export function setFuncParamsContextFromText(prefix: string): void {
+    const head = CALL_HEAD.exec(prefix);
+    if (!head) return;
+    const rest = head[2] ?? "";
+    const sections = [...rest.matchAll(SECTION_KEYWORD)];
+    const last = sections.at(-1);
+    const paramSection = last ? SECTIONS[last[1]!.toUpperCase()] : undefined;
+    if (!last || !paramSection) return;
+    const afterSection = rest.slice((last.index ?? 0) + last[0].length);
+    lastFuncParamsContext = {
+        functionName: stripStringDelimiters(head[1]!),
+        paramSection,
+        usedParams: [...afterSection.matchAll(/(\S+?)\s*=/g)].map((match) => match[1]!),
+    };
+}
+
 /**
  * Get the enriched function params context from the last completion request.
  * Returns null if context is not funcParams or if function info cannot be determined.
@@ -368,6 +398,13 @@ function paramContextAt(node: SyntaxNode, cursorOffset: number): CompletionConte
 export function detectFunctionCallContext(node: SyntaxNode, cursorOffset: number): CompletionContext[] | null {
     const type = node.type;
 
+    // Recovery sometimes builds a call around half-typed code: it wraps the real name (or a whole finished call) in
+    // an ERROR and makes the word being typed the name. Such a call says nothing reliable; the text fallbacks decide.
+    const name = node.childForFieldName("name");
+    if (name && node.children.some((child) => child.type === SyntaxType.ERROR && child.startIndex < name.startIndex)) {
+        return null;
+    }
+
     // Action function call (LAF)
     if (type === SyntaxType.ActionLaunchFunction) {
         if (isAtFunctionName(cursorOffset, node)) {
@@ -466,6 +503,8 @@ function detectFunctionDefinitionContext(node: SyntaxNode, cursorOffset: number)
 function isAtFunctionName(cursorOffset: number, funcCall: SyntaxNode): boolean {
     let keywordEnd = -1;
     let firstArgStart = -1;
+    // The name field, whatever its form: a bare, digit-leading or quoted name.
+    const name = funcCall.childForFieldName("name");
 
     for (const child of funcCall.children) {
         const text = child.text.toUpperCase();
@@ -476,8 +515,8 @@ function isAtFunctionName(cursorOffset: number, funcCall: SyntaxNode): boolean {
             continue;
         }
 
-        // If cursor is within an identifier (the function name), return true
-        if (child.type === SyntaxType.Identifier) {
+        // If cursor is within the function name, return true
+        if (name !== null && child.startIndex === name.startIndex && child.endIndex === name.endIndex) {
             if (cursorOffset >= child.startIndex && cursorOffset <= child.endIndex) {
                 return true;
             }

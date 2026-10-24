@@ -39,13 +39,18 @@ const COMPONENT_TYPES: ReadonlySet<SyntaxType> = new Set([SyntaxType.Component])
 /** Def or launch nodes - the INNERMOST of these that encloses the cursor names the callable it is on. */
 const CALLABLE_CONTAINER_TYPES: ReadonlySet<SyntaxType> = new Set([...FUNCTION_DEF_TYPES, ...FUNCTION_CALL_TYPES]);
 
-/** Find a top-level function/macro definition in `root` by exact name (TP2 names are case-sensitive). */
-function findTopLevelDefByName(root: SyntaxNode, name: string): SyntaxNode | null {
-    for (let i = 0; i < root.childCount; i++) {
-        const node = root.child(i);
-        if (!node || !FUNCTION_DEF_TYPES.has(node.type as SyntaxType)) continue;
-        const nameNode = node.childForFieldName("name");
-        if (nameNode && stripStringDelimiters(nameNode.text) === name) return node;
+/**
+ * Find a function/macro definition in `root` by exact name (TP2 names are case-sensitive), at any depth: a
+ * definition is global wherever it is written, a component or an ACTION_IF included. The first in document order.
+ */
+function findDefByName(root: SyntaxNode, name: string): SyntaxNode | null {
+    for (const node of root.children) {
+        if (FUNCTION_DEF_TYPES.has(node.type as SyntaxType)) {
+            const nameNode = node.childForFieldName("name");
+            if (nameNode && stripStringDelimiters(nameNode.text) === name) return node;
+        }
+        const nested = findDefByName(node, name);
+        if (nested) return nested;
     }
     return null;
 }
@@ -82,7 +87,7 @@ function walk(node: SyntaxNode, fn: (n: SyntaxNode) => void): void {
 
 /** Resolve a callee name to a CallHierarchyItem: same-file def first, then the injected cross-file lookup. */
 function resolveCallee(name: string, root: SyntaxNode, uri: string, crossFileDef: DefLookup): CallHierarchyItem | null {
-    const localDef = findTopLevelDefByName(root, name);
+    const localDef = findDefByName(root, name);
     if (localDef) return itemFromDefNode(localDef, uri);
     const loc = crossFileDef(name);
     return loc ? itemFromLocation(name, loc) : null;
@@ -137,7 +142,7 @@ export function outgoingCalls(
     const tree = parseWithCache(text);
     if (!tree) return [];
 
-    const defNode = findTopLevelDefByName(tree.rootNode, item.name);
+    const defNode = findDefByName(tree.rootNode, item.name);
     if (!defNode) return [];
 
     const byCallee = new Map<string, { to: CallHierarchyItem | null; ranges: Range[] }>();

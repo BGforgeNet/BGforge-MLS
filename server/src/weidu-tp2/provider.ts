@@ -343,12 +343,17 @@ class WeiduTp2Provider
             return [];
         }
         // A name several headers define (IDS constants per game, shared helpers) is one completion; the first
-        // definition supplies its detail, as the local-symbol path already does.
-        const byLabel = new Map<string, CompletionItem>();
+        // definition supplies its detail, as the local-symbol path already does. Only the same kind of symbol
+        // collapses: an action and a patch function may share a name, and each is offered where it is callable.
+        const unique = new Map<string, CompletionItem>();
         for (const symbol of this.fileIndex.symbols.query({ excludeUri: uri })) {
-            if (!byLabel.has(symbol.completion.label)) byLabel.set(symbol.completion.label, symbol.completion);
+            const kind = isCallableSymbol(symbol)
+                ? `${symbol.callable.context ?? ""}:${symbol.callable.dtype ?? ""}`
+                : String(symbol.kind);
+            const key = `${symbol.completion.label}\u0000${kind}`;
+            if (!unique.has(key)) unique.set(key, symbol.completion);
         }
-        return [...byLabel.values()];
+        return [...unique.values()];
     }
 
     filterCompletions(

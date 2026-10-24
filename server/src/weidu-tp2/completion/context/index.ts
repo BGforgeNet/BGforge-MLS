@@ -17,7 +17,7 @@ import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2
 import { CompletionContext } from "../types";
 import { ASSIGNMENT_SITE_PATTERN, DEFINITION_SITE_PATTERN, FUNC_CALL_KEYWORDS, FUNC_PARAM_KEYWORDS } from "./constants";
 import { detectContextFromNode } from "./detectors";
-import { lastTokenBefore, resetFuncParamsContext } from "./function-call";
+import { lastTokenBefore, resetFuncParamsContext, setFuncParamsContextFromText } from "./function-call";
 
 export { getFuncParamsContext } from "./function-call";
 
@@ -90,15 +90,22 @@ export function isPatchPosition(text: string, line: number, character: number): 
 }
 
 /**
- * The text of the statement the cursor is in when tree-sitter could not build it: from the start of the ERROR
- * node holding the last token before the cursor, else the current line. A call split over lines (`LAF fn` on
- * one line, `ST|` on the next) is one statement to the text fallbacks.
+ * The text the fallbacks read, in the order to try: the current line, then - when tree-sitter could not build the
+ * statement - everything from the start of the ERROR node holding the last token before the cursor, so a call split
+ * over lines (`LAF fn` on one line, `ST|` on the next) is one statement. The line comes first because an ERROR can
+ * also start lines above the statement being typed.
  */
-function statementPrefix(text: string, root: SyntaxNode, cursorOffset: number, position: Position): string {
+function fallbackPrefixes(text: string, root: SyntaxNode, cursorOffset: number, position: Position): string[] {
+    const prefixes = [getLinePrefix(text, position)];
     for (let node = lastTokenBefore(root, cursorOffset)?.parent ?? null; node; node = node.parent) {
-        if (node.type === SyntaxType.ERROR) return text.slice(node.startIndex, cursorOffset);
+        if (node.type === SyntaxType.ERROR) {
+            const statement = text.slice(node.startIndex, cursorOffset);
+            // An END in it has closed whatever call the ERROR starts with; the cursor is past that call.
+            if (!/\bEND\b/i.test(statement)) prefixes.push(statement);
+            break;
+        }
     }
-    return getLinePrefix(text, position);
+    return prefixes;
 }
 
 /**
@@ -228,15 +235,17 @@ export function getContextAtPosition(text: string, line: number, character: numb
     // Text-based fallback: detect function call contexts for incomplete code.
     // Only apply when tree-sitter found no context (empty array).
     if (contexts.length === 0) {
-        const prefix = statementPrefix(text, tree.rootNode, cursorOffset, { line, character });
-        const funcNameContext = detectFuncNameFromText(prefix);
-        if (funcNameContext !== null) {
-            return [funcNameContext];
-        }
-        // Detect parameter position: "LAF/LPF funcname " (past the name, typing params)
-        const funcParamContext = detectFuncParamFromText(prefix);
-        if (funcParamContext !== null) {
-            return [funcParamContext];
+        for (const prefix of fallbackPrefixes(text, tree.rootNode, cursorOffset, { line, character })) {
+            const funcNameContext = detectFuncNameFromText(prefix);
+            if (funcNameContext !== null) {
+                return [funcNameContext];
+            }
+            // Detect parameter position: "LAF/LPF funcname " (past the name, typing params)
+            const funcParamContext = detectFuncParamFromText(prefix);
+            if (funcParamContext !== null) {
+                setFuncParamsContextFromText(prefix);
+                return [funcParamContext];
+            }
         }
     }
 

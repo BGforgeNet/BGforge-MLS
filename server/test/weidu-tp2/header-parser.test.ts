@@ -25,6 +25,19 @@ describe("parseFile variable symbols", () => {
             expect(result[0]!.variable.value).toBe("10");
         });
 
+        it("indexes functions defined below the root, wherever they are", () => {
+            const text = `BEGIN ~c~
+DEFINE_ACTION_FUNCTION in_component BEGIN END
+ACTION_IF 1 BEGIN
+  DEFINE_PATCH_FUNCTION in_if BEGIN END
+END
+`;
+            const names = parseFile("test://file.tph", text)
+                .symbols.filter(isCallableSymbol)
+                .map((symbol) => symbol.name);
+            expect(names).toEqual(["in_component", "in_if"]);
+        });
+
         it("names an OUTER_SET EVAL variable by its name, not by EVAL", () => {
             const result = fileVariables("OUTER_SET EVAL foo = 2");
             expect(result.map((symbol) => symbol.name)).toEqual(["foo"]);

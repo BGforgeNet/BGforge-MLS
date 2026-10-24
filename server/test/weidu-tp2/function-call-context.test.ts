@@ -325,6 +325,59 @@ describe("unfinished calls while typing", () => {
         expect(getFuncParamsContext()).toBeNull();
     });
 
+    it("names the function being typed among a component's actions", () => {
+        expect(
+            // Error recovery puts the half-typed call in an ERROR that starts at the INCLUDE line above it.
+            ctx(`BEGIN @1 GROUP @2 LABEL a-label\n\tINCLUDE ~a.tpa~\n\tLAF as|\n\nBEGIN @3 GROUP @2 LABEL b-label\n`),
+        ).toEqual([CompletionContext.LafName]);
+    });
+
+    it("reads a half-typed section keyword after the name as a parameter position, in an unclosed body", () => {
+        // Recovery makes `ST` the call's name and wraps the real one in an ERROR before it.
+        expect(
+            ctx(
+                "DEFINE_ACTION_FUNCTION detectable_spells \nBEGIN\n   LAF ds_stat_entries END\n   // comment\n" +
+                    " \tLAF ds_load_ids STR_VAR ids=stats RET_ARRAY ds_ids_map_stats=ids_map END\n\tLAF ds_load_ids ST|",
+            ),
+        ).toEqual([CompletionContext.FuncParamName]);
+    });
+
+    it("reads a word after a finished call as a new statement, in an unclosed body", () => {
+        // Recovery wraps the finished call in an ERROR and makes `CO` the name of a call it invents.
+        expect(
+            ctx(
+                "DEFINE_ACTION_FUNCTION f BEGIN\n  ACTION_IF !a BEGIN\n     ACTION_FOR_EACH s IN x y BEGIN\n     END\n  END\n" +
+                    "  ACTION_IF a BEGIN\n  END\n  ACTION_FOR_EACH s IN x y z BEGIN\n  END\n  ACTION_FOR_EACH s IN p q BEGIN\n  END\n" +
+                    "       LAF create STR_VAR spell=x END\n     CO|",
+            ),
+        ).toEqual([]);
+    });
+
+    it("knows the function and section from the text when recovery breaks the call apart", () => {
+        const contexts = ctx(`DEFINE_ACTION_FUNCTION f BEGIN\n         LPF CLONE_EFFECT INT_VAR match_opcode=177 |`);
+        expect(contexts).toEqual([CompletionContext.FuncParamName]);
+        expect(getFuncParamsContext()).toEqual({
+            functionName: "CLONE_EFFECT",
+            paramSection: ParamSection.IntVar,
+            usedParams: ["match_opcode"],
+        });
+    });
+
+    it("reads a word after finished calls as a new statement even when recovery joins them in an ERROR", () => {
+        const text =
+            "DEFINE_ACTION_FUNCTION f BEGIN\n    COPY_EXISTING ~a.spl~ override\n" +
+            "         LPF add_effect INT_VAR opcode=177 target=1 STR_VAR resource=x END\n" +
+            "         LPF clone_effect INT_VAR match_opcode=177 STR_VAR match_resource=x END\n" +
+            "    BUT_ONLY\n    CO|\n         LPF add_effect INT_VAR opcode=177 END\nEND\n";
+        expect(ctx(text)).toEqual([]);
+    });
+
+    it("knows the cursor is past a quoted function name", () => {
+        expect(ctx(`COPY ~a~ ~b~\n  LAUNCH_PATCH_FUNCTION ~RR#SP2IN~ |\nCOPY ~c~ ~d~\n`)).toEqual([
+            CompletionContext.FuncParamName,
+        ]);
+    });
+
     it("treats the line after a finished call as outside it", () => {
         ctx(`LAF first_fn INT_VAR | END`);
         expect(ctx(`LAF fn INT_VAR a = 1 END\n|`)).toEqual([]);
