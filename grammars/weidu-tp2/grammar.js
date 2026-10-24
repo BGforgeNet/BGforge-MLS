@@ -627,7 +627,7 @@ const extendAction =
                 field("existing", $.value),
                 field("new_file", $.value),
                 optional(choice("EVALUATE_BUFFER", "EVAL")),
-                repeat($._patch),
+                optional($._patch_list),
                 optional(seq("USING", repeat(field("tra", $.value)))),
                 optional($.when),
             ),
@@ -657,6 +657,14 @@ const appendColAction = (keyword) => ($) =>
         ),
     );
 
+/** A block's statements, as the shared list rule for the statement kind `bodyType` returns (see _action_list). */
+const blockBody = ($, bodyType) => {
+    const item = bodyType($);
+    if (item.name === "_action") return optional($._action_list);
+    if (item.name === "_patch") return optional($._patch_list);
+    throw new Error(`blockBody: no list rule for ${item.name}`);
+};
+
 /** Define macro: KEYWORD name BEGIN body END (body can include LOCAL_SET/LOCAL_SPRINT) */
 const defineMacro = (keyword, bodyType) => ($) =>
     seq(
@@ -674,7 +682,7 @@ const defineFunction = (keyword, bodyType) => ($) =>
         field("name", choice($.identifier, $.var_name_numeric, $.string)),
         repeat($._func_decl_param),
         "BEGIN",
-        repeat(bodyType($)),
+        blockBody($, bodyType),
         "END",
     );
 
@@ -683,20 +691,20 @@ const forLoop = (keyword, bodyType) => ($) =>
     seq(
         keyword,
         "(",
-        repeat($._patch),
+        optional($._patch_list),
         ";",
         field("condition", $.value),
         ";",
-        repeat($._patch),
+        optional($._patch_list),
         ")",
         "BEGIN",
-        repeat(bodyType($)),
+        blockBody($, bodyType),
         "END",
     );
 
 /** WHILE loop: WHILE cond BEGIN body END */
 const whileLoop = (keyword, bodyType) => ($) =>
-    seq(keyword, field("condition", $.value), "BEGIN", repeat(bodyType($)), "END");
+    seq(keyword, field("condition", $.value), "BEGIN", blockBody($, bodyType), "END");
 
 /** PHP_EACH loop: KEYWORD array AS key => value BEGIN body END */
 const phpEachLoop =
@@ -715,7 +723,7 @@ const phpEachLoop =
             "=>",
             nameIn($, "value_var"),
             "BEGIN",
-            repeat(bodyType($)),
+            blockBody($, bodyType),
             "END",
         );
 
@@ -734,14 +742,16 @@ const indexExpr =
         );
 
 /** OUTER_PATCH action: KEYWORD buffer BEGIN patches END */
-const outerPatchAction = (keyword) => ($) => seq(keyword, field("buffer", $.value), "BEGIN", repeat($._patch), "END");
+const outerPatchAction = (keyword) => ($) =>
+    seq(keyword, field("buffer", $.value), "BEGIN", optional($._patch_list), "END");
 
 /** OUTER_PATCH_SAVE action: KEYWORD var buffer BEGIN patches END */
 const outerPatchSaveAction = (keyword) => ($) =>
-    seq(keyword, $._var_target, field("buffer", $.value), "BEGIN", repeat($._patch), "END");
+    seq(keyword, $._var_target, field("buffer", $.value), "BEGIN", optional($._patch_list), "END");
 
 /** INNER_PATCH: KEYWORD buffer BEGIN patches END */
-const innerPatchOp = (keyword) => ($) => seq(keyword, field("buffer", $.value), "BEGIN", repeat($._patch), "END");
+const innerPatchOp = (keyword) => ($) =>
+    seq(keyword, field("buffer", $.value), "BEGIN", optional($._patch_list), "END");
 
 /** The tail MATCH and TRY share: WITH case... DEFAULT body END. DEFAULT is required. */
 const withCases = (caseRule, bodyRule) => seq("WITH", repeat(caseRule), "DEFAULT", repeat(bodyRule), "END");
@@ -754,13 +764,13 @@ const matchCase = (bodyType) => ($) =>
             seq("ANY", field("guard", $.value)),
         ),
         "BEGIN",
-        repeat(bodyType($)),
+        blockBody($, bodyType),
         "END",
     );
 
 /** TRY block: KEYWORD body WITH case... DEFAULT handler END */
 const tryBlock = (keyword, bodyType, caseRule) => ($) =>
-    seq(keyword, repeat(bodyType($)), withCases(caseRule($), bodyType($)));
+    seq(keyword, blockBody($, bodyType), withCases(caseRule($), bodyType($)));
 
 /** DEFINE_ASSOCIATIVE_ARRAY: KEYWORD name BEGIN entries END */
 const defineAssocArray =
@@ -895,7 +905,6 @@ export default grammar({
     },
 
     conflicts: ($) => [
-        [$.component],
         [$.action_copy],
         [$.action_copy_existing],
         [$.action_copy_existing_regexp],
@@ -931,7 +940,6 @@ export default grammar({
         [$.patch_write_ascii_list],
         [$.patch_write_asciil],
         [$.patch_add_store_item],
-        [$._action, $._top_level],
         [$.patch_define_associative_array, $.action_define_associative_array],
         [$.patch_evaluate_buffer, $.action_extend_top],
         [$.patch_evaluate_buffer, $.action_extend_bottom],
@@ -943,7 +951,6 @@ export default grammar({
         [$._tight_expr, $.action_at_interactive_now],
         [$._operand, $.action_at_now],
         [$._operand, $.action_at_interactive_now],
-        [$._action, $.action_if],
     ],
 
     rules: {
@@ -955,8 +962,11 @@ export default grammar({
                     // Prologue (should come first if present - optional for malformed files)
                     optional($.backup_directive),
                     optional(choice($.author_directive, $.support_directive)),
-                    // Everything else (flags, languages, components, actions)
+                    // Flags, languages and the actions of a .tpa/.tph file
                     repeat(choice($._top_level, $._action)),
+                    // Components close the file, so an action after a component's header is that component's: at
+                    // the root it would tie with the component and split it from its actions.
+                    repeat($.component),
                 ),
                 // Patch-only file (.tpp)
                 $.patch_file,
@@ -964,6 +974,15 @@ export default grammar({
 
         // Patch-only file (e.g., .tpp includes) - entire file is patches
         patch_file: ($) => repeat1($._patch),
+
+        // Block bodies. Left-recursive rather than repeat(): after any statement the parser then reaches, in one
+        // reduction, a state where END shifts, and that is the only token tree-sitter's recovery inserts for a block
+        // still being typed. With repeat() it inserted an unrelated zero-argument action instead, and the rest of
+        // the file became one ERROR.
+        _action_list: ($) => choice($._action, seq($._action_list, $._action)),
+        _patch_list: ($) => choice($._patch, seq($._patch_list, $._patch)),
+        // Not done: wrapping a body and its END in one rule also recovers a PATCH_IF left open inside a COPY's patch
+        // list, but grows the parse table by half (root ERRORs over simulated edits: 2.8% here, 1.1% with it).
 
         // =========================================
         // LITERALS
@@ -1434,13 +1453,13 @@ export default grammar({
                 field("condition", $.value),
                 optional("THEN"),
                 "BEGIN",
-                repeat($._patch),
+                optional($._patch_list),
                 "END",
                 optional(
                     seq(
                         "ELSE",
                         choice(
-                            seq("BEGIN", repeat($._patch), "END"),
+                            seq("BEGIN", optional($._patch_list), "END"),
                             $._patch, // else-if chain or single patch
                         ),
                     ),
@@ -1456,9 +1475,17 @@ export default grammar({
         patch_php_each: phpEachLoop("PHP_EACH", "PATCH_PHP_EACH")(($) => $._patch),
 
         patch_for_each: ($) =>
-            seq("PATCH_FOR_EACH", field("var", $.value), "IN", repeat($.value), "BEGIN", repeat($._patch), "END"),
+            seq(
+                "PATCH_FOR_EACH",
+                field("var", $.value),
+                "IN",
+                repeat($.value),
+                "BEGIN",
+                optional($._patch_list),
+                "END",
+            ),
 
-        patch_with_scope: ($) => seq("PATCH_WITH_SCOPE", "BEGIN", repeat($._patch), "END"),
+        patch_with_scope: ($) => seq("PATCH_WITH_SCOPE", "BEGIN", optional($._patch_list), "END"),
 
         // Text manipulation
         patch_replace: ($) =>
@@ -1493,7 +1520,7 @@ export default grammar({
                 optional($.search_flags),
                 field("regexp", $.value),
                 "BEGIN",
-                repeat($._patch),
+                optional($._patch_list),
                 "END",
                 field("replacement", $.value),
             ),
@@ -1522,7 +1549,7 @@ export default grammar({
                 optional("ADD_IF_MISSING"),
                 repeat(field("file", $.value)),
                 "BEGIN",
-                repeat($._patch),
+                optional($._patch_list),
                 "END",
             ),
 
@@ -1714,7 +1741,7 @@ export default grammar({
                     ),
                     field("file", $.string),
                     field("file", $.string),
-                    optional(seq("ON_MISMATCH", repeat($._patch), "END")),
+                    optional(seq("ON_MISMATCH", optional($._patch_list), "END")),
                 ),
             ),
 
@@ -1747,17 +1774,18 @@ export default grammar({
         patch_reinclude: ($) => seq("PATCH_REINCLUDE", repeat(field("file", operand($)))),
         patch_random_seed: ($) => seq("PATCH_RANDOM_SEED", $.value),
         patch_readln: ($) => seq("PATCH_READLN", $.value),
-        patch_with_tra: ($) => seq("PATCH_WITH_TRA", repeat(field("file", $.value)), "BEGIN", repeat($._patch), "END"),
+        patch_with_tra: ($) =>
+            seq("PATCH_WITH_TRA", repeat(field("file", $.value)), "BEGIN", optional($._patch_list), "END"),
         patch_reraise: ($) => "PATCH_RERAISE",
         patch_silent: ($) => "PATCH_SILENT",
-        patch_time: ($) => seq("PATCH_TIME", field("name", $.value), "BEGIN", repeat($._patch), "END"),
+        patch_time: ($) => seq("PATCH_TIME", field("name", $.value), "BEGIN", optional($._patch_list), "END"),
         patch_verbose: ($) => "PATCH_VERBOSE",
         patch_compile_baf_to_bcs: ($) => "COMPILE_BAF_TO_BCS",
         patch_decompile_bcs_to_baf: ($) => "DECOMPILE_BCS_TO_BAF",
         patch_compile_d_to_dlg: ($) => "COMPILE_D_TO_DLG",
         patch_decompile_dlg_to_d: ($) => "DECOMPILE_DLG_TO_D",
 
-        patch_decompile_and_patch: ($) => seq("DECOMPILE_AND_PATCH", "BEGIN", repeat($._patch), "END"),
+        patch_decompile_and_patch: ($) => seq("DECOMPILE_AND_PATCH", "BEGIN", optional($._patch_list), "END"),
 
         patch_decompress_replace_file: ($) =>
             seq(
@@ -1822,11 +1850,12 @@ export default grammar({
         inner_patch: innerPatchOp("INNER_PATCH"),
 
         inner_patch_save: ($) =>
-            seq("INNER_PATCH_SAVE", $._var_target, field("buffer", $.value), "BEGIN", repeat($._patch), "END"),
+            seq("INNER_PATCH_SAVE", $._var_target, field("buffer", $.value), "BEGIN", optional($._patch_list), "END"),
 
-        inner_patch_file: ($) => seq("INNER_PATCH_FILE", field("file", $.value), "BEGIN", repeat($._patch), "END"),
+        inner_patch_file: ($) =>
+            seq("INNER_PATCH_FILE", field("file", $.value), "BEGIN", optional($._patch_list), "END"),
 
-        inner_action: ($) => seq("INNER_ACTION", "BEGIN", repeat($._action), "END"),
+        inner_action: ($) => seq("INNER_ACTION", "BEGIN", optional($._action_list), "END"),
 
         // =========================================
         // ACTIONS
@@ -1998,7 +2027,7 @@ export default grammar({
         // Named rule (not hidden) so context detection can find it in AST
         patches: ($) => prec.right(choice(repeat1($._patch), $.patch_block)),
 
-        patch_block: ($) => prec(-10, seq("BEGIN", repeat($._patch), "END")),
+        patch_block: ($) => prec(-10, seq("BEGIN", optional($._patch_list), "END")),
 
         // When clause: IF_SIZE_IS, IF regexp, UNLESS regexp, IF_EXISTS, BUT_ONLY, BUT_ONLY_IF_IT_CHANGES
         // All can appear in any order, multiple IF/UNLESS allowed
@@ -2024,7 +2053,7 @@ export default grammar({
                     optional(choice("EVALUATE_BUFFER", "EVAL")),
                     repeat(field("source", $.value)),
                     optional(choice("EVALUATE_BUFFER", "EVAL")),
-                    repeat($._patch),
+                    optional($._patch_list),
                     optional(seq("USING", repeat(field("tra", $.value)))),
                 ),
             ),
@@ -2071,15 +2100,14 @@ export default grammar({
                 field("condition", $.value),
                 optional("THEN"),
                 "BEGIN",
-                repeat($._action),
+                optional($._action_list),
                 "END",
                 optional(
                     seq(
                         "ELSE",
                         choice(
-                            seq("BEGIN", repeat($._action), "END"),
-                            $.action_if,
-                            $._action, // Single action without BEGIN...END
+                            seq("BEGIN", optional($._action_list), "END"),
+                            $._action, // Single action without BEGIN...END, an ACTION_IF chain included
                         ),
                     ),
                 ),
@@ -2100,7 +2128,15 @@ export default grammar({
 
         action_for_each: ($) =>
             prec.right(
-                seq("ACTION_FOR_EACH", field("var", $.value), "IN", repeat($.value), "BEGIN", repeat($._action), "END"),
+                seq(
+                    "ACTION_FOR_EACH",
+                    field("var", $.value),
+                    "IN",
+                    repeat($.value),
+                    "BEGIN",
+                    optional($._action_list),
+                    "END",
+                ),
             ),
 
         action_php_each: phpEachLoop("ACTION_PHP_EACH")(($) => $._action),
@@ -2133,9 +2169,10 @@ export default grammar({
                 seq("LOCAL_TEXT_SPRINT", $._var_target, field("value", $.value)),
             ),
 
-        action_with_tra: ($) => seq("WITH_TRA", repeat(field("file", $.value)), "BEGIN", repeat($._action), "END"),
+        action_with_tra: ($) =>
+            seq("WITH_TRA", repeat(field("file", $.value)), "BEGIN", optional($._action_list), "END"),
 
-        action_with_scope: ($) => seq("WITH_SCOPE", "BEGIN", repeat($._action), "END"),
+        action_with_scope: ($) => seq("WITH_SCOPE", "BEGIN", optional($._action_list), "END"),
 
         // ADD_JOURNAL [EXISTING] [MANAGED] [TITLE (text)] reference list [USING traFile list]
         action_add_journal: ($) =>
@@ -2270,8 +2307,8 @@ export default grammar({
                 ),
             ),
 
-        add_spell_if_existing: ($) => seq("IF_EXISTING", repeat($._patch), "END"),
-        add_spell_on_disable: ($) => seq("ON_DISABLE", repeat($._patch), "END"),
+        add_spell_if_existing: ($) => seq("IF_EXISTING", optional($._patch_list), "END"),
+        add_spell_on_disable: ($) => seq("ON_DISABLE", optional($._patch_list), "END"),
 
         action_add_kit: ($) => prec.right(seq("ADD_KIT", repeat1(choice($.value, $.kit_say)))),
 
@@ -2302,10 +2339,10 @@ export default grammar({
             seq("AT_INTERACTIVE_NOW", optional(nameIn($, "var")), field("command", $.value), optional("EXACT")),
 
         patch_bash_for: ($) =>
-            prec.right(seq("PATCH_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", repeat($._patch), "END")),
+            prec.right(seq("PATCH_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", optional($._patch_list), "END")),
 
         action_bash_for: ($) =>
-            seq("ACTION_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", repeat($._action), "END"),
+            seq("ACTION_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", optional($._action_list), "END"),
 
         action_decompress_biff: ($) => prec.right(seq("DECOMPRESS_BIFF", repeat(field("file", $.value)))),
 
@@ -2356,13 +2393,20 @@ export default grammar({
         action_get_directory_array: fileArray("GET_DIRECTORY_ARRAY"),
 
         action_alter_tlk_list: ($) =>
-            seq("ALTER_TLK_LIST", "BEGIN", repeat($.value), "END", "BEGIN", repeat($._patch), "END"),
-        action_alter_tlk: ($) => seq("ALTER_TLK", "BEGIN", repeat($._patch), "END"),
+            seq("ALTER_TLK_LIST", "BEGIN", repeat($.value), "END", "BEGIN", optional($._patch_list), "END"),
+        action_alter_tlk: ($) => seq("ALTER_TLK", "BEGIN", optional($._patch_list), "END"),
         action_alter_tlk_range: ($) =>
-            seq("ALTER_TLK_RANGE", field("from", $.value), field("to", $.value), "BEGIN", repeat($._patch), "END"),
+            seq(
+                "ALTER_TLK_RANGE",
+                field("from", $.value),
+                field("to", $.value),
+                "BEGIN",
+                optional($._patch_list),
+                "END",
+            ),
 
         action_reraise: ($) => "ACTION_RERAISE",
-        action_time: ($) => seq("ACTION_TIME", field("name", $.value), "BEGIN", repeat($._action), "END"),
+        action_time: ($) => seq("ACTION_TIME", field("name", $.value), "BEGIN", optional($._action_list), "END"),
 
         action_add_school: ($) =>
             prec.right(seq("ADD_SCHOOL", field("name", $.value), field("description", $.value), ...textTail($))),
@@ -2397,8 +2441,6 @@ export default grammar({
                 $.uninstall_order_directive,
                 $.modder_directive,
                 $.language_directive,
-                $.component,
-                $.inlined_file,
                 $.always_block,
             ),
 
@@ -2454,7 +2496,7 @@ export default grammar({
                 field("name", $.value),
                 ...textTail($),
                 repeat($._componentFlag),
-                repeat($._action),
+                optional($._action_list),
             ),
 
         _componentFlag: ($) =>
@@ -2524,7 +2566,7 @@ export default grammar({
         forbid_file_flag: ($) =>
             prec.right(seq("FORBID_FILE", field("file", $.value), field("message", $.value), ...textTail($))),
 
-        always_block: ($) => seq("ALWAYS", repeat($._action), "END"),
+        always_block: ($) => seq("ALWAYS", optional($._action_list), "END"),
 
         inlined_file: ($) => seq(field("filename", $.inlined_filename), field("body", $.inlined_body), ">>>>>>>>"),
         // Start marker + optional space + filename on same line

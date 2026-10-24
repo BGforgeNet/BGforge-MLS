@@ -19,7 +19,9 @@ Note: `.tpa`/`.tph` files containing component structure are treated like `.tp2`
 
 ### Structure
 
-**TP2 is a strictly ordered grammar.** Elements must appear in this order:
+WeiDU requires this order. The grammar enforces only its last step, components closing the file, so that every
+action after a component's header belongs to that component. Between the prologue and the first component it accepts
+flags, languages and actions in any order, so one grammar also serves `.tpa`/`.tph` files.
 
 ```
 file :=

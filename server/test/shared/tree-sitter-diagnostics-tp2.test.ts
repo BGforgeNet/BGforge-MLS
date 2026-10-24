@@ -146,3 +146,13 @@ END
         expect(tree.rootNode.descendantsOfType(listType)).toHaveLength(1);
     });
 });
+
+describe("WeiDU TP2 syntax error wording", () => {
+    it("names the first code token of an error, not a comment before it", () => {
+        const tree = tp2.parseWithCache(
+            "/** doc */\nDEFINE_PATCH_FUNCTION f BEGIN\n  PATCH_IF x BEGIN\n    SET y = 1\n    SET z = 2\n",
+        )!;
+        const messages = collectParseDiagnostics(tree.rootNode).map((d) => d.message);
+        expect(messages).toContain("Syntax error near 'DEFINE_PATCH_FUNCTION'");
+    });
+});

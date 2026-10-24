@@ -44,9 +44,9 @@ function errorMessage(node: SyntaxNode): string {
 }
 
 function firstToken(node: SyntaxNode): string {
-    // The first child is usually the first real token of the bad span; fall back
-    // to the span's own text. Trim, take the first line and first whitespace-run.
-    const raw = (node.children[0]?.text ?? node.text).trim();
+    // The first child that is not an extra (a comment, which may open the span) is usually the first real token
+    // of the bad span; fall back to the span's own text. Trim, take the first line and first whitespace-run.
+    const raw = (node.children.find((child) => !child.isExtra)?.text ?? node.text).trim();
     if (raw.length === 0) {
         return "";
     }

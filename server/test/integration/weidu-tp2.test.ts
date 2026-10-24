@@ -286,7 +286,7 @@ describe("weidu-tp2 integration", () => {
             const f = loadFixture(RR_BASE, "rr/setup-rr.tp2");
 
             const ranges = getFoldingRanges(f.text);
-            expect(ranges).toHaveLength(327);
+            expect(ranges).toHaveLength(328);
         });
 
         it("includes comment folding for JSDoc blocks", () => {

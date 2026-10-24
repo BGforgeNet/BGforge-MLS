@@ -148,9 +148,10 @@ function extractVarNameNode(node: Node): Node | null {
 }
 
 /**
- * Extract file-level variable symbols from a node, recursing into children.
- * TP2 variables are global - assignments inside conditionals/loops are still file-level.
- * Skips function/macro definitions (those have their own scope via collectBodyVars).
+ * Outline symbols from a node, recursing into children, in document order.
+ * TP2 variables are global - assignments inside conditionals/loops/components are still file-level.
+ * So are functions and macros, wherever they are defined: each becomes its own symbol, and its body is not
+ * descended into here (it has its own scope via collectBodyVars).
  * Uses `seen` set to deduplicate - only the first occurrence of each variable is collected.
  */
 function extractFileLevelVars(node: Node, seen: Set<string>): DocumentSymbol[] {
@@ -181,14 +182,31 @@ function extractFileLevelVars(node: Node, seen: Set<string>): DocumentSymbol[] {
         }
     }
 
-    // Recurse into children, skipping function/macro definitions (separate scope).
     for (const child of node.children) {
-        if (!isFunctionDef(child.type)) {
+        if (isFunctionDef(child.type)) {
+            const fn = functionSymbol(child);
+            if (fn) results.push(fn);
+        } else {
             results.push(...extractFileLevelVars(child, seen));
         }
     }
 
     return results;
+}
+
+/** A function or macro definition as one outline symbol, its parameters and body variables as children. */
+function functionSymbol(node: Node): DocumentSymbol | null {
+    const nameNode = node.childForFieldName("name");
+    if (!nameNode || !nameNode.text) return null;
+    const seen = new Set<string>();
+    const children = [...collectFuncParams(node, nameNode.text, seen), ...collectBodyVars(node, nameNode.text, seen)];
+    return {
+        name: nameNode.text,
+        kind: MACRO_DEF_TYPES.has(node.type) ? SymbolKind.Method : SymbolKind.Function,
+        range: makeRange(node),
+        selectionRange: makeRange(nameNode),
+        children: children.length > 0 ? children : undefined,
+    };
 }
 
 /** Parameter declaration types to collect as function children. */
@@ -262,30 +280,5 @@ export function getDocumentSymbols(text: string): DocumentSymbol[] {
         return [];
     }
 
-    const symbols: DocumentSymbol[] = [];
-    const fileLevelSeen = new Set<string>();
-
-    for (const node of tree.rootNode.children) {
-        if (isFunctionDef(node.type)) {
-            const nameNode = node.childForFieldName("name");
-            if (nameNode && nameNode.text) {
-                const seen = new Set<string>();
-                const params = collectFuncParams(node, nameNode.text, seen);
-                const bodyVars = collectBodyVars(node, nameNode.text, seen);
-                const children = [...params, ...bodyVars];
-                const kind = MACRO_DEF_TYPES.has(node.type) ? SymbolKind.Method : SymbolKind.Function;
-                symbols.push({
-                    name: nameNode.text,
-                    kind,
-                    range: makeRange(node),
-                    selectionRange: makeRange(nameNode),
-                    children: children.length > 0 ? children : undefined,
-                });
-            }
-        } else {
-            symbols.push(...extractFileLevelVars(node, fileLevelSeen));
-        }
-    }
-
-    return symbols;
+    return extractFileLevelVars(tree.rootNode, new Set<string>());
 }

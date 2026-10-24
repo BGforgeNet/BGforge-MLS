@@ -34,6 +34,21 @@ static bool scan_content_until(TSLexer *lexer, int32_t delimiter, enum TokenType
     return true;
 }
 
+/* A percent string is a variable name: its content stops at whitespace too, so an unclosed `%foo` being typed
+ * cannot run on to the next `%` lines away and swallow everything between. */
+static bool scan_percent_content(TSLexer *lexer) {
+    bool any = false;
+    while (!lexer->eof(lexer) && lexer->lookahead != '%' && lexer->lookahead != ' ' && lexer->lookahead != '\t' &&
+           lexer->lookahead != '\n' && lexer->lookahead != '\r') {
+        lexer->advance(lexer, false);
+        any = true;
+    }
+    if (!any) return false;
+    lexer->mark_end(lexer);
+    lexer->result_symbol = PERCENT_CONTENT;
+    return true;
+}
+
 /* Content up to a run of five tildes; a run of one to four tildes is content. */
 static bool scan_five_tilde_content(TSLexer *lexer) {
     bool any = false;
@@ -112,7 +127,7 @@ bool tree_sitter_weidu_tp2_external_scanner_scan(
         if (valid_symbols[FIVE_TILDE_CONTENT]) return scan_five_tilde_content(lexer);
         if (valid_symbols[TILDE_CONTENT]) return scan_content_until(lexer, '~', TILDE_CONTENT);
         if (valid_symbols[DOUBLE_CONTENT]) return scan_content_until(lexer, '"', DOUBLE_CONTENT);
-        if (valid_symbols[PERCENT_CONTENT]) return scan_content_until(lexer, '%', PERCENT_CONTENT);
+        if (valid_symbols[PERCENT_CONTENT]) return scan_percent_content(lexer);
     }
 
     if (valid_symbols[COMMENT]) return scan_comment(lexer);

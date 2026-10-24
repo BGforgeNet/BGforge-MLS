@@ -20,6 +20,25 @@ beforeAll(async () => {
     await initParser();
 });
 
+describe("weidu-tp2: functions defined below the root", () => {
+    it("lists a function defined inside a component or an ACTION_IF, in document order", () => {
+        const text = `OUTER_SET first = 1
+BEGIN ~c~
+DEFINE_ACTION_FUNCTION in_component BEGIN END
+ACTION_IF 1 BEGIN
+  DEFINE_ACTION_MACRO in_if BEGIN END
+END
+OUTER_SET last = 2
+`;
+        expect(getDocumentSymbols(text).map((s) => [s.name, s.kind])).toEqual([
+            ["first", SymbolKind.Variable],
+            ["in_component", SymbolKind.Function],
+            ["in_if", SymbolKind.Method],
+            ["last", SymbolKind.Variable],
+        ]);
+    });
+});
+
 describe("weidu-tp2: getDocumentSymbols", () => {
     it("returns function symbols", () => {
         const text = `DEFINE_ACTION_FUNCTION my_func BEGIN END`;
