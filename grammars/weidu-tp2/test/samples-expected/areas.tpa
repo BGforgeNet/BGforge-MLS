@@ -40,13 +40,19 @@ BEGIN
     PATCH_MATCH 1
     WITH
         (~%type%~ STR_EQ ~region~) BEGIN
-            GET_OFFSET_ARRAY struct_off_list ARE_V10_REGIONS struct_off = ARE_regions_offset script_off = ARE_REGION_script
+            GET_OFFSET_ARRAY struct_off_list ARE_V10_REGIONS
+            struct_off = ARE_regions_offset
+            script_off = ARE_REGION_script
         END
         (~%type%~ STR_EQ ~container~) BEGIN
-            GET_OFFSET_ARRAY struct_off_list ARE_V10_CONTAINERS struct_off = ARE_containers_offset script_off = ARE_CONTAINER_script
+            GET_OFFSET_ARRAY struct_off_list ARE_V10_CONTAINERS
+            struct_off = ARE_containers_offset
+            script_off = ARE_CONTAINER_script
         END
         (~%type%~ STR_EQ ~door~) BEGIN
-            GET_OFFSET_ARRAY struct_off_list ARE_V10_DOORS struct_off = ARE_doors_offset script_off = ARE_DOOR_script
+            GET_OFFSET_ARRAY struct_off_list ARE_V10_DOORS
+            struct_off = ARE_doors_offset
+            script_off = ARE_DOOR_script
         END
     DEFAULT
         PATCH_FAIL ~ALTER_AREA_STRUCTURE_SCRIPT: unknown structure type %type%~

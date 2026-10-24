@@ -249,6 +249,7 @@
 "DECOMPRESS_REPLACE_FILE" @function
 "DECOMPRESS_INTO_VAR" @function
 "EVALUATE_BUFFER" @function
+"EVALUATE_BUFFER_SPECIAL" @function
 "SOURCE_BIFF" @function
 "SPACES" @function
 "QUOTE" @function
@@ -360,6 +361,16 @@
 "ON_DISABLE" @keyword.modifier
 "ADD_IF_MISSING" @keyword.modifier
 "TEXT" @keyword.modifier
+"EQUIP" @keyword.modifier
+"TWOHANDED" @keyword.modifier
+"NOMOVE" @keyword.modifier
+"FIRST" @keyword.modifier
+"LAST" @keyword.modifier
+"AFTER" @keyword.modifier
+"BEFORE" @keyword.modifier
+"ANY" @keyword
+(offset_array_preset) @constant.builtin
+(offset_array2_preset) @constant.builtin
 "ALLOW_MISSING" @keyword.modifier
 "DEST_DIRECTORY" @keyword.modifier
 "DEST_FILE" @keyword.modifier

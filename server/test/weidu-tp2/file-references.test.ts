@@ -106,6 +106,18 @@ describe("TP2 definition: COPY/COMPILE file navigation", () => {
         expect(outcome(`COPY ~mymod/items/sword.itm~ ~override/sword.itm~`, "override/sword.itm")).toBe("self@0");
     });
 
+    it("does not treat a string inside a COPY patch as a file path", () => {
+        write("mymod/items/sword.itm");
+        const text = `COPY ~mymod/a.itm~ ~override~ REPLACE_TEXTUALLY ~mymod/items/sword.itm~ ~x~`;
+        expect(outcome(text, "items/sword")).toBe("NULL");
+    });
+
+    it("does not treat a string inside a COMPILE patch as a file path", () => {
+        write("mymod/baf/other.baf");
+        const text = `COMPILE ~mymod/baf/script.baf~ REPLACE_TEXTUALLY ~mymod/baf/other.baf~ ~x~`;
+        expect(outcome(text, "other.baf")).toBe("NULL");
+    });
+
     it("does not navigate a COPY_EXISTING source (game resref), staying put", () => {
         write("mymod/sword.itm");
         expect(outcome(`COPY_EXISTING ~sword.itm~ ~override~`, "sword.itm")).toBe("self@0");

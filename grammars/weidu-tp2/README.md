@@ -189,6 +189,13 @@ The `value` node is deliberately kept as a **named node** (not hidden as `_value
 
 By exposing `value` as a named node in the parse tree, the completion provider can detect when the cursor is in an expression context and offer appropriate suggestions (variables, operators, constants) instead of command keywords. Without this distinction, completions would incorrectly suggest keywords like `COPY` or `SET` in expression positions where they are syntactically invalid.
 
+### Reserved Words
+
+WeiDU's lexer turns every keyword into its token wherever it appears, so `SET`, `PRINT` or `BEGIN` is never a
+variable, file or array name. The grammar reserves the same words (`RESERVED_WORDS` in `grammar.js`), so a keyword
+ends a list instead of being read as one more item. The words WeiDU also accepts as operator spellings (`PLUS`,
+`LPAREN`) stay unreserved, as the comment there explains.
+
 ---
 
 ## TP2 Syntax Reference
@@ -579,16 +586,16 @@ Copy and patch Default.gam and all savegames.
 #### MOVE
 
 ```tp2
-MOVE [+|-] ~fromFile~ ~toFile~ ...
-MOVE (~directory~ ~regexp~) ~toDir~
+MOVE [+] ~fromFile~ ~toFile~ ...
+MOVE [+] (~directory~ [EXACT_MATCH | EVALUATE_REGEXP] ~regexp~) ~toDir~ ...
 ```
 
-Move files or directories. `+` skips backup, `-` only moves inlined files. Second form uses `directory-file-regexp` pattern.
+Move files or directories; `+` skips backup. Pairs and regexp groups may be mixed in one list.
 
 #### DELETE
 
 ```tp2
-DELETE [--no-backup] ~file~ ...
+DELETE [+] ~file~ ...
 ```
 
 Remove files/directories.
@@ -922,18 +929,16 @@ Loop while condition is true (patch context only).
 ```tp2
 ACTION_TRY
   actions...
-WITH DEFAULT
+WITH
+  ~errorRegexp~ ... [WHEN condition] BEGIN actions... END
+  ANY condition BEGIN actions... END
+DEFAULT
   fallback_actions...
-END
-
-PATCH_TRY
-  patches...
-WITH DEFAULT
-  fallback_patches...
 END
 ```
 
-Exception handling.
+Exception handling; PATCH_TRY has the same shape with patches. ACTION_MATCH and PATCH_MATCH share the WITH part,
+and DEFAULT is required in all four.
 
 ### Functions and Macros
 
@@ -1398,6 +1403,13 @@ PATCH_REINCLUDE ~file~...
 PATCH_RANDOM_SEED value
 PATCH_READLN var
 REBUILD_CRE_FILE
+EVALUATE_BUFFER_SPECIAL ~marker~
+GET_OFFSET_ARRAY arr offset offSize count countSize index indexSize entryLength
+GET_OFFSET_ARRAY arr ARE_V10_ACTORS     // a preset stands for the seven values
+GET_OFFSET_ARRAY2 arr parent ... (eight values), or arr parent ITM_V10_HEAD_EFFECTS
+ADD_CRE_ITEM ~item~ #c1 #c2 #c3 ~flags~ ~slot~ [EQUIP] [TWOHANDED] [NOMOVE]
+REPLACE_CRE_ITEM ~item~ #c1 #c2 #c3 ~flags~ ~slot~ [EQUIP] [TWOHANDED]
+ADD_STORE_ITEM [+] ~item~ [FIRST | LAST | AFTER ~x~ | BEFORE ~x~] #c1 #c2 #c3 ~flags~ #stock [~unlimited~]
 ```
 
 ### Text Replacement

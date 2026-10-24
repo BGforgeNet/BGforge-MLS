@@ -761,9 +761,7 @@ OUTER_SPRINT GLOBAL myvar ~hello~
 
 (source_file
   (action_outer_sprint
-    var: (value
-      (variable_ref
-        (identifier)))
+    var: (identifier)
     value: (value
       (string
         (tilde_string
@@ -779,9 +777,7 @@ OUTER_TEXT_SPRINT GLOBAL myvar ~hello~
 
 (source_file
   (action_outer_text_sprint
-    var: (value
-      (variable_ref
-        (identifier)))
+    var: (identifier)
     value: (value
       (string
         (tilde_string
@@ -888,9 +884,7 @@ END
     key_var: (identifier)
     value_var: (identifier)
     (action_outer_sprint
-      var: (value
-        (variable_ref
-          (identifier)))
+      var: (identifier)
       value: (value
         (string
           (tilde_string
@@ -915,9 +909,7 @@ END
     value_var: (string
       (tilde_string))
     (action_outer_sprint
-      var: (value
-        (variable_ref
-          (identifier)))
+      var: (identifier)
       value: (value
         (string
           (tilde_string

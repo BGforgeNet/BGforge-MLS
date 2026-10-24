@@ -13,18 +13,63 @@
  * through weidu-binary.ts, which has no skip path.
  */
 
-import { execFileSync } from "child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "fs";
+import { execFile } from "child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import os from "os";
 import path from "path";
+import { promisify } from "util";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
-import {
-    exitStatus,
-    resolveWeidu,
-    WEIDU_HOOK_TIMEOUT_MS,
-    WEIDU_TIMEOUT_MS,
-} from "../../../scripts/utils/src/weidu-binary.ts";
+import { resolveWeidu, WEIDU_HOOK_TIMEOUT_MS, WEIDU_TIMEOUT_MS } from "../../../scripts/utils/src/weidu-binary.ts";
 import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
+
+/**
+ * The words the grammar reserves, read from the generated grammar.json: its `reserved` set is the RESERVED_WORDS
+ * list in grammar.js. Not skipped when absent - this suite needs a built grammar anyway.
+ */
+const GRAMMAR_RESERVED_WORDS = (
+    JSON.parse(readFileSync(path.resolve(__dirname, "../../../grammars/weidu-tp2/src/grammar.json"), "utf8")) as {
+        reserved: { global: { value: string }[] };
+    }
+).reserved.global.map((rule) => rule.value);
+
+/**
+ * WeiDU also reserves these spellings of punctuation and operators (PLUS for +, LPAREN for `(`). The grammar models
+ * only the symbols and tree-sitter reserves only words the grammar uses, so they stay unreserved there: `SET PLUS = 1`
+ * parses, though WeiDU rejects it. Their cases below check WeiDU's side only.
+ */
+const OPERATOR_WORDS = [
+    "AND_EQUALS",
+    "BLSL_EQUALS",
+    "BLSR_EQUALS",
+    "BXOR_EQUALS",
+    "COLON",
+    "COMMA",
+    "DIVIDE",
+    "DIVIDE_EQUALS",
+    "DOLLARS",
+    "EQUALSEQUALS",
+    "EQUALSGREATER",
+    "GT",
+    "GTE",
+    "LPAREN",
+    "LT",
+    "LTE",
+    "MINUS",
+    "MINUS_EQUALS",
+    "MINUS_MINUS",
+    "NOTEQUALS",
+    "OR_EQUALS",
+    "PLUS",
+    "PLUS_EQUALS",
+    "PLUS_PLUS",
+    "QUESTION",
+    "RPAREN",
+    "SEMICOLON",
+    "STRING_CONCAT",
+    "TIMES",
+    "TIMESTIMES",
+    "TIMES_EQUALS",
+];
 
 /**
  * WeiDU exits 0 when the file parsed and 4 on a parse error. Anything else (crash, missing binary,
@@ -54,6 +99,8 @@ const macroBody = (body: string) => `DEFINE_ACTION_MACRO m BEGIN\n  ${body}\nEND
 interface Case {
     name: string;
     code: string;
+    /** Assert WeiDU's verdict only: a recorded divergence of the grammar, documented where it is decided. */
+    weiduOnly?: boolean;
 }
 
 /**
@@ -235,6 +282,77 @@ const CASES: Case[] = [
     { name: "INSTALL_ORDER AFTER", code: component("ACTION_IF INSTALL_ORDER ~a~ 1 AFTER ~b~ 2 BEGIN END") },
     { name: "INSTALL_ORDER BEFORE", code: component("ACTION_IF INSTALL_ORDER ~a~ 1 BEFORE ~b~ 2 BEGIN END") },
 
+    // WeiDU reserves every keyword everywhere; a keyword in a name, file or value slot is an error, not a name.
+    { name: "a keyword is not a file name", code: component("INCLUDE ~a.tpa~ SET") },
+    { name: "a keyword is not a variable name", code: component("OUTER_SPRINT SET ~a~") },
+    { name: "a keyword is not an assignment target", code: patch("SET COPY = 1") },
+    { name: "a keyword is not a value", code: component("OUTER_SET x = BEGIN") },
+    { name: "an offset preset is not a value", code: component("OUTER_SET x = ARE_V10_ACTORS") },
+    { name: "EXTEND_TOP rejects USING before patches", code: component("EXTEND_TOP ~a~ ~b~ USING ~t.tra~ SET x = 1") },
+    { name: "a lowercase keyword is a plain name", code: component("OUTER_SPRINT set ~a~") },
+    { name: "a word extending a keyword is a plain name", code: component("OUTER_SPRINT SETTER ~a~") },
+    { name: "COMPILE USING list ends at the next action", code: component("COMPILE ~a.d~ USING ~a.tra~\nPRINT ~x~") },
+    { name: "GET_OFFSET_ARRAY with a preset", code: patch("GET_OFFSET_ARRAY arr ARE_V10_ACTORS") },
+    { name: "GET_OFFSET_ARRAY with seven values", code: patch("GET_OFFSET_ARRAY arr 0x54 4 0x58 2 0 0 0x110") },
+    { name: "GET_OFFSET_ARRAY rejects six values", code: patch("GET_OFFSET_ARRAY arr 0x54 4 0x58 2 0 0") },
+    { name: "GET_OFFSET_ARRAY2 with a preset", code: patch("GET_OFFSET_ARRAY2 arr 0 ITM_V10_HEAD_EFFECTS") },
+    { name: "GET_OFFSET_ARRAY2 with eight values", code: patch("GET_OFFSET_ARRAY2 arr 0 0x64 4 0x68 2 0 0 0x28") },
+    // Lists WeiDU allows to be empty; the next keyword then starts the next statement, not a list item.
+    { name: "INCLUDE with no files", code: component("INCLUDE\nPRINT ~x~") },
+    { name: "COMPILE USING with no tra files", code: component("COMPILE ~a.d~ USING\nPRINT ~x~") },
+    { name: "COPY with no file pairs", code: component("COPY\nPRINT ~x~") },
+    { name: "ACTION_FOR_EACH with an empty list", code: component("ACTION_FOR_EACH x IN BEGIN PRINT ~y~ END") },
+    { name: "STRING_SET with no pairs", code: component("STRING_SET\nPRINT ~x~") },
+    { name: "REMOVE_CRE_ITEM with no items", code: patch("REMOVE_CRE_ITEM\n  SET x = 1") },
+    { name: "WRITE_ASCII_LIST with no strings", code: patch("WRITE_ASCII_LIST 0\n  SET x = 1") },
+    { name: "README with no files", code: tp2("README\n\nBEGIN ~Core~\nDESIGNATED 1\n") },
+    { name: "LANGUAGE with no tra files", code: tp2("LANGUAGE ~E~ ~english~\n\nBEGIN ~Core~\nDESIGNATED 1\n") },
+
+    // List and clause shapes.
+    { name: "COMPILE with patches", code: component("COMPILE ~a.d~ SET x = 1 USING ~t.tra~") },
+    { name: "MOVE regexp group with EXACT_MATCH", code: component("MOVE (~a~ EXACT_MATCH ~b~) ~c~") },
+    { name: "MOVE mixing pairs and groups", code: component("MOVE ~a~ ~b~ (~c~ ~d~) ~e~") },
+    { name: "ACTION_FOR_EACH rejects a missing BEGIN", code: component("ACTION_FOR_EACH x IN a b PRINT ~y~ END") },
+    { name: "STRING_SET rejects two USING files", code: component("STRING_SET 1 ~a~ USING ~a.tra~ ~b.tra~") },
+    { name: "DECOMPRESS_BIFF with several files", code: component("DECOMPRESS_BIFF ~a~ ~b~") },
+
+    // MATCH and TRY share one shape: WITH case... DEFAULT body END.
+    {
+        name: "ACTION_TRY with a case",
+        code: component("ACTION_TRY PRINT ~x~ WITH ~Failure.*~ BEGIN PRINT ~y~ END DEFAULT ACTION_RERAISE END"),
+    },
+    { name: "PATCH_TRY with an ANY case", code: patch("PATCH_TRY SET x = 1 WITH ANY 1 BEGIN END DEFAULT END") },
+    { name: "ACTION_MATCH rejects a missing DEFAULT", code: component("ACTION_MATCH 1 WITH 1 BEGIN END END") },
+    { name: "ACTION_MATCH case with WHEN", code: component("ACTION_MATCH x WITH 1 2 WHEN y BEGIN END DEFAULT END") },
+    {
+        name: "ACTION_MATCH rejects WHEN without a guard",
+        code: component("ACTION_MATCH x WITH 1 WHEN BEGIN END DEFAULT END"),
+    },
+
+    // Item patches take a fixed argument count and their own switches.
+    {
+        name: "ADD_CRE_ITEM with every switch",
+        code: patch("ADD_CRE_ITEM ~sw1h01~ #0 #0 #0 ~NONE~ ~WEAPON1~ EQUIP TWOHANDED NOMOVE"),
+    },
+    {
+        name: "REPLACE_CRE_ITEM rejects NOMOVE",
+        code: patch("REPLACE_CRE_ITEM ~sw1h01~ #0 #0 #0 ~NONE~ ~WEAPON1~ NOMOVE"),
+    },
+    { name: "ADD_STORE_ITEM with a position", code: patch("ADD_STORE_ITEM ~sw1h01~ LAST #0 #0 #0 ~IDENTIFIED~ #5") },
+    { name: "EVALUATE_BUFFER_SPECIAL", code: patch("EVALUATE_BUFFER_SPECIAL ~%~") },
+
+    // Every reserved word, in a slot that takes a bare name: WeiDU rejects each, so the list holds no plain word.
+    ...GRAMMAR_RESERVED_WORDS.map((word) => ({
+        name: `reserved word ${word} is not a name`,
+        code: component(`OUTER_SPRINT ${word} ~a~`),
+    })),
+    // The operator spellings are WeiDU-reserved too, but the grammar does not reserve them (see OPERATOR_WORDS).
+    ...OPERATOR_WORDS.map((word) => ({
+        name: `operator word ${word} is reserved by WeiDU`,
+        code: component(`OUTER_SPRINT ${word} ~a~`),
+        weiduOnly: true,
+    })),
+
     // Lexer-level changes.
     { name: "subtraction written without spaces", code: patch("WRITE_LONG 0 (%SOURCE_SIZE%-12)") },
     { name: "a string whose whole content is //", code: patch("REPLACE_TEXTUALLY ~//~ ~x~") },
@@ -243,6 +361,8 @@ const CASES: Case[] = [
         code: "DEFINE_ACTION_FUNCTION ~f~ STR_VAR 2da = ~~ BEGIN\n  PRINT ~hi~\nEND\n",
     },
 ];
+
+const execFileAsync = promisify(execFile);
 
 let weidu = "";
 let tmpDir = "";
@@ -260,25 +380,50 @@ interface WeiduVerdict {
  * WeiDU if ANY of the three accepts it; comparing against TP2 alone reports TPA-context constructs
  * (function definitions, ACTION_INCLUDE) as though the grammar invented them.
  */
-function weiduVerdict(code: string, slug: string): WeiduVerdict {
+async function weiduVerdict(code: string, slug: string): Promise<WeiduVerdict> {
     const file = path.join(tmpDir, `${slug}.tp2`);
     writeFileSync(file, code);
     for (const type of ["TP2", "TPA", "TPP"]) {
         try {
-            execFileSync(weidu, ["--nogame", "--noautoupdate", "--parse-check", type, file], {
+            // oxlint-disable-next-line no-await-in-loop -- the types are tried in turn, stopping at the first that accepts
+            await execFileAsync(weidu, ["--nogame", "--noautoupdate", "--parse-check", type, file], {
                 cwd: tmpDir,
                 timeout: WEIDU_TIMEOUT_MS,
-                stdio: "ignore",
             });
             return { acceptedAs: type };
         } catch (error) {
-            const status = exitStatus(error);
-            if (status !== WEIDU_OK && status !== WEIDU_PARSE_ERROR) {
-                return { acceptedAs: null, inconclusive: `${type} exited with status ${String(status)}` };
+            // An async exec failure carries the exit code as `code`; a timeout or spawn failure carries a string.
+            const exitCode = (error as { code?: unknown }).code;
+            if (exitCode !== WEIDU_OK && exitCode !== WEIDU_PARSE_ERROR) {
+                return { acceptedAs: null, inconclusive: `${type} exited with ${String(exitCode)}` };
             }
         }
     }
     return { acceptedAs: null };
+}
+
+/** Each case's WeiDU verdict, computed up front: the cases are independent, so the runs go in parallel. */
+const verdicts = new Map<string, WeiduVerdict>();
+
+/** Concurrent WeiDU runs; each is a short single-threaded process. */
+const WEIDU_POOL = 8;
+
+/** One case costs up to three WeiDU runs, and the reserved-word cases make the suite several hundred long. */
+const VERDICTS_TIMEOUT_MS = WEIDU_HOOK_TIMEOUT_MS + 300_000;
+
+async function computeVerdicts(): Promise<void> {
+    let next = 0;
+    const worker = async (): Promise<void> => {
+        while (next < CASES.length) {
+            // Named by index: names that differ only in punctuation (`SET <<=`, `SET >>=`) would share a slug,
+            // and two runs in flight would write one file.
+            const index = next++;
+            const { name, code } = CASES[index]!;
+            // oxlint-disable-next-line no-await-in-loop -- each worker runs its cases one at a time; the pool is the parallelism
+            verdicts.set(name, await weiduVerdict(code, `case${index}`));
+        }
+    };
+    await Promise.all(Array.from({ length: WEIDU_POOL }, worker));
 }
 
 /** Our grammar's verdict: any ERROR or MISSING node in the tree means we reject the snippet. */
@@ -292,7 +437,8 @@ beforeAll(async () => {
     weidu = resolveWeidu();
     tmpDir = mkdtempSync(path.join(os.tmpdir(), "weidu-tp2-differential-"));
     await initParser();
-}, WEIDU_HOOK_TIMEOUT_MS);
+    await computeVerdicts();
+}, VERDICTS_TIMEOUT_MS);
 
 afterAll(() => {
     if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
@@ -306,18 +452,25 @@ describe("WeiDU TP2 differential (grammar vs the real binary)", () => {
         expect(new Set(CASES.map((c) => c.name)).size).toBe(CASES.length);
     });
 
-    it.each(CASES)("$name: our grammar agrees with WeiDU", ({ name, code }) => {
-        const slug = name.replaceAll(/[^a-z0-9]+/gi, "_");
-        const verdict = weiduVerdict(code, slug);
+    it.each(CASES.filter((c) => c.weiduOnly))("$name: WeiDU rejects it as a name", ({ name }) => {
+        const verdict = verdicts.get(name);
+        expect(verdict, `no WeiDU verdict was computed for "${name}"`).toBeDefined();
+        expect(verdict!.inconclusive, `WeiDU gave no verdict for "${name}"`).toBeUndefined();
+        expect(verdict!.acceptedAs, "WeiDU accepts this word as a plain name").toBeNull();
+    });
+
+    it.each(CASES.filter((c) => !c.weiduOnly))("$name: our grammar agrees with WeiDU", ({ name, code }) => {
+        const verdict = verdicts.get(name);
+        expect(verdict, `no WeiDU verdict was computed for "${name}"`).toBeDefined();
         // An inconclusive WeiDU run is reported, never folded into "reject" - a silent exclusion would
         // let the gate shrink without the summary changing.
-        expect(verdict.inconclusive, `WeiDU gave no verdict for "${name}"`).toBeUndefined();
+        expect(verdict!.inconclusive, `WeiDU gave no verdict for "${name}"`).toBeUndefined();
 
-        const weiduAccepts = verdict.acceptedAs !== null;
+        const weiduAccepts = verdict!.acceptedAs !== null;
         expect(
             grammarAccepts(code),
             weiduAccepts
-                ? `WeiDU accepts this as ${verdict.acceptedAs} but our grammar reports a syntax error`
+                ? `WeiDU accepts this as ${verdict!.acceptedAs} but our grammar reports a syntax error`
                 : "WeiDU rejects this as TP2, TPA and TPP but our grammar accepts it",
         ).toBe(weiduAccepts);
     });

@@ -8,9 +8,528 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
+/**
+ * The words WeiDU reserves in TP2 code: its lexer returns each one as a keyword, never as a bare name, so none can be
+ * a variable, file or array name in any position. Taken from WeiDU 251, the version scripts/ensure-weidu.sh pins;
+ * on a WeiDU upgrade, re-derive the list from that release. WeiDU also reserves its spelled-out operators (PLUS for
+ * +, LPAREN for `(`); tree-sitter reserves only words the grammar uses as tokens, and the grammar models only the
+ * symbols, so those stay out. server/test/integration/weidu-tp2-grammar-differential.test.ts checks both sets.
+ */
+const RESERVED_WORDS = [
+    "ABORT",
+    "ABS",
+    "ACTION_BASH_FOR",
+    "ACTION_CLEAR_ARRAY",
+    "ACTION_DEFINE_ARRAY",
+    "ACTION_DEFINE_ASSOCIATIVE_ARRAY",
+    "ACTION_FOR_EACH",
+    "ACTION_GET_STRREF",
+    "ACTION_GET_STRREF_F",
+    "ACTION_GET_STRREF_FS",
+    "ACTION_GET_STRREF_S",
+    "ACTION_IF",
+    "ACTION_INCLUDE",
+    "ACTION_MATCH",
+    "ACTION_PHP_EACH",
+    "ACTION_READLN",
+    "ACTION_REINCLUDE",
+    "ACTION_RERAISE",
+    "ACTION_SORT_ARRAY_INDICES",
+    "ACTION_TIME",
+    "ACTION_TO_LOWER",
+    "ACTION_TO_UPPER",
+    "ACTION_TRY",
+    "ADD_AREA_TYPE",
+    "ADD_CRE_ITEM",
+    "ADD_GAME_NPC",
+    "ADD_GAM_NPC",
+    "ADD_IF_MISSING",
+    "ADD_JOURNAL",
+    "ADD_KIT",
+    "ADD_KNOWN_SPELL",
+    "ADD_MAP_NOTE",
+    "ADD_MEMORIZED_SPELL",
+    "ADD_MUSIC",
+    "ADD_PROJECTILE",
+    "ADD_SCHOOL",
+    "ADD_SECTYPE",
+    "ADD_SPELL",
+    "ADD_STORE_ITEM",
+    "AFTER",
+    "ALLOW_MISSING",
+    "ALTER_TLK",
+    "ALTER_TLK_LIST",
+    "ALTER_TLK_RANGE",
+    "ALWAYS",
+    "ALWAYS_ASK",
+    "AND",
+    "ANY",
+    "APPEND",
+    "APPEND_COL",
+    "APPEND_COL_OUTER",
+    "APPEND_FILE",
+    "APPEND_FILE_EVALUATE",
+    "APPEND_OUTER",
+    "APPLY_BCS_PATCH",
+    "APPLY_BCS_PATCH_OR_COPY",
+    "ARE_V10_ACTORS",
+    "ARE_V10_AMBIENTS",
+    "ARE_V10_ANIMATIONS",
+    "ARE_V10_CONTAINERS",
+    "ARE_V10_CONTAINER_VERTICES",
+    "ARE_V10_DOORS",
+    "ARE_V10_DOOR_CLOSED_CELL_VERTICES",
+    "ARE_V10_DOOR_CLOSED_OUTLINE_VERTICES",
+    "ARE_V10_DOOR_OPEN_CELL_VERTICES",
+    "ARE_V10_DOOR_OPEN_OUTLINE_VERTICES",
+    "ARE_V10_ENTRANCES",
+    "ARE_V10_ITEMS",
+    "ARE_V10_REGIONS",
+    "ARE_V10_REGION_VERTICES",
+    "ARE_V10_SPAWN_POINTS",
+    "ARE_V91_ACTORS",
+    "AS",
+    "ASK_EVERY_COMPONENT",
+    "AT",
+    "AT_EXIT",
+    "AT_INTERACTIVE_EXIT",
+    "AT_INTERACTIVE_NOW",
+    "AT_INTERACTIVE_UNINSTALL",
+    "AT_INTERACTIVE_UNINSTALL_EXIT",
+    "AT_NOW",
+    "AT_UNINSTALL",
+    "AT_UNINSTALL_EXIT",
+    "AUTHOR",
+    "AUTO_EVAL_STRINGS",
+    "AUTO_TRA",
+    "A_B_P",
+    "BACKUP",
+    "BAND",
+    "BASR",
+    "BEFORE",
+    "BEGIN",
+    "BIFF",
+    "BIFF_IS_COMPRESSED",
+    "BLSL",
+    "BLSR",
+    "BNOT",
+    "BOR",
+    "BUFFER_LENGTH",
+    "BUT_ONLY",
+    "BUT_ONLY_IF_IT_CHANGES",
+    "BXOR",
+    "BYTE_AT",
+    "CACHE",
+    "CASE_INSENSITIVE",
+    "CASE_SENSITIVE",
+    "CLEAR",
+    "CLEAR_ARRAY",
+    "CLEAR_ARRAYS",
+    "CLEAR_CODES",
+    "CLEAR_EVERYTHING",
+    "CLEAR_IDS_MAP",
+    "CLEAR_INLINED",
+    "CLEAR_MEMORY",
+    "COMPILE",
+    "COMPILE_BAF_TO_BCS",
+    "COMPILE_D_TO_DLG",
+    "COMPRESS_INTO_FILE",
+    "COMPRESS_INTO_VAR",
+    "COMPRESS_REPLACE_FILE",
+    "COPY",
+    "COPY_ALL_GAM_FILES",
+    "COPY_EXISTING",
+    "COPY_EXISTING_REGEXP",
+    "COPY_KIT",
+    "COPY_LARGE",
+    "COPY_RANDOM",
+    "COUNT_2DA_COLS",
+    "COUNT_2DA_ROWS",
+    "COUNT_REGEXP_INSTANCES",
+    "CREATE",
+    "CRE_V10_EFFECTS",
+    "CRE_V10_ITEMS",
+    "CRE_V10_KNOWN_SPELLS",
+    "CRE_V10_SPELL_MEM",
+    "CRE_V10_SPELL_MEM_INFO",
+    "DECOMPILE_AND_PATCH",
+    "DECOMPILE_BCS_TO_BAF",
+    "DECOMPILE_DLG_TO_D",
+    "DECOMPRESS_BIFF",
+    "DECOMPRESS_INTO_FILE",
+    "DECOMPRESS_INTO_VAR",
+    "DECOMPRESS_REPLACE_FILE",
+    "DEFAULT",
+    "DEFINED_AS_FUNCTION",
+    "DEFINED_AS_INLINED",
+    "DEFINE_ACTION_FUNCTION",
+    "DEFINE_ACTION_MACRO",
+    "DEFINE_ARRAY",
+    "DEFINE_ASSOCIATIVE_ARRAY",
+    "DEFINE_DIMORPHIC_FUNCTION",
+    "DEFINE_FUNCTION_ACTION",
+    "DEFINE_FUNCTION_PATCH",
+    "DEFINE_MACRO_ACTION",
+    "DEFINE_MACRO_PATCH",
+    "DEFINE_PATCH_FUNCTION",
+    "DEFINE_PATCH_MACRO",
+    "DELETE",
+    "DELETE_BYTES",
+    "DEPRECATED",
+    "DESIGNATED",
+    "DIRECTORY_EXISTS",
+    "DISABLE_FROM_KEY",
+    "EDIT_SAV_FILE",
+    "ELSE",
+    "END",
+    "ENGINE_IS",
+    "EQUALS",
+    "EQUIP",
+    "EVAL",
+    "EVALUATE_BUFFER",
+    "EVALUATE_BUFFER_SPECIAL",
+    "EVALUATE_REGEXP",
+    "EXACT",
+    "EXACT_MATCH",
+    "EXISTING",
+    "EXTEND_BOTTOM",
+    "EXTEND_BOTTOM_REGEXP",
+    "EXTEND_MOS",
+    "EXTEND_TOP",
+    "EXTEND_TOP_REGEXP",
+    "FAIL",
+    "FILE_CONTAINS",
+    "FILE_CONTAINS_EVALUATED",
+    "FILE_EXISTS",
+    "FILE_EXISTS_IN_GAME",
+    "FILE_IS_IN_COMPRESSED_BIF",
+    "FILE_IS_IN_COMPRESSED_BIFF",
+    "FILE_MD5",
+    "FILE_SIZE",
+    "FIRST",
+    "FOR",
+    "FORBID_COMPONENT",
+    "FORBID_FILE",
+    "FORCED_SUBCOMPONENT",
+    "FROM",
+    "GAME_INCLUDES",
+    "GAME_IS",
+    "GET_DIRECTORY_ARRAY",
+    "GET_FILE_ARRAY",
+    "GET_OFFSET_ARRAY",
+    "GET_OFFSET_ARRAY2",
+    "GET_RESOURCE_ARRAY",
+    "GET_STRREF",
+    "GET_STRREF_F",
+    "GET_STRREF_FS",
+    "GET_STRREF_S",
+    "GLOB",
+    "GLOBAL",
+    "GROUP",
+    "IDS_OF_SYMBOL",
+    "ID_OF_LABEL",
+    "IF",
+    "IF_EVAL",
+    "IF_EXISTING",
+    "IF_EXISTS",
+    "IF_SIZE_IS",
+    "IN",
+    "INCLUDE",
+    "INDEX",
+    "INDEX_BUFFER",
+    "INNER_ACTION",
+    "INNER_PATCH",
+    "INNER_PATCH_FILE",
+    "INNER_PATCH_SAVE",
+    "INSERT_2DA_ROW",
+    "INSERT_BYTES",
+    "INSERT_FILE",
+    "INSTALL_BY_DEFAULT",
+    "INSTALL_ORDER",
+    "INT_VAR",
+    "IS_AN_INT",
+    "IS_SILENT",
+    "ITM_V10_GEN_EFFECTS",
+    "ITM_V10_HEADERS",
+    "ITM_V10_HEAD_EFFECTS",
+    "I_S_I",
+    "KEEP_CRLF",
+    "LABEL",
+    "LAF",
+    "LAM",
+    "LANGUAGE",
+    "LAST",
+    "LAUNCH_ACTION_FUNCTION",
+    "LAUNCH_ACTION_MACRO",
+    "LAUNCH_FUNCTION_ACTION",
+    "LAUNCH_FUNCTION_PATCH",
+    "LAUNCH_MACRO_ACTION",
+    "LAUNCH_MACRO_PATCH",
+    "LAUNCH_PATCH_FUNCTION",
+    "LAUNCH_PATCH_MACRO",
+    "LEXICOGRAPHICALLY",
+    "LOAD",
+    "LOAD_TRA",
+    "LOCAL_SET",
+    "LOCAL_SPRINT",
+    "LOCAL_TEXT_SPRINT",
+    "LOG",
+    "LONG_AT",
+    "LOOKUP_IDS_SYMBOL_OF_INT",
+    "LPF",
+    "LPM",
+    "MAKE_BIFF",
+    "MANAGED",
+    "MENU_STYLE",
+    "METADATA",
+    "MKDIR",
+    "MODDER",
+    "MODULO",
+    "MOD_IS_INSTALLED",
+    "MOVE",
+    "NEXT_STRREF",
+    "NOGLOB",
+    "NOMOVE",
+    "NOT",
+    "NO_IF_EVAL_BUG",
+    "NO_LOG_RECORD",
+    "NULL",
+    "NUMERICALLY",
+    "ON_DISABLE",
+    "ON_MISMATCH",
+    "OR",
+    "OUTER_FOR",
+    "OUTER_INNER_PATCH",
+    "OUTER_INNER_PATCH_SAVE",
+    "OUTER_PATCH",
+    "OUTER_PATCH_SAVE",
+    "OUTER_SET",
+    "OUTER_SNPRINT",
+    "OUTER_SPRINT",
+    "OUTER_SPRINTF",
+    "OUTER_TEXT_SPRINT",
+    "OUTER_WHILE",
+    "PATCH_ABORT",
+    "PATCH_BASH_FOR",
+    "PATCH_CLEAR_ARRAY",
+    "PATCH_DEFINE_ARRAY",
+    "PATCH_DEFINE_ASSOCIATIVE_ARRAY",
+    "PATCH_FAIL",
+    "PATCH_FOR_EACH",
+    "PATCH_GAM",
+    "PATCH_IF",
+    "PATCH_INCLUDE",
+    "PATCH_LOG",
+    "PATCH_MATCH",
+    "PATCH_PHP_EACH",
+    "PATCH_PRINT",
+    "PATCH_RANDOM_SEED",
+    "PATCH_READLN",
+    "PATCH_REINCLUDE",
+    "PATCH_RERAISE",
+    "PATCH_SILENT",
+    "PATCH_TIME",
+    "PATCH_TRY",
+    "PATCH_VERBOSE",
+    "PATCH_WARN",
+    "PATCH_WITH_SCOPE",
+    "PATCH_WITH_TRA",
+    "PHP_EACH",
+    "PRETTY_PRINT_2DA",
+    "PRINT",
+    "QUICK_MENU",
+    "QUOTE",
+    "RANDOM",
+    "RANDOM_SEED",
+    "README",
+    "READ_2DA_ENTRIES_NOW",
+    "READ_2DA_ENTRY",
+    "READ_2DA_ENTRY_FORMER",
+    "READ_ASCII",
+    "READ_BYTE",
+    "READ_LONG",
+    "READ_SBYTE",
+    "READ_SHORT",
+    "READ_SLONG",
+    "READ_SSHORT",
+    "READ_STRREF",
+    "READ_STRREF_F",
+    "READ_STRREF_FS",
+    "READ_STRREF_S",
+    "REBUILD_CRE_FILE",
+    "REFACTOR_BAF_TRIGGER",
+    "REFACTOR_D_TRIGGER",
+    "REFACTOR_TRIGGER",
+    "REGISTER_UNINSTALL",
+    "REINCLUDE",
+    "REM",
+    "REMOVE_2DA_ROW",
+    "REMOVE_CRE_EFFECTS",
+    "REMOVE_CRE_ITEM",
+    "REMOVE_CRE_ITEMS",
+    "REMOVE_KNOWN_SPELL",
+    "REMOVE_KNOWN_SPELLS",
+    "REMOVE_MEMORIZED_SPELL",
+    "REMOVE_MEMORIZED_SPELLS",
+    "REMOVE_STORE_ITEM",
+    "REPLACE",
+    "REPLACE_BCS_BLOCK",
+    "REPLACE_BCS_BLOCK_REGEXP",
+    "REPLACE_CRE_ITEM",
+    "REPLACE_EVALUATE",
+    "REPLACE_TEXTUALLY",
+    "REQUIRE_COMPONENT",
+    "REQUIRE_FILE",
+    "REQUIRE_PREDICATE",
+    "RESOLVE_STR_REF",
+    "RESOURCE_CONTAINS",
+    "RET",
+    "RET_ARRAY",
+    "RINDEX",
+    "RINDEX_BUFFER",
+    "R_B_B",
+    "R_B_B_RE",
+    "SAY",
+    "SAY_EVALUATED",
+    "SBYTE_AT",
+    "SCRIPT_STYLE",
+    "SET",
+    "SET_2DA_ENTRIES_NOW",
+    "SET_2DA_ENTRY",
+    "SET_2DA_ENTRY_LATER",
+    "SET_BG2_PROFICIENCY",
+    "SET_IDS_SYMBOL_OF_INT",
+    "SHORT_AT",
+    "SILENT",
+    "SIZE_OF_FILE",
+    "SLONG_AT",
+    "SNPRINT",
+    "SORT_ARRAY_INDICES",
+    "SOURCE_BIFF",
+    "SPACES",
+    "SPL_V10_GEN_EFFECTS",
+    "SPL_V10_HEADERS",
+    "SPL_V10_HEAD_EFFECTS",
+    "SPRINT",
+    "SPRINTF",
+    "SSHORT_AT",
+    "STATE_WHICH_SAYS",
+    "STO_V10_CURES",
+    "STO_V10_DRINKS",
+    "STO_V10_ITEMS_PURCHASED",
+    "STO_V10_ITEMS_SOLD",
+    "STRING_COMPARE",
+    "STRING_COMPARE_CASE",
+    "STRING_COMPARE_REGEXP",
+    "STRING_CONTAINS_REGEXP",
+    "STRING_EQUAL",
+    "STRING_EQUAL_CASE",
+    "STRING_LENGTH",
+    "STRING_MATCHES_REGEXP",
+    "STRING_SET",
+    "STRING_SET_EVALUATE",
+    "STRING_SET_RANGE",
+    "STR_CMP",
+    "STR_EQ",
+    "STR_VAR",
+    "SUBCOMPONENT",
+    "SUB_COMPONENT",
+    "SUPPORT",
+    "TEXT",
+    "TEXT_SPRINT",
+    "THEN",
+    "TITLE",
+    "TO_LOWER",
+    "TO_UPPER",
+    "TRA_ENTRY_EXISTS",
+    "TWOHANDED",
+    "UNINSTALL",
+    "UNINSTALL_ORDER",
+    "UNLESS",
+    "USING",
+    "VALID_SCRIPT_ACTIONS",
+    "VALID_SCRIPT_TRIGGERS",
+    "VARIABLE_IS_IN_ARRAY",
+    "VARIABLE_IS_SET",
+    "VERBOSE",
+    "VERSION",
+    "WARN",
+    "WHEN",
+    "WHILE",
+    "WITH",
+    "WITH_SCOPE",
+    "WITH_TRA",
+    "WMP_AREAS",
+    "WMP_EAST_LINKS",
+    "WMP_LINKS",
+    "WMP_NORTH_LINKS",
+    "WMP_SOUTH_LINKS",
+    "WMP_WEST_LINKS",
+    "WRITE_ASCII",
+    "WRITE_ASCIIE",
+    "WRITE_ASCIIL",
+    "WRITE_ASCIIT",
+    "WRITE_ASCII_LIST",
+    "WRITE_ASCII_TERMINATE",
+    "WRITE_ASCII_TERMINATED",
+    "WRITE_BYTE",
+    "WRITE_EVALUATED_ASCII",
+    "WRITE_FILE",
+    "WRITE_LONG",
+    "WRITE_SHORT",
+];
+
 // =========================================
 // HELPER FUNCTIONS
 // =========================================
+
+/** `rule` exactly `n` times. */
+const repeatN = (rule, n) => seq(...Array.from({ length: n }, () => rule));
+
+/** GET_OFFSET_ARRAY presets: each stands for the seven values of one file structure's array. */
+const OFFSET_ARRAY_PRESETS = [
+    "ARE_V10_ACTORS",
+    "ARE_V10_REGIONS",
+    "ARE_V10_SPAWN_POINTS",
+    "ARE_V10_ENTRANCES",
+    "ARE_V10_CONTAINERS",
+    "ARE_V10_AMBIENTS",
+    "ARE_V10_DOORS",
+    "ARE_V10_ANIMATIONS",
+    "ARE_V91_ACTORS",
+    "CRE_V10_KNOWN_SPELLS",
+    "CRE_V10_SPELL_MEM_INFO",
+    "CRE_V10_EFFECTS",
+    "CRE_V10_ITEMS",
+    "ITM_V10_HEADERS",
+    "ITM_V10_GEN_EFFECTS",
+    "SPL_V10_HEADERS",
+    "SPL_V10_GEN_EFFECTS",
+    "STO_V10_ITEMS_PURCHASED",
+    "STO_V10_ITEMS_SOLD",
+    "STO_V10_DRINKS",
+    "STO_V10_CURES",
+    "WMP_AREAS",
+    "WMP_LINKS",
+];
+
+/** GET_OFFSET_ARRAY2 presets: each follows the parent offset and stands for the other seven values. */
+const OFFSET_ARRAY2_PRESETS = [
+    "ARE_V10_ITEMS",
+    "ARE_V10_REGION_VERTICES",
+    "ARE_V10_CONTAINER_VERTICES",
+    "ARE_V10_DOOR_OPEN_OUTLINE_VERTICES",
+    "ARE_V10_DOOR_CLOSED_OUTLINE_VERTICES",
+    "ARE_V10_DOOR_OPEN_CELL_VERTICES",
+    "ARE_V10_DOOR_CLOSED_CELL_VERTICES",
+    "CRE_V10_SPELL_MEM",
+    "ITM_V10_HEAD_EFFECTS",
+    "SPL_V10_HEAD_EFFECTS",
+    "WMP_NORTH_LINKS",
+    "WMP_WEST_LINKS",
+    "WMP_SOUTH_LINKS",
+    "WMP_EAST_LINKS",
+];
 
 /** choice() that handles single keyword without warning */
 const kw = (...keywords) => (keywords.length === 1 ? keywords[0] : choice(...keywords));
@@ -48,13 +567,13 @@ const checkExpr =
 const sprintOp =
     (...keywords) =>
     ($) =>
-        seq(kw(...keywords), field("var", $.value), field("value", $.value));
+        seq(kw(...keywords), $._sprint_target, field("value", $.value));
 
 /** Sprint-like operation with optional GLOBAL: KEYWORD [GLOBAL] var value */
 const sprintOpGlobal =
     (...keywords) =>
     ($) =>
-        seq(kw(...keywords), optional("GLOBAL"), field("var", $.value), field("value", $.value));
+        seq(kw(...keywords), optional("GLOBAL"), $._sprint_target, field("value", $.value));
 
 /** Sprintf-like operation: KEYWORD var format [(args...)] */
 const sprintfOp = (keyword) => ($) =>
@@ -67,7 +586,7 @@ const printOp = (keyword) => ($) => seq(keyword, field("message", $.value));
 const caseConvert = (keyword) => ($) => seq(keyword, field("var", choice($.identifier, $.var_name_numeric, $.string)));
 
 /** CRE/store item patch: KEYWORD values... */
-const itemPatch = (keyword) => ($) => seq(keyword, repeat1($.value));
+const itemPatch = (keyword) => ($) => prec.right(seq(keyword, repeat($.value)));
 
 /** EXTEND action: KEYWORD existing new_file [EVAL] patches... [USING tra...] [when] */
 const extendAction =
@@ -80,7 +599,7 @@ const extendAction =
                 field("new_file", $.value),
                 optional(choice("EVALUATE_BUFFER", "EVAL")),
                 repeat($._patch),
-                optional(seq("USING", repeat1(field("tra", $.value)))),
+                optional(seq("USING", repeat(field("tra", $.value)))),
                 optional($.when),
             ),
         );
@@ -182,9 +701,24 @@ const outerPatchSaveAction = (keyword) => ($) =>
 /** INNER_PATCH: KEYWORD buffer BEGIN patches END */
 const innerPatchOp = (keyword) => ($) => seq(keyword, field("buffer", $.value), "BEGIN", repeat($._patch), "END");
 
-/** TRY block: KEYWORD body WITH [DEFAULT] handler END */
-const tryBlock = (keyword, bodyType) => ($) =>
-    seq(keyword, repeat(bodyType($)), "WITH", optional("DEFAULT"), repeat(bodyType($)), "END");
+/** The tail MATCH and TRY share: WITH case... DEFAULT body END. DEFAULT is required. */
+const withCases = (caseRule, bodyRule) => seq("WITH", repeat(caseRule), "DEFAULT", repeat(bodyRule), "END");
+
+/** A MATCH or TRY case: values... [WHEN guard] BEGIN body END, or ANY guard BEGIN body END. */
+const matchCase = (bodyType) => ($) =>
+    seq(
+        choice(
+            seq(repeat1($.value), optional(seq("WHEN", field("guard", $.value)))),
+            seq("ANY", field("guard", $.value)),
+        ),
+        "BEGIN",
+        repeat(bodyType($)),
+        "END",
+    );
+
+/** TRY block: KEYWORD body WITH case... DEFAULT handler END */
+const tryBlock = (keyword, bodyType, caseRule) => ($) =>
+    seq(keyword, repeat(bodyType($)), withCases(caseRule($), bodyType($)));
 
 /** DEFINE_ASSOCIATIVE_ARRAY: KEYWORD name BEGIN entries END */
 const defineAssocArray =
@@ -275,6 +809,12 @@ export default grammar({
 
     word: ($) => $.identifier,
 
+    // WeiDU's lexer turns every keyword into its token wherever it appears, so a keyword never reads as a bare
+    // name. Without this, tree-sitter would read one as an identifier wherever the keyword itself is not expected.
+    reserved: {
+        global: () => RESERVED_WORDS,
+    },
+
     conflicts: ($) => [
         [$._expr, $._simple_expr],
         [$.component],
@@ -293,12 +833,8 @@ export default grammar({
         [$.variable_ref, $.assoc_entry],
         [$.patch_remove_store_item],
         [$.patch_add_store_item],
-        [$.patch_replace_cre_item],
-        [$.patch_remove_cre_item],
-        [$.patch_add_cre_item],
         [$.action_copy_all_gam_files],
         [$.action_copy_random],
-        [$.action_match_case],
         [$._action, $._top_level],
         [$._assignable],
         [$._assignable, $._primary],
@@ -306,6 +842,7 @@ export default grammar({
         [$.patch_define_associative_array, $.action_define_associative_array],
         [$.patch_evaluate_buffer, $.action_extend_top],
         [$.patch_evaluate_buffer, $.action_extend_bottom],
+        [$.patch_evaluate_buffer, $.action_compile],
         [$._action, $.action_if],
     ],
 
@@ -384,6 +921,13 @@ export default grammar({
             ),
 
         // EVAL allows evaluated variable names (e.g., EVAL $array(...))
+        // A SPRINT target is a name, as WeiDU has it; the EVALUATE_BUFFER prefix stays outside the var field.
+        _sprint_target: ($) =>
+            seq(
+                optional(choice("EVAL", "EVALUATE_BUFFER")),
+                field("var", choice($.identifier, $.var_name_numeric, $.array_access, $.string)),
+            ),
+
         _assignable: ($) => seq(optional("EVAL"), choice($.identifier, $.var_name_numeric, $.array_access, $.string)),
 
         // =========================================
@@ -651,6 +1195,7 @@ export default grammar({
                 $.patch_replace_evaluate,
                 // Buffer operations
                 $.patch_evaluate_buffer,
+                $.patch_evaluate_buffer_special,
                 $.patch_insert_bytes,
                 $.patch_delete_bytes,
                 $.patch_append_file,
@@ -761,7 +1306,7 @@ export default grammar({
                 ),
             ),
 
-        patch_write_ascii_list: ($) => prec.right(seq("WRITE_ASCII_LIST", field("offset", $.value), repeat1($.value))),
+        patch_write_ascii_list: ($) => prec.right(seq("WRITE_ASCII_LIST", field("offset", $.value), repeat($.value))),
 
         patch_write_asciil: ($) => prec.right(seq("WRITE_ASCIIL", field("offset", $.value), repeat1($.value))),
 
@@ -876,26 +1421,16 @@ export default grammar({
                 ),
             ),
 
-        patch_match: ($) =>
-            seq(
-                "PATCH_MATCH",
-                field("value", $.value),
-                "WITH",
-                repeat($.match_case),
-                "DEFAULT",
-                repeat($._patch),
-                "END",
-            ),
+        patch_match: ($) => seq("PATCH_MATCH", field("value", $.value), withCases($.match_case, $._patch)),
 
-        match_case: ($) =>
-            seq(repeat1($.value), optional(seq("WHEN", field("guard", $.value))), "BEGIN", repeat($._patch), "END"),
+        match_case: matchCase(($) => $._patch),
 
         patch_for: forLoop("FOR", ($) => $._patch),
         patch_while: whileLoop("WHILE", ($) => $._patch),
         patch_php_each: phpEachLoop("PHP_EACH", "PATCH_PHP_EACH")(($) => $._patch),
 
         patch_for_each: ($) =>
-            seq("PATCH_FOR_EACH", field("var", $.value), "IN", repeat1($.value), "BEGIN", repeat($._patch), "END"),
+            seq("PATCH_FOR_EACH", field("var", $.value), "IN", repeat($.value), "BEGIN", repeat($._patch), "END"),
 
         patch_with_scope: ($) => seq("PATCH_WITH_SCOPE", "BEGIN", repeat($._patch), "END"),
 
@@ -931,6 +1466,7 @@ export default grammar({
 
         // Buffer operations
         patch_evaluate_buffer: ($) => choice("EVALUATE_BUFFER", "EVAL"),
+        patch_evaluate_buffer_special: ($) => seq("EVALUATE_BUFFER_SPECIAL", field("marker", $.value)),
 
         patch_insert_bytes: ($) => seq("INSERT_BYTES", field("offset", $.value), field("length", $.value)),
 
@@ -1046,23 +1582,50 @@ export default grammar({
 
         patch_remove_2da_row: ($) => seq("REMOVE_2DA_ROW", field("row", $.value), field("req_cols", $.value)),
 
+        // Seven values (offset, offset size, count, count size, index, index size, entry length), or a preset that
+        // names a known file structure.
         patch_get_offset_array: ($) =>
-            prec.right(seq("GET_OFFSET_ARRAY", field("var", $.identifier), repeat1($.value))),
+            seq(
+                "GET_OFFSET_ARRAY",
+                field("var", choice($.identifier, $.var_name_numeric, $.string)),
+                choice(repeatN($.value, 7), $.offset_array_preset),
+            ),
 
+        // As GET_OFFSET_ARRAY with the parent offset first: eight values, or that offset and a preset.
         patch_get_offset_array2: ($) =>
-            prec.right(seq("GET_OFFSET_ARRAY2", field("var", $.identifier), repeat1($.value))),
+            seq(
+                "GET_OFFSET_ARRAY2",
+                field("var", choice($.identifier, $.var_name_numeric, $.string)),
+                choice(repeatN($.value, 8), seq($.value, $.offset_array2_preset)),
+            ),
+
+        offset_array_preset: ($) => choice(...OFFSET_ARRAY_PRESETS),
+        offset_array2_preset: ($) => choice(...OFFSET_ARRAY2_PRESETS),
 
         // Store/CRE item operations (using helpers)
-        patch_remove_store_item: ($) => seq("REMOVE_STORE_ITEM", repeat1(field("item", $.value))),
+        patch_remove_store_item: ($) => seq("REMOVE_STORE_ITEM", repeat(field("item", $.value))),
 
-        patch_add_store_item: ($) => seq("ADD_STORE_ITEM", optional($._opt_no_backup), repeat1(field("item", $.value))),
+        // ADD_STORE_ITEM [+] item [position] charge1 charge2 charge3 flags stock [unlimited]; only `+` (overwrite)
+        // is a flag here. A position of AT value reads as an AT-reference value, which keeps the count the same.
+        patch_add_store_item: ($) =>
+            seq(
+                "ADD_STORE_ITEM",
+                optional("+"),
+                field("item", $.value),
+                optional(choice("FIRST", "LAST", seq(choice("AFTER", "BEFORE"), field("position", $.value)))),
+                repeatN($.value, 5),
+                optional($.value),
+            ),
 
-        patch_replace_cre_item: itemPatch("REPLACE_CRE_ITEM"),
+        // item charge1 charge2 charge3 flags slot, then the switches; only ADD_CRE_ITEM has NOMOVE.
+        patch_replace_cre_item: ($) =>
+            seq("REPLACE_CRE_ITEM", repeatN($.value, 6), optional("EQUIP"), optional("TWOHANDED")),
         patch_remove_cre_item: itemPatch("REMOVE_CRE_ITEM"),
         // REMOVE_CRE_ITEMS (plural, no argument) strips every item from the CRE, unlike the
         // singular REMOVE_CRE_ITEM ~resref~ which removes one named item.
         patch_remove_cre_items: ($) => "REMOVE_CRE_ITEMS",
-        patch_add_cre_item: itemPatch("ADD_CRE_ITEM"),
+        patch_add_cre_item: ($) =>
+            seq("ADD_CRE_ITEM", repeatN($.value, 6), optional("EQUIP"), optional("TWOHANDED"), optional("NOMOVE")),
 
         patch_add_memorized_spell: ($) =>
             prec.right(
@@ -1075,7 +1638,7 @@ export default grammar({
                 ),
             ),
 
-        patch_remove_memorized_spell: ($) => prec.right(seq("REMOVE_MEMORIZED_SPELL", repeat1($.value))),
+        patch_remove_memorized_spell: ($) => prec.right(seq("REMOVE_MEMORIZED_SPELL", repeat($.value))),
         patch_remove_memorized_spells: ($) => "REMOVE_MEMORIZED_SPELLS",
         patch_remove_known_spells: ($) => "REMOVE_KNOWN_SPELLS",
         patch_remove_cre_effects: ($) => "REMOVE_CRE_EFFECTS",
@@ -1083,7 +1646,7 @@ export default grammar({
         patch_add_known_spell: ($) =>
             seq("ADD_KNOWN_SPELL", field("spell", $.value), field("level", $.value), field("type", $.value)),
 
-        patch_remove_known_spell: ($) => prec.right(seq("REMOVE_KNOWN_SPELL", repeat1(field("spell", $.value)))),
+        patch_remove_known_spell: ($) => prec.right(seq("REMOVE_KNOWN_SPELL", repeat(field("spell", $.value)))),
 
         patch_add_map_note: ($) =>
             seq(
@@ -1144,11 +1707,11 @@ export default grammar({
         patch_fail: printOp("PATCH_FAIL"),
         patch_abort: printOp("PATCH_ABORT"),
 
-        patch_include: ($) => prec.right(seq("PATCH_INCLUDE", repeat1(field("file", $.value)))),
-        patch_reinclude: ($) => prec.right(seq("PATCH_REINCLUDE", repeat1(field("file", $.value)))),
+        patch_include: ($) => prec.right(seq("PATCH_INCLUDE", repeat(field("file", $.value)))),
+        patch_reinclude: ($) => prec.right(seq("PATCH_REINCLUDE", repeat(field("file", $.value)))),
         patch_random_seed: ($) => seq("PATCH_RANDOM_SEED", $.value),
         patch_readln: ($) => seq("PATCH_READLN", $.value),
-        patch_with_tra: ($) => seq("PATCH_WITH_TRA", repeat1(field("file", $.value)), "BEGIN", repeat($._patch), "END"),
+        patch_with_tra: ($) => seq("PATCH_WITH_TRA", repeat(field("file", $.value)), "BEGIN", repeat($._patch), "END"),
         patch_reraise: ($) => "PATCH_RERAISE",
         patch_silent: ($) => "PATCH_SILENT",
         patch_time: ($) => seq("PATCH_TIME", field("name", $.value), "BEGIN", repeat($._patch), "END"),
@@ -1214,7 +1777,11 @@ export default grammar({
                 field("var", $.identifier),
             ),
 
-        patch_try: tryBlock("PATCH_TRY", ($) => $._patch),
+        patch_try: tryBlock(
+            "PATCH_TRY",
+            ($) => $._patch,
+            ($) => $.match_case,
+        ),
 
         inner_patch: innerPatchOp("INNER_PATCH"),
 
@@ -1352,7 +1919,7 @@ export default grammar({
                 "COPY",
                 optional($._opt_no_backup),
                 optional($._opt_glob),
-                repeat1($.file_pair),
+                repeat($.file_pair),
                 optional($.patches),
                 optional($.when),
             ),
@@ -1361,7 +1928,7 @@ export default grammar({
             seq(
                 "COPY_EXISTING",
                 optional($._opt_no_backup),
-                repeat1($.file_pair),
+                repeat($.file_pair),
                 optional($.patches),
                 optional($.when),
             ),
@@ -1371,13 +1938,12 @@ export default grammar({
                 "COPY_EXISTING_REGEXP",
                 optional($._opt_no_backup),
                 optional($._opt_glob),
-                repeat1($.file_pair),
+                repeat($.file_pair),
                 optional($.patches),
                 optional($.when),
             ),
 
-        action_copy_large: ($) =>
-            seq("COPY_LARGE", optional($._opt_no_backup), optional($._opt_glob), repeat1($.file_pair)),
+        action_copy_large: ($) => seq("COPY_LARGE", optional("+"), optional($._opt_glob), repeat($.file_pair)),
 
         action_copy_random: ($) => seq("COPY_RANDOM", repeat1(seq("(", repeat1($.value), ")")), optional($.patches)),
 
@@ -1413,9 +1979,10 @@ export default grammar({
                 seq(
                     "COMPILE",
                     optional(choice("EVALUATE_BUFFER", "EVAL")),
-                    repeat1(field("source", $.value)),
+                    repeat(field("source", $.value)),
                     optional(choice("EVALUATE_BUFFER", "EVAL")),
-                    optional(seq("USING", repeat1(field("tra", $.value)))),
+                    repeat($._patch),
+                    optional(seq("USING", repeat(field("tra", $.value)))),
                 ),
             ),
 
@@ -1428,23 +1995,22 @@ export default grammar({
         action_append_outer: appendAction("APPEND_OUTER"),
         action_append_col_outer: appendAction("APPEND_COL_OUTER"),
 
-        action_delete: ($) => prec.right(seq("DELETE", optional($._opt_no_backup), repeat1(field("file", $.value)))),
+        action_delete: ($) => prec.right(seq("DELETE", optional("+"), repeat(field("file", $.value)))),
 
-        action_move: ($) =>
-            prec.right(
-                seq(
-                    "MOVE",
-                    optional($._opt_no_backup),
-                    choice(
-                        // Glob pattern: (directory pattern) destination
-                        seq("(", field("dir", $.value), field("pattern", $.value), ")", field("to", $.value)),
-                        // Standard file pairs
-                        repeat1($.file_pair),
-                    ),
-                ),
+        action_move: ($) => prec.right(seq("MOVE", optional("+"), repeat(choice($.file_pair, $.move_regexp)))),
+
+        // MOVE (directory [EXACT_MATCH | EVALUATE_REGEXP] pattern) destination: every match goes to destination.
+        move_regexp: ($) =>
+            seq(
+                "(",
+                field("dir", $.value),
+                optional($._opt_exact),
+                field("pattern", $.value),
+                ")",
+                field("to", $.value),
             ),
 
-        action_mkdir: ($) => prec.right(seq("MKDIR", repeat1(field("dir", $.value)))),
+        action_mkdir: ($) => prec.right(seq("MKDIR", repeat(field("dir", $.value)))),
 
         action_create: ($) =>
             seq(
@@ -1476,42 +2042,22 @@ export default grammar({
                 ),
             ),
 
-        action_match: ($) =>
-            seq(
-                "ACTION_MATCH",
-                field("value", $.value),
-                "WITH",
-                repeat($.action_match_case),
-                optional(seq("DEFAULT", repeat($._action))),
-                "END",
-            ),
+        action_match: ($) => seq("ACTION_MATCH", field("value", $.value), withCases($.action_match_case, $._action)),
 
-        action_match_case: ($) =>
-            seq(
-                repeat1($.value),
-                optional("WHEN"),
-                optional(field("condition", $.value)),
-                "BEGIN",
-                repeat($._action),
-                "END",
-            ),
+        action_match_case: matchCase(($) => $._action),
 
-        action_try: tryBlock("ACTION_TRY", ($) => $._action),
+        action_try: tryBlock(
+            "ACTION_TRY",
+            ($) => $._action,
+            ($) => $.action_match_case,
+        ),
 
         outer_for: forLoop("OUTER_FOR", ($) => $._action),
         outer_while: whileLoop("OUTER_WHILE", ($) => $._action),
 
         action_for_each: ($) =>
             prec.right(
-                seq(
-                    "ACTION_FOR_EACH",
-                    field("var", $.value),
-                    "IN",
-                    repeat1($.value),
-                    optional("BEGIN"),
-                    repeat($._action),
-                    "END",
-                ),
+                seq("ACTION_FOR_EACH", field("var", $.value), "IN", repeat($.value), "BEGIN", repeat($._action), "END"),
             ),
 
         action_php_each: phpEachLoop("ACTION_PHP_EACH")(($) => $._action),
@@ -1540,7 +2086,7 @@ export default grammar({
             seq("LOCAL_SET", field("var", $._assignable), field("operator", "="), field("value", $.value)),
         local_sprint: sprintOp("LOCAL_SPRINT", "LOCAL_TEXT_SPRINT"),
 
-        action_with_tra: ($) => seq("WITH_TRA", repeat1(field("file", $.value)), "BEGIN", repeat($._action), "END"),
+        action_with_tra: ($) => seq("WITH_TRA", repeat(field("file", $.value)), "BEGIN", repeat($._action), "END"),
 
         action_with_scope: ($) => seq("WITH_SCOPE", "BEGIN", repeat($._action), "END"),
 
@@ -1552,8 +2098,8 @@ export default grammar({
                     optional("EXISTING"),
                     optional("MANAGED"),
                     optional(seq("TITLE", "(", field("title", $.value), ")")),
-                    repeat1($.value),
-                    optional(seq("USING", repeat1(field("tra", $.value)))),
+                    repeat($.value),
+                    optional(seq("USING", repeat(field("tra", $.value)))),
                 ),
             ),
 
@@ -1563,9 +2109,9 @@ export default grammar({
         action_outer_inner_patch_save: outerPatchSaveAction("OUTER_INNER_PATCH_SAVE"),
 
         // Includes
-        action_include: ($) => prec.right(seq(kw("INCLUDE", "ACTION_INCLUDE"), repeat1(field("file", $.value)))),
+        action_include: ($) => prec.right(seq(kw("INCLUDE", "ACTION_INCLUDE"), repeat(field("file", $.value)))),
         action_reinclude: ($) =>
-            prec.right(seq(choice("REINCLUDE", "ACTION_REINCLUDE"), repeat1(field("file", $.value)))),
+            prec.right(seq(choice("REINCLUDE", "ACTION_REINCLUDE"), repeat(field("file", $.value)))),
 
         // Functions/macros definitions (using helpers)
         action_define_macro: defineMacro(kw("DEFINE_ACTION_MACRO", "DEFINE_MACRO_ACTION"), ($) => $._action),
@@ -1643,16 +2189,21 @@ export default grammar({
             prec.right(
                 seq(
                     choice("STRING_SET", "STRING_SET_EVALUATE"),
-                    field("strref", $.value),
-                    field("male", $.value),
-                    optional($.sound_ref),
-                    optional(seq(field("female", $.value), optional($.sound_ref))),
-                    // WeiDU: ... USING e2:STRING - names the tra file the references resolve against.
-                    optional(seq("USING", repeat1(field("tra", $.value)))),
+                    // WeiDU's pair list may be empty.
+                    optional(
+                        seq(
+                            field("strref", $.value),
+                            field("male", $.value),
+                            optional($.sound_ref),
+                            optional(seq(field("female", $.value), optional($.sound_ref))),
+                        ),
+                    ),
+                    // WeiDU: ... USING e2:STRING - names the one tra file the references resolve against.
+                    optional(seq("USING", field("tra", $.value))),
                 ),
             ),
 
-        action_load_tra: ($) => prec.right(seq("LOAD_TRA", repeat1(field("file", $.value)))),
+        action_load_tra: ($) => prec.right(seq("LOAD_TRA", repeat(field("file", $.value)))),
 
         // Game data modification
         action_add_sectype: ($) => seq("ADD_SECTYPE", field("name", $.value), field("label", $.value)),
@@ -1715,7 +2266,7 @@ export default grammar({
             ),
 
         patch_bash_for: ($) =>
-            prec.right(seq("PATCH_BASH_FOR", repeat1($.directory_file_regexp), "BEGIN", repeat($._patch), "END")),
+            prec.right(seq("PATCH_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", repeat($._patch), "END")),
 
         action_bash_for: ($) =>
             seq(
@@ -1727,7 +2278,7 @@ export default grammar({
                 "END",
             ),
 
-        action_decompress_biff: ($) => seq("DECOMPRESS_BIFF", field("file", $.value)),
+        action_decompress_biff: ($) => prec.right(seq("DECOMPRESS_BIFF", repeat(field("file", $.value)))),
 
         action_make_biff: ($) =>
             seq(kw("MAKE_BIFF", "BIFF"), field("name", $.value), "BEGIN", repeat($.directory_file_regexp), "END"),
@@ -1768,7 +2319,7 @@ export default grammar({
             "ACTION_GET_STRREF_FS",
         ),
 
-        action_disable_from_key: ($) => prec.right(seq("DISABLE_FROM_KEY", repeat1(field("resource", $.value)))),
+        action_disable_from_key: ($) => prec.right(seq("DISABLE_FROM_KEY", repeat(field("resource", $.value)))),
 
         action_get_resource_array: ($) => seq("GET_RESOURCE_ARRAY", field("name", $.value), field("regexp", $.value)),
 
@@ -1825,10 +2376,10 @@ export default grammar({
         author_directive: ($) => seq("AUTHOR", field("email", $.value)),
         support_directive: ($) => seq("SUPPORT", field("url", $.value)),
         version_flag: ($) => seq("VERSION", field("version", $.value)),
-        readme_directive: ($) => prec.right(seq("README", repeat1(field("path", $.value)))),
+        readme_directive: ($) => prec.right(seq("README", repeat(field("path", $.value)))),
         no_if_eval_bug_flag: ($) => "NO_IF_EVAL_BUG",
         auto_eval_strings_flag: ($) => "AUTO_EVAL_STRINGS",
-        allow_missing_directive: ($) => prec.right(seq("ALLOW_MISSING", repeat1(field("file", $.value)))),
+        allow_missing_directive: ($) => prec.right(seq("ALLOW_MISSING", repeat(field("file", $.value)))),
         auto_tra_directive: ($) => seq("AUTO_TRA", field("path", $.value)),
 
         // QUICK_MENU ALWAYS_ASK <components> END (<label> BEGIN <components> END)* END
@@ -1849,11 +2400,11 @@ export default grammar({
         // MENU_STYLE takes exactly one style argument; a second is a parse error in WeiDU.
         menu_style_directive: ($) => seq("MENU_STYLE", field("style", $.value)),
         // LOAD takes a list, like the other list-taking directives above.
-        load_directive: ($) => prec.right(seq("LOAD", repeat1(field("file", $.value)))),
-        uninstall_order_directive: ($) => prec.right(seq("UNINSTALL_ORDER", repeat1(field("op", $.value)))),
+        load_directive: ($) => prec.right(seq("LOAD", repeat(field("file", $.value)))),
+        uninstall_order_directive: ($) => prec.right(seq("UNINSTALL_ORDER", repeat(field("op", $.value)))),
         // MODDER takes option/value pairs: MODDER ~SETUP_DEBUG~ ~ON~ ~ASSERT~ ~FAIL~
         modder_directive: ($) =>
-            prec.right(seq("MODDER", repeat1(seq(field("option", $.value), field("value", $.value))))),
+            prec.right(seq("MODDER", repeat(seq(field("option", $.value), field("value", $.value))))),
 
         language_directive: ($) =>
             prec.right(
@@ -1861,7 +2412,7 @@ export default grammar({
                     "LANGUAGE",
                     field("name", $.value),
                     field("directory", $.value),
-                    repeat1(field("tra_file", $.value)),
+                    repeat(field("tra_file", $.value)),
                 ),
             ),
 

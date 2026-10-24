@@ -2118,7 +2118,7 @@
           "name": "keyword.control.weidu-tp2"
         },
         {
-          "match": "\\b(IF_EXISTING|ON_DISABLE|ADD_IF_MISSING|TEXT)\\b",
+          "match": "\\b(IF_EXISTING|ON_DISABLE|ADD_IF_MISSING|TEXT|EQUIP|TWOHANDED|NOMOVE)\\b",
           "name": "keyword.control.weidu-tp2"
         },
         {

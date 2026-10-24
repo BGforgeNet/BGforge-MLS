@@ -595,7 +595,6 @@ COPY_EXISTING ~a.cre~ ~override~
     (patches
       (patch_remove_cre_items))))
 
-
 ================================================================================
 RESOURCE_CONTAINS expression
 ================================================================================
@@ -629,9 +628,7 @@ OUTER_SPRINT x ~//~
 
 (source_file
   (action_outer_sprint
-    var: (value
-      (variable_ref
-        (identifier)))
+    var: (identifier)
     value: (value
       (string
         (tilde_string

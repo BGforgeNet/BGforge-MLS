@@ -85,9 +85,7 @@ END
     (patches
       (patch_block
         (patch_text_sprint
-          var: (value
-            (variable_ref
-              (identifier)))
+          var: (identifier)
           value: (value
             (string
               (tilde_string
@@ -295,9 +293,7 @@ END
     (patches
       (patch_block
         (patch_sprint
-          var: (value
-            (variable_ref
-              (identifier)))
+          var: (identifier)
           value: (value
             (string
               (tilde_string
@@ -328,14 +324,11 @@ END
     (patches
       (patch_block
         (patch_text_sprint
-          var: (value
-            (variable_ref
-              (identifier)))
+          var: (identifier)
           value: (value
             (string
               (tilde_string
                 (tilde_content)))))))))
-
 
 ================================================================================
 PATCH_PHP_EACH with a string value variable

@@ -737,7 +737,7 @@ repository:
     name: keyword.control.weidu-tp2
     patterns:
       - match: \b(AS|BEGIN|DEFAULT|END|THEN|IN|FROM|ELSE|USING|WHEN|ANY|ERROR_MESSAGE|ALWAYS_ASK)\b
-      - match: \b(IF_EXISTING|ON_DISABLE|ADD_IF_MISSING|TEXT)\b
+      - match: \b(IF_EXISTING|ON_DISABLE|ADD_IF_MISSING|TEXT|EQUIP|TWOHANDED|NOMOVE)\b
       - match: \b(AFTER|BEFORE|LAST|FIRST|AT|S?THIS)\b
       - match: \b(INT_VAR|STR_VAR|RET|RET_ARRAY)\b
 

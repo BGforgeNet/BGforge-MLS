@@ -322,6 +322,36 @@ function findCallItemAtCursor(funcCallNode: SyntaxNode, cursorOffset: number): S
     return search(funcCallNode);
 }
 
+/** The last leaf token of `node` that ends at or before `offset`. */
+function lastTokenBefore(node: SyntaxNode, offset: number): SyntaxNode | null {
+    let found: SyntaxNode | null = null;
+    const visit = (n: SyntaxNode): void => {
+        if (n.startIndex >= offset) return;
+        if (n.childCount === 0) {
+            if (n.endIndex <= offset && (found === null || n.endIndex >= found.endIndex)) found = n;
+            return;
+        }
+        for (const child of n.children) visit(child);
+    };
+    visit(node);
+    return found;
+}
+
+/**
+ * Parameter name or value at the cursor, in a call's or a definition's parameter list. An `=` typed before its
+ * value is left in an ERROR node after the item, since the reserved word that follows (END, BEGIN) cannot be
+ * the value; the cursor right after it is still a value position.
+ */
+function paramContextAt(node: SyntaxNode, cursorOffset: number): CompletionContext {
+    const callItem = findCallItemAtCursor(node, cursorOffset);
+    if (callItem) {
+        return detectParamNameOrValue(callItem, cursorOffset);
+    }
+    return lastTokenBefore(node, cursorOffset)?.type === "="
+        ? CompletionContext.FuncParamValue
+        : CompletionContext.FuncParamName;
+}
+
 /**
  * Check if cursor is at function call name position (LAF/LPF).
  * Returns context array if detected, null otherwise.
@@ -336,13 +366,7 @@ export function detectFunctionCallContext(node: SyntaxNode, cursorOffset: number
         }
         // After function name -> check for funcParamName vs funcParamValue
         extractFuncParamsContext(node, cursorOffset);
-
-        const callItem = findCallItemAtCursor(node, cursorOffset);
-        if (callItem) {
-            return [detectParamNameOrValue(callItem, cursorOffset)];
-        }
-
-        return [CompletionContext.FuncParamName];
+        return [paramContextAt(node, cursorOffset)];
     }
 
     // Action macro call (LAM)
@@ -372,15 +396,7 @@ export function detectFunctionCallContext(node: SyntaxNode, cursorOffset: number
         // LPF is valid inside patches blocks
         // Extract enriched context for parameter completion
         extractFuncParamsContext(node, cursorOffset);
-
-        // Check if cursor is in a call_item to determine name vs value context
-        const callItem = findCallItemAtCursor(node, cursorOffset);
-        if (callItem) {
-            return [detectParamNameOrValue(callItem, cursorOffset)];
-        }
-
-        // Not in a call_item yet -> funcParamName (typing new parameter)
-        return [CompletionContext.FuncParamName];
+        return [paramContextAt(node, cursorOffset)];
     }
 
     return null;
@@ -427,11 +443,7 @@ function detectFunctionDefinitionContext(node: SyntaxNode, cursorOffset: number)
         cursorOffset > functionNameEnd &&
         (beginEnd < 0 || cursorOffset < beginEnd)
     ) {
-        const callItem = findCallItemAtCursor(node, cursorOffset);
-        if (callItem) {
-            return [detectParamNameOrValue(callItem, cursorOffset)];
-        }
-        return [CompletionContext.FuncParamName];
+        return [paramContextAt(node, cursorOffset)];
     }
 
     // Function body or header: no filtering needed

@@ -64,6 +64,23 @@ const RESREF_TYPES = new Set([SyntaxType.ActionCopyExisting, SyntaxType.ActionCo
 const STRING_TYPES = new Set([SyntaxType.TildeString, SyntaxType.DoubleString, SyntaxType.FiveTildeString]);
 const FILE_PAIR_TYPES = new Set([SyntaxType.FilePair]);
 
+/** The fields of COMPILE and INCLUDE that hold paths; COPY's paths are its file pairs. */
+const PATH_FIELDS: ReadonlyMap<string, readonly string[]> = new Map([
+    [SyntaxType.ActionCompile, ["source", "tra"]],
+    [SyntaxType.ActionInclude, ["file"]],
+]);
+
+/** True when `stringNode` lies in one of `directive`'s path positions rather than in its patches. */
+function inPathField(stringNode: SyntaxNode, directive: SyntaxNode, isCopy: boolean): boolean {
+    const contains = (outer: SyntaxNode | null) =>
+        outer !== null && stringNode.startIndex >= outer.startIndex && stringNode.endIndex <= outer.endIndex;
+    if (isCopy) {
+        return directive.namedChildren.some((child) => child?.type === SyntaxType.FilePair && contains(child));
+    }
+    const fields = PATH_FIELDS.get(directive.type) ?? [];
+    return fields.some((field) => directive.childrenForFieldName(field).some((child) => contains(child)));
+}
+
 /**
  * Definition for the file paths in COPY/COMPILE/INCLUDE (and COPY_EXISTING) directives.
  *
@@ -91,6 +108,10 @@ export function tryFileReferenceDefinition(
     const inNavigable = inCopy ?? findAncestorOfType(node, COMPILE_TYPES) ?? findAncestorOfType(node, INCLUDE_TYPES);
     const inResref = findAncestorOfType(node, RESREF_TYPES);
     if (!inNavigable && !inResref) {
+        return null;
+    }
+    // A string in the directive's patches (REPLACE_TEXTUALLY's pattern, say) is not one of its paths.
+    if (inNavigable && !inPathField(stringNode, inNavigable, inCopy !== null)) {
         return null;
     }
 
