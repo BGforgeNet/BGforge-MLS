@@ -662,16 +662,13 @@ Append text to end of file. APPEND_COL appends as new column.
 #### EXTEND_TOP / EXTEND_BOTTOM
 
 ```tp2
-EXTEND_TOP ~dlgFile~ ~stateLabel~ [#position]
-  transitions...
-END
-
-EXTEND_BOTTOM ~dlgFile~ ~stateLabel~ [#position]
-  transitions...
-END
+EXTEND_TOP ~existing.bcs~ ~new.baf~ [EVALUATE_BUFFER] [patches...] [USING ~file.tra~...] [when...]
+EXTEND_BOTTOM ~existing.bcs~ ~new.baf~ [EVALUATE_BUFFER] [patches...] [USING ~file.tra~...] [when...]
+EXTEND_TOP_REGEXP ~existingRegexp~ ~new.baf~ ...    // every BCS matching the regexp
+EXTEND_BOTTOM_REGEXP ~existingRegexp~ ~new.baf~ ...
 ```
 
-Add dialogue transitions to existing states.
+Put a script at the top or bottom of an existing BCS. Patches come before USING.
 
 ### Utility
 
@@ -707,6 +704,20 @@ UNINSTALL ~modToUninstall~ ~modComponent~
 ```
 
 Uninstall a component from another mod.
+
+#### Other actions
+
+```tp2
+ACTION_TIME ~name~ BEGIN actions... END           // time the actions
+ACTION_RERAISE                                    // re-raise inside ACTION_TRY
+ADD_SCHOOL ~name~ ~description~
+COPY_KIT ~oldKit~ ~newKit~ (~column~ ~value~ ...)
+ALTER_TLK BEGIN patches... END
+ALTER_TLK_RANGE from to BEGIN patches... END
+STRING_SET_RANGE #from #to USING ~file.tra~
+ADD_SPELL ~file.spl~ type level ~idsName~ [patches...]
+    [IF_EXISTING patches... END] [ON_DISABLE patches... END]
+```
 
 #### INCLUDE
 
@@ -1021,10 +1032,19 @@ Define associative array.
 
 ```tp2
 ACTION_CLEAR_ARRAY arrayName
-CLEAR_ARRAY arrayName  // patch context
+CLEAR_ARRAY arrayName  // patch context; also PATCH_CLEAR_ARRAY
 ```
 
 Remove all elements from array.
+
+#### ACTION_SORT_ARRAY_INDICES / SORT_ARRAY_INDICES
+
+```tp2
+ACTION_SORT_ARRAY_INDICES arrayName [NUMERICALLY | LEXICOGRAPHICALLY]
+SORT_ARRAY_INDICES arrayName [NUMERICALLY | LEXICOGRAPHICALLY]  // patch context
+```
+
+Sort the array by its indices; lexicographic when no order is given.
 
 ### Inner Operations
 
@@ -1132,6 +1152,8 @@ The body may contain `>` characters as long as they don't form exactly `>>>>>>>>
 | `LEXICOGRAPHICALLY` | Sort as strings (default) |
 | `NUMERICALLY`       | Sort as numbers           |
 
+Optional: `SORT_ARRAY_INDICES array` and `ACTION_SORT_ARRAY_INDICES array` sort lexicographically.
+
 ### Other Modifiers
 
 | Modifier          | Description            |
@@ -1143,6 +1165,7 @@ The body may contain `>` characters as long as they don't form exactly `>>>>>>>>
 ```tp2
 IF ~condition~      // Only if condition is true
 UNLESS ~condition~  // Only if condition is false
+IF_EVAL value       // Only if value is non-zero
 ```
 
 ## Patches
@@ -1176,6 +1199,10 @@ WRITE_ASCIIE offset ~string~ [(length)]   // EVALUATE_BUFFER
 WRITE_ASCIIT offset ~string~              // truncate at null
 WRITE_ASCII_LIST offset (value1 value2 ...)
 WRITE_EVALUATED_ASCII offset ~string~ [(length)]
+WRITE_FILE offset ~file~                  // overwrite from offset
+INSERT_FILE offset ~file~                 // insert at offset
+APPEND_FILE [TEXT] ~file~
+APPEND_FILE_EVALUATE [TEXT] ~file~
 ```
 
 Write values to file buffer.
@@ -1215,9 +1242,15 @@ SET varname *= value
 SET varname /= value
 SET varname |= value    // bitwise OR
 SET varname &= value    // bitwise AND
+SET varname <<= value   // shift left
+SET varname >>= value   // shift right
+SET varname ^^= value   // bitwise XOR
+SET ++varname           // also --varname
+[GLOBAL] varname = value  // bare assignment takes every SET operator
 ```
 
 Variable assignment with operators. GLOBAL sets the variable in a special scope accessible from any other scope.
+OUTER_SET takes the same operators; LOCAL_SET takes only `=`.
 
 ### String/Text
 
@@ -1248,6 +1281,7 @@ Display message and fail component installation.
 
 ```tp2
 PATCH_ABORT ~message~
+ABORT ~message~         // action form
 ```
 
 Display message and undo component installation.
@@ -1346,6 +1380,25 @@ SOURCE_BIFF variable ~filename~
 ```
 
 Get BIF path containing file.
+
+#### Other patches
+
+```tp2
+GET_STRREF_F strref var                // also GET_STRREF, GET_STRREF_S, GET_STRREF_FS
+SET_IDS_SYMBOL_OF_INT var ~ids~ value  // also LOOKUP_IDS_SYMBOL_OF_INT
+EDIT_SAV_FILE level [ADD_IF_MISSING] [~file~...] BEGIN patches... END
+PATCH_WITH_TRA ~file.tra~... BEGIN patches... END
+ADD_GAM_NPC ~cre~ ~area~ (x) (y)       // also PATCH_GAM, ADD_GAME_NPC
+APPLY_BCS_PATCH ~patch~                // also A_B_P
+APPLY_BCS_PATCH_OR_COPY ~patch~ ~copy~
+REPLACE_BCS_BLOCK_REGEXP ~old~ ~new~ [ON_MISMATCH patches... END]
+REFACTOR_TRIGGER [optcase] [optexact] ~old~ ~new~  // also REFACTOR_D_TRIGGER, REFACTOR_BAF_TRIGGER
+EXTEND_MOS ~file~ value
+PATCH_REINCLUDE ~file~...
+PATCH_RANDOM_SEED value
+PATCH_READLN var
+REBUILD_CRE_FILE
+```
 
 ### Text Replacement
 

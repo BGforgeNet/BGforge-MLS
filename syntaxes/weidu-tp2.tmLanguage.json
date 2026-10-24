@@ -1082,6 +1082,10 @@
           "name": "entity.name.function.weidu-tp2.patch"
         },
         {
+          "match": "\\b(EXTEND_MOS)\\b",
+          "name": "entity.name.function.weidu-tp2.patch"
+        },
+        {
           "match": "\\b(FOR)\\b",
           "name": "entity.name.function.weidu-tp2.patch"
         },
@@ -1358,6 +1362,10 @@
           "name": "entity.name.function.weidu-tp2.patch"
         },
         {
+          "match": "\\b(REPLACE_BCS_BLOCK_REGEXP)\\b",
+          "name": "entity.name.function.weidu-tp2.patch"
+        },
+        {
           "match": "\\b(REPLACE_CRE_ITEM)\\b",
           "name": "entity.name.function.weidu-tp2.patch"
         },
@@ -1399,6 +1407,10 @@
         },
         {
           "match": "\\b(SET_BG2_PROFICIENCY)\\b",
+          "name": "entity.name.function.weidu-tp2.patch"
+        },
+        {
+          "match": "\\b(SET_IDS_SYMBOL_OF_INT)\\b",
           "name": "entity.name.function.weidu-tp2.patch"
         },
         {
@@ -1843,6 +1855,10 @@
           "name": "keyword.control.when.weidu-tp2"
         },
         {
+          "match": "\\b(IF_EVAL)\\b",
+          "name": "keyword.control.when.weidu-tp2"
+        },
+        {
           "match": "\\b(IF_EXISTS)\\b",
           "name": "keyword.control.when.weidu-tp2"
         },
@@ -2099,6 +2115,10 @@
       "patterns": [
         {
           "match": "\\b(AS|BEGIN|DEFAULT|END|THEN|IN|FROM|ELSE|USING|WHEN|ANY|ERROR_MESSAGE|ALWAYS_ASK)\\b",
+          "name": "keyword.control.weidu-tp2"
+        },
+        {
+          "match": "\\b(IF_EXISTING|ON_DISABLE|ADD_IF_MISSING|TEXT)\\b",
           "name": "keyword.control.weidu-tp2"
         },
         {

@@ -146,6 +146,13 @@ const GRAMMARS: GrammarCfg[] = [
             LAUNCH_MACRO_PATCH: LEGACY_ALIAS,
             PATCH_DEFINE_ASSOCIATIVE_ARRAY: LEGACY_ALIAS,
             SUB_COMPONENT: LEGACY_ALIAS,
+            A_B_P: LEGACY_ALIAS,
+            ADD_GAME_NPC: LEGACY_ALIAS,
+            BIFF: LEGACY_ALIAS,
+            FILE_IS_IN_COMPRESSED_BIF: LEGACY_ALIAS,
+            PATCH_GAM: LEGACY_ALIAS,
+            R_B_B_RE: LEGACY_ALIAS,
+            WRITE_ASCII_TERMINATED: LEGACY_ALIAS,
         },
     },
     {

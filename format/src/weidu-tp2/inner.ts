@@ -188,15 +188,6 @@ export function formatReplaceBcsBlock(
     for (const child of node.children) {
         const textUpper = child.text.toUpperCase();
 
-        // Keywords
-        if (textUpper === "R_B_B" || textUpper === "REPLACE_BCS_BLOCK") {
-            headerParts.push(child.text);
-            continue;
-        }
-        if (textUpper === "CASE_SENSITIVE" || textUpper === "CASE_INSENSITIVE") {
-            headerParts.push(child.text);
-            continue;
-        }
         if (textUpper === "ON_MISMATCH") {
             hasOnMismatch = true;
             inOnMismatch = true;
@@ -209,8 +200,9 @@ export function formatReplaceBcsBlock(
             continue;
         }
 
-        // File strings (before ON_MISMATCH)
-        if (!inOnMismatch && child.type === SyntaxType.String) {
+        // Header before ON_MISMATCH: the keyword spelling, its EVALUATE_BUFFER and case options, the two files.
+        // Taken by position rather than by spelling, so no spelling the grammar accepts is dropped.
+        if (!inOnMismatch && (!child.isNamed || child.type === SyntaxType.String)) {
             headerParts.push(child.text);
             continue;
         }

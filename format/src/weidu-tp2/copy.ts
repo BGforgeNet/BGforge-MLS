@@ -100,9 +100,9 @@ function parseWhenNode(node: SyntaxNode): string[] {
             continue;
         }
 
-        // Keywords with values: IF, UNLESS, IF_SIZE_IS
+        // Keywords with values: IF, UNLESS, IF_SIZE_IS, IF_EVAL
         // Skip any intervening comments to find the value, but collect them first
-        if (text === "IF" || text === "UNLESS" || text === "IF_SIZE_IS") {
+        if (text === "IF" || text === "UNLESS" || text === "IF_SIZE_IS" || text === "IF_EVAL") {
             let valueIdx = i + 1;
             const commentsBetween: string[] = [];
             // Collect comments between keyword and value.
@@ -425,4 +425,38 @@ export function formatCopyAction(
     const suffixLines = formatCopySuffix(parts.suffix, indent);
 
     return [...headerLines, ...patchLines, ...suffixLines].join("\n");
+}
+
+/**
+ * ADD_SPELL file type level idsName, then its patches, then either a when list or the IF_EXISTING / ON_DISABLE
+ * blocks, each a patch list closed by END. Patches are laid out as under COPY.
+ */
+export function formatAddSpell(
+    node: SyntaxNode,
+    ctx: FormatContext,
+    depth: number,
+    formatNode: (node: SyntaxNode, ctx: FormatContext, depth: number) => string,
+): string {
+    const indent = ctx.indent.repeat(depth);
+    const header: string[] = [];
+    const lines: string[] = [];
+    const suffix: string[] = [];
+    for (const child of node.children) {
+        if (child.type === SyntaxType.Patches || isComment(child)) {
+            lines.push(...formatCopyPatches([child], ctx, depth, formatNode));
+        } else if (child.type === SyntaxType.When) {
+            suffix.push(...parseWhenNode(child));
+        } else if (child.type === SyntaxType.AddSpellIfExisting || child.type === SyntaxType.AddSpellOnDisable) {
+            const [keyword, ...body] = child.children;
+            const bodyPatches = body.filter((c) => c.text !== KW_END);
+            lines.push(
+                indent + (keyword?.text ?? ""),
+                ...formatCopyPatches(bodyPatches, ctx, depth, formatNode),
+                indent + KW_END,
+            );
+        } else {
+            header.push(normalizeWhitespace(child.text));
+        }
+    }
+    return [indent + header.join(" "), ...lines, ...formatCopySuffix(suffix, indent)].join("\n");
 }

@@ -86,12 +86,22 @@
 "LOG" @function.builtin
 "WARN" @function.builtin
 "FAIL" @function.builtin
+"ABORT" @function.builtin
 "RANDOM_SEED" @function.builtin
 "CLEAR_MEMORY" @function.builtin
 "GET_RESOURCE_ARRAY" @function.builtin
 "ACTION_GET_STRREF" @function.builtin
 "ACTION_READLN" @function.builtin
 "ALWAYS" @function.builtin
+"ACTION_TIME" @function.builtin
+(action_reraise) @function.builtin
+"ADD_SCHOOL" @function.builtin
+"COPY_KIT" @function.builtin
+"ALTER_TLK" @function.builtin
+"ALTER_TLK_RANGE" @function.builtin
+"STRING_SET_RANGE" @function.builtin
+"EXTEND_TOP_REGEXP" @function.builtin
+"EXTEND_BOTTOM_REGEXP" @function.builtin
 
 ; Action control flow
 "ACTION_IF" @keyword.conditional
@@ -107,6 +117,7 @@
 "ACTION_DEFINE_ARRAY" @function.builtin
 "ACTION_DEFINE_ASSOCIATIVE_ARRAY" @function.builtin
 "ACTION_CLEAR_ARRAY" @function.builtin
+"ACTION_SORT_ARRAY_INDICES" @function.builtin
 "ACTION_TO_LOWER" @function.builtin
 "ACTION_TO_UPPER" @function.builtin
 
@@ -157,11 +168,18 @@
 "REPLACE" @function
 "REPLACE_EVALUATE" @function
 "REPLACE_BCS_BLOCK" @function
+"REPLACE_BCS_BLOCK_REGEXP" @function
+"REFACTOR_TRIGGER" @function
+"REFACTOR_D_TRIGGER" @function
+"REFACTOR_BAF_TRIGGER" @function
+"APPLY_BCS_PATCH" @function
+"APPLY_BCS_PATCH_OR_COPY" @function
 "SPRINT" @function
 "SPRINTF" @function
 "TEXT_SPRINT" @function
 "SNPRINT" @function
 "LOCAL_SPRINT" @function
+"LOCAL_TEXT_SPRINT" @function
 "SAY" @function
 "SAY_EVALUATED" @function
 
@@ -183,6 +201,9 @@
 (patch_pretty_print_2da) @function
 "SORT_ARRAY_INDICES" @function
 "APPEND_FILE" @function
+"APPEND_FILE_EVALUATE" @function
+"WRITE_FILE" @function
+"INSERT_FILE" @function
 
 ; Item/spell/creature patches
 "ADD_CRE_ITEM" @function
@@ -196,6 +217,10 @@
 "REMOVE_STORE_ITEM" @function
 "ADD_MAP_NOTE" @function
 "SET_BG2_PROFICIENCY" @function
+"ADD_GAM_NPC" @function
+"EDIT_SAV_FILE" @function
+"EXTEND_MOS" @function
+(patch_rebuild_cre_file) @function
 (patch_remove_cre_effects) @function
 
 ; Decompile/compile patches
@@ -207,11 +232,18 @@
 
 ; Misc patches
 "PATCH_INCLUDE" @function
+"PATCH_REINCLUDE" @function
+"PATCH_RANDOM_SEED" @function
+"PATCH_READLN" @function
+"PATCH_WITH_TRA" @function
 "COUNT_REGEXP_INSTANCES" @function
 "GET_OFFSET_ARRAY" @function
 "GET_OFFSET_ARRAY2" @function
 "GET_STRREF" @function
 "GET_STRREF_S" @function
+"GET_STRREF_F" @function
+"GET_STRREF_FS" @function
+"SET_IDS_SYMBOL_OF_INT" @function
 "LOOKUP_IDS_SYMBOL_OF_INT" @function
 "COMPRESS_REPLACE_FILE" @function
 "DECOMPRESS_REPLACE_FILE" @function
@@ -232,6 +264,7 @@
 "PATCH_TIME" @function
 "DEFINE_ASSOCIATIVE_ARRAY" @function
 "CLEAR_ARRAY" @function
+"PATCH_CLEAR_ARRAY" @function
 (patch_reraise) @function
 
 ; Patch control flow
@@ -321,7 +354,12 @@
 "BUT_ONLY_IF_IT_CHANGES" @keyword.modifier
 "IF_EXISTS" @keyword.modifier
 "IF_SIZE_IS" @keyword.modifier
+"IF_EVAL" @keyword.modifier
 "ON_MISMATCH" @keyword.modifier
+"IF_EXISTING" @keyword.modifier
+"ON_DISABLE" @keyword.modifier
+"ADD_IF_MISSING" @keyword.modifier
+"TEXT" @keyword.modifier
 "ALLOW_MISSING" @keyword.modifier
 "DEST_DIRECTORY" @keyword.modifier
 "DEST_FILE" @keyword.modifier
@@ -357,7 +395,12 @@
 "FILE_CONTAINS" @function.builtin
 "FILE_CONTAINS_EVALUATED" @function.builtin
 "FILE_IS_IN_COMPRESSED_BIFF" @function.builtin
+"BIFF_IS_COMPRESSED" @function.builtin
 "FILE_SIZE" @function.builtin
+"SIZE_OF_FILE" @function.builtin
+"INSTALL_ORDER" @function.builtin
+"VALID_SCRIPT_ACTIONS" @function.builtin
+"VALID_SCRIPT_TRIGGERS" @function.builtin
 "FILE_MD5" @function.builtin
 "DIRECTORY_EXISTS" @function.builtin
 "GAME_IS" @function.builtin
@@ -474,8 +517,9 @@
 "/=" @operator
 "&=" @operator
 "|=" @operator
-"&&=" @operator
-"||=" @operator
+"<<=" @operator
+">>=" @operator
+"^^=" @operator
 "++" @operator
 "--" @operator
 "&&" @operator

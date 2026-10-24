@@ -50,7 +50,7 @@ import {
     pushBlankIfGap,
 } from "./utils";
 import { formatControlFlow, formatCondition, formatMatchCase } from "./control-flow";
-import { formatCopyAction } from "./copy";
+import { formatAddSpell, formatCopyAction } from "./copy";
 import { formatFunctionDef, formatFunctionCall } from "./functions";
 import { formatInnerAction, formatInnerPatch, formatReplaceBcsBlock } from "./inner";
 import { formatPredicateAction } from "./predicate";
@@ -464,6 +464,10 @@ function formatNode(node: SyntaxNode, ctx: FormatContext, depth: number): string
     // COPY-style actions
     if (isCopyAction(type)) {
         return formatCopyAction(node, ctx, depth, formatNode);
+    }
+
+    if (type === SyntaxType.ActionAddSpell) {
+        return formatAddSpell(node, ctx, depth, formatNode);
     }
 
     // Control flow (IF, FOR, MATCH, etc.)

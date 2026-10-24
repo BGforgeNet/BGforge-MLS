@@ -105,18 +105,6 @@ export function findIdentifier(node: SyntaxNode): SyntaxNode | null {
 const ASSIGNMENT_NODE_TYPES: ReadonlySet<string> = new Set([SyntaxType.PatchAssignment]);
 
 /**
- * Assignment operators from the grammar's `_assign_op` rule.
- * Mirrors `grammars/weidu-tp2/grammar.js` line:
- *   _assign_op: ($) => choice("=", "+=", "-=", "*=", "/=", "|=", "&=", "||=", "&&=")
- *
- * Using a Set rather than hardcoded if-chain so that adding an operator to the grammar
- * only requires adding it here. If a new operator is missed, the function falls through
- * to "no operator found" and returns true (phantom) - this is the safe direction
- * (rejects a real assignment rather than accepting a phantom one).
- */
-const ASSIGN_OPS: ReadonlySet<string> = new Set(["=", "+=", "-=", "*=", "/=", "|=", "&=", "||=", "&&="]);
-
-/**
  * Check if an assignment node is a phantom created by tree-sitter error recovery.
  *
  * When tree-sitter can't parse a keyword (e.g. partially typed "COPY_EXISTN"),
@@ -145,16 +133,10 @@ export function isPhantomAssignment(node: SyntaxNode): boolean {
         return false;
     }
 
-    for (const child of node.children) {
-        if (ASSIGN_OPS.has(child.type)) {
-            // Zero-width operator = phantom inserted by error recovery,
-            // not present in the source text
-            return child.startIndex === child.endIndex;
-        }
-    }
-
-    // No operator child found at all - also phantom
-    return true;
+    // The grammar tags every assignment operator with the `operator` field, so the operator set has one home.
+    const operator = node.childForFieldName("operator");
+    // No operator at all, or a zero-width one inserted by error recovery: not present in the source text.
+    return operator === null || operator.startIndex === operator.endIndex;
 }
 
 // ============================================

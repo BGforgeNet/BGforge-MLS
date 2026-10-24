@@ -383,6 +383,7 @@ repository:
       - match: \b(EDIT_SAV_FILE)\b
       - match: \b(EVALUATE_BUFFER)\b
       - match: \b(EVALUATE_BUFFER_SPECIAL)\b
+      - match: \b(EXTEND_MOS)\b
       - match: \b(FOR)\b
       - match: \b(GET_OFFSET_ARRAY)\b
       - match: \b(GET_OFFSET_ARRAY2)\b
@@ -452,6 +453,7 @@ repository:
       - match: \b(REMOVE_STORE_PURCHASE)\b
       - match: \b(REPLACE)\b
       - match: \b(REPLACE_BCS_BLOCK)\b
+      - match: \b(REPLACE_BCS_BLOCK_REGEXP)\b
       - match: \b(REPLACE_CRE_ITEM)\b
       - match: \b(REPLACE_EVALUATE)\b
       - match: \b(REPLACE_TEXTUALLY)\b
@@ -463,6 +465,7 @@ repository:
       - match: \b(SET_2DA_ENTRY)\b
       - match: \b(SET_2DA_ENTRY_LATER)\b
       - match: \b(SET_BG2_PROFICIENCY)\b
+      - match: \b(SET_IDS_SYMBOL_OF_INT)\b
       - match: \b(SNPRINT)\b
       - match: \b(SORT_ARRAY_INDICES)\b
       - match: \b(SOURCE_BIFF)\b
@@ -659,6 +662,7 @@ repository:
       - match: \b(BUT_ONLY)\b
       - match: \b(BUT_ONLY_IF_IT_CHANGES)\b
       - match: \b(IF)\b
+      - match: \b(IF_EVAL)\b
       - match: \b(IF_EXISTS)\b
       - match: \b(IF_SIZE_IS)\b
       - match: \b(I_S_I)\b
@@ -733,6 +737,7 @@ repository:
     name: keyword.control.weidu-tp2
     patterns:
       - match: \b(AS|BEGIN|DEFAULT|END|THEN|IN|FROM|ELSE|USING|WHEN|ANY|ERROR_MESSAGE|ALWAYS_ASK)\b
+      - match: \b(IF_EXISTING|ON_DISABLE|ADD_IF_MISSING|TEXT)\b
       - match: \b(AFTER|BEFORE|LAST|FIRST|AT|S?THIS)\b
       - match: \b(INT_VAR|STR_VAR|RET|RET_ARRAY)\b
 

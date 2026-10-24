@@ -2612,6 +2612,16 @@
         }
     },
     {
+        "label": "ADD_IF_MISSING",
+        "kind": 14,
+        "source": "builtin",
+        "category": "keywords",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nEDIT_SAV_FILE level [ ADD_IF_MISSING ] [ filename list ] BEGIN patch list END\n```\nIf the optional ADD_IF_MISSING is provided, the file will be loaded if it exists (determined with FILE_EXISTS_IN_GAME) and the patches are applied. If the file does not exist, the patches will instead be applied to the empty buffer. The resulting file is added to the SAV itself."
+        }
+    },
+    {
         "label": "AS",
         "kind": 14,
         "source": "builtin",
@@ -2636,6 +2646,36 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nPATCH_MATCH value WITH [ guardvalue ... [ WHEN conditionvalue ] BEGIN patch list END ] ... DEFAULT patch list END\n```\nThe value is case-insensitively matched against the guard values. If value matches one of the guard values, the associated patch list is executed. If there is a condition, it additionally needs to evaluate to true for the values to match. If none of the values match, the DEFAULT patch list is executed. See the MATCH and TRY tutorial for additional information."
+        }
+    },
+    {
+        "label": "IF_EXISTING",
+        "kind": 14,
+        "source": "builtin",
+        "category": "keywords",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nADD_SPELL newSPLfile type level idsName patch list [ IF_EXISTING patch list END ] [ ON_DISABLE patch list END ]\n```\nIf Spell.ids already contains a spell named idsName, of the same type and level than the one you're adding, the patches of the IF_EXISTING section are applied to the current version instead."
+        }
+    },
+    {
+        "label": "ON_DISABLE",
+        "kind": 14,
+        "source": "builtin",
+        "category": "keywords",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nADD_SPELL newSPLfile type level idsName patch list [ IF_EXISTING patch list END ] [ ON_DISABLE patch list END ]\n```\nIf Spell.ids already contains a spell named idsName, but of different type and/or level than the one you're adding, the patches of the ON_DISABLE section are applied to the older spell."
+        }
+    },
+    {
+        "label": "TEXT",
+        "kind": 14,
+        "source": "builtin",
+        "category": "keywords",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nAPPEND_FILE [ TEXT ] filename\n```\nIf TEXT is specified, the contents of filename and the current file is separated by a newline character (LF) unless the first character of filename or the last character of the current file is a newline character."
         }
     },
     {
@@ -3071,6 +3111,16 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nEVALUATE_BUFFER_SPECIAL string\n```\nString must be one character long. Any WeiDU variables (like XmyvarX) \tinside the current file are replaced by their values, where X is to be intended \tas string. Example: <<<<<<<< .../mymod-inlined/script.baf IF See($myvar$) THEN RESPONSE #100 Kill(%myvar%) END >>>>>>>> EXTEND_TOP ~sola.bcs~ ~.../mymod-inlined/script.baf~ SPRINT myvar = ~\"Anomen\"~ EVALUATE_BUFFER_SPECIAL ~$~ \tmyvar will be substituted with Anomen, but %myvar% will be not.\tDo not use this without a real reason."
+        }
+    },
+    {
+        "label": "EXTEND_MOS",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nEXTEND_MOS filename value\n```\nListed among WeiDU's undocumented features; the readme gives no description."
         }
     },
     {
@@ -3824,6 +3874,16 @@
         }
     },
     {
+        "label": "REPLACE_BCS_BLOCK_REGEXP",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nREPLACE_BCS_BLOCK_REGEXP oldFile newFile [ ON_MISMATCH patch list END ]\n```\nListed among WeiDU's undocumented features; the readme gives no description. Takes no EVALUATE_BUFFER or case option, unlike REPLACE_BCS_BLOCK."
+        }
+    },
+    {
         "label": "REPLACE_CRE_ITEM",
         "kind": 3,
         "source": "builtin",
@@ -3931,6 +3991,16 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nSET_BG2_PROFICIENCY String value\n```\nRemoves all effects from the current CRE file that alter the proficiency specified by \tString (relative to Stats.ids). After that, if value is different from zero, add an effect \tto set said proficiency to value."
+        }
+    },
+    {
+        "label": "SET_IDS_SYMBOL_OF_INT",
+        "kind": 3,
+        "source": "builtin",
+        "category": "patch",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nSET_IDS_SYMBOL_OF_INT variable idsFile value\n```\nThe symbolic constant associated with value in idsFile (which may contain user variables) is stored in variable. If that doesn't work, value is stored in variable. You may use LOOKUP_IDS_SYMBOL_OF_INT as a synonym."
         }
     },
     {
@@ -10716,6 +10786,16 @@
         "documentation": {
             "kind": "markdown",
             "value": "```weidu-tp2-tooltip\nIF regexp\n```\nTrue if the input file contains regexp."
+        }
+    },
+    {
+        "label": "IF_EVAL",
+        "kind": 14,
+        "source": "builtin",
+        "category": "when",
+        "documentation": {
+            "kind": "markdown",
+            "value": "```weidu-tp2-tooltip\nIF_EVAL value\n```\nListed among WeiDU's undocumented features; the readme gives no description."
         }
     },
     {

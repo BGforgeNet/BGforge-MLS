@@ -1,0 +1,59 @@
+// Constructs WeiDU accepts that the grammar once rejected; each is formatted like its closest sibling.
+OUTER_SET flags <<= 1
+OUTER_SET flags >>= 1
+ACTION_IF IS_AN_INT ~%directory%~ BEGIN
+    ABORT ~stop~
+END
+ACTION_DEFINE_ARRAY names BEGIN
+    b
+    a
+END
+ACTION_SORT_ARRAY_INDICES names
+ACTION_SORT_ARRAY_INDICES names NUMERICALLY
+ACTION_TIME ~timer~ BEGIN
+    PRINT ~x~
+END
+ACTION_RERAISE
+ADD_SCHOOL ~MYSCHOOL~ @1
+ALTER_TLK BEGIN
+    REPLACE_TEXTUALLY ~a~ ~b~
+END
+ALTER_TLK_RANGE 1 5 BEGIN
+    REPLACE_TEXTUALLY ~a~ ~b~
+END
+STRING_SET_RANGE #1 #2 USING ~f.tra~
+EXTEND_TOP_REGEXP ~^a.*\.bcs$~ ~b.baf~ USING ~t.tra~
+EXTEND_BOTTOM ~a.bcs~ ~b.baf~ EVALUATE_BUFFER USING ~t.tra~ IF ~x~
+ADD_SPELL ~a.spl~ 1 2 ~NAME~
+    SAY NAME1 @1
+IF_EXISTING
+    SAY NAME1 @2
+END
+ON_DISABLE
+    SAY NAME1 @3
+END
+ACTION_IF INSTALL_ORDER ~a~ 1 BEFORE ~b~ 2 AND NOT BIFF_IS_COMPRESSED ~data.bif~ BEGIN
+    OUTER_SET size = SIZE_OF_FILE ~a.itm~
+END
+COPY ~a.itm~ ~override~
+    SET ++count
+    SET x ^^= 2
+    GET_STRREF_F 5 name
+    SET_IDS_SYMBOL_OF_INT sym ~spell~ 1101
+    APPEND_FILE TEXT ~f.txt~
+    WRITE_FILE 0 ~f.bin~
+    EDIT_SAV_FILE 1 ADD_IF_MISSING ~a.cre~ ~b.cre~ BEGIN
+        WRITE_BYTE 0 1
+    END
+    PATCH_WITH_TRA ~a.tra~ BEGIN
+        SAY NAME1 @1
+    END
+    PATCH_RANDOM_SEED 5
+    REPLACE_BCS_BLOCK_REGEXP ~a.bcs~ ~b.bcs~
+    REFACTOR_BAF_TRIGGER EXACT_MATCH ~a~ ~b~
+    REBUILD_CRE_FILE
+IF_EVAL size > 0
+DEFINE_ACTION_MACRO macro BEGIN
+    LOCAL_SET x = 1
+    LOCAL_TEXT_SPRINT y ~z~
+END

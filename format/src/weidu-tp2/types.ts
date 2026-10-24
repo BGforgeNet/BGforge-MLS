@@ -114,6 +114,8 @@ export const CONTROL_FLOW_TYPES = [
     "patch_while",
     "patch_with_scope",
     "action_alter_tlk_list",
+    "action_alter_tlk",
+    "action_alter_tlk_range",
     // Array definitions with BEGIN...END body
     "action_define_array",
     "action_define_associative_array",
@@ -128,7 +130,10 @@ export const CONTROL_FLOW_TYPES = [
     "patch_decompile_and_patch",
     "patch_replace_evaluate",
     "patch_time",
+    "patch_with_tra",
+    "patch_edit_sav_file",
     // Actions with BEGIN...END body
+    "action_time",
     "action_with_tra",
     "action_with_scope",
     "action_make_biff",

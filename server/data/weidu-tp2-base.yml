@@ -1363,6 +1363,11 @@ func_var_keyword:
 keywords:
   type: 14 # keyword
   items:
+    - name: ADD_IF_MISSING
+      detail: EDIT_SAV_FILE level [ ADD_IF_MISSING ] [ filename list ] BEGIN patch list END
+      doc: |-
+        If the optional ADD_IF_MISSING is provided, the file will be loaded if it exists (determined with FILE_EXISTS_IN_GAME) and the patches are applied. If the file does not exist, the patches will instead be applied to the empty buffer. The resulting file is added to the SAV itself.
+
     - name: AS
 
     - name: BEGIN
@@ -1372,6 +1377,21 @@ keywords:
       detail: PATCH_MATCH value WITH [ guardvalue ... [ WHEN conditionvalue ] BEGIN patch list END ] ... DEFAULT patch list END
       doc: |-
         The value is case-insensitively matched against the guard values. If value matches one of the guard values, the associated patch list is executed. If there is a condition, it additionally needs to evaluate to true for the values to match. If none of the values match, the DEFAULT patch list is executed. See the MATCH and TRY tutorial for additional information.
+
+    - name: IF_EXISTING
+      detail: ADD_SPELL newSPLfile type level idsName patch list [ IF_EXISTING patch list END ] [ ON_DISABLE patch list END ]
+      doc: |-
+        If Spell.ids already contains a spell named idsName, of the same type and level than the one you're adding, the patches of the IF_EXISTING section are applied to the current version instead.
+
+    - name: ON_DISABLE
+      detail: ADD_SPELL newSPLfile type level idsName patch list [ IF_EXISTING patch list END ] [ ON_DISABLE patch list END ]
+      doc: |-
+        If Spell.ids already contains a spell named idsName, but of different type and/or level than the one you're adding, the patches of the ON_DISABLE section are applied to the older spell.
+
+    - name: TEXT
+      detail: APPEND_FILE [ TEXT ] filename
+      doc: |-
+        If TEXT is specified, the contents of filename and the current file is separated by a newline character (LF) unless the first character of filename or the last character of the current file is a newline character.
 
     - name: USING
 
@@ -1670,6 +1690,11 @@ patch:
       detail: EVALUATE_BUFFER_SPECIAL string
       doc: |-
         String must be one character long. Any WeiDU variables (like XmyvarX) 	inside the current file are replaced by their values, where X is to be intended 	as string. Example: <<<<<<<< .../mymod-inlined/script.baf IF See($myvar$) THEN RESPONSE #100 Kill(%myvar%) END >>>>>>>> EXTEND_TOP ~sola.bcs~ ~.../mymod-inlined/script.baf~ SPRINT myvar = ~"Anomen"~ EVALUATE_BUFFER_SPECIAL ~$~ 	myvar will be substituted with Anomen, but %myvar% will be not.	Do not use this without a real reason.
+
+    - name: EXTEND_MOS
+      detail: EXTEND_MOS filename value
+      doc: |-
+        Listed among WeiDU's undocumented features; the readme gives no description.
 
     - name: FOR
       detail: FOR ( patch list ; value ; patch list ) BEGIN patch list END
@@ -2142,6 +2167,11 @@ patch:
       doc: |-
         If the current file is a BCS file, the segment of it corresponding to oldFile is replaced with the contents of newFile. oldFile and newFile may be BCS or BAF files. If they are BAF files they will not get the benefit of AUTO_TRA. If EVALUATE_BUFFER is given, variables inside oldFile and newFile are evaluated, but only they are BAF files. If the segment corresponding to oldFile is not found and the ON_MISMATCH section is present, those patches are run; if oldFile is not found and ON_MISMATCH is not present, a warning message is printed. You may use R_B_B as a synonym for REPLACE_BCS_BLOCK.
 
+    - name: REPLACE_BCS_BLOCK_REGEXP
+      detail: REPLACE_BCS_BLOCK_REGEXP oldFile newFile [ ON_MISMATCH patch list END ]
+      doc: |-
+        Listed among WeiDU's undocumented features; the readme gives no description. Takes no EVALUATE_BUFFER or case option, unlike REPLACE_BCS_BLOCK.
+
     - name: REPLACE_CRE_ITEM
       detail: "REPLACE_CRE_ITEM itmName #charge1 #charge2 #charge3 flags slot [ EQUIP ] [ TWOHANDED ]"
       doc: |-
@@ -2204,6 +2234,11 @@ patch:
       detail: SET_BG2_PROFICIENCY String value
       doc: |-
         Removes all effects from the current CRE file that alter the proficiency specified by 	String (relative to Stats.ids). After that, if value is different from zero, add an effect 	to set said proficiency to value.
+
+    - name: SET_IDS_SYMBOL_OF_INT
+      detail: SET_IDS_SYMBOL_OF_INT variable idsFile value
+      doc: |-
+        The symbolic constant associated with value in idsFile (which may contain user variables) is stored in variable. If that doesn't work, value is stored in variable. You may use LOOKUP_IDS_SYMBOL_OF_INT as a synonym.
 
     - name: SNPRINT
       detail: SNPRINT value variable stringWithVars
@@ -5942,6 +5977,11 @@ when:
       detail: IF regexp
       doc: |-
         True if the input file contains regexp.
+
+    - name: IF_EVAL
+      detail: IF_EVAL value
+      doc: |-
+        Listed among WeiDU's undocumented features; the readme gives no description.
 
     - name: IF_EXISTS
       doc: |-

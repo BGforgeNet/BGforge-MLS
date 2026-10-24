@@ -42,8 +42,14 @@ const tp2 = (body: string) => TP2_PREAMBLE + body;
 /** A snippet in component context - a component flag or an action inside BEGIN. */
 const component = (body: string) => tp2(`BEGIN ~Core~\n${body}\n`);
 
-/** A snippet in patch context - inside a COPY block. */
-const patch = (body: string) => component(`COPY ~a~ ~b~\n  ${body}`);
+/**
+ * A snippet in patch context - inside a COPY block, after one known patch. Straight after the file pairs, a patch
+ * keyword the grammar lacks would read as one more `source dest` pair and agree with WeiDU for the wrong reason.
+ */
+const patch = (body: string) => component(`COPY ~a~ ~b~\n  SET patch_context = 0\n  ${body}`);
+
+/** A snippet in a macro body, where LOCAL_SET and LOCAL_SPRINT are legal. */
+const macroBody = (body: string) => `DEFINE_ACTION_MACRO m BEGIN\n  ${body}\nEND\n`;
 
 interface Case {
     name: string;
@@ -133,6 +139,101 @@ const CASES: Case[] = [
         code: component("ACTION_PHP_EACH arr AS data => ~~ BEGIN\nPRINT ~hi~\nEND"),
     },
     { name: "STRING_SET single pair", code: component("STRING_SET ~1~ ~a~") },
+
+    // ABORT is an action as well as a patch (PATCH_ABORT).
+    { name: "ABORT", code: component("ABORT ~msg~") },
+
+    // The sort type is optional and defaults to LEXICOGRAPHICALLY; the action form shares it.
+    { name: "SORT_ARRAY_INDICES without a sort type", code: patch("SORT_ARRAY_INDICES arr") },
+    { name: "SORT_ARRAY_INDICES NUMERICALLY", code: patch("SORT_ARRAY_INDICES arr NUMERICALLY") },
+    { name: "ACTION_SORT_ARRAY_INDICES without a sort type", code: component("ACTION_SORT_ARRAY_INDICES arr") },
+    {
+        name: "ACTION_SORT_ARRAY_INDICES LEXICOGRAPHICALLY",
+        code: component("ACTION_SORT_ARRAY_INDICES arr LEXICOGRAPHICALLY"),
+    },
+
+    // Compound assignment: the shift and bitwise-xor forms exist; ||= and &&= do not.
+    { name: "SET <<=", code: patch("SET x <<= 1") },
+    { name: "SET >>=", code: patch("SET x >>= 1") },
+    { name: "SET ^^=", code: patch("SET x ^^= 1") },
+    { name: "bare patch assignment <<=", code: patch("x <<= 1") },
+    { name: "OUTER_SET >>=", code: component("OUTER_SET x >>= 1") },
+    { name: "SET rejects ||=", code: patch("SET x ||= 1") },
+    { name: "SET rejects &&=", code: patch("SET x &&= 1") },
+    { name: "SET ++ prefix", code: patch("SET ++x") },
+    { name: "SET -- prefix", code: patch("SET --x") },
+    { name: "SET GLOBAL ++", code: patch("SET GLOBAL ++x") },
+    { name: "bare GLOBAL assignment", code: patch("GLOBAL x = 1") },
+    { name: "bare GLOBAL ++", code: patch("GLOBAL ++x") },
+    { name: "LOCAL_SET =", code: macroBody("LOCAL_SET x = 1") },
+    { name: "LOCAL_SET rejects +=", code: macroBody("LOCAL_SET x += 1") },
+    { name: "LOCAL_TEXT_SPRINT", code: macroBody("LOCAL_TEXT_SPRINT x ~a~") },
+
+    // Actions the grammar did not model.
+    { name: "ACTION_RERAISE", code: component("ACTION_RERAISE") },
+    { name: "ACTION_TIME", code: component("ACTION_TIME ~t~ BEGIN PRINT ~x~ END") },
+    { name: "ADD_SCHOOL", code: component("ADD_SCHOOL ~MYSCHOOL~ @1") },
+    { name: "COPY_KIT with column/value pairs", code: component("COPY_KIT ~a~ ~b~ (~c~ ~d~ ~e~ ~f~)") },
+    { name: "COPY_KIT with an empty list", code: component("COPY_KIT ~a~ ~b~ ()") },
+    { name: "BIFF alias of MAKE_BIFF", code: component("BIFF ~a.bif~ BEGIN ~dir~ ~.*\\.itm~ END") },
+    { name: "MAKE_BIFF with no file entries", code: component("MAKE_BIFF ~x~ BEGIN END") },
+    { name: "ALTER_TLK", code: component("ALTER_TLK BEGIN REPLACE ~a~ ~b~ END") },
+    { name: "ALTER_TLK_RANGE", code: component("ALTER_TLK_RANGE 1 5 BEGIN REPLACE ~a~ ~b~ END") },
+    { name: "STRING_SET_RANGE", code: component("STRING_SET_RANGE #1 #2 USING ~f.tra~") },
+    { name: "EXTEND_TOP_REGEXP", code: component("EXTEND_TOP_REGEXP ~a.bcs~ ~b.baf~ USING ~t.tra~") },
+    { name: "EXTEND_BOTTOM_REGEXP with a patch", code: component("EXTEND_BOTTOM_REGEXP ~a~ ~b~ SET x = 1") },
+    { name: "EXTEND_TOP patches before USING", code: component("EXTEND_TOP ~a~ ~b~ SET x = 1 USING ~t.tra~") },
+    { name: "EXTEND_TOP with a when clause", code: component("EXTEND_TOP ~a~ ~b~ IF ~x~") },
+    { name: "COPY with IF_EVAL", code: component("COPY ~a~ ~b~ SET x = 1 IF_EVAL 1") },
+    { name: "ADD_SPELL with IF_EXISTING", code: component("ADD_SPELL ~a~ 1 2 ~b~ IF_EXISTING SET x = 1 END") },
+    {
+        name: "ADD_SPELL with IF_EXISTING and ON_DISABLE",
+        code: component("ADD_SPELL ~a~ 1 2 ~b~ IF_EXISTING END ON_DISABLE END"),
+    },
+    { name: "ADD_SPELL with a when clause", code: component("ADD_SPELL ~a~ 1 2 ~b~ IF ~x~") },
+
+    // Patches the grammar did not model.
+    { name: "GET_STRREF_F", code: patch("GET_STRREF_F 5 x") },
+    { name: "GET_STRREF_FS", code: patch("GET_STRREF_FS 5 x") },
+    { name: "SET_IDS_SYMBOL_OF_INT", code: patch("SET_IDS_SYMBOL_OF_INT ~sym~ ~ids~ 5") },
+    { name: "LOOKUP_IDS_SYMBOL_OF_INT into a quoted variable", code: patch("LOOKUP_IDS_SYMBOL_OF_INT ~x~ ~f~ 1") },
+    { name: "WRITE_ASCII_TERMINATED", code: patch("WRITE_ASCII_TERMINATED 0 ~abc~") },
+    { name: "PATCH_CLEAR_ARRAY", code: patch("PATCH_CLEAR_ARRAY ~arr~") },
+    { name: "APPEND_FILE TEXT", code: patch("APPEND_FILE TEXT ~f~") },
+    { name: "APPEND_FILE_EVALUATE TEXT", code: patch("APPEND_FILE_EVALUATE TEXT ~f~") },
+    { name: "WRITE_FILE", code: patch("WRITE_FILE 0 ~f~") },
+    { name: "INSERT_FILE", code: patch("INSERT_FILE 0 ~f~") },
+    { name: "EXTEND_MOS", code: patch("EXTEND_MOS ~a.mos~ 5") },
+    { name: "EDIT_SAV_FILE", code: patch("EDIT_SAV_FILE 0 ~a.cre~ BEGIN WRITE_BYTE 0 1 END") },
+    {
+        name: "EDIT_SAV_FILE ADD_IF_MISSING with several files",
+        code: patch("EDIT_SAV_FILE 1 ADD_IF_MISSING ~a~ ~b~ BEGIN END"),
+    },
+    { name: "PATCH_GAM", code: patch("PATCH_GAM ~a~ ~b~ #1 #2") },
+    { name: "ADD_GAME_NPC", code: patch("ADD_GAME_NPC ~a~ ~b~ #0 #0") },
+    { name: "APPLY_BCS_PATCH", code: patch("APPLY_BCS_PATCH ~p.bcs~") },
+    { name: "alias A_B_P", code: patch("A_B_P ~p.bcs~") },
+    { name: "APPLY_BCS_PATCH_OR_COPY", code: patch("APPLY_BCS_PATCH_OR_COPY ~p.bcs~ ~q.bcs~") },
+    { name: "REFACTOR_TRIGGER with flags", code: patch("REFACTOR_TRIGGER CASE_SENSITIVE EXACT_MATCH ~a~ ~b~") },
+    { name: "REFACTOR_BAF_TRIGGER", code: patch("REFACTOR_BAF_TRIGGER ~a~ ~b~") },
+    { name: "REBUILD_CRE_FILE", code: patch("REBUILD_CRE_FILE") },
+    { name: "REPLACE_BCS_BLOCK_REGEXP", code: patch("REPLACE_BCS_BLOCK_REGEXP ~a~ ~b~ ON_MISMATCH END") },
+    { name: "R_B_B_RE", code: patch("R_B_B_RE ~a~ ~b~") },
+    { name: "REPLACE_BCS_BLOCK EVALUATE_BUFFER", code: patch("REPLACE_BCS_BLOCK EVALUATE_BUFFER ~a~ ~b~") },
+    { name: "REPLACE_BCS_BLOCK rejects a third file", code: patch("REPLACE_BCS_BLOCK ~a~ ~b~ ~c~") },
+    { name: "PATCH_REINCLUDE", code: patch("PATCH_REINCLUDE ~a.tph~ ~b.tph~") },
+    { name: "PATCH_RANDOM_SEED", code: patch("PATCH_RANDOM_SEED (x + 1)") },
+    { name: "PATCH_READLN", code: patch("PATCH_READLN x") },
+    { name: "PATCH_WITH_TRA", code: patch("PATCH_WITH_TRA ~a~ ~b~ BEGIN SET x = 1 END") },
+
+    // Value functions the grammar did not model.
+    { name: "BIFF_IS_COMPRESSED", code: component("ACTION_IF BIFF_IS_COMPRESSED ~a.bif~ BEGIN END") },
+    { name: "FILE_IS_IN_COMPRESSED_BIF", code: component("ACTION_IF FILE_IS_IN_COMPRESSED_BIF ~a~ BEGIN END") },
+    { name: "SIZE_OF_FILE", code: component("OUTER_SET x = SIZE_OF_FILE ~a~") },
+    { name: "VALID_SCRIPT_ACTIONS", code: component("ACTION_IF VALID_SCRIPT_ACTIONS ~a~ BEGIN END") },
+    { name: "VALID_SCRIPT_TRIGGERS", code: component("ACTION_IF VALID_SCRIPT_TRIGGERS ~a~ BEGIN END") },
+    { name: "INSTALL_ORDER AFTER", code: component("ACTION_IF INSTALL_ORDER ~a~ 1 AFTER ~b~ 2 BEGIN END") },
+    { name: "INSTALL_ORDER BEFORE", code: component("ACTION_IF INSTALL_ORDER ~a~ 1 BEFORE ~b~ 2 BEGIN END") },
 
     // Lexer-level changes.
     { name: "subtraction written without spaces", code: patch("WRITE_LONG 0 (%SOURCE_SIZE%-12)") },
