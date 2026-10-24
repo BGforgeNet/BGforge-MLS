@@ -551,17 +551,20 @@ const writePatch =
     ($) =>
         seq(kw(...keywords), field("offset", $.value), field("value", $.value));
 
-/** Memory access expression: KEYWORD offset */
+/** Memory access expression: KEYWORD offset. The offset binds tighter than any operator: `BYTE_AT 0 + 1` adds 1. */
 const memoryAt =
     (...keywords) =>
     ($) =>
-        seq(kw(...keywords), field("offset", $.value));
+        seq(kw(...keywords), field("offset", alias($._tight_expr, $.value)));
 
-/** Check expression: KEYWORD value (with prec.right(3)) */
+/** A one-string operand, still a `value` node to consumers (completion keys on it). */
+const operand = ($) => alias($._operand, $.value);
+
+/** Check expression: KEYWORD operand */
 const checkExpr =
     (keyword, fieldName = "value") =>
     ($) =>
-        prec.right(3, seq(keyword, field(fieldName, $.value)));
+        seq(keyword, field(fieldName, operand($)));
 
 /** Sprint-like operation with optional GLOBAL: KEYWORD [GLOBAL] var text */
 const sprintOpGlobal =
@@ -611,8 +614,8 @@ const printOp = (keyword) => ($) => prec.right(seq(keyword, field("message", $.v
 /** Case conversion: KEYWORD var (identifier only) */
 const caseConvert = (keyword) => ($) => seq(keyword, $._var_target);
 
-/** CRE/store item patch: KEYWORD values... */
-const itemPatch = (keyword) => ($) => prec.right(seq(keyword, repeat($.value)));
+/** CRE/store item patch: KEYWORD items..., each one string */
+const itemPatch = (keyword) => ($) => seq(keyword, repeat(operand($)));
 
 /** EXTEND action: KEYWORD existing new_file [EVAL] patches... [USING tra...] [when] */
 const extendAction =
@@ -735,7 +738,7 @@ const outerPatchAction = (keyword) => ($) => seq(keyword, field("buffer", $.valu
 
 /** OUTER_PATCH_SAVE action: KEYWORD var buffer BEGIN patches END */
 const outerPatchSaveAction = (keyword) => ($) =>
-    seq(keyword, field("var", $._assignable), field("buffer", $.value), "BEGIN", repeat($._patch), "END");
+    seq(keyword, $._var_target, field("buffer", $.value), "BEGIN", repeat($._patch), "END");
 
 /** INNER_PATCH: KEYWORD buffer BEGIN patches END */
 const innerPatchOp = (keyword) => ($) => seq(keyword, field("buffer", $.value), "BEGIN", repeat($._patch), "END");
@@ -768,9 +771,44 @@ const defineAssocArray =
 /** CLEAR_ARRAY: KEYWORD array */
 const clearArray = (keyword) => ($) => seq(keyword, field("array", $.value));
 
-/** Every expression form but the binary one, shared by _expr and _simple_expr (which differ only in that). */
-const nonBinaryExprs = ($) => [
-    $.ternary_expr,
+/**
+ * WeiDU's binary operator levels, loosest first (the conditional is looser still). Prefix operators and memory reads
+ * bind tighter than all of them; that is structural here, through _tight_expr, rather than a precedence number.
+ */
+const BINARY_LEVELS = [
+    ["OR", "||"],
+    ["AND", "&&"],
+    ["BOR", "|"],
+    ["BXOR", "^^"],
+    ["BAND", "&"],
+    [
+        "=",
+        "==",
+        "!=",
+        "EQUALS",
+        "STRING_COMPARE",
+        "STR_CMP",
+        "STRING_COMPARE_CASE",
+        "STRING_EQUAL",
+        "STRING_EQUAL_CASE",
+        "STR_EQ",
+        "STRING_MATCHES_REGEXP",
+        "STRING_CONTAINS_REGEXP",
+        "STRING_COMPARE_REGEXP",
+    ],
+    ["<", ">", "<=", ">="],
+    ["BLSL", "BLSR", "BASR", "<<", ">>"],
+    // `^` joins strings in WeiDU and is no arithmetic operator there; it is kept, leniently, beside `+`.
+    ["+", "-", "^"],
+    ["*", "/", "MODULO", "REM"],
+    ["**"],
+];
+
+/** The conditional's level, below every binary one; binary level i takes PREC_TERNARY + 1 + i. */
+const PREC_TERNARY = 1;
+
+/** Every expression form that binds tighter than any operator: the operand of a prefix operator or memory read. */
+const tightExprs = ($) => [
     $.unary_expr,
     $.paren_expr,
     $.evaluated_expr,
@@ -837,12 +875,18 @@ const getStrref =
 export default grammar({
     name: "weidu_tp2",
 
-    // Block comments nest, which no internal token can express - see src/scanner.c.
-    externals: ($) => [$.comment],
+    // Block comments nest, which no internal token can express. String contents are scanned there too: the
+    // scanner is asked for a comment wherever one may appear, which includes right after a string's opening
+    // delimiter, so only it can tell that `~/* b */~` is text. See src/scanner.c.
+    externals: ($) => [$.comment, $.tilde_content, $.double_content, $.five_tilde_content, $.percent_content],
 
     extras: ($) => [/\s/, $.comment, $.line_comment],
 
     word: ($) => $.identifier,
+
+    // Declared so node-types.json lists which node types are actions and which are patches; the generated
+    // syntax-type module turns those lists into runtime sets, so no consumer guesses from a node-type prefix.
+    supertypes: ($) => [$._action, $._patch],
 
     // WeiDU's lexer turns every keyword into its token wherever it appears, so a keyword never reads as a bare
     // name. Without this, tree-sitter would read one as an identifier wherever the keyword itself is not expected.
@@ -851,27 +895,43 @@ export default grammar({
     },
 
     conflicts: ($) => [
-        [$._expr, $._simple_expr],
         [$.component],
         [$.action_copy],
         [$.action_copy_existing],
         [$.action_copy_existing_regexp],
         [$.action_create],
-        [$.variable_ref, $._assignable],
-        // `EVAL ~x~` is either an assignable target or a standalone EVAL patch followed by a string; only the
-        // rest of the parse distinguishes them.
-        [$._assignable, $.patch_evaluate_buffer],
-        [$._assignable, $.patch_evaluate_buffer, $.action_extend_top],
-        [$._assignable, $.patch_evaluate_buffer, $.action_extend_bottom],
+        // `EVAL ~x~` is an evaluated name a statement writes, an evaluated value, or a standalone EVAL patch followed
+        // by a string; only the rest of the parse distinguishes them.
+        [$._var_target, $.patch_evaluate_buffer],
+        [$._var_target, $.evaluated_expr, $.patch_evaluate_buffer],
+        [$.evaluated_expr, $.patch_evaluate_buffer],
+        [$._var_target, $.evaluated_expr, $.patch_evaluate_buffer, $.action_compile],
+        [$.evaluated_expr, $.patch_evaluate_buffer, $.action_compile],
+        [$._var_target, $.patch_evaluate_buffer, $.action_extend_top],
+        [$._var_target, $.patch_evaluate_buffer, $.action_extend_bottom],
+        // After a statement that ends in an open list of values, a name starts either one more value or the next
+        // statement, which writes it (`x = 1`).
+        [$.variable_ref, $._var_target],
+        [$._var_target],
+        [$._var_target, $._primary],
+        [$._var_target, $._tight_expr],
+        [$._var_target, $._operand],
+        [$._var_target, $._tight_expr, $._operand],
+        [$._tight_expr, $._operand],
         [$.variable_ref, $.action_at_now],
         [$.variable_ref, $.action_at_interactive_now],
         [$.variable_ref, $.assoc_entry],
+        // A string list ends where the next statement starts: `x` after its items is one more item, or the start of
+        // `x = 1`. Only the token after it decides.
         [$.patch_remove_store_item],
+        [$.patch_remove_cre_item],
+        [$.patch_remove_known_spell],
+        [$.patch_include],
+        [$.patch_reinclude],
+        [$.patch_write_ascii_list],
+        [$.patch_write_asciil],
         [$.patch_add_store_item],
         [$._action, $._top_level],
-        [$._assignable],
-        [$._assignable, $._primary],
-        [$._assignable, $._expr],
         [$.patch_define_associative_array, $.action_define_associative_array],
         [$.patch_evaluate_buffer, $.action_extend_top],
         [$.patch_evaluate_buffer, $.action_extend_bottom],
@@ -879,8 +939,10 @@ export default grammar({
         // AT_NOW ~a~ - 1: a quoted result variable before a negative command, or one command `~a~ - 1`.
         [$._primary, $.action_at_now],
         [$._primary, $.action_at_interactive_now],
-        [$._expr, $.action_at_now],
-        [$._expr, $.action_at_interactive_now],
+        [$._tight_expr, $.action_at_now],
+        [$._tight_expr, $.action_at_interactive_now],
+        [$._operand, $.action_at_now],
+        [$._operand, $.action_at_interactive_now],
         [$._action, $.action_if],
     ],
 
@@ -909,19 +971,11 @@ export default grammar({
 
         string: ($) => choice($.tilde_string, $.double_string, $.five_tilde_string, $.percent_string),
 
+        // The *_content tokens come from the external scanner (see externals).
         tilde_string: ($) => seq("~", optional($.tilde_content), "~"),
-        // token.immediate: without it the line_comment extra is a candidate right after the opening ~, so a
-        // string whose content is exactly `//` (a regexp WeiDU mods really do write) lexes as a comment.
-        tilde_content: ($) => token.immediate(prec(1, /[^~]+/)),
-
         double_string: ($) => seq('"', optional($.double_content), '"'),
-        double_content: ($) => /[^"]*/,
-
         five_tilde_string: ($) => seq("~~~~~", optional($.five_tilde_content), "~~~~~"),
-        five_tilde_content: ($) => repeat1(choice(/[^~]+/, /~{1,4}/)),
-
         percent_string: ($) => seq("%", optional($.percent_content), "%"),
-        percent_content: ($) => /[^%]+/,
 
         // Decimal, hex (0x), octal (0o), binary (0b), # prefix, dotted version
         // No leading `-` on the decimal form: it would swallow the operator in `%size%-12`, which WeiDU
@@ -962,14 +1016,8 @@ export default grammar({
         // A variable a statement writes: a name, as WeiDU has it in that position.
         _var_target: ($) => nameIn($, "var"),
 
-        // A parameter or return name in a function definition or call.
-        _name: ($) =>
-            seq(
-                optional(choice("EVAL", "EVALUATE_BUFFER")),
-                choice($.identifier, $.var_name_numeric, $.array_access, $.string),
-            ),
-
-        _assignable: ($) => seq(optional("EVAL"), choice($.identifier, $.var_name_numeric, $.array_access, $.string)),
+        // A parameter or return name in a function definition or call, as the `name` field of its list or item.
+        _name: ($) => nameIn($, "name"),
 
         // =========================================
         // MODIFIERS / FLAGS
@@ -989,26 +1037,16 @@ export default grammar({
         // Named node for expression context detection in completions
         value: ($) => $._expr,
 
-        // Simple value excludes OR/AND binary expressions - used where boolean operators shouldn't appear
-        simple_value: ($) => $._simple_expr,
+        _expr: ($) => choice($.binary_expr, $.ternary_expr, $._tight_expr),
 
-        _expr: ($) => choice($.binary_expr, ...nonBinaryExprs($)),
+        _tight_expr: ($) => choice(...tightExprs($)),
 
-        // Simple expression excludes OR/AND - only comparison and arithmetic binary ops
-        _simple_expr: ($) => choice($._simple_binary_expr, ...nonBinaryExprs($)),
+        // A one-string operand, as WeiDU's predicates take it: a literal or variable, an array element, or an
+        // evaluated string. It ends at the string, so in `FILE_EXISTS ~a~ AND x` the AND belongs to the condition.
+        _operand: ($) => choice($._primary, $.array_access, $.evaluated_expr),
 
-        // Binary expression without OR/AND
-        _simple_binary_expr: ($) =>
-            choice(
-                prec.left(
-                    2,
-                    seq(field("left", $._simple_expr), field("op", $._comparison_op), field("right", $._simple_expr)),
-                ),
-                prec.left(
-                    3,
-                    seq(field("left", $._simple_expr), field("op", $._arithmetic_op), field("right", $._simple_expr)),
-                ),
-            ),
+        // An operand that may also be a parenthesised expression (MOD_IS_INSTALLED's component number).
+        _safe_operand: ($) => choice($._operand, $.paren_expr),
 
         _primary: ($) => choice($.string, $.number, $.tra_ref, $.at_ref, $.bare_resref, $.variable_ref),
 
@@ -1017,67 +1055,32 @@ export default grammar({
         paren_expr: ($) => seq("(", $._expr, ")"),
 
         ternary_expr: ($) =>
-            prec.right(1, seq(field("condition", $._expr), "?", field("then", $._expr), ":", field("else", $._expr))),
+            prec.right(
+                PREC_TERNARY,
+                seq(field("condition", $._expr), "?", field("then", $._expr), ":", field("else", $._expr)),
+            ),
 
+        // WeiDU's levels are all left-associative, `**` included.
         binary_expr: ($) =>
             choice(
-                prec.left(
-                    1,
-                    seq(field("left", $._expr), field("op", choice("AND", "OR", "&&", "||")), field("right", $._expr)),
+                ...BINARY_LEVELS.map((ops, i) =>
+                    prec.left(
+                        PREC_TERNARY + 1 + i,
+                        seq(
+                            field("left", $._expr),
+                            field("op", ops.length === 1 ? ops[0] : choice(...ops)),
+                            field("right", $._expr),
+                        ),
+                    ),
                 ),
-                prec.left(2, seq(field("left", $._expr), field("op", $._comparison_op), field("right", $._expr))),
-                prec.left(3, seq(field("left", $._expr), field("op", $._arithmetic_op), field("right", $._expr))),
             ),
 
-        _comparison_op: ($) =>
-            choice(
-                "==",
-                "=",
-                "!=",
-                "<",
-                ">",
-                "<=",
-                ">=",
-                "EQUALS",
-                "STRING_COMPARE",
-                "STR_CMP",
-                "STRING_COMPARE_CASE",
-                "STRING_EQUAL",
-                "STRING_EQUAL_CASE",
-                "STR_EQ",
-                "STRING_MATCHES_REGEXP",
-                "STRING_CONTAINS_REGEXP",
-                "STRING_COMPARE_REGEXP",
-            ),
-
-        _arithmetic_op: ($) =>
-            choice(
-                "+",
-                "-",
-                "*",
-                "/",
-                "**",
-                "MODULO",
-                "REM",
-                "BAND",
-                "BOR",
-                "BXOR",
-                "&",
-                "|",
-                "^^",
-                "BLSL",
-                "BLSR",
-                "BASR",
-                "<<",
-                ">>",
-                "^",
-            ),
-
-        unary_expr: ($) => prec.right(3, seq(field("op", $._unary_op), field("operand", $._expr))),
+        // `-` is no WeiDU operator (WeiDU reads `-1` as an error); it is kept, leniently, as a prefix negation.
+        unary_expr: ($) => seq(field("op", $._unary_op), field("operand", $._tight_expr)),
 
         _unary_op: ($) => choice("-", "NOT", "!", "BNOT", "`", "ABS"),
 
-        evaluated_expr: ($) => prec.right(1, seq(choice("EVAL", "EVALUATE_BUFFER"), field("value", $._expr))),
+        evaluated_expr: ($) => seq(choice("EVAL", "EVALUATE_BUFFER"), field("value", $._operand)),
 
         // Memory access expressions
         byte_at_expr: memoryAt("BYTE_AT", "SBYTE_AT"),
@@ -1121,19 +1124,17 @@ export default grammar({
             "file",
         ),
         biff_is_compressed_expr: checkExpr("BIFF_IS_COMPRESSED", "biff"),
-        file_size_expr: ($) => prec.right(3, seq("FILE_SIZE", field("file", $.value), field("size", $.value))),
+        file_size_expr: ($) => seq("FILE_SIZE", field("file", operand($)), field("size", operand($))),
         size_of_file_expr: checkExpr("SIZE_OF_FILE", "file"),
         valid_script_actions_expr: checkExpr("VALID_SCRIPT_ACTIONS", "text"),
         valid_script_triggers_expr: checkExpr("VALID_SCRIPT_TRIGGERS", "text"),
-        file_md5_expr: ($) => prec.right(3, seq("FILE_MD5", field("file", $.value), field("md5", $.value))),
-        variable_is_set_expr: ($) =>
-            prec.right(3, seq("VARIABLE_IS_SET", optional(choice("EVAL", "EVALUATE_BUFFER")), field("var", $.value))),
+        file_md5_expr: ($) => seq("FILE_MD5", field("file", operand($)), field("md5", operand($))),
+        // `VARIABLE_IS_SET EVAL ~%x%~` reads its name through the operand's evaluated_expr.
+        variable_is_set_expr: checkExpr("VARIABLE_IS_SET", "var"),
         is_an_int_expr: checkExpr("IS_AN_INT", "var"),
-        game_is_expr: ($) => prec.right(3, seq("GAME_IS", optional($._opt_caching), field("games", $.value))),
-        game_includes_expr: ($) =>
-            prec.right(3, seq("GAME_INCLUDES", optional($._opt_caching), field("games", $.simple_value))),
-        engine_is_expr: ($) =>
-            prec.right(3, seq("ENGINE_IS", optional($._opt_caching), field("engines", $.simple_value))),
+        game_is_expr: ($) => seq("GAME_IS", optional($._opt_caching), field("games", operand($))),
+        game_includes_expr: ($) => seq("GAME_INCLUDES", optional($._opt_caching), field("games", operand($))),
+        engine_is_expr: ($) => seq("ENGINE_IS", optional($._opt_caching), field("engines", operand($))),
         string_length_expr: checkExpr("STRING_LENGTH", "string"),
 
         variable_is_in_array_expr: checkExpr("VARIABLE_IS_IN_ARRAY", "array"),
@@ -1141,29 +1142,25 @@ export default grammar({
         defined_as_inlined_expr: checkExpr("DEFINED_AS_INLINED", "var"),
 
         mod_is_installed_expr: ($) =>
-            prec.right(3, seq("MOD_IS_INSTALLED", field("mod", $.value), field("component", $.simple_value))),
+            seq("MOD_IS_INSTALLED", field("mod", operand($)), field("component", alias($._safe_operand, $.value))),
 
         install_order_expr: ($) =>
-            prec.right(
-                3,
-                seq(
-                    "INSTALL_ORDER",
-                    field("mod", $.value),
-                    field("component", $.simple_value),
-                    choice("AFTER", "BEFORE"),
-                    field("other_mod", $.value),
-                    field("other_component", $.simple_value),
-                ),
+            seq(
+                "INSTALL_ORDER",
+                field("mod", operand($)),
+                field("component", alias($._safe_operand, $.value)),
+                choice("AFTER", "BEFORE"),
+                field("other_mod", operand($)),
+                field("other_component", alias($._safe_operand, $.value)),
             ),
 
-        id_of_label_expr: ($) => seq("ID_OF_LABEL", field("tp2", $.value), field("label", $.value)),
+        id_of_label_expr: ($) => seq("ID_OF_LABEL", field("tp2", operand($)), field("label", operand($))),
 
-        file_contains_expr: ($) =>
-            prec.right(3, seq("FILE_CONTAINS", field("file", $.value), field("regexp", $.value))),
+        file_contains_expr: ($) => seq("FILE_CONTAINS", field("file", operand($)), field("regexp", operand($))),
 
         // Takes a resource name and a regexp, both evaluated as patch strings.
         resource_contains_expr: ($) =>
-            prec.right(3, seq("RESOURCE_CONTAINS", field("resource", $.value), field("regexp", $.value))),
+            seq("RESOURCE_CONTAINS", field("resource", operand($)), field("regexp", operand($))),
 
         file_contains_evaluated_expr: ($) =>
             seq("FILE_CONTAINS_EVALUATED", "(", field("file", $.value), field("regexp", $.value), ")"),
@@ -1348,9 +1345,9 @@ export default grammar({
                 ),
             ),
 
-        patch_write_ascii_list: ($) => prec.right(seq("WRITE_ASCII_LIST", field("offset", $.value), repeat($.value))),
+        patch_write_ascii_list: ($) => seq("WRITE_ASCII_LIST", field("offset", $.value), repeat(operand($))),
 
-        patch_write_asciil: ($) => prec.right(seq("WRITE_ASCIIL", field("offset", $.value), repeat($.value))),
+        patch_write_asciil: ($) => seq("WRITE_ASCIIL", field("offset", $.value), repeat(operand($))),
 
         // Read patches
         patch_read_byte: readPatch("READ_BYTE", "READ_SBYTE"),
@@ -1388,17 +1385,10 @@ export default grammar({
             ),
 
         // String operations
-        // SAY offset text [sound] [female_text [female_sound]]
-        // When female_text is provided, first text is for male PC, second for female PC
+        // SAY offset text [sound] [female [female_sound]]: with a female text, the first is the male PC's
         patch_say: ($) =>
             prec.right(
-                seq(
-                    choice("SAY", "SAY_EVALUATED"),
-                    field("offset", $.value),
-                    field("text", $.value),
-                    optional($.sound_ref),
-                    optional(seq(field("female_text", $.value), optional($.sound_ref))),
-                ),
+                seq(choice("SAY", "SAY_EVALUATED"), field("offset", $.value), field("text", $.value), ...textTail($)),
             ),
 
         patch_sprint: sprintOpGlobal("SPRINT"),
@@ -1422,23 +1412,15 @@ export default grammar({
         patch_set: ($) =>
             seq(
                 "SET",
-                optional(choice("EVAL", "EVALUATE_BUFFER", "GLOBAL")),
+                optional("GLOBAL"),
                 choice(
-                    seq(field("var", $._assignable), field("operator", $._assign_op), field("value", $.value)),
-                    seq(choice("++", "--"), field("var", $._assignable)),
+                    seq($._var_target, field("operator", $._assign_op), field("value", $.value)),
+                    seq(choice("++", "--"), $._var_target),
                 ),
             ),
 
         patch_assignment: ($) =>
-            prec(
-                10,
-                seq(
-                    optional("GLOBAL"),
-                    field("var", $._assignable),
-                    field("operator", $._assign_op),
-                    field("value", $.value),
-                ),
-            ),
+            prec(10, seq(optional("GLOBAL"), $._var_target, field("operator", $._assign_op), field("value", $.value))),
 
         patch_increment: ($) => seq(optional("GLOBAL"), "++", field("var", $.value)),
         patch_decrement: ($) => seq(optional("GLOBAL"), "--", field("var", $.value)),
@@ -1646,7 +1628,9 @@ export default grammar({
         offset_array2_preset: ($) => choice(...OFFSET_ARRAY2_PRESETS),
 
         // Store/CRE item operations (using helpers)
-        patch_remove_store_item: ($) => seq("REMOVE_STORE_ITEM", repeat(field("item", $.value))),
+        // String lists (here and REMOVE_CRE_ITEM, REMOVE_KNOWN_SPELL, PATCH_INCLUDE, WRITE_ASCII_LIST) take one-string
+        // items, as in WeiDU, so `x = 1` on the next line is an assignment, not one more item.
+        patch_remove_store_item: ($) => seq("REMOVE_STORE_ITEM", repeat(field("item", operand($)))),
 
         // ADD_STORE_ITEM [+] item [position] charge1 charge2 charge3 flags stock [unlimited]; only `+` (overwrite)
         // is a flag here. A position of AT value reads as an AT-reference value, which keeps the count the same.
@@ -1689,7 +1673,7 @@ export default grammar({
         patch_add_known_spell: ($) =>
             seq("ADD_KNOWN_SPELL", field("spell", $.value), field("level", $.value), field("type", $.value)),
 
-        patch_remove_known_spell: ($) => prec.right(seq("REMOVE_KNOWN_SPELL", repeat(field("spell", $.value)))),
+        patch_remove_known_spell: ($) => seq("REMOVE_KNOWN_SPELL", repeat(field("spell", operand($)))),
 
         patch_add_map_note: ($) =>
             prec.right(
@@ -1744,7 +1728,13 @@ export default grammar({
 
         patch_sort_array_indices: sortArrayIndices("SORT_ARRAY_INDICES"),
 
-        assoc_entry: ($) => seq(choice($.value, $.var_name_numeric), repeat(seq(",", $.value)), "=>", $.value),
+        assoc_entry: ($) =>
+            seq(
+                field("key", choice($.value, $.var_name_numeric)),
+                repeat(seq(",", field("key", $.value))),
+                "=>",
+                field("value", $.value),
+            ),
 
         // Print/log operations (using helpers)
         patch_print: printOp("PATCH_PRINT"),
@@ -1753,8 +1743,8 @@ export default grammar({
         patch_fail: printOp("PATCH_FAIL"),
         patch_abort: printOp("PATCH_ABORT"),
 
-        patch_include: ($) => prec.right(seq("PATCH_INCLUDE", repeat(field("file", $.value)))),
-        patch_reinclude: ($) => prec.right(seq("PATCH_REINCLUDE", repeat(field("file", $.value)))),
+        patch_include: ($) => seq("PATCH_INCLUDE", repeat(field("file", operand($)))),
+        patch_reinclude: ($) => seq("PATCH_REINCLUDE", repeat(field("file", operand($)))),
         patch_random_seed: ($) => seq("PATCH_RANDOM_SEED", $.value),
         patch_readln: ($) => seq("PATCH_READLN", $.value),
         patch_with_tra: ($) => seq("PATCH_WITH_TRA", repeat(field("file", $.value)), "BEGIN", repeat($._patch), "END"),
@@ -1811,7 +1801,7 @@ export default grammar({
                 field("start", $.value),
                 field("length", $.value),
                 field("level", $.value),
-                field("var", $._assignable),
+                $._var_target,
             ),
 
         patch_decompress_into_var: ($) =>
@@ -1832,14 +1822,7 @@ export default grammar({
         inner_patch: innerPatchOp("INNER_PATCH"),
 
         inner_patch_save: ($) =>
-            seq(
-                "INNER_PATCH_SAVE",
-                field("var", $._assignable),
-                field("buffer", $.value),
-                "BEGIN",
-                repeat($._patch),
-                "END",
-            ),
+            seq("INNER_PATCH_SAVE", $._var_target, field("buffer", $.value), "BEGIN", repeat($._patch), "END"),
 
         inner_patch_file: ($) => seq("INNER_PATCH_FILE", field("file", $.value), "BEGIN", repeat($._patch), "END"),
 
@@ -2126,10 +2109,10 @@ export default grammar({
         action_outer_set: ($) =>
             seq(
                 "OUTER_SET",
-                optional(choice("EVAL", "EVALUATE_BUFFER", "GLOBAL")),
+                optional("GLOBAL"),
                 choice(
-                    seq(field("var", $._assignable), field("operator", $._assign_op), field("value", $.value)),
-                    seq(choice("++", "--"), field("var", $._assignable)),
+                    seq($._var_target, field("operator", $._assign_op), field("value", $.value)),
+                    seq(choice("++", "--"), $._var_target),
                 ),
             ),
 
@@ -2142,8 +2125,7 @@ export default grammar({
 
         // Local variables (only valid inside macro bodies)
         // LOCAL_SET takes plain `=` only; WeiDU has no compound form of it.
-        local_set: ($) =>
-            seq("LOCAL_SET", field("var", $._assignable), field("operator", "="), field("value", $.value)),
+        local_set: ($) => seq("LOCAL_SET", $._var_target, field("operator", "="), field("value", $.value)),
         // LOCAL_SPRINT takes a text with its sound and female forms; LOCAL_TEXT_SPRINT a plain string.
         local_sprint: ($) =>
             choice(
@@ -2196,9 +2178,10 @@ export default grammar({
 
         // Every parameter list, here and in calls, may be empty: WeiDU accepts it, and parameter-name completion
         // right after typing `INT_VAR ` finds its context from the (still empty) list node.
-        int_var_decl: ($) => seq("INT_VAR", repeat(seq($._name, "=", $.value))),
+        // Each name has exactly one default, so the i-th `name` and the i-th `default` field are one parameter.
+        int_var_decl: ($) => seq("INT_VAR", repeat(seq($._name, "=", field("default", $.value)))),
 
-        str_var_decl: ($) => seq("STR_VAR", repeat(seq($._name, "=", $.value))),
+        str_var_decl: ($) => seq("STR_VAR", repeat(seq($._name, "=", field("default", $.value)))),
 
         ret_decl: ($) => seq("RET", repeat($._name)),
         ret_array_decl: ($) => seq("RET_ARRAY", repeat($._name)),
@@ -2222,13 +2205,13 @@ export default grammar({
 
         // In function calls, left-hand side of assignments is always an identifier/string, not an expression
         int_var_call: ($) => seq("INT_VAR", repeat($.int_var_call_item)),
-        int_var_call_item: ($) => seq($._name, optional(seq("=", $.value))),
+        int_var_call_item: ($) => seq($._name, optional(seq("=", field("value", $.value)))),
         str_var_call: ($) => seq("STR_VAR", repeat($.str_var_call_item)),
-        str_var_call_item: ($) => seq($._name, optional(seq("=", $.value))),
+        str_var_call_item: ($) => seq($._name, optional(seq("=", field("value", $.value)))),
         ret_call: ($) => seq("RET", repeat($.ret_call_item)),
-        ret_call_item: ($) => seq($._name, optional(seq("=", $.value))),
+        ret_call_item: ($) => seq($._name, optional(seq("=", field("value", $.value)))),
         ret_array_call: ($) => seq("RET_ARRAY", repeat($.ret_array_call_item)),
-        ret_array_call_item: ($) => seq($._name, optional(seq("=", $.value))),
+        ret_array_call_item: ($) => seq($._name, optional(seq("=", field("value", $.value)))),
 
         // Arrays
         action_define_array: ($) =>
@@ -2253,14 +2236,7 @@ export default grammar({
                 seq(
                     choice("STRING_SET", "STRING_SET_EVALUATE"),
                     // WeiDU's pair list may be empty.
-                    optional(
-                        seq(
-                            field("strref", $.value),
-                            field("male", $.value),
-                            optional($.sound_ref),
-                            optional(seq(field("female", $.value), optional($.sound_ref))),
-                        ),
-                    ),
+                    optional(seq(field("strref", $.value), field("male", $.value), ...textTail($))),
                     // WeiDU: ... USING e2:STRING - names the one tra file the references resolve against.
                     optional(seq("USING", field("tra", $.value))),
                 ),

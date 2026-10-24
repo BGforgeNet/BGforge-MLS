@@ -82,7 +82,7 @@ export function unwrapVariableRef(node: SyntaxNode): SyntaxNode {
 
 /**
  * Find the first Identifier descendant of a node.
- * Handles arbitrarily nested wrappers like value > simple_value > variable_ref > identifier.
+ * Handles arbitrarily nested wrappers like value > variable_ref > identifier.
  */
 export function findIdentifier(node: SyntaxNode): SyntaxNode | null {
     if (node.type === SyntaxType.Identifier) {

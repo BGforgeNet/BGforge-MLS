@@ -432,16 +432,16 @@ END
   (action_define_dimorphic_function
     name: (identifier)
     (int_var_decl
-      (identifier)
-      (value
+      name: (identifier)
+      default: (value
         (number)))
     (str_var_decl
-      (identifier)
-      (value
+      name: (identifier)
+      default: (value
         (string
           (tilde_string))))
     (ret_decl
-      (identifier))
+      name: (identifier))
     (action_print
       message: (value
         (string
@@ -1081,8 +1081,8 @@ END
   (action_define_function
     name: (identifier)
     (str_var_decl
-      (var_name_numeric)
-      (value
+      name: (var_name_numeric)
+      default: (value
         (string
           (tilde_string))))))
 
@@ -1173,10 +1173,9 @@ STRING_SET_EVALUATE i ~%male%~ [%male_sound%] ~%female%~ [%female_sound%]
         (tilde_string
           (tilde_content))))
     (sound_ref)
-    female: (value
-      (string
-        (tilde_string
-          (tilde_content))))
+    female: (string
+      (tilde_string
+        (tilde_content)))
     (sound_ref)))
 
 ================================================================================

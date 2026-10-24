@@ -444,7 +444,7 @@ END
   (action_if
     condition: (value
       (game_includes_expr
-        games: (simple_value
+        games: (value
           (string
             (tilde_string
               (tilde_content))))))))
@@ -462,7 +462,7 @@ END
   (action_if
     condition: (value
       (engine_is_expr
-        engines: (simple_value
+        engines: (value
           (string
             (tilde_string
               (tilde_content))))))))
@@ -633,6 +633,65 @@ OUTER_SPRINT x ~//~
       (string
         (tilde_string
           (tilde_content))))))
+
+================================================================================
+Comment markers inside every string form are string content
+================================================================================
+
+OUTER_SPRINT a ~/* b */~
+OUTER_SPRINT a "/* b */"
+OUTER_SPRINT a ~
+/* b */ c~
+OUTER_SPRINT a "//"
+OUTER_SPRINT a %//%
+OUTER_SPRINT a ~~~~~//~~~~~
+OUTER_SPRINT a ~~~~~/* b */~~~~~
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_outer_sprint
+    var: (identifier)
+    value: (value
+      (string
+        (tilde_string
+          (tilde_content)))))
+  (action_outer_sprint
+    var: (identifier)
+    value: (value
+      (string
+        (double_string
+          (double_content)))))
+  (action_outer_sprint
+    var: (identifier)
+    value: (value
+      (string
+        (tilde_string
+          (tilde_content)))))
+  (action_outer_sprint
+    var: (identifier)
+    value: (value
+      (string
+        (double_string
+          (double_content)))))
+  (action_outer_sprint
+    var: (identifier)
+    value: (value
+      (string
+        (percent_string
+          (percent_content)))))
+  (action_outer_sprint
+    var: (identifier)
+    value: (value
+      (string
+        (five_tilde_string
+          (five_tilde_content)))))
+  (action_outer_sprint
+    var: (identifier)
+    value: (value
+      (string
+        (five_tilde_string
+          (five_tilde_content))))))
 
 ================================================================================
 SUBCOMPONENT and GROUP with a predicate

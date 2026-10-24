@@ -469,8 +469,8 @@ COPY ~mymod/item.itm~ ~override~
         name: (var_name_numeric)
         (int_var_call
           (int_var_call_item
-            (identifier)
-            (value
+            name: (identifier)
+            value: (value
               (number))))))))
 
 ================================================================================
@@ -573,8 +573,8 @@ COPY ~mymod/item.itm~ ~override~
         name: (identifier)
         (str_var_call
           (str_var_call_item
-            (var_name_numeric)
-            (value
+            name: (var_name_numeric)
+            value: (value
               (string
                 (double_string
                   (double_content))))))))))
@@ -703,6 +703,52 @@ COPY ~mymod/item.itm~ ~override~
               (tilde_content))))))))
 
 ================================================================================
+An assignment after a string list or a SAY is its own patch
+================================================================================
+
+COPY ~a~ ~b~
+  REMOVE_STORE_ITEM ~sw1h01~
+  count = 1
+  SAY NAME1 ~foo~
+  other = 2
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (action_copy
+    (file_pair
+      from: (value
+        (string
+          (tilde_string
+            (tilde_content))))
+      to: (value
+        (string
+          (tilde_string
+            (tilde_content)))))
+    (patches
+      (patch_remove_store_item
+        item: (value
+          (string
+            (tilde_string
+              (tilde_content)))))
+      (patch_assignment
+        var: (identifier)
+        value: (value
+          (number)))
+      (patch_say
+        offset: (value
+          (variable_ref
+            (identifier)))
+        text: (value
+          (string
+            (tilde_string
+              (tilde_content)))))
+      (patch_assignment
+        var: (identifier)
+        value: (value
+          (number))))))
+
+================================================================================
 LPF returning into an array element and an evaluated name
 ================================================================================
 
@@ -727,20 +773,20 @@ COPY ~mymod/item.itm~ ~override~
         name: (identifier)
         (ret_call
           (ret_call_item
-            (array_access
+            name: (array_access
               name: (identifier)
               (value
                 (string
                   (tilde_string
                     (tilde_content)))))
-            (value
+            value: (value
               (variable_ref
                 (identifier)))))
         (ret_array_call
           (ret_array_call_item
-            (string
+            name: (string
               (tilde_string
                 (tilde_content)))
-            (value
+            value: (value
               (variable_ref
                 (identifier)))))))))

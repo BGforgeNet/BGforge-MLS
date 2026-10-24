@@ -329,69 +329,17 @@ function extractParams(node: SyntaxNode): FunctionParams {
         if (!Object.hasOwn(PARAM_DECL_TYPES, child.type)) continue;
         const paramType = PARAM_DECL_TYPES[child.type as keyof typeof PARAM_DECL_TYPES];
 
+        const names = child.childrenForFieldName("name").map((name) => stripStringDelimiters(name.text));
         if (paramType === "ret" || paramType === "retArray") {
-            // RET and RET_ARRAY just have identifiers
-            for (const paramChild of child.children) {
-                if (paramChild.type === SyntaxType.Identifier) {
-                    params[paramType].push(paramChild.text);
-                }
-            }
+            params[paramType].push(...names);
         } else {
-            // INT_VAR and STR_VAR have name = default pairs
-            extractVarParams(child, params[paramType]);
+            // The grammar gives every INT_VAR/STR_VAR name exactly one default, so the two lists pair by index.
+            const defaults = child.childrenForFieldName("default");
+            params[paramType].push(...names.map((name, i) => ({ name, defaultValue: defaults[i]?.text })));
         }
     }
 
     return params;
-}
-
-/**
- * Extract INT_VAR/STR_VAR parameters with optional default values.
- * Grammar structure: INT_VAR name1 = value1 name2 = value2 ...
- */
-function extractVarParams(node: SyntaxNode, target: ParamInfo[]): void {
-    let currentName: string | null = null;
-    let expectingDefault = false;
-
-    for (const child of node.children) {
-        // Skip the keyword itself (INT_VAR, STR_VAR)
-        if (child.type === node.type || child.text === "INT_VAR" || child.text === "STR_VAR") {
-            continue;
-        }
-
-        if (child.text === "=") {
-            // Next value will be the default
-            expectingDefault = true;
-            continue;
-        }
-
-        // Value types that can be parameter names or default values
-        const isValue = ["identifier", "string", "number", "variable_ref", "binary_expr", "value"].includes(child.type);
-
-        if (!isValue) {
-            continue;
-        }
-
-        if (expectingDefault && currentName !== null) {
-            // This is a default value for currentName
-            target.push({ name: currentName, defaultValue: child.text });
-            currentName = null;
-            expectingDefault = false;
-            continue;
-        }
-
-        // Otherwise this is a new parameter name; flush any pending default-less
-        // name first.
-        if (currentName !== null) {
-            target.push({ name: currentName });
-        }
-        currentName = child.text;
-    }
-
-    // Don't forget the last parameter if no default value
-    if (currentName !== null) {
-        target.push({ name: currentName });
-    }
 }
 
 // ============================================

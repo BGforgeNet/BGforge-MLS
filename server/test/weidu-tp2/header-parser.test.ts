@@ -2,7 +2,7 @@
  * Unit tests for WeiDU TP2 header parser.
  */
 
-import { describe, expect, it, beforeAll } from "vitest";
+import { assert, describe, expect, it, beforeAll } from "vitest";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 
@@ -23,6 +23,11 @@ describe("parseFile variable symbols", () => {
             expect(result[0]!.variable.declarationKind).toBe("set");
             expect(result[0]!.variable.type).toBe("int");
             expect(result[0]!.variable.value).toBe("10");
+        });
+
+        it("names an OUTER_SET EVAL variable by its name, not by EVAL", () => {
+            const result = fileVariables("OUTER_SET EVAL foo = 2");
+            expect(result.map((symbol) => symbol.name)).toEqual(["foo"]);
         });
 
         it("extracts OUTER_SPRINT variables", () => {
@@ -639,6 +644,27 @@ END`;
             expect(sym.callable.params?.strVar[0]!.name).toBe("name");
             expect(sym.callable.params?.strVar[0]!.description).toBe("item name to use");
             expect(sym.callable.params?.strVar[0]!.required).toBeFalsy();
+        });
+
+        it("pairs every parameter name with its own default, whatever the name's form", () => {
+            const input = `DEFINE_ACTION_FUNCTION f
+    INT_VAR 2da = 0 count = 1
+    STR_VAR ~quoted~ = ~q~ plain = ~p~
+    RET 2nd ~third~
+BEGIN
+END`;
+            const sym = parseHeaderToSymbols(uri, input, workspaceRoot)[0]!;
+            assert(isCallableSymbol(sym), "the function is not indexed as a callable");
+            const params = sym.callable.params;
+            expect(params?.intVar.map((p) => [p.name, p.defaultValue])).toEqual([
+                ["2da", "0"],
+                ["count", "1"],
+            ]);
+            expect(params?.strVar.map((p) => [p.name, p.defaultValue])).toEqual([
+                ["quoted", "~q~"],
+                ["plain", "~p~"],
+            ]);
+            expect(params?.ret).toEqual(["2nd", "third"]);
         });
 
         it("includes @arg type override in callable.params", () => {

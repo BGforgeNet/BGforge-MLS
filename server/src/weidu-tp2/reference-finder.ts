@@ -181,10 +181,10 @@ function findVariableReferences(root: SyntaxNode, symbolInfo: SymbolInfo, occurr
             }
 
             // For DEFINE_ARRAY etc., field is "name"
-            // The name field is a value/simple_value node, which wraps the actual expression
+            // The name field is a value node, which wraps the actual expression
             const nameNode = node.childForFieldName("name");
             if (nameNode) {
-                // The name field is value/simple_value, which is a wrapper. Get the actual expression child.
+                // The name field is a value wrapper. Get the actual expression child.
                 // value node has one child: the actual expression (variable_ref, string, number, etc.)
                 let exprNode = nameNode.child(0);
 

@@ -72,6 +72,8 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
     let beginLine = "";
     let lastEndRow = -1;
     let lastHeaderRow = -1;
+    // Set once the first action is emitted: REQUIRE_FILE and FORBID_FILE are header flags before it and actions after.
+    let inBody = false;
 
     for (const child of node.children) {
         if (isComment(child)) {
@@ -111,20 +113,21 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
 
         // Component flags - each on its own line
         if (
-            child.type === SyntaxType.DesignatedFlag ||
-            child.type === SyntaxType.DeprecatedFlag ||
-            child.type === SyntaxType.SubcomponentFlag ||
-            child.type === SyntaxType.GroupFlag ||
-            child.type === SyntaxType.LabelFlag ||
-            child.type === SyntaxType.RequirePredicateFlag ||
-            child.type === SyntaxType.RequireComponentFlag ||
-            child.type === SyntaxType.ForbidComponentFlag ||
-            child.type === SyntaxType.RequireFileFlag ||
-            child.type === SyntaxType.ForbidFileFlag ||
-            child.type === SyntaxType.ForcedSubcomponentFlag ||
-            child.type === SyntaxType.MetadataFlag ||
-            child.type === SyntaxType.NoLogRecordFlag ||
-            child.type === SyntaxType.InstallByDefaultFlag
+            !(inBody && isAction(child.type)) &&
+            (child.type === SyntaxType.DesignatedFlag ||
+                child.type === SyntaxType.DeprecatedFlag ||
+                child.type === SyntaxType.SubcomponentFlag ||
+                child.type === SyntaxType.GroupFlag ||
+                child.type === SyntaxType.LabelFlag ||
+                child.type === SyntaxType.RequirePredicateFlag ||
+                child.type === SyntaxType.RequireComponentFlag ||
+                child.type === SyntaxType.ForbidComponentFlag ||
+                child.type === SyntaxType.RequireFileFlag ||
+                child.type === SyntaxType.ForbidFileFlag ||
+                child.type === SyntaxType.ForcedSubcomponentFlag ||
+                child.type === SyntaxType.MetadataFlag ||
+                child.type === SyntaxType.NoLogRecordFlag ||
+                child.type === SyntaxType.InstallByDefaultFlag)
         ) {
             if (beginLine) {
                 lines.push(beginLine);
@@ -164,6 +167,7 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
             pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, 0));
             lastEndRow = child.endPosition.row;
+            inBody = true;
         }
     }
 

@@ -264,12 +264,16 @@ BEGIN ~componentName~
 
 ### String Types
 
-| Type         | Example          | Status                                       |
-| ------------ | ---------------- | -------------------------------------------- |
-| Double quote | `"text"`         | Supported                                    |
-| Tilde        | `~text~`         | Supported                                    |
-| Five tildes  | `~~~~~text~~~~~` | Supported                                    |
-| Percent      | `%text%`         | Not supported (conflicts with variable refs) |
+| Type         | Example          | Status    |
+| ------------ | ---------------- | --------- |
+| Double quote | `"text"`         | Supported |
+| Tilde        | `~text~`         | Supported |
+| Five tildes  | `~~~~~text~~~~~` | Supported |
+| Percent      | `%text%`         | Supported |
+
+A string's content is everything up to its closing delimiter, comment markers included: `~/* x */~` and `"//"`
+are text. The external scanner produces the content tokens, because it is the one asked for a comment right after
+an opening delimiter.
 
 ### Text Arguments
 
@@ -311,23 +315,23 @@ All syntaxes are equivalent in expression context:
 ```
 
 Block comments nest: WeiDU recurses on an inner opener and closes only at the matching closer, so a
-commented-out region may itself contain comments. Nesting is not a regular language, so `comment` is the
-one token produced by the external scanner (`src/scanner.c`), which counts depth; `line_comment` is
-internal.
+commented-out region may itself contain comments. Nesting is not a regular language, so `comment` comes from
+the external scanner (`src/scanner.c`), which counts depth; `line_comment` is internal.
 
 ### Expressions (Values)
 
 #### Arithmetic Operators
 
-| Operator                    | Description                           |
-| --------------------------- | ------------------------------------- |
-| `+`                         | Addition                              |
-| `-`                         | Subtraction                           |
-| `*`                         | Multiplication                        |
-| `/`                         | Division (rounds toward zero)         |
-| `**`                        | Exponentiation                        |
-| `MODULO`, `REM`, `MOD`, `%` | Remainder                             |
-| `** (n d)`                  | Fractional exponentiation (n/d power) |
+| Operator        | Description                   |
+| --------------- | ----------------------------- |
+| `+`             | Addition                      |
+| `-`             | Subtraction                   |
+| `*`             | Multiplication                |
+| `/`             | Division (rounds toward zero) |
+| `**`            | Exponentiation                |
+| `MODULO`, `REM` | Remainder                     |
+
+WeiDU's fractional power `** (n d)` is not supported: the grammar rejects it.
 
 #### Comparison Operators
 
@@ -359,18 +363,47 @@ internal.
 
 #### Unary Operators
 
-| Operator   | Description    |
-| ---------- | -------------- |
-| `-`        | Negation       |
-| `ABS`      | Absolute value |
-| `NOT`, `!` | Logical NOT    |
-| `BNOT`     | Bitwise NOT    |
+| Operator   | Description                                    |
+| ---------- | ---------------------------------------------- |
+| `-`        | Negation (not WeiDU's; accepted for tolerance) |
+| `ABS`      | Absolute value                                 |
+| `NOT`, `!` | Logical NOT                                    |
+| `BNOT`     | Bitwise NOT                                    |
 
 #### Ternary Operator
 
 ```tp2
 condition ? then_value : else_value
 ```
+
+#### Precedence
+
+WeiDU's, loosest first; every binary level groups to the left, `**` included:
+
+| Level | Operators                                               |
+| ----- | ------------------------------------------------------- |
+| 1     | `? :` (groups to the right)                             |
+| 2     | `OR`, `\|\|`                                            |
+| 3     | `AND`, `&&`                                             |
+| 4     | `BOR`, `\|`                                             |
+| 5     | `BXOR`, `^^`                                            |
+| 6     | `BAND`, `&`                                             |
+| 7     | `=`, `==`, `!=`, the `STRING_*` comparisons             |
+| 8     | `<`, `>`, `<=`, `>=`                                    |
+| 9     | `BLSL`, `BLSR`, `BASR`, `<<`, `>>`                      |
+| 10    | `+`, `-`                                                |
+| 11    | `*`, `/`, `MODULO`, `REM`                               |
+| 12    | `**`                                                    |
+| -     | prefix operators and memory reads bind tighter than all |
+
+So `1 + 2 * 3` is 7 and `NOT x = 1` is `(NOT x) = 1`. The tree is checked against WeiDU's own reading by
+`server/test/integration/weidu-tp2-expression-shape.test.ts`.
+
+#### Predicate Operands
+
+A predicate's argument (`FILE_EXISTS`, `GAME_IS`, `STRING_LENGTH`, `VARIABLE_IS_SET`, `MOD_IS_INSTALLED` and the
+rest) is one string, a variable, an array element or an `EVAL` of one, as in WeiDU. It ends at that string:
+`FILE_EXISTS ~a~ AND FILE_EXISTS ~b~` is an `AND` of two predicates. The operand is still a `value` node.
 
 #### Memory Access
 

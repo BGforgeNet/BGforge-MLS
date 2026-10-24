@@ -35,16 +35,24 @@ import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 // Assignment parsing
 // ============================================
 
+const CALL_ITEM_TYPES: ReadonlySet<string> = new Set([
+    SyntaxType.IntVarCallItem,
+    SyntaxType.StrVarCallItem,
+    SyntaxType.RetCallItem,
+    SyntaxType.RetArrayCallItem,
+]);
+
 /** Parse assignment: name = value (handles assignment, binary_expr, ternary_expr, *_call_item nodes) */
 function parseAssignment(node: SyntaxNode): { name: string; value: string } | null {
-    // A RET destination can span several children (`EVAL ~name~`), so it is everything before `=`;
-    // the grammar always follows `=` with a value, hence the non-null assertion.
-    if (node.type === SyntaxType.RetCallItem || node.type === SyntaxType.RetArrayCallItem) {
+    // A call item's name can span several children (`EVAL ~name~`, with EVAL outside the name field), so it is
+    // everything before `=`.
+    if (CALL_ITEM_TYPES.has(node.type)) {
         const equals = node.children.findIndex((child) => !child.isNamed && child.text === "=");
         const destination = equals === -1 ? node.children : node.children.slice(0, equals);
+        const value = node.childForFieldName("value");
         return {
             name: destination.map((child) => child.text).join(" "),
-            value: equals === -1 ? "" : normalizeWhitespace(node.children[equals + 1]!.text),
+            value: value ? normalizeWhitespace(value.text) : "",
         };
     }
 
@@ -56,29 +64,6 @@ function parseAssignment(node: SyntaxNode): { name: string; value: string } | nu
     if (!nameNode) {
         nameNode = node.childForFieldName("left");
         valueNode = node.childForFieldName("right");
-    }
-
-    // Handle *_call_item nodes: identifier/string [= value]
-    // web-tree-sitter includes anonymous tokens in children, so structure is:
-    // [identifier/string] or [identifier/string, "=", value]
-    if (!nameNode && node.type.endsWith("_call_item")) {
-        const children = node.children;
-        const first = children[0];
-        // First child is the name: an identifier, a quoted string, or a digit-leading name (STR_VAR 2da = ~~).
-        if (
-            first &&
-            (first.type === SyntaxType.Identifier ||
-                first.type === SyntaxType.String ||
-                first.type === SyntaxType.VarNameNumeric)
-        ) {
-            nameNode = first;
-            // If there's an "=" token, value is the third child
-            const second = children[1];
-            const third = children[2];
-            if (second && second.text === "=" && third) {
-                valueNode = third;
-            }
-        }
     }
 
     // Handle ternary_expr: "name = condition ? then : else"

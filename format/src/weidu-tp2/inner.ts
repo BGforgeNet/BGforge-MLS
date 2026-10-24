@@ -94,34 +94,12 @@ export function formatInnerPatch(
     const bodyIndent = ctx.indent.repeat(depth + 1);
     const lines: string[] = [];
 
-    // Determine keyword (INNER_PATCH, INNER_PATCH_SAVE, or INNER_PATCH_FILE)
-    let keyword = "INNER_PATCH";
+    // Build header: every token before BEGIN, so a modifier outside the fields (INNER_PATCH_SAVE EVAL name) stays.
+    const headerParts: string[] = [];
     for (const child of node.children) {
-        if (child.text === "INNER_PATCH" || child.text === "INNER_PATCH_SAVE" || child.text === "INNER_PATCH_FILE") {
-            keyword = child.text;
-            break;
-        }
-    }
-
-    // Build header: INNER_PATCH[_SAVE var] buffer
-    const headerParts: string[] = [keyword];
-
-    // For INNER_PATCH_SAVE, add the var field if present
-    const varNode = node.childForFieldName("var");
-    if (varNode) {
-        headerParts.push(normalizeWhitespace(varNode.text));
-    }
-
-    // Add buffer field if present (for INNER_PATCH/INNER_PATCH_SAVE)
-    const bufferNode = node.childForFieldName("buffer");
-    if (bufferNode) {
-        headerParts.push(normalizeWhitespace(bufferNode.text));
-    }
-
-    // Add file field if present (for INNER_PATCH_FILE)
-    const fileNode = node.childForFieldName("file");
-    if (fileNode) {
-        headerParts.push(normalizeWhitespace(fileNode.text));
+        if (isKeyword(child, KW_BEGIN)) break;
+        if (isComment(child)) continue;
+        headerParts.push(normalizeWhitespace(child.text));
     }
 
     // Output header + BEGIN
@@ -130,27 +108,21 @@ export function formatInnerPatch(
 
     // Process body content (patches)
     let lastEndRow = -1;
+    let inBody = false;
     for (const child of node.children) {
         if (isKeyword(child, KW_BEGIN)) {
+            inBody = true;
             lastEndRow = child.startPosition.row;
             continue;
         }
         if (isKeyword(child, KW_END)) {
             continue;
         }
-        // Skip keyword identifier
-        if (child.text === keyword) {
-            continue;
-        }
-        // Skip var, buffer, and file nodes (already handled via named fields)
-        if (child === varNode || child === bufferNode || child === fileNode) {
-            continue;
-        }
 
-        // Body content (patches and comments)
+        // Body content (patches and comments); a comment in the header is kept on its own line here too.
         if (isComment(child)) {
             lastEndRow = handleComment(lines, child, bodyIndent, lastEndRow);
-        } else if (isInnerPatchBodyContent(child.type)) {
+        } else if (inBody && isInnerPatchBodyContent(child.type)) {
             pushBlankIfGap(lines, child, lastEndRow);
             lines.push(formatNode(child, ctx, depth + 1));
             lastEndRow = child.endPosition.row;

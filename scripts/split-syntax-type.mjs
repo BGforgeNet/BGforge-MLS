@@ -12,6 +12,7 @@
 //
 // Usage: node split-syntax-type.mjs <tree-sitter.d.ts> <syntax-type.ts>
 import fs from "node:fs";
+import path from "node:path";
 
 const [dtsPath, outPath] = process.argv.slice(2);
 if (!dtsPath || !outPath) {
@@ -32,7 +33,23 @@ const header =
     "// Auto-generated from the grammar by split-syntax-type.mjs. Do not hand-edit.\n" +
     "// Runtime SyntaxType enum, split out of tree-sitter.d.ts so the values exist\n" +
     "// at runtime under any bundler.\n";
-fs.writeFileSync(outPath, header + block + "\n");
+// A grammar that declares `supertypes:` gets their direct members as runtime sets, read from the node-types.json
+// beside the .d.ts, so a consumer asks "is this an action?" of the grammar rather than of a node-type prefix.
+const nodeTypes = JSON.parse(fs.readFileSync(path.join(path.dirname(dtsPath), "node-types.json"), "utf8"));
+const supertypes = nodeTypes.filter((entry) => Array.isArray(entry.subtypes));
+const subtypesBlock =
+    supertypes.length === 0
+        ? ""
+        : "\n/** The direct members of each supertype the grammar declares. */\n" +
+          "export const SUBTYPES: Readonly<Record<string, ReadonlySet<string>>> = {\n" +
+          supertypes
+              .map((entry) => {
+                  const members = entry.subtypes.map((subtype) => `    ${JSON.stringify(subtype.type)},`).join("\n");
+                  return `  ${JSON.stringify(entry.type)}: new Set([\n${members}\n  ]),\n`;
+              })
+              .join("") +
+          "};\n";
+fs.writeFileSync(outPath, header + block + "\n" + subtypesBlock);
 
 dts =
     `import type { SyntaxType } from "./syntax-type";\n\n` +

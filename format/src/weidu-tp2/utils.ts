@@ -15,7 +15,7 @@ import {
     type CollectedItem,
     CollectedItemType,
 } from "./types";
-import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
+import { SUBTYPES, SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 import {
     type WeiduToken,
     tokenizeWeidu,
@@ -51,11 +51,15 @@ const ASSOC_ARRAY_DEF_TYPES = new Set(["action_define_associative_array", "patch
 /** Primitive value types (for array definitions). */
 const PRIMITIVE_TYPES = new Set(["value", "binary_expr", "variable_ref", "identifier", "string", "number"]);
 
-/** Special action types that don't use action_ prefix. */
-const SPECIAL_ACTION_TYPES = new Set(["text_sprint_action"]);
+/** The members of a supertype the grammar declares; a missing one is a grammar/formatter mismatch, not a fallback. */
+function subtypesOf(supertype: string): ReadonlySet<string> {
+    const members = SUBTYPES[supertype];
+    if (!members) throw new Error(`the WeiDU TP2 grammar declares no supertype ${supertype}`);
+    return members;
+}
 
-/** Special patch types that don't use patch_ prefix. */
-const SPECIAL_PATCH_TYPES = new Set(["write_var", "read_var", "set_var"]);
+const ACTION_SET = subtypesOf("_action");
+const PATCH_SET = subtypesOf("_patch");
 
 // ============================================
 // Comment utilities
@@ -214,12 +218,12 @@ export function isTopLevelDirective(type: string): boolean {
 
 /** Check if node type is an action. */
 export function isAction(type: string): boolean {
-    return type.startsWith("action_") || type.startsWith("outer_") || SPECIAL_ACTION_TYPES.has(type);
+    return ACTION_SET.has(type);
 }
 
 /** Check if node type is a patch. */
 export function isPatch(type: string): boolean {
-    return type.startsWith("patch_") || type.startsWith("inner_") || SPECIAL_PATCH_TYPES.has(type);
+    return PATCH_SET.has(type);
 }
 
 /** Check if text is a parameter keyword. */

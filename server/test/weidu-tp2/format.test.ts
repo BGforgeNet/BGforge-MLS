@@ -128,18 +128,19 @@ describe("format-utils: withNormalizedComment", () => {
 });
 
 describe("format-utils: type predicates", () => {
-    it("isAction detects action types", () => {
+    it("isAction detects action types by the grammar's action list, not by name", () => {
         expect(isAction("action_copy")).toBe(true);
-        expect(isAction("action_assignment")).toBe(true);
-        expect(isAction("action_fail")).toBe(true);
+        expect(isAction("require_file_flag")).toBe(true);
+        expect(isAction("inlined_file")).toBe(true);
+        expect(isAction("action_match_case")).toBe(false);
         expect(isAction("identifier")).toBe(false);
     });
 
-    it("isPatch detects patch types", () => {
+    it("isPatch detects patch types by the grammar's patch list, not by name", () => {
         expect(isPatch("patch_write_byte")).toBe(true);
-        expect(isPatch("read_var")).toBe(true);
-        expect(isPatch("set_var")).toBe(true);
-        expect(isPatch("action")).toBe(false);
+        expect(isPatch("inner_patch")).toBe(true);
+        expect(isPatch("patch_file")).toBe(false);
+        expect(isPatch("action_copy")).toBe(false);
     });
 
     it("isControlFlow detects control flow types", () => {
@@ -245,6 +246,16 @@ END`;
         expect(output).toContain("ALWAYS");
         expect(output).toContain("    OUTER_SET foo = 1");
         expect(output).toContain("END");
+    });
+
+    it("formats a file check inside ALWAYS as an action", () => {
+        expect(format("ALWAYS\nFORBID_FILE ~a~ ~no~\nEND")).toBe("ALWAYS\n    FORBID_FILE ~a~ ~no~\nEND\n");
+    });
+
+    it("keeps a file check among a component's actions without a blank line", () => {
+        expect(format("BEGIN @1\nCOPY ~a~ ~b~\nREQUIRE_FILE ~c~ ~no~\nPRINT ~y~\n")).toBe(
+            "BEGIN @1\nCOPY ~a~ ~b~\nREQUIRE_FILE ~c~ ~no~\nPRINT ~y~\n",
+        );
     });
 
     it("formats ACTION_IF with condition", () => {
@@ -421,6 +432,14 @@ END`;
         expect(output).toContain("INNER_PATCH_SAVE result ~input_buffer~ BEGIN");
         expect(output).toContain("REPLACE_TEXTUALLY ~old~ ~new~");
         expect(output).toContain("END");
+    });
+
+    it("keeps the evaluated name of INNER_PATCH_SAVE EVAL", () => {
+        const input = `BEGIN @1
+COPY_EXISTING ~test.itm~ ~override~
+INNER_PATCH_SAVE EVAL ~%a%~ ~buffer~ BEGIN
+END`;
+        expect(format(input)).toContain("INNER_PATCH_SAVE EVAL ~%a%~ ~buffer~ BEGIN");
     });
 
     it("formats nested INNER_PATCH variants", () => {

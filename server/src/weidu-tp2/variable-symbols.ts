@@ -173,7 +173,7 @@ export function isLoopVariable(loopNode: SyntaxNode, varName: string): boolean {
 /**
  * Collect all loop variable names from a PHP_EACH or FOR_EACH node.
  * PHP_EACH: key_var and value_var fields (direct identifiers).
- * FOR_EACH: var field (value > simple_value > variable_ref > identifier chain).
+ * FOR_EACH: var field (value > variable_ref > identifier chain).
  */
 export function collectLoopVarNames(loopNode: SyntaxNode): ReadonlySet<string> {
     const names = new Set<string>();
