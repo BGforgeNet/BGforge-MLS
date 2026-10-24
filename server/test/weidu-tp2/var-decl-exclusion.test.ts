@@ -148,10 +148,6 @@ describe("TP2 declaration-site detection", () => {
             expectSite("FOR_EACH item", "definition");
         });
 
-        it("detects PHP_EACH", () => {
-            expectSite("PHP_EACH entry", "definition");
-        });
-
         it("detects PATCH_FOR_EACH", () => {
             expectSite("PATCH_FOR_EACH x", "definition");
         });
@@ -159,13 +155,19 @@ describe("TP2 declaration-site detection", () => {
         it("detects ACTION_FOR_EACH", () => {
             expectSite("ACTION_FOR_EACH y", "definition");
         });
+    });
 
-        it("detects ACTION_PHP_EACH", () => {
-            expectSite("ACTION_PHP_EACH e", "definition");
+    describe("the array after PHP_EACH already exists, so it is no declaration", () => {
+        it("PHP_EACH", () => {
+            expectSite("PHP_EACH entry", false);
         });
 
-        it("detects PATCH_PHP_EACH", () => {
-            expectSite("PATCH_PHP_EACH e", "definition");
+        it("ACTION_PHP_EACH", () => {
+            expectSite("ACTION_PHP_EACH e", false);
+        });
+
+        it("PATCH_PHP_EACH", () => {
+            expectSite("PATCH_PHP_EACH e", false);
         });
     });
 

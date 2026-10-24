@@ -46,8 +46,8 @@ export const DEFINITION_SITE_PATTERN = new RegExp(
         "DEFINE_(?:ACTION|PATCH)_(?:FUNCTION|MACRO)\\s+|" +
         // Array definitions
         "(?:ACTION_)?DEFINE_(?:ASSOCIATIVE_)?ARRAY\\s+|" +
-        // Loop variable bindings
-        "(?:PATCH_|ACTION_)?(?:FOR_EACH|PHP_EACH)\\s+" +
+        // Loop variable bindings. Not PHP_EACH: the word after it names an array that already exists.
+        "(?:PATCH_|ACTION_)?FOR_EACH\\s+" +
         ")\\S*$",
     "i",
 );

@@ -350,9 +350,10 @@ export enum SyntaxType {
   VarNameNumeric = "var_name_numeric",
 }
 
-/** The direct members of each supertype the grammar declares. */
-export const SUBTYPES: Readonly<Record<string, ReadonlySet<string>>> = {
-  "_action": new Set([
+/** The direct members of each supertype the grammar declares; the keys are literal, so a consumer of a
+ * supertype the grammar drops fails to compile. */
+export const SUBTYPES = {
+  action: new Set<string>([
     "action_abort",
     "action_add_area_type",
     "action_add_journal",
@@ -452,7 +453,7 @@ export const SUBTYPES: Readonly<Record<string, ReadonlySet<string>>> = {
     "outer_while",
     "require_file_flag",
   ]),
-  "_patch": new Set([
+  patch: new Set<string>([
     "inner_action",
     "inner_patch",
     "inner_patch_file",
@@ -570,4 +571,4 @@ export const SUBTYPES: Readonly<Record<string, ReadonlySet<string>>> = {
     "patch_write_long",
     "patch_write_short",
   ]),
-};
+} as const;

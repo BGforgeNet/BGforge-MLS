@@ -65,7 +65,7 @@ import { getFormatOptions } from "../shared/format-options";
 import { stripCommentsWeidu, formatWeiduTp2 as formatAst } from "@bgforge/format";
 import { resolveSymbolWithLocal, formatWithValidation } from "../shared/provider-helpers";
 import { compile as weiduCompile } from "../weidu-compile";
-import { getContextAtPosition, getFuncParamsContext, isAtDeclarationSite } from "./completion/context";
+import { getContextAtPosition, getFuncParamsContext, isAtDeclarationSite, isPatchPosition } from "./completion/context";
 import { filterItemsByContext } from "./completion/filter";
 import { getParamCompletions } from "./completion/parameter";
 import { CompletionCategory, CompletionContext, type Tp2CompletionItem } from "./completion/types";
@@ -168,16 +168,16 @@ function addParamCompletions(
  *
  * Snippets are applied globally (skipped only in param contexts where they
  * would interfere with INT_VAR/STR_VAR value entry). The snippet prefix
- * (LAF/LPF/LAM/LPM) is symbol-driven, not position-driven:
+ * (LAF/LPF/LAM/LPM) comes from the symbol, and for a dimorphic function from the position:
  * - In name contexts: user already typed the keyword, so no prefix is added.
  * - In general context: prefix is determined from the symbol's callable data
- *   (action function -> LAF, patch macro -> LPM, dimorphic -> LAF/.tpp LPF).
+ *   (action function -> LAF, patch macro -> LPM, dimorphic -> LPF at a patch position, else LAF).
  */
 function applySnippets(
     items: Tp2CompletionItem[],
     contexts: CompletionContext[],
     localByName: ReadonlyMap<string, IndexedSymbol>,
-    uri: NormalizedUri,
+    inPatch: boolean,
     symbolStore: Symbols | undefined,
 ): Tp2CompletionItem[] {
     const inNameContext =
@@ -192,8 +192,6 @@ function applySnippets(
     if (inParamContext) {
         return items;
     }
-
-    const ext = extname(fileURLToPath(uri)).toLowerCase();
 
     return items.map((item) => {
         // Apply keyword snippets for action/patch command keywords
@@ -214,7 +212,7 @@ function applySnippets(
 
         const prefix = inNameContext
             ? undefined
-            : getSnippetPrefixFromSymbol(symbol.callable.dtype, symbol.callable.context, ext);
+            : getSnippetPrefixFromSymbol(symbol.callable.dtype, symbol.callable.context, inPatch);
 
         const snippet = buildFunctionCallSnippet(symbol.callable, funcName, prefix);
         if (snippet) {
@@ -232,12 +230,12 @@ function applySnippets(
  * Determine the keyword prefix for a function/macro snippet from the symbol's own data.
  * - Action function -> LAF, action macro -> LAM
  * - Patch function -> LPF, patch macro -> LPM
- * - Dimorphic function -> LPF in .tpp files, LAF in all others
+ * - Dimorphic function -> LPF at a patch position, LAF at an action position
  */
 function getSnippetPrefixFromSymbol(
     dtype: string | undefined,
     callableContext: CallableContext | undefined,
-    ext: string,
+    inPatch: boolean,
 ): string | undefined {
     const isMacro = dtype === "macro";
     if (callableContext === CallableContext.Patch) {
@@ -246,9 +244,8 @@ function getSnippetPrefixFromSymbol(
     if (callableContext === CallableContext.Action) {
         return isMacro ? "LAM" : "LAF";
     }
-    // Dimorphic: use LPF in .tpp files, LAF elsewhere
     if (callableContext === CallableContext.Dimorphic) {
-        return ext === ".tpp" ? "LPF" : "LAF";
+        return inPatch ? "LPF" : "LAF";
     }
     return undefined;
 }
@@ -345,8 +342,13 @@ class WeiduTp2Provider
         if (!this.fileIndex) {
             return [];
         }
-        const allSymbols = this.fileIndex.symbols.query({ excludeUri: uri });
-        return allSymbols.map((s: IndexedSymbol) => s.completion);
+        // A name several headers define (IDS constants per game, shared helpers) is one completion; the first
+        // definition supplies its detail, as the local-symbol path already does.
+        const byLabel = new Map<string, CompletionItem>();
+        for (const symbol of this.fileIndex.symbols.query({ excludeUri: uri })) {
+            if (!byLabel.has(symbol.completion.label)) byLabel.set(symbol.completion.label, symbol.completion);
+        }
+        return [...byLabel.values()];
     }
 
     filterCompletions(
@@ -423,7 +425,9 @@ class WeiduTp2Provider
         }
 
         const withParams = addParamCompletions(baseItems, contexts, this.fileIndex?.symbols);
-        const withSnippets = applySnippets(withParams, contexts, local.byName, uri, this.fileIndex?.symbols);
+        // A .tpp file is all patches, even while its tree is still too empty to say so.
+        const inPatch = ext === ".tpp" || isPatchPosition(text, position.line, position.character);
+        const withSnippets = applySnippets(withParams, contexts, local.byName, inPatch, this.fileIndex?.symbols);
 
         return filterItemsByContext(withSnippets, contexts);
     }

@@ -118,6 +118,11 @@ const CATEGORY_EXCLUSIONS: Partial<Record<CompletionCategory, CompletionContext[
         CompletionContext.FuncParamName,
         CompletionContext.FuncParamValue,
     ],
+    [CompletionCategory.Keywords]: [
+        ...ALL_NAME_CONTEXTS,
+        CompletionContext.FuncParamName,
+        CompletionContext.FuncParamValue,
+    ],
     [CompletionCategory.Constants]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName],
     [CompletionCategory.Vars]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName],
     [CompletionCategory.Value]: [...ALL_NAME_CONTEXTS, CompletionContext.FuncParamName],

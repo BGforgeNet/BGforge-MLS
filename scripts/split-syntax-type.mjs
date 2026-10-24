@@ -40,15 +40,19 @@ const supertypes = nodeTypes.filter((entry) => Array.isArray(entry.subtypes));
 const subtypesBlock =
     supertypes.length === 0
         ? ""
-        : "\n/** The direct members of each supertype the grammar declares. */\n" +
-          "export const SUBTYPES: Readonly<Record<string, ReadonlySet<string>>> = {\n" +
+        : "\n/** The direct members of each supertype the grammar declares; the keys are literal, so a consumer of a\n" +
+          " * supertype the grammar drops fails to compile. */\n" +
+          "export const SUBTYPES = {\n" +
           supertypes
               .map((entry) => {
                   const members = entry.subtypes.map((subtype) => `    ${JSON.stringify(subtype.type)},`).join("\n");
-                  return `  ${JSON.stringify(entry.type)}: new Set([\n${members}\n  ]),\n`;
+                  // A supertype is a hidden rule (`_action`); its key drops the underscore, which only marks it
+                  // hidden in the grammar.
+                  const key = entry.type.replace(/^_/, "");
+                  return `  ${key}: new Set<string>([\n${members}\n  ]),\n`;
               })
               .join("") +
-          "};\n";
+          "} as const;\n";
 fs.writeFileSync(outPath, header + block + "\n" + subtypesBlock);
 
 dts =

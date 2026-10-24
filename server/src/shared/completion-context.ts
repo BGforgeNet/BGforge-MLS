@@ -50,6 +50,8 @@ export const CompletionCategory = {
     Action: "action",
     // Patch context (value position)
     Patch: "patch",
+    // Clause words inside statements (AS, BEGIN, USING, ...)
+    Keywords: "keywords",
     // Value items (not commands)
     Constants: "constants",
     Vars: "vars",

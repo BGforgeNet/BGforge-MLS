@@ -363,6 +363,13 @@ describe("no context (general completion)", () => {
         expect(filtered).toHaveLength(2);
     });
 
+    it("clause keywords (USING, AS, BEGIN) stay out of parameter and function-name lists", () => {
+        const items = [createItem("USING", CompletionCategory.Keywords), createItem("AS", CompletionCategory.Keywords)];
+        expect(filterItemsByContext(items, getContexts(`LAF func INT_VAR | END`))).toHaveLength(0);
+        expect(filterItemsByContext(items, getContexts(`LAF |`))).toHaveLength(0);
+        expect(filterItemsByContext(items, getContexts(`COPY ~a~ ~b~ |`))).toHaveLength(2);
+    });
+
     it("FuncVarKeyword shown in incomplete LAF without END (text fallback)", () => {
         // No END - tree-sitter can't parse function call, text fallback detects param position
         const contexts = getContexts(`LAF func |`);

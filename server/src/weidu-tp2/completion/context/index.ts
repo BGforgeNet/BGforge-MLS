@@ -8,16 +8,98 @@
  */
 
 import type { Position } from "vscode-languageserver/node";
+import type { Node as SyntaxNode } from "web-tree-sitter";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { SyntaxType } from "../../syntax-type";
+import { SUBTYPES, SyntaxType } from "../../syntax-type";
 import { CommentKind, detectCommentKind } from "../../../shared/completion-context";
 import { getLinePrefix } from "../../../cursor-utils";
 import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { CompletionContext } from "../types";
 import { ASSIGNMENT_SITE_PATTERN, DEFINITION_SITE_PATTERN, FUNC_CALL_KEYWORDS, FUNC_PARAM_KEYWORDS } from "./constants";
 import { detectContextFromNode } from "./detectors";
+import { lastTokenBefore, resetFuncParamsContext } from "./function-call";
 
 export { getFuncParamsContext } from "./function-call";
+
+const LAUNCH_CALL_TYPES: ReadonlySet<string> = new Set([
+    SyntaxType.ActionLaunchFunction,
+    SyntaxType.PatchLaunchFunction,
+    SyntaxType.ActionLaunchMacro,
+    SyntaxType.PatchLaunchMacro,
+]);
+
+/**
+ * The last token before the cursor when it belongs to a call still being typed (its END missing). tree-sitter
+ * ends such a call at that token, so the node at the cursor lies outside the call even though the user is still
+ * inside it. A new line after it counts as inside too: the call stays open until its END, so a statement typed
+ * there before the END gets the call's contexts.
+ */
+function unfinishedCallToken(root: SyntaxNode, cursorOffset: number): SyntaxNode | null {
+    const token = lastTokenBefore(root, cursorOffset);
+    for (let node = token?.parent ?? null; node; node = node.parent) {
+        if (LAUNCH_CALL_TYPES.has(node.type)) {
+            return node.lastChild?.isMissing ? token : null;
+        }
+    }
+    return null;
+}
+
+/** Bodies whose statements are patches, beside the patch statements themselves. */
+const PATCH_BODIES: ReadonlySet<string> = new Set([
+    SyntaxType.Patches,
+    SyntaxType.PatchFile,
+    SyntaxType.ActionDefinePatchFunction,
+    SyntaxType.ActionDefinePatchMacro,
+]);
+
+/**
+ * Whether a statement typed at the cursor is a patch rather than an action: decided by the nearest enclosing
+ * statement or body of the last token before the cursor. A half-typed word that error recovery left outside any
+ * statement belongs to what precedes it. A COPY-family action's patch list ends where the code stops being
+ * indented deeper than the action, which is how TP2 is written; on the action's own line its pairs come first.
+ */
+export function isPatchPosition(text: string, line: number, character: number): boolean {
+    const tree = isInitialized() ? parseWithCache(text) : null;
+    if (!tree) return false;
+    const cursorOffset = TextDocument.create("", "", 0, text).offsetAt({ line, character });
+    const lineText = text.split("\n")[line] ?? "";
+    const indent = Math.min(character, lineText.search(/\S|$/));
+
+    let token = lastTokenBefore(tree.rootNode, cursorOffset);
+    for (let node = token?.parent ?? null; node; node = node.parent) {
+        if (node.type === SyntaxType.ERROR) {
+            token = lastTokenBefore(tree.rootNode, node.startIndex);
+            break;
+        }
+    }
+
+    for (let node = token?.parent ?? null; node; node = node.parent) {
+        const owner = node.parent;
+        if (node.type === SyntaxType.Patches && owner && SUBTYPES.action.has(owner.type)) {
+            return owner.startPosition.row === line || indent > owner.startPosition.column;
+        }
+        if (node.type === SyntaxType.PatchFile) return true;
+        // A statement or body that ended before the cursor holds nothing typed now; its container decides.
+        if (node.endIndex < cursorOffset) continue;
+        if (PATCH_BODIES.has(node.type) || SUBTYPES.patch.has(node.type)) return true;
+        if (SUBTYPES.action.has(node.type)) {
+            return node.children.some((child) => child.type === SyntaxType.FilePair && child.endIndex < cursorOffset);
+        }
+    }
+    return false;
+}
+
+/**
+ * The text of the statement the cursor is in when tree-sitter could not build it: from the start of the ERROR
+ * node holding the last token before the cursor, else the current line. A call split over lines (`LAF fn` on
+ * one line, `ST|` on the next) is one statement to the text fallbacks.
+ */
+function statementPrefix(text: string, root: SyntaxNode, cursorOffset: number, position: Position): string {
+    for (let node = lastTokenBefore(root, cursorOffset)?.parent ?? null; node; node = node.parent) {
+        if (node.type === SyntaxType.ERROR) return text.slice(node.startIndex, cursorOffset);
+    }
+    return getLinePrefix(text, position);
+}
 
 /**
  * Result of declaration site detection.
@@ -48,10 +130,8 @@ export function isAtDeclarationSite(text: string, position: Position): Declarati
  * Used when tree-sitter can't parse incomplete function/macro calls.
  * Returns the context or null if not at a function/macro name position.
  */
-function detectFuncNameFromLineText(text: string, line: number, character: number): CompletionContext | null {
-    const lineText = getLinePrefix(text, { line, character });
-
-    const match = lineText.match(FUNC_CALL_KEYWORDS);
+function detectFuncNameFromText(prefix: string): CompletionContext | null {
+    const match = prefix.match(FUNC_CALL_KEYWORDS);
     if (!match || !match[1]) return null;
 
     const keyword = match[1].toUpperCase();
@@ -78,10 +158,8 @@ function detectFuncNameFromLineText(text: string, line: number, character: numbe
  * Used when tree-sitter can't parse incomplete function calls (e.g., no END yet).
  * Matches "LAF/LPF funcname " - cursor is past the function name, in parameter position.
  */
-function detectFuncParamFromLineText(text: string, line: number, character: number): CompletionContext | null {
-    const lineText = getLinePrefix(text, { line, character });
-
-    if (FUNC_PARAM_KEYWORDS.test(lineText)) {
+function detectFuncParamFromText(prefix: string): CompletionContext | null {
+    if (FUNC_PARAM_KEYWORDS.test(prefix)) {
         return CompletionContext.FuncParamName;
     }
     return null;
@@ -100,6 +178,7 @@ function detectFuncParamFromLineText(text: string, line: number, character: numb
  * @returns Array of detected contexts, or empty array if no filtering needed
  */
 export function getContextAtPosition(text: string, line: number, character: number): CompletionContext[] {
+    resetFuncParamsContext();
     if (!isInitialized()) {
         return [];
     }
@@ -136,17 +215,26 @@ export function getContextAtPosition(text: string, line: number, character: numb
     }
 
     // Walk up the tree to find function call/definition context
-    const contexts = detectContextFromNode(node, cursorOffset);
+    let contexts = detectContextFromNode(node, cursorOffset);
+
+    // A call still being typed ends before the cursor; detect from its last token instead.
+    if (contexts.length === 0) {
+        const callToken = unfinishedCallToken(tree.rootNode, cursorOffset);
+        if (callToken) {
+            contexts = detectContextFromNode(callToken, cursorOffset);
+        }
+    }
 
     // Text-based fallback: detect function call contexts for incomplete code.
     // Only apply when tree-sitter found no context (empty array).
     if (contexts.length === 0) {
-        const funcNameContext = detectFuncNameFromLineText(text, line, character);
+        const prefix = statementPrefix(text, tree.rootNode, cursorOffset, { line, character });
+        const funcNameContext = detectFuncNameFromText(prefix);
         if (funcNameContext !== null) {
             return [funcNameContext];
         }
         // Detect parameter position: "LAF/LPF funcname " (past the name, typing params)
-        const funcParamContext = detectFuncParamFromLineText(text, line, character);
+        const funcParamContext = detectFuncParamFromText(prefix);
         if (funcParamContext !== null) {
             return [funcParamContext];
         }

@@ -56,138 +56,18 @@ patch :=
     (see Patches below for full list)
 ```
 
-At context boundaries, completions show items from both adjacent contexts.
-
-### Completion Contexts
-
-| Context         | Location                             | Shows                      |
-| --------------- | ------------------------------------ | -------------------------- |
-| `prologue`      | Before first flag                    | BACKUP, AUTHOR             |
-| `flag`          | After prologue, outside components   | TP2 flags, LANGUAGE, BEGIN |
-| `componentFlag` | After BEGIN, before first action     | Component flags            |
-| `action`        | Inside component, .tpa/.tph root     | Actions                    |
-| `patch`         | Inside COPY/COPY_EXISTING, .tpp root | Patches                    |
-| `when`          | After COPY file pairs                | When conditions            |
-| `lafName`       | After `LAF` keyword                  | Action function names      |
-| `lpfName`       | After `LPF` keyword                  | Patch function names       |
-
-### Ambiguous Contexts
-
-**Definition:** Positions where **multiple completion contexts are simultaneously valid** - you cannot determine which single context you're in based on grammar position alone.
-
-**What this means:**
-
-- Cannot decide between `action` vs `patch` vs `when` vs `componentFlag` vs `flag` vs `prologue`
-- Must suggest completions from all valid contexts at that position
-- Results from grammar rules with optional elements (`*`, `+`) allowing zero or transitions
-
-**What this is NOT:**
-
-- ❌ Multiple syntactic choices within same context (e.g., ELSE vs next action - both are in action context)
-- ❌ Optional parameters (e.g., INT_VAR vs STR_VAR in function - all in function definition context)
-- ❌ Keyword aliases (e.g., PHP_EACH vs PATCH_PHP_EACH - same context, same meaning)
-
-**Why it matters:** At these positions, completion suggestions must include items from all simultaneously valid contexts.
-
----
-
-**The 8 ambiguous positions:**
-
-#### 1. Empty Component
-
-```tp2
-BEGIN @123
-  [cursor, nothing below]
-```
-
-Valid: `componentFlag` OR `action` OR end component
-Reason: `componentFlag*` and `action*` both allow zero
-
-#### 2. After COPY File Pairs
-
-```tp2
-COPY ~a~ ~b~
-  [cursor]
-```
-
-Valid: `patch` OR `when` OR end COPY (continue with actions)
-
-Note: Only unambiguous if patch-only or when-only keyword appears below:
-
-- `REPLACE_TEXTUALLY` below -> `patch` context only
-- `BUT_ONLY` below -> `when` context only
-- `IF ~foo~` below -> still ambiguous (could be `PATCH_IF` or when `IF`)
-- Another `COPY` below -> still ambiguous (first COPY not ended yet)
-
-#### 3. After COPY Patches
-
-```tp2
-COPY ~a~ ~b~
-  REPLACE_TEXTUALLY ...
-  [cursor]
-```
-
-Valid: More patches OR `when` OR end COPY
-
-#### 4. After COPY When Conditions
-
-```tp2
-COPY ~a~ ~b~
-  BUT_ONLY
-  [cursor]
-```
-
-Valid: More when conditions (`when*` allows multiples) OR end COPY
-
-#### 5. After Prologue
-
-```tp2
-BACKUP ~mymod~
-AUTHOR ~me~
-[cursor]
-```
-
-Valid: More prologue (SUPPORT) OR start flags (AUTO_TRA, etc.)
-
-#### 6. Between Flags and Language
-
-```tp2
-AUTO_TRA ~foo~
-[cursor]
-LANGUAGE ~English~ ...
-```
-
-Valid: More flags (`flag*`) OR start language (`language+`)
-
-#### 7. After Languages
-
-```tp2
-LANGUAGE ~English~ ~en~ ~english.tra~
-[cursor]
-```
-
-Valid: More languages (`language+` allows multiples) OR start components OR end file
-
-#### 8. Empty .tpa/.tph File
-
-```tp2
-[cursor, empty file]
-```
-
-Valid: `action` (default for .tpa/.tph) OR `file` (if component structure added)
-
----
+Completion does not filter by these positions: many of them are ambiguous while typing (after a COPY's file pairs
+the next word may be a patch, a `when` clause or the next action), and on real mods filtering statement keywords by
+position saves about one keystroke at most. It narrows only function and macro names and parameter lists; the
+contexts it uses are in `server/src/weidu-tp2/completion/types.ts`.
 
 ## Grammar Design Decisions
 
 ### Named `value` Node
 
-The `value` node is deliberately kept as a **named node** (not hidden as `_value`) to enable completion context detection. This design choice allows the LSP to distinguish between:
-
-- **Command positions**: Only keywords (actions, patches, flags) are valid
-- **Value positions**: Constants, variables, and expressions are valid
-
-By exposing `value` as a named node in the parse tree, the completion provider can detect when the cursor is in an expression context and offer appropriate suggestions (variables, operators, constants) instead of command keywords. Without this distinction, completions would incorrectly suggest keywords like `COPY` or `SET` in expression positions where they are syntactically invalid.
+The `value` node is deliberately kept as a **named node** (not hidden as `_value`): every slot that takes an
+expression holds one, so the formatter and the reference finder treat any value slot the same way whatever
+expression fills it. A one-string operand (a predicate's argument, a string-list item) is aliased to `value` too.
 
 ### Reserved Words
 

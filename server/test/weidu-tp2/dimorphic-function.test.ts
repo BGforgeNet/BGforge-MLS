@@ -93,6 +93,27 @@ describe("TP2 dimorphic functions", () => {
         expect(inLpf.some((i) => i.label === "my_dim")).toBe(true);
     });
 
+    it("inserts LPF in a patch list and LAF among actions, whatever the file extension", () => {
+        const headerUri = normalizeUri("file:///dim.tph");
+        weiduTp2Provider.reloadFileData?.(headerUri, `${DEF}\n`);
+
+        const uri = normalizeUri("file:///test.tp2");
+        const insertFor = (marked: string): string | undefined => {
+            const { text, position } = cursor(marked);
+            const all = weiduTp2Provider.getCompletions?.(uri) ?? [];
+            const items = weiduTp2Provider.filterCompletions?.(all, text, position, uri) ?? [];
+            return items.find((i) => i.label === "my_dim")?.insertText;
+        };
+
+        expect(insertFor(`INCLUDE ~dim.tph~\nCOPY ~a~ ~b~\n  SET x = 1\n  my|\n`)).toMatch(/^LPF my_dim\b/);
+        expect(insertFor(`INCLUDE ~dim.tph~\nCOPY ~a~ ~b~\n  PATCH_IF 1 BEGIN\n    my|\n  END\n`)).toMatch(
+            /^LPF my_dim\b/,
+        );
+        expect(insertFor(`INCLUDE ~dim.tph~\nOUTER_SET x = 1\nmy|\n`)).toMatch(/^LAF my_dim\b/);
+        // Back at the COPY's own indentation the patch list has ended: a new action.
+        expect(insertFor(`INCLUDE ~dim.tph~\nCOPY ~a~ ~b~\n  SET x = 1\nmy|\n`)).toMatch(/^LAF my_dim\b/);
+    });
+
     it("provides a folding range over the dimorphic function block", () => {
         const ranges = weiduTp2Provider.foldingRanges?.(`${DEF}\n`) ?? [];
         expect(ranges.some((r) => r.startLine === 0)).toBe(true);

@@ -19,10 +19,15 @@ import { findBeginEndBoundaries } from "./position";
  * Set by detectFunctionCallContext when cursor is in funcParams context.
  * Retrieved by getFuncParamsContext() for parameter completion.
  *
- * Request-scoped memoisation: safe as module state because LSP callbacks are
- * sequential - a new completion request always overwrites this before it reads it.
+ * Request-scoped: LSP callbacks are sequential, and getContextAtPosition clears it at the start of every
+ * request, so no path that leaves it unset can hand a later request the previous call's parameters.
  */
 let lastFuncParamsContext: FuncParamsContext | null = null;
+
+/** Clear the enriched params context; called once per completion request before any detection runs. */
+export function resetFuncParamsContext(): void {
+    lastFuncParamsContext = null;
+}
 
 /**
  * Get the enriched function params context from the last completion request.
@@ -182,7 +187,7 @@ function extractFuncParamsContext(node: SyntaxNode, cursorOffset: number): void 
         // Extract params, filtering by keyword position if needed
         // Bug fix: When STR_VAR is inside int_var_call (error recovery), we need to extract
         // only params that appear after the STR_VAR keyword position
-        const usedParams = extractUsedParamsAfter(sectionNode, keywordPosition);
+        const usedParams = extractUsedParamsAfter(sectionNode, keywordPosition, cursorOffset);
         lastFuncParamsContext = {
             functionName,
             paramSection: sectionType,
@@ -193,14 +198,18 @@ function extractFuncParamsContext(node: SyntaxNode, cursorOffset: number): void 
 
 /**
  * Extract parameter names that appear after a given position in a section node.
- * Used when keywords are misparsed due to error recovery.
+ * Used when keywords are misparsed due to error recovery. The item under the cursor is the one being typed, not
+ * a used one.
  */
-function extractUsedParamsAfter(sectionNode: SyntaxNode, afterPosition: number): string[] {
+function extractUsedParamsAfter(sectionNode: SyntaxNode, afterPosition: number, cursorOffset: number): string[] {
     const params: string[] = [];
 
     for (const child of sectionNode.children) {
         // Only consider children that start after the keyword position
         if (child.startIndex <= afterPosition) {
+            continue;
+        }
+        if (cursorOffset >= child.startIndex && cursorOffset <= child.endIndex) {
             continue;
         }
 
@@ -323,7 +332,7 @@ function findCallItemAtCursor(funcCallNode: SyntaxNode, cursorOffset: number): S
 }
 
 /** The last leaf token of `node` that ends at or before `offset`. */
-function lastTokenBefore(node: SyntaxNode, offset: number): SyntaxNode | null {
+export function lastTokenBefore(node: SyntaxNode, offset: number): SyntaxNode | null {
     let found: SyntaxNode | null = null;
     const visit = (n: SyntaxNode): void => {
         if (n.startIndex >= offset) return;

@@ -51,15 +51,8 @@ const ASSOC_ARRAY_DEF_TYPES = new Set(["action_define_associative_array", "patch
 /** Primitive value types (for array definitions). */
 const PRIMITIVE_TYPES = new Set(["value", "binary_expr", "variable_ref", "identifier", "string", "number"]);
 
-/** The members of a supertype the grammar declares; a missing one is a grammar/formatter mismatch, not a fallback. */
-function subtypesOf(supertype: string): ReadonlySet<string> {
-    const members = SUBTYPES[supertype];
-    if (!members) throw new Error(`the WeiDU TP2 grammar declares no supertype ${supertype}`);
-    return members;
-}
-
-const ACTION_SET = subtypesOf("_action");
-const PATCH_SET = subtypesOf("_patch");
+const ACTION_SET: ReadonlySet<string> = SUBTYPES.action;
+const PATCH_SET: ReadonlySet<string> = SUBTYPES.patch;
 
 // ============================================
 // Comment utilities

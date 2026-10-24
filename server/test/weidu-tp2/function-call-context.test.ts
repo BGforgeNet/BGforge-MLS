@@ -286,6 +286,53 @@ describe("getFuncParamsContext after detection", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Calls still being typed: no END yet, so the cursor ends the call (or follows it after whitespace) and the
+// node at the cursor is not inside it. These are the normal state while typing.
+// ---------------------------------------------------------------------------
+describe("unfinished calls while typing", () => {
+    it("reports the call being typed, not the previous request's call", () => {
+        ctx(`LAF first_fn INT_VAR | END`);
+        const contexts = ctx(`COPY_EXISTING ~a~ ~b~\n  LPF second_fn INT_VAR opcode = 1 ta|`);
+        expect(contexts).toEqual([CompletionContext.FuncParamName]);
+        expect(getFuncParamsContext()).toEqual({
+            functionName: "second_fn",
+            paramSection: ParamSection.IntVar,
+            usedParams: ["opcode"],
+        });
+    });
+
+    it("finds the call across lines when the cursor ends a parameter name", () => {
+        const contexts = ctx(
+            `COPY_EXISTING ~a~ ~b~\n  LPF second_fn\n    INT_VAR\n      opcode = 1\n      ta|\n  WRITE_LONG 0x10 5\n`,
+        );
+        expect(contexts).toEqual([CompletionContext.FuncParamName]);
+        expect(getFuncParamsContext()?.functionName).toBe("second_fn");
+    });
+
+    it("reads the position after = as a parameter value", () => {
+        expect(ctx(`LAF fn INT_VAR alpha = zz|`)).toEqual([CompletionContext.FuncParamValue]);
+    });
+
+    it("offers section keywords on the line after a multi-line call's name", () => {
+        expect(ctx(`LAF my_fn\n  ST|`)).toEqual([CompletionContext.FuncParamName]);
+    });
+
+    it("leaves no previous call's parameters in a function definition header", () => {
+        ctx(`LAF first_fn INT_VAR | END`);
+        expect(ctx(`DEFINE_PATCH_FUNCTION pfun INT_VAR my_param = 0 | BEGIN END`)).toEqual([
+            CompletionContext.FuncParamName,
+        ]);
+        expect(getFuncParamsContext()).toBeNull();
+    });
+
+    it("treats the line after a finished call as outside it", () => {
+        ctx(`LAF first_fn INT_VAR | END`);
+        expect(ctx(`LAF fn INT_VAR a = 1 END\n|`)).toEqual([]);
+        expect(getFuncParamsContext()).toBeNull();
+    });
+});
+
+// ---------------------------------------------------------------------------
 // LPM in patch context - separate from LAM tests because the parse path
 // goes through PatchLaunchMacro instead of ActionLaunchMacro.
 // ---------------------------------------------------------------------------

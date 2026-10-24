@@ -38,6 +38,21 @@ beforeAll(async () => {
     });
 });
 
+describe("weidu-tp2: workspace completions", () => {
+    it("offers a name defined in several headers once", () => {
+        const first = normalizeUri("file:///ids-a.tph");
+        const second = normalizeUri("file:///ids-b.tph");
+        weiduTp2Provider.reloadFileData!(first, `OUTER_SET DUPLICATED_IDS_NAME = 1\n`);
+        weiduTp2Provider.reloadFileData!(second, `OUTER_SET DUPLICATED_IDS_NAME = 1\n`);
+
+        const items = weiduTp2Provider.getCompletions!(normalizeUri("file:///user.tp2"));
+        expect(items.filter((item) => item.label === "DUPLICATED_IDS_NAME")).toHaveLength(1);
+
+        weiduTp2Provider.onWatchedFileDeleted!(first);
+        weiduTp2Provider.onWatchedFileDeleted!(second);
+    });
+});
+
 describe("weidu-tp2: completion routing by file extension", () => {
     // Tests verify that .tph functions go to shared Symbols,
     // while .tpa/.tpp/.tp2 functions are handled by localCompletion().
