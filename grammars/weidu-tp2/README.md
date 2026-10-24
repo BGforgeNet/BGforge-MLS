@@ -763,7 +763,8 @@ AT_NOW [varname] ~command~ [EXACT]
 AT_INTERACTIVE_NOW [varname] ~command~ [EXACT]
 ```
 
-Execute system command immediately. Optional varname captures output. INTERACTIVE variant shows command output to user.
+Execute system command immediately. Optional varname captures output; it may be quoted, `EVALUATE_BUFFER ~name~` or
+an array element `$arr(~k~)`. INTERACTIVE variant shows command output to user.
 
 #### AT_EXIT / AT_INTERACTIVE_EXIT
 

@@ -420,6 +420,13 @@ const CASES: Case[] = [
     { name: "WRITE_ASCIIL with no strings", code: patch("WRITE_ASCIIL 0") },
     { name: "DESIGNATED with a quoted number", code: tp2("BEGIN ~c~ DESIGNATED ~1~\n") },
 
+    // AT_NOW's optional result variable is a name in any of WeiDU's forms, not only a bare word.
+    { name: "AT_NOW into an evaluated name", code: component("AT_NOW EVALUATE_BUFFER ~r~ ~x~") },
+    { name: "AT_NOW into an array element", code: component("AT_NOW $arr(~k~) ~x~") },
+    { name: "AT_INTERACTIVE_NOW into a quoted name", code: component("AT_INTERACTIVE_NOW ~r~ ~x~") },
+    { name: "AT_NOW with a command only", code: component("AT_NOW ~x~\nPRINT ~y~") },
+    { name: "an empty percent string", code: patch("SET x = %%") },
+
     // Every reserved word, in a slot that takes a bare name: WeiDU rejects each, so the list holds no plain word.
     ...GRAMMAR_RESERVED_WORDS.map((word) => ({
         name: `reserved word ${word} is not a name`,

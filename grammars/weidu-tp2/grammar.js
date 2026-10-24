@@ -876,6 +876,11 @@ export default grammar({
         [$.patch_evaluate_buffer, $.action_extend_top],
         [$.patch_evaluate_buffer, $.action_extend_bottom],
         [$.patch_evaluate_buffer, $.action_compile],
+        // AT_NOW ~a~ - 1: a quoted result variable before a negative command, or one command `~a~ - 1`.
+        [$._primary, $.action_at_now],
+        [$._primary, $.action_at_interactive_now],
+        [$._expr, $.action_at_now],
+        [$._expr, $.action_at_interactive_now],
         [$._action, $.action_if],
     ],
 
@@ -915,7 +920,7 @@ export default grammar({
         five_tilde_string: ($) => seq("~~~~~", optional($.five_tilde_content), "~~~~~"),
         five_tilde_content: ($) => repeat1(choice(/[^~]+/, /~{1,4}/)),
 
-        percent_string: ($) => seq("%", $.percent_content, "%"),
+        percent_string: ($) => seq("%", optional($.percent_content), "%"),
         percent_content: ($) => /[^%]+/,
 
         // Decimal, hex (0x), octal (0o), binary (0b), # prefix, dotted version
@@ -2315,15 +2320,10 @@ export default grammar({
         action_uninstall: ($) => seq("UNINSTALL", field("tp2", $.value), field("component", $.value)),
 
         // Pattern B: optional variable + command + optional EXACT
-        action_at_now: ($) =>
-            seq("AT_NOW", optional(field("var", $.identifier)), field("command", $.value), optional("EXACT")),
+        // The optional result variable takes any of WeiDU's name forms; one string alone is the command.
+        action_at_now: ($) => seq("AT_NOW", optional(nameIn($, "var")), field("command", $.value), optional("EXACT")),
         action_at_interactive_now: ($) =>
-            seq(
-                "AT_INTERACTIVE_NOW",
-                optional(field("var", $.identifier)),
-                field("command", $.value),
-                optional("EXACT"),
-            ),
+            seq("AT_INTERACTIVE_NOW", optional(nameIn($, "var")), field("command", $.value), optional("EXACT")),
 
         patch_bash_for: ($) =>
             prec.right(seq("PATCH_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", repeat($._patch), "END")),
