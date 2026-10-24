@@ -341,6 +341,85 @@ const CASES: Case[] = [
     { name: "ADD_STORE_ITEM with a position", code: patch("ADD_STORE_ITEM ~sw1h01~ LAST #0 #0 #0 ~IDENTIFIED~ #5") },
     { name: "EVALUATE_BUFFER_SPECIAL", code: patch("EVALUATE_BUFFER_SPECIAL ~%~") },
 
+    // A WeiDU text argument: an optional sound, then an optional female text with its own sound.
+    { name: "OUTER_SPRINT with a sound", code: component("OUTER_SPRINT x ~a~ [SND]") },
+    { name: "OUTER_SPRINT with a female text", code: component("OUTER_SPRINT x ~a~ [S1] ~b~ [S2]") },
+    { name: "PRINT with a female text", code: component("PRINT ~a~ ~b~") },
+    { name: "PATCH_FAIL with a sound", code: patch("PATCH_FAIL ~a~ [SND]") },
+    { name: "component name with a sound", code: tp2("BEGIN ~Core~ [SND]\nDESIGNATED 1\n") },
+    { name: "VERSION with a female text", code: tp2("VERSION ~1.0~ ~2.0~\n\nBEGIN ~Core~\nDESIGNATED 1\n") },
+    {
+        name: "REQUIRE_COMPONENT message with a sound",
+        code: component("REQUIRE_COMPONENT ~a.tp2~ ~1~ ~needs a~ [SND]"),
+    },
+    { name: "SUBCOMPONENT name with a sound", code: component("SUBCOMPONENT ~Sub~ [SND]") },
+    {
+        name: "ADD_KIT SAY with a sound",
+        code: component(`ADD_KIT ${"~x~ ".repeat(14)}SAY ~a~ [S1] SAY ~b~ [S2] SAY ~c~ [S3]`),
+    },
+    {
+        name: "RESOLVE_STR_REF with a female text",
+        code: component("ACTION_IF RESOLVE_STR_REF (~hi~ ~ho~) = 1 BEGIN END"),
+    },
+    {
+        name: "a sound with a dot, a space or nothing",
+        code: patch("SAY 0x10 ~a~ [A.WAV]\n  SAY 0x10 ~a~ [A B]\n  SAY 0x10 ~a~ []"),
+    },
+    { name: "a forced string reference", code: component("PRINT !5 ~a~") },
+    { name: "REQUIRE_FILE as an action", code: component("PRINT ~x~\nREQUIRE_FILE ~f~ ~m~") },
+    {
+        name: "REQUIRE_FILE inside ALWAYS",
+        code: tp2("ALWAYS REQUIRE_FILE ~f~ ~m~ END\n\nBEGIN ~Core~\nDESIGNATED 1\n"),
+    },
+
+    // A name position takes an array element or an evaluated name, as well as a plain name.
+    {
+        name: "an array element as an INT_VAR parameter",
+        code: "DEFINE_ACTION_FUNCTION f INT_VAR $int(arg4) = 0 BEGIN END\n",
+    },
+    { name: "an array element as a RET name", code: "DEFINE_ACTION_FUNCTION f RET $str(ret4) BEGIN END\n" },
+    {
+        name: "an evaluated INT_VAR argument name",
+        code: component("LAUNCH_ACTION_FUNCTION f INT_VAR EVALUATE_BUFFER ~%v%~ = 5 END"),
+    },
+    {
+        name: "an array element as a STR_VAR argument",
+        code: component("LAUNCH_ACTION_FUNCTION f STR_VAR $arr(~k~) = ~v~ END"),
+    },
+    { name: "READ_BYTE into an evaluated name", code: patch("READ_BYTE 0 EVALUATE_BUFFER ~%v%~") },
+    { name: "GET_STRREF into an array element", code: patch("GET_STRREF 0 $arr(~k~)") },
+    {
+        name: "PATCH_PHP_EACH with array-element loop variables",
+        code: patch("PATCH_PHP_EACH a AS $k(~1~) => $v(~2~) BEGIN END"),
+    },
+    { name: "TO_UPPER an array element", code: patch("TO_UPPER $arr(~k~)") },
+
+    // Clauses and argument shapes.
+    { name: "COPY_RANDOM with a bare list", code: component("COPY_RANDOM ~a~ ~b~") },
+    {
+        name: "COPY_RANDOM groups with patches and a when clause",
+        code: component("COPY_RANDOM (~a~ ~b~) (~c~ ~d~) SET x = 1 IF ~y~"),
+    },
+    { name: "COPY_RANDOM with an empty group", code: component("COPY_RANDOM (~a~) ()") },
+    { name: "COPY_ALL_GAM_FILES with a when clause", code: component("COPY_ALL_GAM_FILES SET x = 1 IF ~c~") },
+    {
+        name: "ACTION_BASH_FOR with several regexp pairs",
+        code: component("ACTION_BASH_FOR ~a~ EXACT_MATCH ~b~ ~c~ ~d~ BEGIN END"),
+    },
+    { name: "ACTION_BASH_FOR with no pairs", code: component("ACTION_BASH_FOR BEGIN END") },
+    { name: "APPEND_COL with a column count", code: component("APPEND_COL ~a~ ~b~ 3 IF ~c~") },
+    { name: "ADD_PROJECTILE with a name", code: component("ADD_PROJECTILE ~x.pro~ ~NAME~") },
+    { name: "REPLACE with case and match flags", code: patch("REPLACE CASE_INSENSITIVE EVALUATE_REGEXP ~a~ ~b~") },
+    {
+        name: "COUNT_REGEXP_INSTANCES with EVALUATE_REGEXP",
+        code: patch("COUNT_REGEXP_INSTANCES CASE_INSENSITIVE EVALUATE_REGEXP ~a~ n"),
+    },
+    { name: "PRETTY_PRINT_2DA with a column count", code: patch("PRETTY_PRINT_2DA (4)") },
+    { name: "AUTO_TRA with two paths", code: tp2("AUTO_TRA ~tra/%s~ ~x~\n\nBEGIN ~Core~\nDESIGNATED 1\n") },
+    { name: "ADD_MEMORIZED_SPELL with a strref count", code: patch("ADD_MEMORIZED_SPELL ~x~ #1 ~wiz~ #2") },
+    { name: "WRITE_ASCIIL with no strings", code: patch("WRITE_ASCIIL 0") },
+    { name: "DESIGNATED with a quoted number", code: tp2("BEGIN ~c~ DESIGNATED ~1~\n") },
+
     // Every reserved word, in a slot that takes a bare name: WeiDU rejects each, so the list holds no plain word.
     ...GRAMMAR_RESERVED_WORDS.map((word) => ({
         name: `reserved word ${word} is not a name`,

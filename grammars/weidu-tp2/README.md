@@ -271,6 +271,18 @@ BEGIN ~componentName~
 | Five tildes  | `~~~~~text~~~~~` | Supported                                    |
 | Percent      | `%text%`         | Not supported (conflicts with variable refs) |
 
+### Text Arguments
+
+A displayed text (PRINT, FAIL, the SPRINT family's value, a component name, flag messages, ADD_KIT's SAY, and the
+like) may carry a sound, and a female text with its own sound:
+
+```tp2
+PRINT ~male text~ [MSOUND] ~female text~ [FSOUND]
+```
+
+A sound is anything in brackets, empty included. SUBCOMPONENT, FORCED_SUBCOMPONENT and GROUP take the sound only,
+since a second string there is their predicate.
+
 ### Variable References
 
 All syntaxes are equivalent in expression context:
@@ -570,9 +582,11 @@ Like COPY but for large files (>1GB), no patches allowed.
 ```tp2
 COPY_RANDOM (~file1~ ~file2~ ...) [(~fileN~ ...)] ...
   patch list
+  [when...]
+COPY_RANDOM ~file1~ ~file2~ ...
 ```
 
-Shuffle files randomly within each group.
+Shuffle files randomly within each group; the bare list is one group.
 
 #### COPY_ALL_GAM_FILES
 
@@ -661,7 +675,7 @@ Compile D and BAF files.
 
 ```tp2
 APPEND [IF_FILE_EXISTS] ~filename~ ~text~ [KEEP_CRLF]
-APPEND_COL ~filename~ ~text~ [KEEP_CRLF]
+APPEND_COL ~filename~ ~text~ [columns] [when...]
 ```
 
 Append text to end of file. APPEND_COL appends as new column.
@@ -878,13 +892,13 @@ Iterate over literal values.
 #### ACTION_BASH_FOR
 
 ```tp2
-ACTION_BASH_FOR ~directory~ ~filepattern~ BEGIN
+ACTION_BASH_FOR ~directory~ [EXACT_MATCH|EVALUATE_REGEXP] ~filepattern~ ... BEGIN
   // %BASH_FOR_FILE%, %BASH_FOR_RES%, %BASH_FOR_EXT% available
   actions...
 END
 ```
 
-Iterate over files matching pattern in directory.
+Iterate over files matching each pattern in its directory.
 
 #### ACTION_PHP_EACH / PATCH_PHP_EACH
 

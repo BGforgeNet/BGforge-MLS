@@ -541,7 +541,7 @@ const readPatch =
         seq(
             kw(...keywords),
             field("offset", $.value),
-            field("var", $._assignable),
+            $._var_target,
             optional(seq("ELSE", field("else_value", $.value))),
         );
 
@@ -563,27 +563,53 @@ const checkExpr =
     ($) =>
         prec.right(3, seq(keyword, field(fieldName, $.value)));
 
-/** Sprint-like operation: KEYWORD var value */
-const sprintOp =
-    (...keywords) =>
-    ($) =>
-        seq(kw(...keywords), $._sprint_target, field("value", $.value));
-
-/** Sprint-like operation with optional GLOBAL: KEYWORD [GLOBAL] var value */
+/** Sprint-like operation with optional GLOBAL: KEYWORD [GLOBAL] var text */
 const sprintOpGlobal =
     (...keywords) =>
     ($) =>
-        seq(kw(...keywords), optional("GLOBAL"), $._sprint_target, field("value", $.value));
+        prec.right(seq(kw(...keywords), optional("GLOBAL"), $._var_target, field("value", $.value), ...textTail($)));
+
+/** TEXT_SPRINT-like operation: as sprintOpGlobal, but the value is a plain string with no sound or female text. */
+const textSprintOpGlobal =
+    (...keywords) =>
+    ($) =>
+        seq(kw(...keywords), optional("GLOBAL"), $._var_target, field("value", $.value));
 
 /** Sprintf-like operation: KEYWORD var format [(args...)] */
 const sprintfOp = (keyword) => ($) =>
-    prec.right(seq(keyword, field("var", $.value), field("format", $.value), optional(seq("(", repeat($.value), ")"))));
+    prec.right(
+        seq(
+            keyword,
+            field("var", $.value),
+            field("format", $.value),
+            // Sound only: a female text here would be ambiguous with the parenthesised argument list.
+            optional($.sound_ref),
+            optional(seq("(", repeat($.value), ")")),
+        ),
+    );
+
+/**
+ * The tail of a WeiDU text argument: an optional sound, then an optional female text with its own sound
+ * (`~male~ [M] ~female~ [F]`). The female text is a string, as in WeiDU, so a following `name = value` statement
+ * is never read as one.
+ */
+const textTail = ($) => [optional($.sound_ref), optional(seq(field("female", $.string), optional($.sound_ref)))];
+
+/**
+ * A name as WeiDU takes it in a variable position: a bare or quoted name, an array element, or an evaluated name,
+ * with the EVAL / EVALUATE_BUFFER prefix kept outside the named field.
+ */
+const nameIn = ($, fieldName) =>
+    seq(
+        optional(choice("EVAL", "EVALUATE_BUFFER")),
+        field(fieldName, choice($.identifier, $.var_name_numeric, $.array_access, $.string)),
+    );
 
 /** Print-like operation: KEYWORD message */
-const printOp = (keyword) => ($) => seq(keyword, field("message", $.value));
+const printOp = (keyword) => ($) => prec.right(seq(keyword, field("message", $.value), ...textTail($)));
 
 /** Case conversion: KEYWORD var (identifier only) */
-const caseConvert = (keyword) => ($) => seq(keyword, field("var", choice($.identifier, $.var_name_numeric, $.string)));
+const caseConvert = (keyword) => ($) => seq(keyword, $._var_target);
 
 /** CRE/store item patch: KEYWORD values... */
 const itemPatch = (keyword) => ($) => prec.right(seq(keyword, repeat($.value)));
@@ -613,6 +639,19 @@ const appendAction = (keyword) => ($) =>
         field("text", $.value),
         optional($.when),
         optional("KEEP_CRLF"),
+    );
+
+/** APPEND_COL action: KEYWORD [+/-] file text [column] [when] */
+const appendColAction = (keyword) => ($) =>
+    prec.right(
+        seq(
+            keyword,
+            optional($._opt_no_backup),
+            field("file", $.value),
+            field("text", $.value),
+            optional(field("column", $.value)),
+            optional($.when),
+        ),
     );
 
 /** Define macro: KEYWORD name BEGIN body END (body can include LOCAL_SET/LOCAL_SPRINT) */
@@ -669,9 +708,9 @@ const phpEachLoop =
             // "discard this half of the pair". Kept as identifier|string rather than $.value so the
             // identifier case stays a direct child: the rename/definition providers key on that shape,
             // and a quoted variable declares no renamable name.
-            field("key_var", choice($.identifier, $.string)),
+            nameIn($, "key_var"),
             "=>",
-            field("value_var", choice($.identifier, $.string)),
+            nameIn($, "value_var"),
             "BEGIN",
             repeat(bodyType($)),
             "END",
@@ -793,11 +832,7 @@ const fileArray = (keyword) => ($) =>
 const getStrref =
     (...keywords) =>
     ($) =>
-        seq(
-            kw(...keywords),
-            field("strref", $.value),
-            field("var", choice($.identifier, $.var_name_numeric, $.string)),
-        );
+        seq(kw(...keywords), field("strref", $.value), $._var_target);
 
 export default grammar({
     name: "weidu_tp2",
@@ -833,8 +868,6 @@ export default grammar({
         [$.variable_ref, $.assoc_entry],
         [$.patch_remove_store_item],
         [$.patch_add_store_item],
-        [$.action_copy_all_gam_files],
-        [$.action_copy_random],
         [$._action, $._top_level],
         [$._assignable],
         [$._assignable, $._primary],
@@ -921,11 +954,14 @@ export default grammar({
             ),
 
         // EVAL allows evaluated variable names (e.g., EVAL $array(...))
-        // A SPRINT target is a name, as WeiDU has it; the EVALUATE_BUFFER prefix stays outside the var field.
-        _sprint_target: ($) =>
+        // A variable a statement writes: a name, as WeiDU has it in that position.
+        _var_target: ($) => nameIn($, "var"),
+
+        // A parameter or return name in a function definition or call.
+        _name: ($) =>
             seq(
                 optional(choice("EVAL", "EVALUATE_BUFFER")),
-                field("var", choice($.identifier, $.var_name_numeric, $.array_access, $.string)),
+                choice($.identifier, $.var_name_numeric, $.array_access, $.string),
             ),
 
         _assignable: ($) => seq(optional("EVAL"), choice($.identifier, $.var_name_numeric, $.array_access, $.string)),
@@ -1053,7 +1089,7 @@ export default grammar({
 
         ids_of_symbol_expr: ($) => seq("IDS_OF_SYMBOL", "(", field("file", $.value), field("symbol", $.value), ")"),
 
-        resolve_str_ref_expr: ($) => seq("RESOLVE_STR_REF", "(", field("text", $.value), ")"),
+        resolve_str_ref_expr: ($) => seq("RESOLVE_STR_REF", "(", field("text", $.value), ...textTail($), ")"),
 
         state_which_says_expr: ($) =>
             prec.right(
@@ -1061,6 +1097,7 @@ export default grammar({
                 seq(
                     "STATE_WHICH_SAYS",
                     field("text", $.value),
+                    ...textTail($),
                     optional(seq("IN", field("in_dlg", $.value))),
                     "FROM",
                     field("from_dlg", $.value),
@@ -1308,7 +1345,7 @@ export default grammar({
 
         patch_write_ascii_list: ($) => prec.right(seq("WRITE_ASCII_LIST", field("offset", $.value), repeat($.value))),
 
-        patch_write_asciil: ($) => prec.right(seq("WRITE_ASCIIL", field("offset", $.value), repeat1($.value))),
+        patch_write_asciil: ($) => prec.right(seq("WRITE_ASCIIL", field("offset", $.value), repeat($.value))),
 
         // Read patches
         patch_read_byte: readPatch("READ_BYTE", "READ_SBYTE"),
@@ -1331,7 +1368,7 @@ export default grammar({
             seq(
                 choice("READ_STRREF", "READ_STRREF_F", "READ_STRREF_S", "READ_STRREF_FS"),
                 field("offset", $.value),
-                field("var", $.identifier),
+                $._var_target,
                 optional(seq("ELSE", field("default", $.value))),
             ),
 
@@ -1360,19 +1397,21 @@ export default grammar({
             ),
 
         patch_sprint: sprintOpGlobal("SPRINT"),
-        patch_text_sprint: sprintOpGlobal("TEXT_SPRINT"),
+        patch_text_sprint: textSprintOpGlobal("TEXT_SPRINT"),
 
         patch_snprint: ($) =>
-            seq("SNPRINT", field("length", $.value), field("var", $.identifier), field("value", $.value)),
+            prec.right(
+                seq("SNPRINT", field("length", $.value), $._var_target, field("value", $.value), ...textTail($)),
+            ),
 
         patch_sprintf: sprintfOp("SPRINTF"),
 
         patch_to_upper: caseConvert("TO_UPPER"),
         patch_to_lower: caseConvert("TO_LOWER"),
 
-        patch_spaces: ($) => seq("SPACES", field("var", $.identifier), field("template", $.value)),
-        patch_quote: ($) => seq("QUOTE", field("var", $.identifier), field("string", $.value)),
-        patch_source_biff: ($) => seq("SOURCE_BIFF", field("var", $.identifier), field("filename", $.value)),
+        patch_spaces: ($) => seq("SPACES", $._var_target, field("template", $.value)),
+        patch_quote: ($) => seq("QUOTE", $._var_target, field("string", $.value)),
+        patch_source_biff: ($) => seq("SOURCE_BIFF", $._var_target, field("filename", $.value)),
 
         // Assignment
         patch_set: ($) =>
@@ -1436,11 +1475,19 @@ export default grammar({
 
         // Text manipulation
         patch_replace: ($) =>
-            seq("REPLACE", field("regexp", $.value), field("replacement", $.value), optional($.sound_ref)),
+            prec.right(
+                seq(
+                    "REPLACE",
+                    optional($._opt_case),
+                    optional($._opt_exact),
+                    field("regexp", $.value),
+                    field("replacement", $.value),
+                    ...textTail($),
+                ),
+            ),
 
-        // Sound reference: [sound_name] or [%variable%]
-        // Higher precedence to prefer identifier over variable_ref for bare names
-        sound_ref: ($) => prec(5, seq("[", field("sound", choice($.identifier, $.variable_ref)), "]")),
+        // Sound reference: one token, as WeiDU lexes it - anything between the brackets, empty included.
+        sound_ref: ($) => /\[[^\]]*\]/,
 
         patch_replace_textually: ($) =>
             prec.right(
@@ -1561,21 +1608,20 @@ export default grammar({
         patch_set_2da_entries_now: ($) =>
             seq("SET_2DA_ENTRIES_NOW", field("array", $.value), field("req_cols", $.value)),
 
-        patch_count_2da_cols: ($) => seq("COUNT_2DA_COLS", field("var", choice($.identifier, $.string))),
+        patch_count_2da_cols: ($) => seq("COUNT_2DA_COLS", $._var_target),
 
-        patch_count_2da_rows: ($) =>
-            seq("COUNT_2DA_ROWS", field("req_cols", $.value), field("var", choice($.identifier, $.string))),
+        patch_count_2da_rows: ($) => seq("COUNT_2DA_ROWS", field("req_cols", $.value), $._var_target),
 
         patch_count_regexp_instances: ($) =>
             seq(
                 "COUNT_REGEXP_INSTANCES",
-                optional("CASE_SENSITIVE"),
-                optional("EXACT_MATCH"),
+                optional($._opt_case),
+                optional($._opt_exact),
                 field("pattern", $.value),
-                field("var", $.value),
+                $._var_target,
             ),
 
-        patch_pretty_print_2da: ($) => "PRETTY_PRINT_2DA",
+        patch_pretty_print_2da: ($) => seq("PRETTY_PRINT_2DA", optional(seq("(", field("columns", $.value), ")"))),
 
         patch_insert_2da_row: ($) =>
             seq("INSERT_2DA_ROW", field("row", $.value), field("req_cols", $.value), field("value", $.value)),
@@ -1585,19 +1631,11 @@ export default grammar({
         // Seven values (offset, offset size, count, count size, index, index size, entry length), or a preset that
         // names a known file structure.
         patch_get_offset_array: ($) =>
-            seq(
-                "GET_OFFSET_ARRAY",
-                field("var", choice($.identifier, $.var_name_numeric, $.string)),
-                choice(repeatN($.value, 7), $.offset_array_preset),
-            ),
+            seq("GET_OFFSET_ARRAY", $._var_target, choice(repeatN($.value, 7), $.offset_array_preset)),
 
         // As GET_OFFSET_ARRAY with the parent offset first: eight values, or that offset and a preset.
         patch_get_offset_array2: ($) =>
-            seq(
-                "GET_OFFSET_ARRAY2",
-                field("var", choice($.identifier, $.var_name_numeric, $.string)),
-                choice(repeatN($.value, 8), seq($.value, $.offset_array2_preset)),
-            ),
+            seq("GET_OFFSET_ARRAY2", $._var_target, choice(repeatN($.value, 8), seq($.value, $.offset_array2_preset))),
 
         offset_array_preset: ($) => choice(...OFFSET_ARRAY_PRESETS),
         offset_array2_preset: ($) => choice(...OFFSET_ARRAY2_PRESETS),
@@ -1634,7 +1672,7 @@ export default grammar({
                     field("spell", $.value),
                     field("level", $.value),
                     field("type", $.value),
-                    optional(seq("(", field("count", $.value), ")")),
+                    optional(choice(seq("(", field("count", $.value), ")"), field("count", $.number))),
                 ),
             ),
 
@@ -1649,12 +1687,15 @@ export default grammar({
         patch_remove_known_spell: ($) => prec.right(seq("REMOVE_KNOWN_SPELL", repeat(field("spell", $.value)))),
 
         patch_add_map_note: ($) =>
-            seq(
-                "ADD_MAP_NOTE",
-                field("x", $.value),
-                field("y", $.value),
-                field("color", $.value),
-                field("strref", $.value),
+            prec.right(
+                seq(
+                    "ADD_MAP_NOTE",
+                    field("x", $.value),
+                    field("y", $.value),
+                    field("color", $.value),
+                    field("strref", $.value),
+                    ...textTail($),
+                ),
             ),
 
         patch_set_bg2_proficiency: ($) =>
@@ -1774,7 +1815,7 @@ export default grammar({
                 field("offset", $.value),
                 field("compressed_size", $.value),
                 field("uncompressed_size", $.value),
-                field("var", $.identifier),
+                $._var_target,
             ),
 
         patch_try: tryBlock(
@@ -1889,6 +1930,8 @@ export default grammar({
                 $.action_warn,
                 $.action_fail,
                 $.action_abort,
+                $.require_file_flag,
+                $.forbid_file_flag,
                 $.action_clear_memory,
                 $.action_silent,
                 $.action_verbose,
@@ -1945,9 +1988,21 @@ export default grammar({
 
         action_copy_large: ($) => seq("COPY_LARGE", optional("+"), optional($._opt_glob), repeat($.file_pair)),
 
-        action_copy_random: ($) => seq("COPY_RANDOM", repeat1(seq("(", repeat1($.value), ")")), optional($.patches)),
+        // COPY_RANDOM (file...) (file...) ... [patches] [when], or a bare file list.
+        action_copy_random: ($) =>
+            prec.right(
+                seq(
+                    "COPY_RANDOM",
+                    // The bare list holds strings only, as in WeiDU, so `(` always opens a group.
+                    choice(repeat1($.copy_random_item), repeat(choice($.string, $.identifier))),
+                    optional($.patches),
+                    optional($.when),
+                ),
+            ),
 
-        action_copy_all_gam_files: ($) => seq("COPY_ALL_GAM_FILES", optional($.patches)),
+        copy_random_item: ($) => seq("(", repeat($.value), ")"),
+
+        action_copy_all_gam_files: ($) => prec.right(seq("COPY_ALL_GAM_FILES", optional($.patches), optional($.when))),
 
         file_pair: ($) => seq(field("from", $.value), field("to", $.value)),
 
@@ -1990,10 +2045,10 @@ export default grammar({
         action_extend_bottom: extendAction("EXTEND_BOTTOM", "EXTEND_BOTTOM_REGEXP"),
 
         action_append: appendAction("APPEND"),
-        action_append_col: appendAction("APPEND_COL"),
+        action_append_col: appendColAction("APPEND_COL"),
 
         action_append_outer: appendAction("APPEND_OUTER"),
-        action_append_col_outer: appendAction("APPEND_COL_OUTER"),
+        action_append_col_outer: appendColAction("APPEND_COL_OUTER"),
 
         action_delete: ($) => prec.right(seq("DELETE", optional("+"), repeat(field("file", $.value)))),
 
@@ -2074,17 +2129,22 @@ export default grammar({
             ),
 
         action_outer_sprint: sprintOpGlobal("OUTER_SPRINT"),
-        action_outer_text_sprint: sprintOpGlobal("OUTER_TEXT_SPRINT"),
+        action_outer_text_sprint: textSprintOpGlobal("OUTER_TEXT_SPRINT"),
 
         action_outer_sprintf: sprintfOp("OUTER_SPRINTF"),
         action_outer_snprint: ($) =>
-            seq("OUTER_SNPRINT", field("length", $.value), field("var", $.identifier), field("value", $.value)),
+            seq("OUTER_SNPRINT", field("length", $.value), $._var_target, field("value", $.value), ...textTail($)),
 
         // Local variables (only valid inside macro bodies)
         // LOCAL_SET takes plain `=` only; WeiDU has no compound form of it.
         local_set: ($) =>
             seq("LOCAL_SET", field("var", $._assignable), field("operator", "="), field("value", $.value)),
-        local_sprint: sprintOp("LOCAL_SPRINT", "LOCAL_TEXT_SPRINT"),
+        // LOCAL_SPRINT takes a text with its sound and female forms; LOCAL_TEXT_SPRINT a plain string.
+        local_sprint: ($) =>
+            choice(
+                prec.right(seq("LOCAL_SPRINT", $._var_target, field("value", $.value), ...textTail($))),
+                seq("LOCAL_TEXT_SPRINT", $._var_target, field("value", $.value)),
+            ),
 
         action_with_tra: ($) => seq("WITH_TRA", repeat(field("file", $.value)), "BEGIN", repeat($._action), "END"),
 
@@ -2097,7 +2157,7 @@ export default grammar({
                     "ADD_JOURNAL",
                     optional("EXISTING"),
                     optional("MANAGED"),
-                    optional(seq("TITLE", "(", field("title", $.value), ")")),
+                    optional(seq("TITLE", "(", field("title", $.value), ...textTail($), ")")),
                     repeat($.value),
                     optional(seq("USING", repeat(field("tra", $.value)))),
                 ),
@@ -2131,14 +2191,12 @@ export default grammar({
 
         // Every parameter list, here and in calls, may be empty: WeiDU accepts it, and parameter-name completion
         // right after typing `INT_VAR ` finds its context from the (still empty) list node.
-        int_var_decl: ($) =>
-            seq("INT_VAR", repeat(seq(choice($.identifier, $.var_name_numeric, $.string), "=", $.value))),
+        int_var_decl: ($) => seq("INT_VAR", repeat(seq($._name, "=", $.value))),
 
-        str_var_decl: ($) =>
-            seq("STR_VAR", repeat(seq(choice($.identifier, $.var_name_numeric, $.string), "=", $.value))),
+        str_var_decl: ($) => seq("STR_VAR", repeat(seq($._name, "=", $.value))),
 
-        ret_decl: ($) => seq("RET", repeat($.identifier)),
-        ret_array_decl: ($) => seq("RET_ARRAY", repeat($.identifier)),
+        ret_decl: ($) => seq("RET", repeat($._name)),
+        ret_array_decl: ($) => seq("RET_ARRAY", repeat($._name)),
 
         // Function/macro calls
         action_launch_macro: ($) =>
@@ -2159,13 +2217,13 @@ export default grammar({
 
         // In function calls, left-hand side of assignments is always an identifier/string, not an expression
         int_var_call: ($) => seq("INT_VAR", repeat($.int_var_call_item)),
-        int_var_call_item: ($) => seq(choice($.identifier, $.var_name_numeric, $.string), optional(seq("=", $.value))),
+        int_var_call_item: ($) => seq($._name, optional(seq("=", $.value))),
         str_var_call: ($) => seq("STR_VAR", repeat($.str_var_call_item)),
-        str_var_call_item: ($) => seq(choice($.identifier, $.var_name_numeric, $.string), optional(seq("=", $.value))),
+        str_var_call_item: ($) => seq($._name, optional(seq("=", $.value))),
         ret_call: ($) => seq("RET", repeat($.ret_call_item)),
-        ret_call_item: ($) => seq($._assignable, optional(seq("=", $.value))),
+        ret_call_item: ($) => seq($._name, optional(seq("=", $.value))),
         ret_array_call: ($) => seq("RET_ARRAY", repeat($.ret_array_call_item)),
-        ret_array_call_item: ($) => seq($._assignable, optional(seq("=", $.value))),
+        ret_array_call_item: ($) => seq($._name, optional(seq("=", $.value))),
 
         // Arrays
         action_define_array: ($) =>
@@ -2206,7 +2264,8 @@ export default grammar({
         action_load_tra: ($) => prec.right(seq("LOAD_TRA", repeat(field("file", $.value)))),
 
         // Game data modification
-        action_add_sectype: ($) => seq("ADD_SECTYPE", field("name", $.value), field("label", $.value)),
+        action_add_sectype: ($) =>
+            prec.right(seq("ADD_SECTYPE", field("name", $.value), field("label", $.value), ...textTail($))),
 
         action_add_area_type: ($) => seq("ADD_AREA_TYPE", field("name", $.value)),
 
@@ -2235,9 +2294,10 @@ export default grammar({
 
         action_add_kit: ($) => prec.right(seq("ADD_KIT", repeat1(choice($.value, $.kit_say)))),
 
-        kit_say: ($) => seq("SAY", $.value),
+        kit_say: ($) => prec.right(seq("SAY", $.value, ...textTail($))),
 
-        action_add_projectile: ($) => seq("ADD_PROJECTILE", field("file", $.value)),
+        action_add_projectile: ($) =>
+            prec.right(seq("ADD_PROJECTILE", field("file", $.value), optional(field("name", $.value)))),
 
         action_add_music: ($) => seq("ADD_MUSIC", field("name", $.value), field("file", $.value)),
 
@@ -2269,14 +2329,7 @@ export default grammar({
             prec.right(seq("PATCH_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", repeat($._patch), "END")),
 
         action_bash_for: ($) =>
-            seq(
-                "ACTION_BASH_FOR",
-                field("directory", $.value),
-                field("pattern", $.value),
-                "BEGIN",
-                repeat($._action),
-                "END",
-            ),
+            seq("ACTION_BASH_FOR", repeat($.directory_file_regexp), "BEGIN", repeat($._action), "END"),
 
         action_decompress_biff: ($) => prec.right(seq("DECOMPRESS_BIFF", repeat(field("file", $.value)))),
 
@@ -2335,7 +2388,8 @@ export default grammar({
         action_reraise: ($) => "ACTION_RERAISE",
         action_time: ($) => seq("ACTION_TIME", field("name", $.value), "BEGIN", repeat($._action), "END"),
 
-        action_add_school: ($) => seq("ADD_SCHOOL", field("name", $.value), field("description", $.value)),
+        action_add_school: ($) =>
+            prec.right(seq("ADD_SCHOOL", field("name", $.value), field("description", $.value), ...textTail($))),
 
         // COPY_KIT old new ( column value ... ): the parenthesised list holds 2DA column/value pairs.
         action_copy_kit: ($) =>
@@ -2375,12 +2429,13 @@ export default grammar({
         backup_directive: ($) => seq("BACKUP", field("path", $.value)),
         author_directive: ($) => seq("AUTHOR", field("email", $.value)),
         support_directive: ($) => seq("SUPPORT", field("url", $.value)),
-        version_flag: ($) => seq("VERSION", field("version", $.value)),
+        version_flag: ($) => prec.right(seq("VERSION", field("version", $.value), ...textTail($))),
         readme_directive: ($) => prec.right(seq("README", repeat(field("path", $.value)))),
         no_if_eval_bug_flag: ($) => "NO_IF_EVAL_BUG",
         auto_eval_strings_flag: ($) => "AUTO_EVAL_STRINGS",
         allow_missing_directive: ($) => prec.right(seq("ALLOW_MISSING", repeat(field("file", $.value)))),
-        auto_tra_directive: ($) => seq("AUTO_TRA", field("path", $.value)),
+        auto_tra_directive: ($) =>
+            prec.right(seq("AUTO_TRA", field("path", $.value), optional(field("path", $.value)))),
 
         // QUICK_MENU ALWAYS_ASK <components> END (<label> BEGIN <components> END)* END
         quick_menu_directive: ($) =>
@@ -2393,7 +2448,8 @@ export default grammar({
                 "END",
             ),
 
-        quick_menu_entry: ($) => seq(field("name", $.value), "BEGIN", repeat(field("component", $.value)), "END"),
+        quick_menu_entry: ($) =>
+            seq(field("name", $.value), ...textTail($), "BEGIN", repeat(field("component", $.value)), "END"),
 
         ask_every_component_flag: ($) => "ASK_EVERY_COMPONENT",
         script_style_directive: ($) => seq("SCRIPT_STYLE", field("style", $.value)),
@@ -2417,7 +2473,13 @@ export default grammar({
             ),
 
         component: ($) =>
-            seq(alias("BEGIN", $.component_begin), field("name", $.value), repeat($._componentFlag), repeat($._action)),
+            seq(
+                alias("BEGIN", $.component_begin),
+                field("name", $.value),
+                ...textTail($),
+                repeat($._componentFlag),
+                repeat($._action),
+            ),
 
         _componentFlag: ($) =>
             choice(
@@ -2428,8 +2490,6 @@ export default grammar({
                 $.require_predicate_flag,
                 $.require_component_flag,
                 $.forbid_component_flag,
-                $.require_file_flag,
-                $.forbid_file_flag,
                 $.label_flag,
                 $.forced_subcomponent_flag,
                 $.metadata_flag,
@@ -2437,30 +2497,56 @@ export default grammar({
                 $.install_by_default_flag,
             ),
 
-        designated_flag: ($) => seq("DESIGNATED", field("number", $.number)),
-        deprecated_flag: ($) => seq("DEPRECATED", field("message", $.value)),
+        designated_flag: ($) => seq("DESIGNATED", field("number", choice($.number, $.string))),
+        deprecated_flag: ($) => prec.right(seq("DEPRECATED", field("message", $.value), ...textTail($))),
         // All three of these take an optional predicate expression after the label, which WeiDU evaluates to
         // decide whether the component is offered.
         subcomponent_flag: ($) =>
-            seq(kw("SUBCOMPONENT", "SUB_COMPONENT"), field("name", $.value), optional(field("predicate", $.value))),
+            seq(
+                kw("SUBCOMPONENT", "SUB_COMPONENT"),
+                field("name", $.value),
+                optional($.sound_ref),
+                optional(field("predicate", $.value)),
+            ),
         forced_subcomponent_flag: ($) =>
-            seq("FORCED_SUBCOMPONENT", field("name", $.value), optional(field("predicate", $.value))),
+            seq(
+                "FORCED_SUBCOMPONENT",
+                field("name", $.value),
+                optional($.sound_ref),
+                optional(field("predicate", $.value)),
+            ),
         metadata_flag: ($) => seq("METADATA", field("value", $.value)),
         no_log_record_flag: ($) => "NO_LOG_RECORD",
         install_by_default_flag: ($) => "INSTALL_BY_DEFAULT",
-        group_flag: ($) => seq("GROUP", field("name", $.value), optional(field("predicate", $.value))),
+        group_flag: ($) =>
+            seq("GROUP", field("name", $.value), optional($.sound_ref), optional(field("predicate", $.value))),
         label_flag: ($) => seq("LABEL", field("label", $.value)),
-        require_predicate_flag: ($) => seq("REQUIRE_PREDICATE", field("predicate", $.value), field("message", $.value)),
+        require_predicate_flag: ($) =>
+            prec.right(
+                seq("REQUIRE_PREDICATE", field("predicate", $.value), field("message", $.value), ...textTail($)),
+            ),
         require_component_flag: ($) =>
-            seq("REQUIRE_COMPONENT", field("file", $.value), field("component", $.value), field("message", $.value)),
+            seq(
+                "REQUIRE_COMPONENT",
+                field("file", $.value),
+                field("component", $.value),
+                field("message", $.value),
+                ...textTail($),
+            ),
         forbid_component_flag: ($) =>
-            seq("FORBID_COMPONENT", field("file", $.value), field("component", $.value), field("message", $.value)),
-        // REQUIRE_FILE / FORBID_FILE take a file and an error message. WeiDU treats the message as optional,
-        // but the sibling *_component / *_predicate flags above all model it as required and the real corpus
-        // never omits it; matching them keeps the message field required and avoids a trailing-optional-$.value
-        // ambiguity against the next flag.
-        require_file_flag: ($) => seq("REQUIRE_FILE", field("file", $.value), field("message", $.value)),
-        forbid_file_flag: ($) => seq("FORBID_FILE", field("file", $.value), field("message", $.value)),
+            seq(
+                "FORBID_COMPONENT",
+                field("file", $.value),
+                field("component", $.value),
+                field("message", $.value),
+                ...textTail($),
+            ),
+        // REQUIRE_FILE / FORBID_FILE take a file and a required message. They are actions in WeiDU, legal anywhere
+        // an action is; the node names keep their history as component flags.
+        require_file_flag: ($) =>
+            prec.right(seq("REQUIRE_FILE", field("file", $.value), field("message", $.value), ...textTail($))),
+        forbid_file_flag: ($) =>
+            prec.right(seq("FORBID_FILE", field("file", $.value), field("message", $.value), ...textTail($))),
 
         always_block: ($) => seq("ALWAYS", repeat($._action), "END"),
 

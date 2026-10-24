@@ -1172,16 +1172,12 @@ STRING_SET_EVALUATE i ~%male%~ [%male_sound%] ~%female%~ [%female_sound%]
       (string
         (tilde_string
           (tilde_content))))
-    (sound_ref
-      sound: (variable_ref
-        (identifier)))
+    (sound_ref)
     female: (value
       (string
         (tilde_string
           (tilde_content))))
-    (sound_ref
-      sound: (variable_ref
-        (identifier)))))
+    (sound_ref)))
 
 ================================================================================
 STRING_SET with a USING tra file
