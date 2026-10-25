@@ -159,8 +159,10 @@ export default grammar({
 
         // A number is a decimal or hex literal, signed. `#5` (a hash, spaces allowed after it) is a number too,
         // read wherever a value goes; it is NOT the `#` of `RESPONSE #100`, which that rule spells out.
+        // The reference's hex literal is a lower-case `0x` and decimal digits only, read as base 16: `0x19` is 25,
+        // while `0xFF`, `0X10` and `0x1a` are syntax errors there (a quoted text is another matter).
         _integer: ($) => choice($.number, alias($._hash_number, $.number)),
-        number: ($) => token(choice(/-?\d+/, /-?0x[0-9a-fA-F]+/)),
+        number: ($) => token(choice(/-?\d+/, /-?0x\d+/)),
         _hash_number: ($) => token(/#[ \t]*\d+/),
 
         // The `"` and `~` forms span lines, as the reference's do. One that never closes therefore reads on to

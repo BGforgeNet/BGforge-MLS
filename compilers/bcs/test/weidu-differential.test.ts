@@ -163,6 +163,11 @@ describe(`BCS - differential against the reference implementation (${SOURCES.len
             // `#5` and a signed hex number are integers; a rectangle may follow an object.
             hashAndSignedHex: /,#5\)/.test(sources) && /,-0x10\)/.test(sources),
             objectRectangle: /Attack\(Player1\[1\.2\.3\.4\]\)/.test(sources),
+            // A hex literal is `0x` then decimal digits, read as base 16; a quoted number takes the host
+            // language's integer forms, hex letters included, and a text with five tildes is a plain string.
+            hexDecimalDigits: /,0x19\)/.test(sources),
+            quotedNumber: /,"0xFF"\)/.test(sources) && /"WIZARD_MAGIC_MISSILE"\)/.test(sources),
+            fiveTildeString: /SetGlobal\(~~~~~y~~~~~,/.test(sources),
             // Comments nest, and a string may hold a comment marker.
             nestedComment: /\/\* outer \/\* inner \*\/ still outer \*\//.test(sources),
             commentMarkerInString: /"\/\/ x"/.test(sources),

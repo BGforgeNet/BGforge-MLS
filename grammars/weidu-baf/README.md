@@ -77,19 +77,19 @@ END
 
 Functions can take various argument types:
 
-| Type                  | Example              | Description                  |
-| --------------------- | -------------------- | ---------------------------- |
-| String (double quote) | `"text"`             | Standard string              |
-| String (tilde)        | `~text~`             | Alternative string delimiter |
-| Number                | `123`, `-5`, `-0x10` | Integer (decimal or hex)     |
-| Hash number           | `#5`, `# 5`          | Integer, same as `5`         |
-| Identifier            | `GLOBAL`, `Myself`   | Symbolic constant            |
-| Object reference      | `[PC]`, `[ANYONE]`   | Special object               |
-| Object with rectangle | `Player1[1.2.3.4]`   | Object plus a rectangle      |
-| Point                 | `[100.200]`          | Coordinates x.y              |
-| TRA reference         | `@123`               | Translation string reference |
-| Variable reference    | `%varname%`          | WeiDU variable substitution  |
-| Nested call           | `LastSeenBy(Myself)` | Function as argument         |
+| Type                  | Example              | Description                         |
+| --------------------- | -------------------- | ----------------------------------- |
+| String (double quote) | `"text"`             | Standard string                     |
+| String (tilde)        | `~text~`             | Alternative string delimiter        |
+| Number                | `123`, `-5`, `-0x10` | Integer (`0x` takes decimal digits) |
+| Hash number           | `#5`, `# 5`          | Integer, same as `5`                |
+| Identifier            | `GLOBAL`, `Myself`   | Symbolic constant                   |
+| Object reference      | `[PC]`, `[ANYONE]`   | Special object                      |
+| Object with rectangle | `Player1[1.2.3.4]`   | Object plus a rectangle             |
+| Point                 | `[100.200]`          | Coordinates x.y                     |
+| TRA reference         | `@123`               | Translation string reference        |
+| Variable reference    | `%varname%`          | WeiDU variable substitution         |
+| Nested call           | `LastSeenBy(Myself)` | Function as argument                |
 
 ### Strings
 

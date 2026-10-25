@@ -208,6 +208,72 @@ END
             args: (number)))))))
 
 ================================================================================
+Number: a hex integer is the prefix and decimal digits, whatever its value then reads as
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    Wait(0x10)
+    Wait(0x19)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (number)))
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (number)))))))
+
+================================================================================
+Number: a hex letter makes no number
+:error
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    Wait(0xFF)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (ERROR))
+
+================================================================================
+Number: a capital X makes no hex number
+:error
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    Wait(0X10)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (ERROR))
+
+================================================================================
 Identifier: a hash and a bang inside a name, and a name that starts with a hash
 ================================================================================
 

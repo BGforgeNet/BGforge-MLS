@@ -7,6 +7,7 @@ import {
     decompileBcs,
     readBcs,
     writeBcs,
+    type BcsCompileDiagnostic,
     type BcsCompileSymbols,
     type BcsSignatureRow,
 } from "@bgforge/bcs";
@@ -431,8 +432,8 @@ describe("compileBaf - arguments that do not fit their parameter", () => {
         expect(refusal(script("False()", ["MoveToPoint([1.2.3])"]))).toContain("expected a point");
     });
 
-    test("a string where a number belongs", () => {
-        expect(refusal(script('HPGT([ANYONE],"twenty")'))).toContain("expected a number");
+    test("a string-table reference where a number belongs", () => {
+        expect(refusal(script("HPGT([ANYONE],~twenty~)"))).toContain("expected a number");
     });
 
     test("a name where the parameter points at no table", () => {
@@ -563,5 +564,85 @@ describe("compileBaf - spellings the reference reads", () => {
 
     test("a variable in a value position is refused, naming the variable", () => {
         expect(problemsOf(() => compile(script("OR(%n%)\n  False()\n  False()")))).toEqual(["%n% is not a number"]);
+    });
+});
+
+/** The located problems a compile refused with, or none when it did not refuse. */
+function diagnosticsOf(source: string): readonly BcsCompileDiagnostic[] {
+    try {
+        compile(source);
+    } catch (error) {
+        return error instanceof BcsCompileError ? error.diagnostics : [];
+    }
+    return [];
+}
+
+describe("compileBaf - which text form fits which slot", () => {
+    const refusals = (source: string): string[] => diagnosticsOf(source).map((problem) => problem.message);
+    const storedString = (argument: string) =>
+        compileBaf(parser, script("False()", [`PlaySound(${argument})`]), COMPILE_SYMBOLS).blocks[0]!.responses[0]!
+            .actions[0]!.strings[0];
+    const storedSpell = (argument: string) =>
+        compileBaf(parser, script("False()", [`ApplySpell(Player1,${argument})`]), COMPILE_SYMBOLS).blocks[0]!
+            .responses[0]!.actions[0]!.ints[0];
+
+    // The reference reads ~text~ and %text% as a dialog string reference, which is a number, so a string or an
+    // object slot refuses it with a type mismatch.
+    test.each(["~x~", "%a-b%"])("%s in a string slot is refused at the argument", (argument) => {
+        const source = script("False()", [`PlaySound(${argument})`]);
+        const found = diagnosticsOf(source);
+
+        expect(found.map((problem) => problem.message)).toEqual([
+            `${argument} is a string-table reference, which only a number argument takes, not a string`,
+        ]);
+        expect(found[0]).toMatchObject({ line: 5, column: source.split("\n")[4]!.indexOf(argument) + 1 });
+    });
+
+    test("a ~text~ as an object is refused at the argument", () => {
+        expect(refusals(script("False()", ["Attack(~Druid3~)"]))).toEqual([
+            "~Druid3~ is a string-table reference, which only a number argument takes, not an object",
+        ]);
+    });
+
+    test("a variable in a string slot stays refused, naming it", () => {
+        expect(refusals(script("False()", ["PlaySound(%x%)"]))).toEqual(["expected a quoted string, not %x%"]);
+    });
+
+    test("the five-tilde form stays a plain string in a string slot", () => {
+        expect(storedString("~~~~~x~~~~~")).toBe("x");
+    });
+
+    test("a quoted text in a number slot is read as the bare name or number would be", () => {
+        const wanted = storedSpell("WIZARD_MAGIC_MISSILE");
+
+        expect(storedSpell('"WIZARD_MAGIC_MISSILE"')).toBe(wanted);
+        expect(storedSpell("~~~~~WIZARD_MAGIC_MISSILE~~~~~")).toBe(wanted);
+        expect(storedSpell('"3"')).toBe(3);
+        expect(storedSpell('"0x10"')).toBe(16);
+    });
+
+    test("a quoted text no table names is refused in a number slot", () => {
+        expect(refusals(script("False()", ['ApplySpell(Player1,"abc")']))).toEqual([
+            "this game's SPELL.IDS does not name abc",
+        ]);
+    });
+
+    test("a string-table reference in a number slot is refused: only an install can resolve it", () => {
+        expect(refusals(script("HPGT(Player1,~3~)"))).toEqual(["expected a number, not ~3~"]);
+    });
+});
+
+describe("compileBaf - hex integers", () => {
+    const second = (value: string) =>
+        compileBaf(parser, script(`HPGT([ANYONE],${value})`), COMPILE_SYMBOLS).blocks[0]!.triggers[0]!.ints[1];
+
+    // The reference's hex number is the prefix and decimal digits only, read as base 16.
+    test("0x then decimal digits is read as base 16", () => {
+        expect(second("0x10")).toBe(16);
+        expect(second("0x19")).toBe(25);
+    });
+
+    test.each(["0xFF", "0xff", "0x1a", "0X10", "-0xFF"])("%s is refused as the reference refuses it", (value) => {
+        expect(problemsOf(() => compile(script(`HPGT([ANYONE],${value})`)))).toEqual(["syntax error"]);
     });
 });

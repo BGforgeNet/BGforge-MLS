@@ -22,7 +22,7 @@
  * - Empty parentheses on an object identifier, `LastSeenBy()`, name an implicit `Myself` inside it, at any depth.
  */
 
-import { bafIntegerValue } from "@bgforge/shared/baf-integer";
+import { bafIntegerValue, bafQuotedIntegerValue } from "@bgforge/shared/baf-integer";
 import { collectParseErrors } from "@bgforge/shared/parse-errors";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-baf";
 import type { Node as SyntaxNode, Parser } from "web-tree-sitter";
@@ -538,13 +538,29 @@ class Compiler {
         return slots;
     }
 
-    private string(node: SyntaxNode): string {
+    /** `~text~` and `%text%`: the reference resolves one to a dialog string index, so only a number slot takes it. */
+    private isStringReference(node: SyntaxNode): boolean {
+        return node.type === SyntaxType.String && !node.text.startsWith('"') && !node.text.startsWith("~~~~~");
+    }
+
+    /** What a `"text"` or five-tilde string holds, whichever delimiters it came in. */
+    private stringContent(node: SyntaxNode): string {
+        return node.text.startsWith("~~~~~") ? node.text.slice(5, -5) : node.text.slice(1, -1);
+    }
+
+    private string(node: SyntaxNode, slot: "a string" | "an object" = "a string"): string {
+        if (this.isStringReference(node)) {
+            this.fail(
+                node,
+                `${node.text} is a string-table reference, which only a number argument takes, not ${slot}`,
+            );
+            return "";
+        }
         if (node.type !== SyntaxType.String) {
             this.fail(node, `expected a quoted string, not ${node.text}`);
             return "";
         }
-        // One delimiter either side - `"text"`, `~text~`, `%text%` - or five of them: `~~~~~text~~~~~`.
-        return node.text.startsWith("~~~~~") ? node.text.slice(5, -5) : node.text.slice(1, -1);
+        return this.stringContent(node);
     }
 
     private point(node: SyntaxNode): number[] {
@@ -569,11 +585,18 @@ class Compiler {
             const components = items(node);
             if (components.length === 1) return this.enumerated(components[0]!, parameter);
         }
-        if (node.type !== SyntaxType.Identifier && node.type !== SyntaxType.QuotedSymbol) {
+        // A `"text"` (or five-tilde text) here is read as the bare name or number would be; the reference does the
+        // same, where a `~text~` is a string-table reference only an install can resolve.
+        const quoted = node.type === SyntaxType.String && !this.isStringReference(node);
+        if (node.type !== SyntaxType.Identifier && node.type !== SyntaxType.QuotedSymbol && !quoted) {
             this.fail(node, `expected a number, not ${node.text}`);
             return 0;
         }
-        const name = symbolName(node);
+        const name = quoted ? this.stringContent(node) : symbolName(node);
+        if (quoted) {
+            const number = bafQuotedIntegerValue(name);
+            if (Number.isFinite(number)) return int32(number);
+        }
         const value = this.value(parameter.table, name);
         if (value === undefined) {
             this.fail(
@@ -676,7 +699,7 @@ class Compiler {
                     break;
                 case SyntaxType.String:
                     // A script name, which is how most records name one specific creature.
-                    text = this.string(layer);
+                    text = this.string(layer, "an object");
                     break;
                 case SyntaxType.ObjectRef:
                 case SyntaxType.Point:
