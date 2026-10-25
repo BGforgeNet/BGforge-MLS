@@ -169,3 +169,62 @@ describe("weidu-d TextMate syntax - patch commands", () => {
         expect(getTokenScopes(line, 0, "UNLESS")).toContain("keyword.other.weidu-d");
     });
 });
+
+/** Whether any of a token's scopes is a comment scope. */
+const isComment = (scopes: readonly string[]): boolean => scopes.some((s) => s.startsWith("comment."));
+
+/**
+ * Lexical forms D shares with WeiDU's own reading: comments nest, a five-tilde string may hold tildes, a
+ * double-quoted string is a string, and a text may carry a sound or be written as a reference.
+ */
+describe("weidu-d TextMate syntax - strings, comments and references", () => {
+    it("keeps a nested block comment one comment", () => {
+        const text = "/* a /* b */ still */ BEGIN d";
+        expect(isComment(getTokenScopes(text, 0, "still"))).toBe(true);
+        expect(isComment(getTokenScopes(text, 0, "BEGIN"))).toBe(false);
+    });
+
+    it("does not let a // inside a block comment swallow its end", () => {
+        expect(isComment(getTokenScopes("/* a // b */ BEGIN d", 0, "BEGIN"))).toBe(false);
+    });
+
+    it("reads a five-tilde string, tildes inside it included, as one string", () => {
+        const line = "SAY ~~~~~he said ~hi~ ok~~~~~ IF ~~ THEN EXIT";
+        expect(getTokenScopes(line, 0, "hi")).toContain("string.quoted.other.weidu-d");
+        expect(getTokenScopes(line, 0, "ok")).toContain("string.quoted.other.weidu-d");
+        expect(getTokenScopes(line, 0, "EXIT")).toContain("keyword.other.weidu-d");
+    });
+
+    it("reads a five-tilde trigger or action as one string", () => {
+        const line = "IF ~~~~~See(~x~)~~~~~ THEN DO ~~~~~Kill(~y~)~~~~~ EXIT";
+        expect(getTokenScopes(line, 0, "x")).toContain("string.quoted.other.weidu-d");
+        expect(getTokenScopes(line, 0, "y")).toContain("string.quoted.other.weidu-d");
+        expect(getTokenScopes(line, 0, "EXIT")).toContain("keyword.other.weidu-d");
+    });
+
+    it("reads a double-quoted string as a string, a // inside it included", () => {
+        const line = 'SAY "//" IF ~~ THEN EXIT';
+        expect(getTokenScopes(line, 0, "//")).toContain("string.quoted.double.weidu-d");
+        expect(getTokenScopes(line, 0, "EXIT")).toContain("keyword.other.weidu-d");
+    });
+
+    it("colors a sound after a text", () => {
+        expect(getTokenScopes("SAY ~m~ [SND01] ~f~ [SND02]", 0, "SND02")).toContain("string.other.sound.weidu-d");
+    });
+
+    it("colors tra and tlk references, negative ones and ones at the end of a line", () => {
+        expect(getTokenScopes("SAY @-1", 0, "-1")).toContain("variable.parameter.tra.weidu-d");
+        expect(getTokenScopes("SAY @12", 0, "12")).toContain("variable.parameter.tra.weidu-d");
+        expect(getTokenScopes("SAY #-1", 0, "#-1")).toContain("variable.parameter.weidu-tra");
+    });
+
+    it("colors a forced strref", () => {
+        expect(getTokenScopes("SAY !5 ~m~", 0, "!5")).toContain("variable.parameter.weidu-tra");
+    });
+
+    it("colors an AT reference holding any string", () => {
+        for (const ref of ["(AT ~foo~)", '(AT "foo")', "(AT foo)"]) {
+            expect(getTokenScopes(`SAY ${ref}`, 0, "AT")).toContain("variable.parameter.weidu-tra");
+        }
+    });
+});

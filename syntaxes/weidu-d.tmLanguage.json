@@ -49,6 +49,9 @@
       "include": "#reference"
     },
     {
+      "include": "#sound"
+    },
+    {
       "include": "#numbers"
     },
     {
@@ -72,8 +75,17 @@
           "name": "comment.line.weidu-d"
         },
         {
-          "begin": "/\\*",
-          "end": "\\*/",
+          "include": "#block-comment"
+        }
+      ]
+    },
+    "block-comment": {
+      "begin": "/\\*",
+      "end": "\\*/",
+      "name": "comment.block.weidu-d",
+      "patterns": [
+        {
+          "include": "#block-comment",
           "name": "comment.block.weidu-d"
         }
       ]
@@ -324,7 +336,7 @@
     "reference": {
       "patterns": [
         {
-          "match": "\\s(@)([0-9]+)\\s",
+          "match": "(?<![\\w#@!])(@)(-?[0-9]+)\\b",
           "captures": {
             "1": {
               "name": "keyword.weidu-d.trastart"
@@ -335,18 +347,18 @@
           }
         },
         {
-          "match": "\\s(#)([0-9]+)\\s",
+          "match": "(?<![\\w#@!])[#!]-?[0-9]+\\b",
           "name": "variable.parameter.weidu-tra"
         },
         {
-          "match": "\\s(\\( AT \"(\\w+)\"\\))\\s",
+          "match": "\\(\\s*AT\\s+(?:~[^~]*~|\"[^\"]*\"|%[^%\\s]*%|[\\w#.-]+)\\s*\\)",
           "name": "variable.parameter.weidu-tra"
         }
       ]
     },
     "condition": {
       "name": "meta.weidu-d.condition",
-      "begin": "\\b(IF)\\b(?:\\s+WEIGHT\\s+#\\s*-?[0-9]+)?\\s+(~)",
+      "begin": "\\b(IF)\\b(?:\\s+WEIGHT\\s+#\\s*-?[0-9]+)?\\s+(~)(?!~~~~)",
       "beginCaptures": {
         "1": {
           "name": "keyword.other.weidu-d"
@@ -369,7 +381,7 @@
       ]
     },
     "condition-abbreviated": {
-      "begin": "\\s+(\\+)\\s*(~)",
+      "begin": "\\s+(\\+)\\s*(~)(?!~~~~)",
       "beginCaptures": {
         "1": {
           "name": "keyword.other.weidu-d"
@@ -392,7 +404,7 @@
     },
     "action": {
       "name": "meta.weidu-d.action",
-      "begin": "\\b(DO)\\b\\s+(~)",
+      "begin": "\\b(DO)\\b\\s+(~)(?!~~~~)",
       "beginCaptures": {
         "1": {
           "name": "keyword.other.weidu-d"
@@ -557,6 +569,11 @@
     "strings": {
       "patterns": [
         {
+          "name": "string.quoted.other.weidu-d",
+          "begin": "~~~~~",
+          "end": "~~~~~"
+        },
+        {
           "name": "string.quoted.tilde.weidu-d",
           "begin": "~",
           "end": "~",
@@ -565,8 +582,22 @@
               "include": "#vars"
             }
           ]
+        },
+        {
+          "name": "string.quoted.double.weidu-d",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "include": "#vars"
+            }
+          ]
         }
       ]
+    },
+    "sound": {
+      "match": "\\[[^\\]]*\\]",
+      "name": "string.other.sound.weidu-d"
     },
     "vars": {
       "name": "variable.parameter.weidu-d",

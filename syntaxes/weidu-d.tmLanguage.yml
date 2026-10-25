@@ -19,6 +19,7 @@ patterns:
   - include: '#transfeature'
   - include: '#transnext'
   - include: '#reference'
+  - include: '#sound'
   - include: '#numbers'
   - include: '#strings'
   - include: '#vars' # D can be COMPILE EVAL
@@ -30,9 +31,15 @@ repository:
     patterns:
       - match: (//).*
         name: comment.line.weidu-d
-      - begin: /\*
-        end: \*/
-        name: comment.block.weidu-d
+      - include: '#block-comment'
+
+  # Block comments nest, as WeiDU reads them. A // inside one is comment text, so only the block rule recurses.
+  block-comment:
+    begin: /\*
+    end: \*/
+    name: comment.block.weidu-d
+    patterns:
+      - include: '#block-comment'
 
   numbers:
     patterns:
@@ -124,24 +131,27 @@ repository:
       - match: \b(EXTERN)\b
       - match: \b(GOTO)\b
 
+  # @tra and #tlk references, a !strref forcing a text into that entry, and (AT var) taking any string. A
+  # reference may be negative and may end the line; the lookbehind keeps a # inside a name (RR#ZA00) out.
   reference:
     patterns:
-      - match: \s(@)([0-9]+)\s
+      - match: (?<![\w#@!])(@)(-?[0-9]+)\b
         captures:
           '1':
             name: keyword.weidu-d.trastart
           '2':
             name: variable.parameter.tra.weidu-d
-      - match: \s(#)([0-9]+)\s
+      - match: (?<![\w#@!])[#!]-?[0-9]+\b
         name: variable.parameter.weidu-tra
-      - match: \s(\( AT "(\w+)"\))\s
+      - match: \(\s*AT\s+(?:~[^~]*~|"[^"]*"|%[^%\s]*%|[\w#.-]+)\s*\)
         name: variable.parameter.weidu-tra
 
   condition:
     name: meta.weidu-d.condition
     # Optional WEIGHT #n guard between IF and the trigger string (IF WEIGHT #5 ~...~); the group is
     # non-capturing so capture indices stay 1=IF, 2=~.
-    begin: '\b(IF)\b(?:\s+WEIGHT\s+#\s*-?[0-9]+)?\s+(~)'
+    # The lookahead leaves a five-tilde string to the strings rule, whose end is five tildes, not the next one.
+    begin: '\b(IF)\b(?:\s+WEIGHT\s+#\s*-?[0-9]+)?\s+(~)(?!~~~~)'
     beginCaptures:
       "1":
         name: keyword.other.weidu-d
@@ -156,7 +166,7 @@ repository:
 
   # this one should come later, when most of the text is taken
   condition-abbreviated:
-    begin: '\s+(\+)\s*(~)'
+    begin: '\s+(\+)\s*(~)(?!~~~~)'
     beginCaptures:
       "1":
         name: keyword.other.weidu-d
@@ -171,7 +181,7 @@ repository:
 
   action:
     name: meta.weidu-d.action
-    begin: '\b(DO)\b\s+(~)'
+    begin: '\b(DO)\b\s+(~)(?!~~~~)'
     beginCaptures:
       "1":
         name: keyword.other.weidu-d
@@ -277,11 +287,25 @@ repository:
 
   strings:
     patterns:
+      # Before the tilde string: a five-tilde string may hold single tildes.
+      - name: string.quoted.other.weidu-d
+        begin: '~~~~~'
+        end: '~~~~~'
       - name: string.quoted.tilde.weidu-d
         begin: '~'
         end: '~'
         patterns:
           - include: '#vars'
+      - name: string.quoted.double.weidu-d
+        begin: '"'
+        end: '"'
+        patterns:
+          - include: '#vars'
+
+  # A sound resource after a text: ~text~ [SND01].
+  sound:
+    match: \[[^\]]*\]
+    name: string.other.sound.weidu-d
 
   vars:
     name: variable.parameter.weidu-d
