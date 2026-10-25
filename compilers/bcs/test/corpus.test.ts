@@ -22,6 +22,12 @@ import { readIdsTables } from "./ids-tables";
  */
 const CORPUS_ROOT = process.env.BGFORGE_BCS_CORPUS;
 
+/**
+ * Each sweep reads, decodes and compiles every script of an install - thousands of files - so it runs far past
+ * vitest's default per-test limit. One bound for all of them: wide enough for a slow disk, still finite.
+ */
+const SWEEP_TIMEOUT_MS = 10 * 60_000;
+
 function findBcsFiles(root: string): string[] {
     const out: string[] = [];
     function walk(dir: string): void {
@@ -63,110 +69,132 @@ const EXTERNAL_FILES = findBcsFiles(path.resolve(__dirname, "../../../external")
 describe.skipIf(EXTERNAL_FILES.length === 0)(
     `BCS codec - mod scripts from external/ (${EXTERNAL_FILES.length} scripts)`,
     () => {
-        test("every script re-emits byte-identically", () => {
-            const mismatched: string[] = [];
+        test(
+            "every script re-emits byte-identically",
+            () => {
+                const mismatched: string[] = [];
 
-            for (const file of EXTERNAL_FILES) {
-                const original = fs.readFileSync(file, "latin1");
-                if (original === "") continue;
-                if (writeBcs(readBcs(original)) !== original) mismatched.push(path.basename(file));
-            }
+                for (const file of EXTERNAL_FILES) {
+                    const original = fs.readFileSync(file, "latin1");
+                    if (original === "") continue;
+                    if (writeBcs(readBcs(original)) !== original) mismatched.push(path.basename(file));
+                }
 
-            expect(mismatched).toEqual([]);
-        });
+                expect(mismatched).toEqual([]);
+            },
+            SWEEP_TIMEOUT_MS,
+        );
     },
 );
 
 describe.skipIf(files.length === 0)(`BCS codec - real install corpus (${files.length} scripts)`, () => {
-    test("every script re-emits byte-identically", () => {
-        const mismatched: string[] = [];
-        const empty: string[] = [];
+    test(
+        "every script re-emits byte-identically",
+        () => {
+            const mismatched: string[] = [];
+            const empty: string[] = [];
 
-        for (const file of files) {
-            // BCS is ASCII, and latin1 is the byte-preserving decoding of it - a stray high byte in a
-            // quoted field survives the round trip instead of becoming a replacement character.
-            const original = fs.readFileSync(file, "latin1");
-            // A zero-byte file holds no script; the codec refuses it rather than inventing markers, so it
-            // is counted out loud here rather than dropped from the denominator in silence.
-            if (original === "") {
-                empty.push(path.basename(file));
-                continue;
+            for (const file of files) {
+                // BCS is ASCII, and latin1 is the byte-preserving decoding of it - a stray high byte in a
+                // quoted field survives the round trip instead of becoming a replacement character.
+                const original = fs.readFileSync(file, "latin1");
+                // A zero-byte file holds no script; the codec refuses it rather than inventing markers, so it
+                // is counted out loud here rather than dropped from the denominator in silence.
+                if (original === "") {
+                    empty.push(path.basename(file));
+                    continue;
+                }
+                if (writeBcs(readBcs(original)) !== original) mismatched.push(path.basename(file));
             }
-            if (writeBcs(readBcs(original)) !== original) mismatched.push(path.basename(file));
-        }
 
-        expect(mismatched).toEqual([]);
-        // A floor on the population, so a corpus that failed to resolve cannot pass vacuously.
-        // The gate is zero mismatches among the scripts actually judged; the floor only stops a corpus
-        // that resolved to nothing but empty files from passing vacuously.
-        expect(files.length - empty.length).toBeGreaterThan(0);
-        console.log(
-            `BCS corpus: ${files.length - empty.length} scripts round-tripped, ${empty.length} empty files skipped`,
-        );
-    });
+            expect(mismatched).toEqual([]);
+            // A floor on the population, so a corpus that failed to resolve cannot pass vacuously.
+            // The gate is zero mismatches among the scripts actually judged; the floor only stops a corpus
+            // that resolved to nothing but empty files from passing vacuously.
+            expect(files.length - empty.length).toBeGreaterThan(0);
+            console.log(
+                `BCS corpus: ${files.length - empty.length} scripts round-tripped, ${empty.length} empty files skipped`,
+            );
+        },
+        SWEEP_TIMEOUT_MS,
+    );
 
-    test("every script parses into the nesting the format actually has", () => {
-        // Measured over 4939 non-empty files: a condition-response block holds exactly one condition and
-        // one response set, a trigger exactly one object, an action exactly three. Nothing in the corpus
-        // deviates, so a deviation is a reader defect rather than a variant.
-        const failures: string[] = [];
-        let triggers = 0;
-        let actions = 0;
+    test(
+        "every script parses into the nesting the format actually has",
+        () => {
+            // Measured over 4939 non-empty files: a condition-response block holds exactly one condition and
+            // one response set, a trigger exactly one object, an action exactly three. Nothing in the corpus
+            // deviates, so a deviation is a reader defect rather than a variant.
+            const failures: string[] = [];
+            let triggers = 0;
+            let actions = 0;
 
-        for (const file of files) {
-            const name = path.basename(file);
-            const text = fs.readFileSync(file, "latin1");
-            if (text === "") continue;
-            const script = readBcs(text);
-            for (const block of script.blocks) {
-                triggers += block.triggers.length;
-                for (const response of block.responses) {
-                    actions += response.actions.length;
-                    for (const action of response.actions) {
-                        if (action.objects.length !== 3)
-                            failures.push(`${name}: action has ${action.objects.length} objects`);
+            for (const file of files) {
+                const name = path.basename(file);
+                const text = fs.readFileSync(file, "latin1");
+                if (text === "") continue;
+                const script = readBcs(text);
+                for (const block of script.blocks) {
+                    triggers += block.triggers.length;
+                    for (const response of block.responses) {
+                        actions += response.actions.length;
+                        for (const action of response.actions) {
+                            if (action.objects.length !== 3)
+                                failures.push(`${name}: action has ${action.objects.length} objects`);
+                        }
                     }
                 }
             }
-        }
 
-        expect(failures).toEqual([]);
-        expect(triggers).toBeGreaterThan(0);
-        expect(actions).toBeGreaterThan(0);
-    });
+            expect(failures).toEqual([]);
+            expect(triggers).toBeGreaterThan(0);
+            expect(actions).toBeGreaterThan(0);
+        },
+        SWEEP_TIMEOUT_MS,
+    );
 
-    test("no record carries more fields than its argument list has slots", () => {
-        // IESDP fixes the argument lists: a trigger takes five numbers and two strings, an action five and
-        // two, and an object twelve numbers before Torment's two extras - fourteen, the most any engine
-        // stores ahead of a name, since Icewind Dale II keeps its own last two behind one. Truncation by an
-        // older writer can only take fields away, so anything OVER the ceiling means the reader split a line
-        // wrongly - which is exactly what counting numbers across a whole line does to an object named
-        // `"HOUSEN2"`.
-        const over: string[] = [];
+    test(
+        "no record carries more fields than its argument list has slots",
+        () => {
+            // IESDP fixes the argument lists: a trigger takes five numbers and two strings, an action five and
+            // two, and an object twelve numbers before Torment's two extras - fourteen, the most any engine
+            // stores ahead of a name, since Icewind Dale II keeps its own last two behind one. Truncation by an
+            // older writer can only take fields away, so anything OVER the ceiling means the reader split a line
+            // wrongly - which is exactly what counting numbers across a whole line does to an object named
+            // `"HOUSEN2"`.
+            const over: string[] = [];
 
-        for (const file of files) {
-            const name = path.basename(file);
-            const text = fs.readFileSync(file, "latin1");
-            if (text === "") continue;
-            const note = (what: string, ints: number, strings: number, maxInts: number, maxStrings: number): void => {
-                if (ints > maxInts || strings > maxStrings) over.push(`${name}: ${what} has ${ints}i ${strings}s`);
-            };
-            for (const block of readBcs(text).blocks) {
-                for (const trigger of block.triggers) {
-                    note("trigger", trigger.ints.length, trigger.strings.length, 5, 2);
-                    note("object", trigger.object.ints.length, 0, 14, 0);
-                }
-                for (const response of block.responses) {
-                    for (const action of response.actions) {
-                        note("action", action.ints.length, action.strings.length, 5, 2);
-                        for (const object of action.objects) note("object", object.ints.length, 0, 14, 0);
+            for (const file of files) {
+                const name = path.basename(file);
+                const text = fs.readFileSync(file, "latin1");
+                if (text === "") continue;
+                const note = (
+                    what: string,
+                    ints: number,
+                    strings: number,
+                    maxInts: number,
+                    maxStrings: number,
+                ): void => {
+                    if (ints > maxInts || strings > maxStrings) over.push(`${name}: ${what} has ${ints}i ${strings}s`);
+                };
+                for (const block of readBcs(text).blocks) {
+                    for (const trigger of block.triggers) {
+                        note("trigger", trigger.ints.length, trigger.strings.length, 5, 2);
+                        note("object", trigger.object.ints.length, 0, 14, 0);
+                    }
+                    for (const response of block.responses) {
+                        for (const action of response.actions) {
+                            note("action", action.ints.length, action.strings.length, 5, 2);
+                            for (const object of action.objects) note("object", object.ints.length, 0, 14, 0);
+                        }
                     }
                 }
             }
-        }
 
-        expect(over).toEqual([]);
-    });
+            expect(over).toEqual([]);
+        },
+        SWEEP_TIMEOUT_MS,
+    );
 });
 
 describe.skipIf(files.length === 0 || IDS_ROOT === undefined)(
@@ -196,43 +224,47 @@ describe.skipIf(files.length === 0 || IDS_ROOT === undefined)(
          * save would be unusable, and idempotence is the property that rules it out - measured against the whole
          * install rather than the three fixtures a checkout can compile.
          */
-        test("every script compiles back, and saving it again changes nothing", () => {
-            const drifted: string[] = [];
-            // Refusals are tallied by reason rather than swallowed: a sweep that quietly stopped judging most of
-            // the corpus would otherwise report the same green as one that judged all of it.
-            const refused = new Map<string, number>();
-            let judged = 0;
-            let identical = 0;
+        test(
+            "every script compiles back, and saving it again changes nothing",
+            () => {
+                const drifted: string[] = [];
+                // Refusals are tallied by reason rather than swallowed: a sweep that quietly stopped judging most of
+                // the corpus would otherwise report the same green as one that judged all of it.
+                const refused = new Map<string, number>();
+                let judged = 0;
+                let identical = 0;
 
-            for (const file of files) {
-                const original = fs.readFileSync(file, "latin1");
-                if (original === "") continue;
-                let once: string;
-                try {
-                    once = roundTrip(original);
-                } catch (error) {
-                    const reason =
-                        error instanceof BcsCompileError
-                            ? (error.diagnostics[0]?.message ?? error.message)
-                            : String(error);
-                    refused.set(reason, (refused.get(reason) ?? 0) + 1);
-                    continue;
+                for (const file of files) {
+                    const original = fs.readFileSync(file, "latin1");
+                    if (original === "") continue;
+                    let once: string;
+                    try {
+                        once = roundTrip(original);
+                    } catch (error) {
+                        const reason =
+                            error instanceof BcsCompileError
+                                ? (error.diagnostics[0]?.message ?? error.message)
+                                : String(error);
+                        refused.set(reason, (refused.get(reason) ?? 0) + 1);
+                        continue;
+                    }
+                    judged++;
+                    if (once === original) identical++;
+                    else if (roundTrip(once) !== once) drifted.push(path.basename(file));
                 }
-                judged++;
-                if (once === original) identical++;
-                else if (roundTrip(once) !== once) drifted.push(path.basename(file));
-            }
 
-            const skipped = [...refused.values()].reduce((total, count) => total + count, 0);
-            console.log(
-                `BCS compiler: ${judged} scripts compiled back (${identical} byte-identical, ` +
-                    `${judged - identical} through a form BAF cannot spell), ${skipped} refused`,
-            );
-            for (const [reason, count] of refused) console.log(`  refused ${count}: ${reason}`);
-            expect(drifted).toEqual([]);
-            expect(refused.size).toBe(0);
-            // A floor on the population, so a corpus that resolved to nothing cannot pass vacuously.
-            expect(judged).toBeGreaterThan(0);
-        });
+                const skipped = [...refused.values()].reduce((total, count) => total + count, 0);
+                console.log(
+                    `BCS compiler: ${judged} scripts compiled back (${identical} byte-identical, ` +
+                        `${judged - identical} through a form BAF cannot spell), ${skipped} refused`,
+                );
+                for (const [reason, count] of refused) console.log(`  refused ${count}: ${reason}`);
+                expect(drifted).toEqual([]);
+                expect(refused.size).toBe(0);
+                // A floor on the population, so a corpus that resolved to nothing cannot pass vacuously.
+                expect(judged).toBeGreaterThan(0);
+            },
+            SWEEP_TIMEOUT_MS,
+        );
     },
 );
