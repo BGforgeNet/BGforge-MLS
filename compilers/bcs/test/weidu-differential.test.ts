@@ -156,6 +156,18 @@ describe(`BCS - differential against the reference implementation (${SOURCES.len
             // An object named by its script name alone, which is how most records name a specific creature.
             objectNamedByString: /Attack\("Druid3"\)/.test(emitted),
             negatedTrigger: /^\s*!HPGT\(/m.test(emitted),
+            // ANYONE is the value 0 in any position of a bracket, not only as the whole of it.
+            anyoneInsideBracket: /\.HUMANOID\.ANYONE\]/.test(sources),
+            // ActionOverride is the one call whose closing parenthesis the reference does not need.
+            unclosedActionOverride: /ActionOverride\(Player1,Attack\(\[ENEMY\]\)\n/.test(sources),
+            // `#5` and a signed hex number are integers; a rectangle may follow an object.
+            hashAndSignedHex: /,#5\)/.test(sources) && /,-0x10\)/.test(sources),
+            objectRectangle: /Attack\(Player1\[1\.2\.3\.4\]\)/.test(sources),
+            // Comments nest, and a string may hold a comment marker.
+            nestedComment: /\/\* outer \/\* inner \*\/ still outer \*\//.test(sources),
+            commentMarkerInString: /"\/\/ x"/.test(sources),
+            // THEN with no response at all.
+            emptyResponseList: /THEN\nEND/.test(sources),
         };
 
         expect(

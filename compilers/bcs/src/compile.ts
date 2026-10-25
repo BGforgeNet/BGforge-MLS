@@ -22,6 +22,7 @@
  * - Empty parentheses on an object identifier, `LastSeenBy()`, name an implicit `Myself` inside it, at any depth.
  */
 
+import { bafIntegerValue } from "@bgforge/shared/baf-integer";
 import { collectParseErrors } from "@bgforge/shared/parse-errors";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-baf";
 import type { Node as SyntaxNode, Parser } from "web-tree-sitter";
@@ -207,6 +208,11 @@ export function compileBaf(
 
 function at(node: SyntaxNode): { line: number; column: number } {
     return { line: node.startPosition.row + 1, column: node.startPosition.column + 1 };
+}
+
+/** The name an identifier spells, or a name written between five double quotes. */
+function symbolName(node: SyntaxNode): string {
+    return node.type === SyntaxType.QuotedSymbol ? node.text.slice(5, -5) : node.text;
 }
 
 /**
@@ -400,14 +406,11 @@ class Compiler {
     private action(node: SyntaxNode): BcsAction {
         let call = node.childForFieldName("call")!;
 
-        // The acting-object override wraps the action it applies to, and only the inner one is stored.
+        // The acting-object override wraps the action it applies to, and only the inner one is stored. The
+        // grammar reads ActionOverride as a word that takes exactly an object and a call, so no shape check here.
         let acting: BcsObject | undefined;
         if (this.callName(call).toLowerCase() === "actionoverride") {
             const args = this.arguments(call);
-            if (args.length !== 2 || args[1]!.type !== SyntaxType.CallExpr) {
-                this.fail(call, "ActionOverride takes an object and the action it applies to");
-                return this.emptyAction(0);
-            }
             acting = this.object(args[0]!);
             call = args[1]!;
         }
@@ -477,18 +480,20 @@ class Compiler {
         for (const [index, parameter] of parameters.entries()) {
             const arg = args[index];
             if (arg === undefined) continue;
+            // A rectangle means something only on an object; the reference drops it from any other argument.
+            const bare = arg.type === SyntaxType.RectArg ? arg.childForFieldName("object")! : arg;
             switch (parameter.type) {
                 case "I":
-                    integers.push(this.enumerated(arg, parameter));
+                    integers.push(this.enumerated(bare, parameter));
                     break;
                 case "S":
-                    strings.push(this.string(arg));
+                    strings.push(this.string(bare));
                     break;
                 case "O":
                     objects.push(this.object(arg));
                     break;
                 case "P":
-                    point = this.point(arg);
+                    point = this.point(bare);
                     break;
                 default:
                     // `A:` - an action passed to another action. The format reference says outright that it
@@ -538,8 +543,8 @@ class Compiler {
             this.fail(node, `expected a quoted string, not ${node.text}`);
             return "";
         }
-        // Both spellings are one delimiter either side: `"text"` and `~text~`.
-        return node.text.slice(1, -1);
+        // One delimiter either side - `"text"`, `~text~`, `%text%` - or five of them: `~~~~~text~~~~~`.
+        return node.text.startsWith("~~~~~") ? node.text.slice(5, -5) : node.text.slice(1, -1);
     }
 
     private point(node: SyntaxNode): number[] {
@@ -564,19 +569,20 @@ class Compiler {
             const components = items(node);
             if (components.length === 1) return this.enumerated(components[0]!, parameter);
         }
-        if (node.type !== SyntaxType.Identifier) {
+        if (node.type !== SyntaxType.Identifier && node.type !== SyntaxType.QuotedSymbol) {
             this.fail(node, `expected a number, not ${node.text}`);
             return 0;
         }
-        const value = this.value(parameter.table, node.text);
+        const name = symbolName(node);
+        const value = this.value(parameter.table, name);
         if (value === undefined) {
             this.fail(
                 node,
                 parameter.table === undefined
-                    ? `${node.text} is a name where a number belongs, and this argument names no table`
+                    ? `${name} is a name where a number belongs, and this argument names no table`
                     : // Upper-cased because a signature spells its table however it likes - `I:Spell*Spell`
                       // names SPELL.IDS - and the message should name the file to go and look at.
-                      `this game's ${parameter.table.toUpperCase()}.IDS does not name ${node.text}`,
+                      `this game's ${parameter.table.toUpperCase()}.IDS does not name ${name}`,
             );
             return 0;
         }
@@ -585,7 +591,7 @@ class Compiler {
 
     private integer(node: SyntaxNode): number {
         const text = node.text;
-        const value = /^-?0x/i.test(text) ? Number.parseInt(text, 16) : Number(text);
+        const value = bafIntegerValue(text);
         if (!Number.isFinite(value)) {
             this.fail(node, `${text} is not a number`);
             return 0;
@@ -640,11 +646,18 @@ class Compiler {
         const fields = zeros(targets.length);
         const slots: number[] = [];
         let text = "";
+        let region: number[] | undefined;
 
         // Each identifier wraps the layer inside it, so this walks from the outside in and stops at whatever
         // the innermost layer turns out to be - a field list, a script name, or nothing at all.
         for (let layer: SyntaxNode | undefined = node; layer !== undefined;) {
             switch (layer.type) {
+                case SyntaxType.RectArg: {
+                    // The outermost rectangle is the one the reference keeps.
+                    region ??= items(layer.childForFieldName("rect")!).map((side) => this.integer(side));
+                    layer = layer.childForFieldName("object")!;
+                    continue;
+                }
                 case SyntaxType.CallExpr: {
                     slots.push(this.identifier(layer, this.callName(layer)));
                     const inner: SyntaxNode | undefined = this.arguments(layer)[0];
@@ -658,7 +671,8 @@ class Compiler {
                     break;
                 }
                 case SyntaxType.Identifier:
-                    slots.push(this.identifier(layer, layer.text));
+                case SyntaxType.QuotedSymbol:
+                    slots.push(this.identifier(layer, symbolName(layer)));
                     break;
                 case SyntaxType.String:
                     // A script name, which is how most records name one specific creature.
@@ -685,6 +699,8 @@ class Compiler {
 
         return {
             ...this.emptyObject(),
+            // Only an engine whose objects have the field stores one; the BG family has nowhere to put it.
+            ...(region !== undefined && hasRegion(this.engine) ? { region } : {}),
             ints: [...fields.slice(0, targets.length - trailing), ...slots],
             string: text,
             ...(trailing > 0 ? { trailingInts: fields.slice(targets.length - trailing) } : {}),
@@ -702,10 +718,6 @@ class Compiler {
     /** `[EA.GENERAL...]`, one enumerated field per component, in the engine's own order. */
     private objectFields(node: SyntaxNode, fields: number[]): void {
         const components = items(node);
-        // An object with nothing set at all. No IDS table has a key for it - EA.IDS starts at 1 - so the
-        // name is recognised here, exactly as the decompiler supplies it.
-        if (components.length === 1 && components[0]!.text.toUpperCase() === ANYONE) return;
-
         const targets = OBJECT_TARGETS[this.engine];
         if (components.length > targets.length) {
             this.fail(node, `this game's objects take at most ${targets.length} fields, not ${components.length}`);
@@ -717,8 +729,13 @@ class Compiler {
                 fields[index] = this.integer(component);
                 continue;
             }
-            const value = this.field(table, component.text);
-            if (value === undefined) this.fail(component, `this game's ${table}.IDS does not name ${component.text}`);
+            const name = symbolName(component);
+            // ANYONE is the reference's own word for "unset" in any position of a bracket, as the decompiler
+            // prints an object with nothing set. No IDS table has a key for it - EA.IDS starts at 1 - so it is
+            // recognised here rather than looked up; the field stays 0.
+            if (name.toUpperCase() === ANYONE) continue;
+            const value = this.field(table, name);
+            if (value === undefined) this.fail(component, `this game's ${table}.IDS does not name ${name}`);
             else fields[index] = value;
         }
     }

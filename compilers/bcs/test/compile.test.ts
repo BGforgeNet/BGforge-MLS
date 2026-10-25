@@ -475,3 +475,93 @@ describe("compileBaf - objects that do not fit", () => {
         expect(refusal(script("See([NO_SUCH_ALLEGIANCE])"))).toContain("EA.IDS does not name");
     });
 });
+
+describe("compileBaf - spellings the reference reads", () => {
+    const objectOf = (source: string, engine: "bg" | "iwd" = "bg") =>
+        compileBaf(parser, source, COMPILE_SYMBOLS, engine).blocks[0]!.triggers[0]!.object;
+
+    test("ANYONE among other bracket components is the value 0, as the reference reads it", () => {
+        // RACE.IDS has no ANYONE row, so a table lookup would refuse this.
+        expect(objectOf(script("See([ENEMY.HUMANOID.ANYONE])")).ints.slice(0, 7)).toEqual([255, 1, 0, 0, 0, 0, 0]);
+        expect(objectOf(script("See([ENEMY.HUMANOID.anyone])")).ints.slice(0, 7)).toEqual([255, 1, 0, 0, 0, 0, 0]);
+    });
+
+    test("an object rectangle is stored where the engine has the field, and dropped where it has not", () => {
+        const plain = objectOf(script("See(Player1)"), "iwd");
+        const withRect = objectOf(script("See(Player1[1.2.3.4])"), "iwd");
+
+        expect(plain.region).toEqual([-1, -1, -1, -1]);
+        expect(withRect.region).toEqual([1, 2, 3, 4]);
+        expect(withRect.ints).toEqual(plain.ints);
+        expect(compile(script("See([ENEMY][1.2.3.4])"))).toBe(compile(script("See([ENEMY])")));
+    });
+
+    test("a rectangle after an object the decompiler printed compiles back", () => {
+        const source = script("See(NearestEnemyOf(Myself)[5.6.7.8])", ['Attack("Druid3"[1.2.3.4])']);
+
+        const compiled = compileBaf(parser, source, COMPILE_SYMBOLS, "iwd");
+
+        expect(compiled.blocks[0]!.triggers[0]!.object.region).toEqual([5, 6, 7, 8]);
+        expect(compiled.blocks[0]!.responses[0]!.actions[0]!.objects[1]!.region).toEqual([1, 2, 3, 4]);
+    });
+
+    test("an ActionOverride without its closing parenthesis compiles as the closed form", () => {
+        const open = script("False()", ["ActionOverride(Player1,Attack([ENEMY])", "Continue()"]);
+        const closed = script("False()", ["ActionOverride(Player1,Attack([ENEMY]))", "Continue()"]);
+
+        expect(compile(open)).toBe(compile(closed));
+    });
+
+    test("a TriggerOverride without its closing parenthesis is refused", () => {
+        // Unlike ActionOverride, whose closing parenthesis the reference does not require.
+        expect(problemsOf(() => compile(script("TriggerOverride(Player1,False()")))).toEqual(["missing )"]);
+    });
+
+    test("a hash integer and a negative hex integer are numbers", () => {
+        const second = (value: string) =>
+            compileBaf(parser, script(`HPGT([ANYONE],${value})`), COMPILE_SYMBOLS).blocks[0]!.triggers[0]!.ints[1];
+
+        expect(second("#5")).toBe(5);
+        expect(second("# 5")).toBe(5);
+        expect(second("-0x10")).toBe(-16);
+    });
+
+    test("a response list may be empty", () => {
+        const compiled = compileBaf(parser, "IF\n  False()\nTHEN\nEND\n", COMPILE_SYMBOLS);
+
+        expect(compiled.blocks[0]!.responses).toEqual([]);
+    });
+
+    test("a five-quote symbol names a table entry like the bare word", () => {
+        const quoted = script("False()", ['ApplySpell([ANYONE],"""""WIZARD_MAGIC_MISSILE""""")']);
+        const bare = script("False()", ["ApplySpell([ANYONE],WIZARD_MAGIC_MISSILE)"]);
+
+        expect(compile(quoted)).toBe(compile(bare));
+    });
+
+    test("a translated text with a sound is refused: only an install can resolve it", () => {
+        const problems = problemsOf(() => compile(script("False()", ["DisplayStringHead(Myself,~hi~ [SND])"])));
+
+        expect(problems).toEqual(["expected a number, not ~hi~ [SND]"]);
+    });
+
+    test("a string keeps what is between its delimiters, whatever the form", () => {
+        const stored = (argument: string) =>
+            compileBaf(parser, script("False()", [`PlaySound(${argument})`]), COMPILE_SYMBOLS).blocks[0]!.responses[0]!
+                .actions[0]!.strings[0];
+
+        expect(stored('"// x"')).toBe("// x");
+        expect(stored("~~~~~a ~ b~~~~~")).toBe("a ~ b");
+        expect(stored('"two\nlines"')).toBe("two\nlines");
+    });
+
+    test("a variable as a call name is refused, naming the variable", () => {
+        const problems = problemsOf(() => compile(script("False()", ["%RunAway%(Myself)"])));
+
+        expect(problems).toEqual(["this game's ACTION.IDS has no action called %RunAway%"]);
+    });
+
+    test("a variable in a value position is refused, naming the variable", () => {
+        expect(problemsOf(() => compile(script("OR(%n%)\n  False()\n  False()")))).toEqual(["%n% is not a number"]);
+    });
+});
