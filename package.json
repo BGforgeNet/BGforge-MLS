@@ -122,16 +122,16 @@
         "knip": "~6.25.0",
         "oxfmt": "0.65.0",
         "oxlint": "1.80.0",
-        "oxlint-tsgolint": "^7.0.2001",
+        "oxlint-tsgolint": "^7.0.2004",
         "playwright": "catalog:",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
         "svelte": "catalog:",
-        "svelte-check": "^4.7.6",
+        "svelte-check": "^4.7.7",
         "tree-sitter-cli": "catalog:",
-        "tsx": "^4.23.13",
+        "tsx": "^4.23.15",
         "typescript": "catalog:",
-        "vite": "^8.2.2",
+        "vite": "^8.3.4",
         "vitest": "catalog:",
         "yaml": "catalog:"
     },
@@ -908,5 +908,5 @@
     "engines": {
         "vscode": "^1.101.0"
     },
-    "packageManager": "pnpm@12.3.4"
+    "packageManager": "pnpm@12.14.0"
 }

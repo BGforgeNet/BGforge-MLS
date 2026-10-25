@@ -17,7 +17,7 @@ cd "$SCRIPT_DIR/.."
 source "$SCRIPT_DIR/tool-download-lib.sh"
 
 ACTIONLINT_VERSION="1.7.12"
-ZIZMOR_VERSION="1.30.0"
+ZIZMOR_VERSION="1.31.1"
 
 ACTIONLINT_CACHE_DIR=".dev/actionlint-${ACTIONLINT_VERSION}"
 ACTIONLINT_BIN="$ACTIONLINT_CACHE_DIR/actionlint"
@@ -36,10 +36,10 @@ declare -A ACTIONLINT_SHA256=(
 )
 declare -A ZIZMOR_SHA256=(
     # keys quoted so shfmt doesn't read the hyphens as arithmetic and reformat them
-    ["x86_64-unknown-linux-gnu"]="ec8c95cd800845abb9bbc5f377ec7c57d2eb8e2386a00a201d3a74ee4092e5ed"
-    ["aarch64-unknown-linux-gnu"]="018a024d6b6d09733b07f6ef42838d984c23ec04bc9b2acd55f7d67826aeafe5"
-    ["x86_64-apple-darwin"]="343c85c8f709edf14bf3c8781d53574975ecbb2d23c80ed1eab4932ab0a72343"
-    ["aarch64-apple-darwin"]="c9c5d83730efb86f2cd71b487605c00a4d63903e4f9458485ed5eac3b1924ab1"
+    ["x86_64-unknown-linux-gnu"]="d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99"
+    ["aarch64-unknown-linux-gnu"]="37eebbd5762a44f262d94875431b14a6d2402991e90a685113ea97b8b41be833"
+    ["x86_64-apple-darwin"]="72ae63bb85b67229c06242f04195cb43927e9fab5f43803c6434dc701a517d61"
+    ["aarch64-apple-darwin"]="ad5aa633cd56215b11e6c51d51f90c7e6b22904a75047d1215abbd422f61d698"
 )
 
 os="$(uname -s)"

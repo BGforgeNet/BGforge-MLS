@@ -30,13 +30,13 @@ echo "lint-shell.sh: using ${shellcheck_cmd[0]}"
 # shfmt isn't preinstalled on GitHub-hosted runners (shellcheck is), so fetch a pinned,
 # checksum-verified binary when it's absent - the same version the devbox ships, so a
 # local pass and a CI pass format-agree. mvdan/sh publishes no checksums manifest, so the
-# hashes are pinned from the sha256 of the immutable v3.14.0 release binaries.
-SHFMT_VERSION="3.14.0"
+# hashes are pinned from the sha256 of the immutable v3.14.1 release binaries.
+SHFMT_VERSION="3.14.1"
 SHFMT_CACHE_DIR=".dev/shfmt-${SHFMT_VERSION}"
 SHFMT_BIN="$SHFMT_CACHE_DIR/shfmt"
 declare -A SHFMT_SHA256=(
-    [linux_amd64]="fe42021c7272ef2d67ea36cbc3031683c625d0badec733ef3a57b567246a0b66"
-    [linux_arm64]="8029959a945b5c6f2bc92ce53fca5cf0384c811cc0884b25b196a093a005657a"
+    [linux_amd64]="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"
+    [linux_arm64]="5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489"
 )
 
 shfmt_cmd=(shfmt)
