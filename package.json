@@ -107,7 +107,7 @@
     },
     "devDependencies": {
         "@bgforge/shared": "workspace:*",
-        "@oxlint/plugins": "1.80.0",
+        "@oxlint/plugins": "1.88.0",
         "@stryker-mutator/core": "^9.6.1",
         "@stryker-mutator/typescript-checker": "^9.6.1",
         "@stryker-mutator/vitest-runner": "^9.6.1",
@@ -121,7 +121,7 @@
         "jsonc-parser": "^3.3.1",
         "knip": "~6.25.0",
         "oxfmt": "0.65.0",
-        "oxlint": "1.80.0",
+        "oxlint": "1.88.0",
         "oxlint-tsgolint": "^7.0.2004",
         "playwright": "catalog:",
         "remark-cli": "^12.0.1",
