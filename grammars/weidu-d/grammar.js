@@ -554,13 +554,11 @@ export default grammar({
         // or a tra/tlk/AT reference; or `!strref text`, which forces the text into that strref.
         _text: ($) => choice($._text_string, $.compound_text, $.tra_ref, $.tlk_ref, $.at_var_ref, $.forced_text),
 
-        // A text written out: one string or a `^`-joined run. %var% belongs here because WeiDU lexes a %...% run
-        // as a plain string token, so a variable stands wherever a string does - a say text among them
-        // (`CHAIN ... %kivan17%`, which OUTER_SPRINT sets to a strref). It substitutes a value, not structure.
-        _text_string: ($) => choice($._string_value, $.variable_ref, $.concat_string),
+        // A text written out: one string or a `^`-joined run, a %var% included (see `_string_value`), as in
+        // `CHAIN ... %kivan17%`, which OUTER_SPRINT sets to a strref.
+        _text_string: ($) => choice($._string_value, $.concat_string),
 
-        concat_string: ($) =>
-            seq(choice($._string_value, $.variable_ref), repeat1(seq("^", choice($._string_value, $.variable_ref)))),
+        concat_string: ($) => seq($._string_value, repeat1(seq("^", $._string_value))),
 
         compound_text: ($) =>
             choice(
@@ -583,9 +581,11 @@ export default grammar({
         string: ($) => choice($.tilde_string, $.double_string, $.five_tilde_string),
 
         // A slot WeiDU fills with a plain string: a trigger, an action, a text, a patch action's old and new text.
-        // WeiDU lexes a bare word as the same string token as a quoted one, so a bare word is a string here (a
-        // keyword is not: it is reserved). Name and label slots take identifiers on their own terms instead.
-        _string_value: ($) => choice($.string, alias($.identifier, $.string)),
+        // WeiDU lexes a bare word and a %...% run as the same string token as a quoted one, so both are strings here
+        // (a keyword is not: it is reserved). A %var% substitutes the whole value, a trigger or an action included;
+        // only a %var% standing for structure, such as a whole transition, has no slot. Name and label slots take
+        // identifiers and variables on their own terms instead.
+        _string_value: ($) => choice($.string, alias($.identifier, $.string), $.variable_ref),
 
         tilde_string: ($) => seq("~", optional($.tilde_content), "~"),
 

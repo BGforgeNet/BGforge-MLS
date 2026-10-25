@@ -70,6 +70,17 @@ export function serializeSayValue(state: DialogState): string {
     return [state.text, ...state.sayTexts.slice(1)].map((t) => serializeTextValue(t)).join(" = ");
 }
 
+/**
+ * A trigger or action string. One that is a lone `%var%` is written bare, as WeiDU code writes a variable standing
+ * for the whole string; anything else is tilde-wrapped. As with `@N` above, the model cannot tell `%x%` from a
+ * literal `~%x%~`, so the common case wins, and the locality skip keeps unedited states byte-for-byte.
+ */
+const LONE_VARIABLE = /^%[^%\s]*%$/;
+
+export function serializeCodeValue(code: string): string {
+    return LONE_VARIABLE.test(code) ? code : `~${code}~`;
+}
+
 /** A bare state label: the D grammar's word token, generated from the grammar since the webview has no parser. */
 const BARE_LABEL = new RegExp(`^(?:${WORD_PATTERN})$`);
 
@@ -88,7 +99,7 @@ export function serializeState(state: DialogState): string[] {
     const weight = state.weight != null ? `WEIGHT #${state.weight} ` : "";
     const trigger = state.trigger ?? "";
     lines.push(
-        `  IF ${weight}~${trigger}~ THEN BEGIN ${serializeLabel(state.id)}`,
+        `  IF ${weight}${serializeCodeValue(trigger)} THEN BEGIN ${serializeLabel(state.id)}`,
         `    SAY ${serializeSayValue(state)}`,
     );
 
@@ -111,9 +122,9 @@ export function serializeChoice(choice: DialogChoice): string {
         // parser reads it back from a transition_short (see parseTransitionShort), so the
         // condition round-trips.
         const cond = choice.condition ?? "";
-        parts.push(cond === "" ? "++" : `+ ~${cond}~ +`, serializeTextValue(choice.text));
+        parts.push(cond === "" ? "++" : `+ ${serializeCodeValue(cond)} +`, serializeTextValue(choice.text));
         if (choice.action != null) {
-            parts.push(`DO ~${choice.action}~`);
+            parts.push(`DO ${serializeCodeValue(choice.action)}`);
         }
         parts.push(...(choice.verbatimFeatures ?? []), serializeNextShort(choice.target));
         return parts.join(" ");
@@ -122,9 +133,9 @@ export function serializeChoice(choice: DialogChoice): string {
     // No reply text -> a bare transition (direct goto/call/exit). Verbose IF/THEN form,
     // no REPLY keyword.
     const condition = choice.condition ?? "";
-    parts.push(`IF ~${condition}~ THEN`);
+    parts.push(`IF ${serializeCodeValue(condition)} THEN`);
     if (choice.action != null) {
-        parts.push(`DO ~${choice.action}~`);
+        parts.push(`DO ${serializeCodeValue(choice.action)}`);
     }
     parts.push(...(choice.verbatimFeatures ?? []), serializeTarget(choice.target));
 

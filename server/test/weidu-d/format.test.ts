@@ -278,6 +278,20 @@ describe("weidu-d/format/core", () => {
             );
         });
 
+        it("keeps a %var% trigger and action as written", () => {
+            const input =
+                "BEGIN d\nIF %t% THEN BEGIN s SAY ~a text long enough to push this state past the line limit of " +
+                "the formatter~ IF %c% THEN DO %a% EXIT END\n";
+            const output = format(input);
+            expect(output).toBe(
+                "BEGIN d\n" +
+                    "    IF %t% s SAY ~a text long enough to push this state past the line limit of the formatter~\n" +
+                    "        IF %c% THEN DO %a% EXIT\n" +
+                    "    END\n",
+            );
+            expect(format(output)).toBe(output);
+        });
+
         it("is idempotent on them", () => {
             const first = format(longState);
             expect(format(first)).toBe(first);

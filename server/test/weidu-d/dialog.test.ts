@@ -709,6 +709,13 @@ CHAIN DIALOG ~c1~ ~x~ EXTERN OTHER ~s9~
             ]);
         });
 
+        it("reads a %var% trigger and action as the variable they name", () => {
+            const result = parseDDialog("BEGIN DIALOG\nIF %t% s SAY ~x~\n  IF %c% THEN DO %a% EXIT\nEND\n");
+
+            expect(result.states.map((s) => [s.label, s.trigger])).toEqual([["s", "%t%"]]);
+            expect(result.states[0]!.transitions.map((t) => [t.trigger, t.action])).toEqual([["%c%", "%a%"]]);
+        });
+
         it("CHAIN with BRANCH transitions (parseChainBranch branch)", () => {
             // BRANCH inside a CHAIN adds conditional speaker transitions.
             // This exercises parseChainBranch (lines 436-444 in dialog.ts).

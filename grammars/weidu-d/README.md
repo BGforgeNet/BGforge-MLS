@@ -17,8 +17,8 @@ D files define Infinity Engine dialogues for WeiDU modding.
 | Concatenation | `"a" ^ "b"`      | Supported in text slots                         |
 | Bare word     | `text`           | Supported wherever WeiDU takes a string         |
 
-A bare word is the same string token as a quoted one, so a trigger, an action or a text may be written without
-quotes (a keyword may not). An integer slot (`FLAGS`, the `BEGIN` non-pausing flag, a transition-number list, the
+A bare word or a `%var%` is the same string token as a quoted one, so a trigger, an action or a text may be written
+without quotes (a keyword may not). A `%var%` standing for structure, such as a whole transition, is an error. An integer slot (`FLAGS`, the `BEGIN` non-pausing flag, a transition-number list, the
 `ADD_TRANS_TRIGGER ... DO` list) takes a number bare, in hex, octal or binary, or quoted (`~-1~`), and nothing else.
 
 ### Keywords

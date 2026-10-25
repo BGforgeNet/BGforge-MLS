@@ -344,6 +344,20 @@ const CASES: Case[] = [
     { name: "bare-word ADD_TRANS_ACTION action", code: file("ADD_TRANS_ACTION ~d~ BEGIN 0 END BEGIN 0 END act") },
     { name: "bare-word ALTER_TRANS value", code: file("ALTER_TRANS ~d~ BEGIN 0 END BEGIN 0 END BEGIN TRIGGER x END") },
 
+    // A %var% is a string wherever a string is, so it may stand for a whole trigger or action string (a value);
+    // only a %var% standing for structure, such as a whole transition, is rejected.
+    { name: "%var% state trigger", code: file("BEGIN ~d~\nIF %t% THEN BEGIN s SAY ~x~ IF ~~ THEN EXIT END") },
+    { name: "%var% transition trigger", code: inState("IF %t% THEN EXIT") },
+    { name: "%var% short transition trigger", code: inState("+ %t% + ~r~ EXIT") },
+    { name: "%var% DO action", code: inState("IF ~~ THEN DO %a% EXIT") },
+    { name: "%var% CHAIN entry trigger", code: file("CHAIN IF %t% THEN ~a~ st\n~m~\nEXIT") },
+    { name: "%var% CHAIN line condition and action", code: file("CHAIN ~a~ st\n~m~ = IF %c% THEN ~n~ DO %a%\nEXIT") },
+    { name: "%var% BRANCH trigger", code: file("CHAIN ~a~ st\n~m~\nBRANCH %t% BEGIN\n== ~b~ ~x~\nEND\nEXIT") },
+    { name: "%var% A_S_T trigger and guard", code: file("ADD_STATE_TRIGGER ~d~ 0 %t% IF %c%") },
+    { name: "%var% REPLACE_TRIGGER_TEXT texts", code: file("REPLACE_TRIGGER_TEXT ~d~ %o% %n%") },
+    { name: "%var% ADD_TRANS_ACTION action", code: file("ADD_TRANS_ACTION ~d~ BEGIN 0 END BEGIN 0 END %a%") },
+    { name: "%var% ALTER_TRANS value", code: file("ALTER_TRANS ~d~ BEGIN 0 END BEGIN 0 END BEGIN TRIGGER %x% END") },
+
     // An integer slot (FLAGS, the non-pausing flag, a transition-number list) takes any string WeiDU can convert
     // to an integer: bare, in hex, octal or binary, with `_` separators, or quoted with a sign. Anything else is
     // an error there.

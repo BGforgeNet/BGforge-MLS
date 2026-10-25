@@ -678,6 +678,18 @@ describe("applyDDialogEdits - stale-range edited model (mid-edit reconcile seque
         );
     });
 
+    it("writes a %var% trigger and action back as the bare variable when it re-serializes them", () => {
+        const source = "BEGIN ~d~\nIF %t% THEN BEGIN s\n  SAY ~x~\n  IF %c% THEN DO %a% EXIT\nEND\n";
+        const original = modelFromD(parseDDialog(source));
+        const edited = structuredClone(original);
+        edited.roots[0]!.states[0]!.id = "s2";
+
+        const out = applyDDialogEdits(source, edited, original);
+
+        expect(out).toContain("IF %t% THEN BEGIN s2");
+        expect(out).toContain("IF %c% THEN DO %a% EXIT");
+    });
+
     it("keeps a transition's FLAGS and journal entries when it re-serializes the whole state", () => {
         const source = [
             "BEGIN ~d~",

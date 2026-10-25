@@ -19,7 +19,13 @@
  */
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
-import { serializeChoice, serializeLabel, serializeSayValue, serializeState } from "./dialog-d-serialize";
+import {
+    serializeChoice,
+    serializeCodeValue,
+    serializeLabel,
+    serializeSayValue,
+    serializeState,
+} from "./dialog-d-serialize";
 import { applySplices, type SpliceOp } from "./dialog-splice";
 
 function targetsEqual(a: DialogTarget, b: DialogTarget): boolean {
@@ -109,7 +115,7 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
         ops.push({
             start: original.triggerRange.start,
             end: original.triggerRange.end,
-            replacement: `~${edited.trigger ?? ""}~`,
+            replacement: serializeCodeValue(edited.trigger ?? ""),
         });
     }
     // Splice each changed transition over its own span. With equal counts this also covers
