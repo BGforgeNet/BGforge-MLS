@@ -110,6 +110,65 @@ describe("fallout-ssl TextMate syntax", () => {
         expect(factorScopes).toContain("variable.parameter.fallout-ssl");
     });
 
+    // The forms the language has that a corpus script rarely writes, each colored as the construct it is.
+    it("colors a raw string whole, its @ included", () => {
+        const text = 'x := @"C:\\dir\\ file" + rest;';
+        expect(getTokenScopes(grammar, text, 0, "@")).toContain("string.quoted.double.fallout-ssl");
+        expect(getTokenScopes(grammar, text, 0, "file")).toContain("string.quoted.double.fallout-ssl");
+        expect(getTokenScopes(grammar, text, 0, "rest")).not.toContain("string.quoted.double.fallout-ssl");
+    });
+
+    it("ends a string at an unescaped quote only", () => {
+        const text = 'x := "a\\"b" + rest;';
+        expect(getTokenScopes(grammar, text, 0, "b")).toContain("string.quoted.double.fallout-ssl");
+        expect(getTokenScopes(grammar, text, 0, "rest")).not.toContain("string.quoted.double.fallout-ssl");
+    });
+
+    it("ends an unclosed string at its line end", () => {
+        const text = ['x := "abc', "rest := 1;"].join("\n");
+        expect(getTokenScopes(grammar, text, 1, "rest")).not.toContain("string.quoted.double.fallout-ssl");
+    });
+
+    it("continues a string past a backslash at its line end", () => {
+        const text = ['x := "abc\\', 'def";'].join("\n");
+        expect(getTokenScopes(grammar, text, 1, "def")).toContain("string.quoted.double.fallout-ssl");
+    });
+
+    it.each(["0XFF", "0xff", "5.", "3.25", ".5"])("colors the number %s whole", (number) => {
+        expect(getTokenScopes(grammar, `x := ${number};`, 0, number)).toContain("constant.numeric.fallout-ssl");
+    });
+
+    it("does not take the begin of an import procedure block for a procedure name", () => {
+        const text = ["import procedure begin", "   ext(variable a);", "end"].join("\n");
+        expect(getTokenScopes(grammar, text, 0, "begin")).not.toContain("entity.name.function.fallout-ssl");
+        expect(getTokenScopes(grammar, text, 0, "procedure")).toContain("support.type.fallout-ssl.procedure");
+    });
+
+    it("colors an imported procedure's name", () => {
+        expect(getTokenScopes(grammar, "import procedure ext(variable a);", 0, "ext")).toContain(
+            "entity.name.function.fallout-ssl",
+        );
+    });
+
+    it.each([
+        ["a plain call", "call target;"],
+        ["a conditional call", "call target when x > 0;"],
+        ["a timed call", "call target in 10;"],
+    ])("colors the procedure of %s", (_name, text) => {
+        expect(getTokenScopes(grammar, text, 0, "target")).toContain("entity.name.function.fallout-ssl");
+        expect(getTokenScopes(grammar, text, 0, "call")).toContain("keyword.control.core.fallout-ssl");
+    });
+
+    it("colors a string as a call target", () => {
+        expect(getTokenScopes(grammar, 'call "target";', 0, "target")).toContain("string.quoted.double.fallout-ssl");
+    });
+
+    it("colors the keywords of a for loop without parentheses and of an else after a macro", () => {
+        const text = ["for i := 0; i < 3; i++; begin", "end", "check_forced_dialog", "else begin", "end"].join("\n");
+        expect(getTokenScopes(grammar, text, 0, "for")).toContain("keyword.control.core.fallout-ssl");
+        expect(getTokenScopes(grammar, text, 3, "else")).toContain("keyword.control.core.fallout-ssl");
+    });
+
     it("colors tooltip procedure keyword as procedure type, not control keyword", () => {
         const text = "procedure map_exit_p_proc";
         const scopes = getTokenScopes(tooltipGrammar, text, 0, "procedure");

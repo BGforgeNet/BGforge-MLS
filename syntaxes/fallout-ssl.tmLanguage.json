@@ -10,6 +10,9 @@
       "include": "#comments"
     },
     {
+      "include": "#call-statement"
+    },
+    {
       "include": "#keywords"
     },
     {
@@ -1483,33 +1486,27 @@
               "name": "entity.name.function.fallout-ssl"
             }
           },
-          "match": "\\b(?i)(procedure)\\b[[:blank:]]+(\\w+)\\b"
+          "match": "\\b(?i)(procedure)\\b[[:blank:]]+(?!(?i:begin)\\b)(\\w+)\\b"
+        },
+        {
+          "match": "\\b(?i)(procedure)\\b",
+          "name": "support.type.fallout-ssl.procedure"
         }
       ]
     },
+    "call-statement": {
+      "match": "\\b(?i)(call)\\b[[:blank:]]+(\\w+)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.core.fallout-ssl"
+        },
+        "2": {
+          "name": "entity.name.function.fallout-ssl"
+        }
+      }
+    },
     "function-invocation": {
       "patterns": [
-        {
-          "match": "\\b(?i)(call)\\b[[:blank:]]+(\\w+)[[:blank:]]*(\\(.*\\))??(;)",
-          "captures": {
-            "1": {
-              "name": "keyword.control.fallout-ssl"
-            },
-            "2": {
-              "name": "entity.name.function.fallout-ssl"
-            },
-            "3": {
-              "patterns": [
-                {
-                  "include": "$self"
-                }
-              ]
-            },
-            "4": {
-              "name": "keyword.control.fallout-ssl"
-            }
-          }
-        },
         {
           "include": "#fallout-base-functions"
         },
@@ -3437,12 +3434,12 @@
       ]
     },
     "strings": {
-      "begin": "\"",
-      "end": "\"",
+      "begin": "@?\"",
+      "end": "\"|(?<![\\\\\\n])$",
       "name": "string.quoted.double.fallout-ssl",
       "patterns": [
         {
-          "match": ".",
+          "match": "\\\\.",
           "name": "string.quoted.double.fallout-ssl"
         }
       ]
@@ -3470,7 +3467,7 @@
     "numbers": {
       "patterns": [
         {
-          "match": "\\b(([0-9]+)|(0x[0-9a-fA-F]+))\\b",
+          "match": "\\b0[xX][0-9a-fA-F]+\\b|\\b[0-9]+\\.[0-9]*|(?<![\\w.])\\.[0-9]+\\b|\\b[0-9]+\\b",
           "name": "constant.numeric.fallout-ssl"
         }
       ]

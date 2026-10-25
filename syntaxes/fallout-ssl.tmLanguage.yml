@@ -4,6 +4,8 @@ scopeName: source.fallout-ssl
 patterns:
   - include: '#docstring'
   - include: '#comments'
+  # Ahead of #keywords, which would otherwise take the `call` and leave its procedure uncolored.
+  - include: '#call-statement'
   - include: '#keywords'
   - include: '#function-invocation'
   - include: '#variable'
@@ -417,21 +419,21 @@ repository:
             name: support.type.fallout-ssl.procedure
           '2':
             name: entity.name.function.fallout-ssl
-        match: \b(?i)(procedure)\b[[:blank:]]+(\w+)\b
+        # `import procedure begin` opens a block of declarations: its `begin` is no name.
+        match: \b(?i)(procedure)\b[[:blank:]]+(?!(?i:begin)\b)(\w+)\b
+      - match: \b(?i)(procedure)\b
+        name: support.type.fallout-ssl.procedure
+  # `call foo`, whatever follows: arguments, `in <delay>`, `when <condition>` or the `;`. A string target is left to
+  # #strings.
+  call-statement:
+    match: \b(?i)(call)\b[[:blank:]]+(\w+)
+    captures:
+      '1':
+        name: keyword.control.core.fallout-ssl
+      '2':
+        name: entity.name.function.fallout-ssl
   function-invocation:
     patterns:
-      - match: \b(?i)(call)\b[[:blank:]]+(\w+)[[:blank:]]*(\(.*\))??(;)
-        captures:
-          '1':
-            name: keyword.control.fallout-ssl
-          '2':
-            name: entity.name.function.fallout-ssl
-          '3':
-            patterns:
-              - include: $self
-          '4':
-            name: keyword.control.fallout-ssl
-
       - include: '#fallout-base-functions'
       - include: '#sfall-functions'
 
@@ -974,12 +976,16 @@ repository:
       - match: \b(?i)(write_int)\b
       - match: \b(?i)(write_short)\b
       - match: \b(?i)(write_string)\b
+  # `@"..."` is a raw string, which still ends where an escaped one would. A literal ends at its line end unless a
+  # backslash continues it, so an unclosed quote colors one line rather than the rest of the file.
   strings:
-    begin: '"'
-    end: '"'
+    begin: '@?"'
+    # The tokenizer hands each line over with its newline, which `$` also matches after: hence the lookbehind on
+    # both the backslash and the newline.
+    end: '"|(?<![\\\n])$'
     name: string.quoted.double.fallout-ssl
     patterns:
-      - match: .
+      - match: \\.
   # A character constant is one character or one escape - matched whole, so an apostrophe in prose cannot
   # open a run that swallows the rest of the line.
   character:
@@ -995,7 +1001,8 @@ repository:
         name: keyword.control.fallout-ssl
   numbers:
     patterns:
-      - match: \b(([0-9]+)|(0x[0-9a-fA-F]+))\b
+      # Hex in either case, and a float with digits on either side of its point (`5.`, `.5`).
+      - match: \b0[xX][0-9a-fA-F]+\b|\b[0-9]+\.[0-9]*|(?<![\w.])\.[0-9]+\b|\b[0-9]+\b
         name: constant.numeric.fallout-ssl
   hooks:
     # Auto-generated from fallout-ssl-sfall.yml - do not edit manually.
