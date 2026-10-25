@@ -1,5 +1,5 @@
 /**
- * The `.tra` entry index (`server/src/translation/entry-readers.ts`) restates the TRA grammar's rules in a
+ * The `.tra` entry index (`shared/translation-entry-readers.ts`) restates the TRA grammar's rules in a
  * single-pass scanner, because the index is built before any parser is available. This pins the two together:
  * for every entry the grammar reads without error, the index holds the same entry with the same text, and the
  * index holds nothing the grammar does not read as an entry.
@@ -13,7 +13,7 @@ import * as fg from "fast-glob";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { beforeAll, describe, expect, it } from "vitest";
 import * as weiduTra from "@bgforge/shared/parsers/weidu-tra";
-import { readTraEntries } from "../../src/translation/entry-readers";
+import { readTraEntries } from "@bgforge/shared/translation-entry-readers";
 import { IE_FIXTURES } from "./test-helpers";
 
 // The TRA grammar generates no node-type enum (no provider keys on its nodes), so the names are spelled here.

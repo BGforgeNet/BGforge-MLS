@@ -10,7 +10,7 @@ import type { Hover, Position } from "vscode-languageserver/node";
 import { CONSUMER_EXTENSIONS_MSG, CONSUMER_EXTENSIONS_TRA } from "../core/languages";
 import { REGEX_MSG_HOVER, REGEX_TRANSPILER_TRA_HOVER } from "../core/patterns";
 import { stringPreview } from "../shared/string-preview";
-import { readMsgEntries, readTraEntries } from "./entry-readers";
+import { readMsgEntries, readTraEntries } from "@bgforge/shared/translation-entry-readers";
 
 export interface TraEntry {
     source: string;
@@ -55,7 +55,7 @@ function lineOf(starts: readonly number[], offset: number): number {
 
 /**
  * Parses text and returns a map of index => entry. A `.tra` file is read as the installer reads it and a
- * `.msg` file as the game loads it (see entry-readers.ts), so what is indexed is what the game would see. Where
+ * `.msg` file as the game loads it (see shared/translation-entry-readers.ts), so what is indexed is what the game would see. Where
  * two entries share a number the last one wins, as in the game.
  */
 export function parseEntries(text: string, traType: TraExt): TraEntries {

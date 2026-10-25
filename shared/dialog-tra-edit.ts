@@ -7,20 +7,48 @@
  * is the `.tra` counterpart of the surgical `.d` edit in `dialog-d-edit.ts`.
  *
  * `rewriteTraEntries` edits only entries that already exist in the `.tra`; `appendTraEntries` adds the
- * brand-new ids the D-family allocator mints for editor-authored text (a new option or state). The entry
- * value grammar matches the parser's (`@N = ~...~`, value is everything up to the next tilde, newlines
- * included).
+ * brand-new ids the D-family allocator mints for editor-authored text (a new option or state). Entries are
+ * found by the same reader as the translation index (`translation-entry-readers.ts`), so an entry the
+ * installer would not read - commented out, or written inside a string - is neither edited nor counted
+ * as present, and a value of any string form is edited.
  */
 import * as path from "path";
+import { readMsgEntries, readTraEntries, type RawEntry } from "./translation-entry-readers";
+
+/** A tra delimiter pair that does not occur in `text`, preferring the one the replaced value used. */
+function traLiteral(text: string, preferred: "~" | '"' | "%" | "~~~~~"): string {
+    const delimiter = [preferred, "~", '"', "%", "~~~~~"].find((open) => !text.includes(open)) ?? "~~~~~";
+    return `${delimiter}${text}${delimiter}`;
+}
+
+/** The delimiter a tra entry's value is written with, when it is a single string. */
+function valueDelimiter(traText: string, entry: RawEntry): "~" | '"' | "%" | "~~~~~" {
+    if (traText.startsWith("~~~~~", entry.valueStart)) return "~~~~~";
+    const first = traText[entry.valueStart];
+    return first === '"' || first === "%" ? first : "~";
+}
+
+/** Replace the `range` of each entry that has a message, from the end so earlier offsets stay valid. */
+function applyEdits(text: string, edits: Array<{ start: number; end: number; with: string }>): string {
+    let out = text;
+    for (const edit of edits.toSorted((a, b) => b.start - a.start)) {
+        out = out.slice(0, edit.start) + edit.with + out.slice(edit.end);
+    }
+    return out;
+}
 
 export function rewriteTraEntries(traText: string, messages: Record<string, string>): string {
-    return traText.replaceAll(
-        /@(\d+)(\s*=\s*~)([^~]*)(~)/g,
-        (whole, num: string, sep: string, _old: string, close: string) => {
-            const next = messages[num];
-            return next === undefined ? whole : `@${num}${sep}${next}${close}`;
-        },
-    );
+    const edits: Array<{ start: number; end: number; with: string }> = [];
+    for (const entry of readTraEntries(traText)) {
+        const next = Object.hasOwn(messages, entry.key) ? messages[entry.key] : undefined;
+        if (next === undefined) continue;
+        edits.push({
+            start: entry.valueStart,
+            end: entry.valueEnd,
+            with: traLiteral(next, valueDelimiter(traText, entry)),
+        });
+    }
+    return applyEdits(traText, edits);
 }
 
 /**
@@ -28,18 +56,17 @@ export function rewriteTraEntries(traText: string, messages: Record<string, stri
  *
  * The `.msg` counterpart of `rewriteTraEntries`: replace only the text group of an entry whose
  * id is in `messages`, preserving the id, the sound field, the brace spacing, and every untouched
- * byte. The entry grammar matches the parser's (`{(\d+)}\s*{\w*}\s*{([^}]*)}`), so the rewriter
- * acts on exactly the entries the editor indexed. A `.tra`-format rewriter never matches a `.msg`
+ * byte. Entries are the ones the game loads (the shared reader), wherever they sit in the file, so the
+ * rewriter acts on exactly the entries the editor indexed. A `.tra`-format rewriter never matches a `.msg`
  * line, so the two formats need separate writers - using the wrong one silently no-ops the save.
  */
 export function rewriteMsgEntries(msgText: string, messages: Record<string, string>): string {
-    return msgText.replaceAll(
-        /({(\d+)}\s*{\w*}\s*{)([^}]*)(})/g,
-        (whole, prefix: string, num: string, _old: string, close: string) => {
-            const next = messages[num];
-            return next === undefined ? whole : `${prefix}${next}${close}`;
-        },
-    );
+    const edits: Array<{ start: number; end: number; with: string }> = [];
+    for (const entry of readMsgEntries(msgText)) {
+        const next = Object.hasOwn(messages, entry.key) ? messages[entry.key] : undefined;
+        if (next !== undefined) edits.push({ start: entry.valueStart, end: entry.valueEnd, with: next });
+    }
+    return applyEdits(msgText, edits);
 }
 
 /**
@@ -49,8 +76,7 @@ export function rewriteMsgEntries(msgText: string, messages: Record<string, stri
  * order given. Ensures the file ends with a newline before appending so entries stay one-per-line.
  */
 export function appendMsgEntries(msgText: string, entries: Record<string, string>): string {
-    const present = new Set<string>();
-    for (const m of msgText.matchAll(/{(\d+)}\s*{\w*}\s*{[^}]*}/g)) present.add(m[1]!);
+    const present = new Set(readMsgEntries(msgText).map((entry) => entry.key));
     const additions = Object.entries(entries).filter(([id]) => !present.has(id));
     if (additions.length === 0) return msgText;
     const base = msgText.length > 0 && !msgText.endsWith("\n") ? msgText + "\n" : msgText;
@@ -66,12 +92,11 @@ export function appendMsgEntries(msgText: string, entries: Record<string, string
  * so entries stay one-per-line.
  */
 export function appendTraEntries(traText: string, entries: Record<string, string>): string {
-    const present = new Set<string>();
-    for (const m of traText.matchAll(/@(\d+)\s*=\s*~/g)) present.add(m[1]!);
+    const present = new Set(readTraEntries(traText).map((entry) => entry.key));
     const additions = Object.entries(entries).filter(([id]) => !present.has(id));
     if (additions.length === 0) return traText;
     const base = traText.length > 0 && !traText.endsWith("\n") ? traText + "\n" : traText;
-    return base + additions.map(([id, text]) => `@${id} = ~${text}~\n`).join("");
+    return base + additions.map(([id, text]) => `@${id} = ${traLiteral(text, "~")}\n`).join("");
 }
 
 /**

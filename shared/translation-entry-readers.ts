@@ -5,6 +5,8 @@
  * whole, so an entry-looking text inside a string or a comment is no entry - and a `.msg` file the way the game
  * loads it. Both are single-pass scanners, because the index is built for every translation file of a project
  * on the main thread at startup, and a parse tree is not available there (the parsers load after it).
+ * The translation index and the dialog editor's save path (`dialog-tra-edit.ts`) both read through here, so
+ * a file has one reading.
  *
  * The TRA reader restates the rules of the TRA grammar (`grammars/weidu-tra`, including the end it gives an
  * unclosed string or comment), and the MSG reader those of the MSG grammar and the game's loader. The grammars
@@ -23,6 +25,12 @@ export interface RawEntry {
     readonly start: number;
     /** Offset just past the entry's last character. */
     readonly end: number;
+    /**
+     * The range an edit of the entry's text replaces. For a tra entry the whole male value, delimiters and any
+     * `^` pieces included; for a msg entry the content of the text group, braces excluded.
+     */
+    readonly valueStart: number;
+    readonly valueEnd: number;
     /** Set on a tra entry whose value is `@N`: the key of the entry whose text it takes (see `readTraEntries`). */
     readonly refersTo?: string;
 }
@@ -83,7 +91,14 @@ export function readMsgEntries(text: string): RawEntry[] {
             pos = start + 1;
             continue;
         }
-        entries.push({ key, source: body.value, start, end: body.end });
+        entries.push({
+            key,
+            source: body.value,
+            start,
+            end: body.end,
+            valueStart: body.end - 1 - body.value.length,
+            valueEnd: body.end - 1,
+        });
         pos = body.end;
     }
 }
@@ -282,15 +297,21 @@ export function readTraEntries(text: string): RawEntry[] {
         } else if (char === "@") {
             const number = readEntryNumber(text, i, true);
             const equals = number === undefined ? -1 : skipTrivia(text, number.end);
-            const value =
-                number !== undefined && text[equals] === "="
-                    ? readValue(text, skipTrivia(text, equals + 1))
-                    : undefined;
+            const valueStart = text[equals] === "=" ? skipTrivia(text, equals + 1) : -1;
+            const value = number !== undefined && valueStart !== -1 ? readValue(text, valueStart) : undefined;
             if (number === undefined || value === undefined) {
                 i++;
                 continue;
             }
-            entries.push({ key: number.key, source: value.source, start: i, end: value.end, refersTo: value.refersTo });
+            entries.push({
+                key: number.key,
+                source: value.source,
+                start: i,
+                end: value.end,
+                valueStart,
+                valueEnd: value.end,
+                refersTo: value.refersTo,
+            });
             i = value.end;
         } else if (char === "[") {
             // A sound: it holds no entries, and a `~` or `%` in it is not a string. One never closed ends at the line.
