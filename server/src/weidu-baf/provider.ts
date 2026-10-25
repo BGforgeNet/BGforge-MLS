@@ -39,6 +39,11 @@ import { createSelectionRangesProvider } from "../shared/selection-ranges";
 import { SyntaxType } from "./syntax-type";
 import { findStrRefSites, type StrRefSite } from "../ie-resources/strref-sites";
 
+/** The generated map keyed lower-case: the reference resolves an action's name without regard to case. */
+const STRREF_PARAMS_BY_LOWER_NAME: ReadonlyMap<string, readonly number[]> = new Map(
+    [...STRREF_PARAMS].map(([name, indexes]) => [name.toLowerCase(), indexes]),
+);
+
 /** Comment node types in the BAF grammar. */
 const BAF_COMMENT_TYPES: ReadonlySet<string> = new Set([SyntaxType.Comment, SyntaxType.LineComment]);
 
@@ -95,7 +100,7 @@ class WeiduBafProvider
     strRefs(text: string): StrRefSite[] {
         const tree = parseWithCache(text);
         if (!tree) return [];
-        return findStrRefSites(tree.rootNode, (name) => STRREF_PARAMS.get(name));
+        return findStrRefSites(tree.rootNode, (name) => STRREF_PARAMS_BY_LOWER_NAME.get(name.toLowerCase()));
     }
 
     foldingRanges(text: string): FoldingRange[] {
