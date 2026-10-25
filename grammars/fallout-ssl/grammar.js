@@ -7,6 +7,72 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
+/**
+ * The words the reference compiler reserves: its lexer returns each one as a keyword token, case-folded, never as
+ * a name, so none can be a variable, procedure or parameter name in any position. Its opcode names (`random`,
+ * `display_msg`) are reserved the same way but stay names here, since completion and hover resolve them as
+ * symbols. Two keywords stay out: `include` is a token the grammar never uses (tree-sitter reserves only words the
+ * grammar uses), and `wait` is a macro name in shipped scripts (`#define WAIT (2)`), which the preprocessor expands
+ * before the compiler's lexer sees it. A macro parameter may carry a keyword's name for the same reason; one shipped
+ * header does (`#define season_morning(when)`), and its two macros are syntax errors here, the price of a keyword
+ * never reading as a name elsewhere. server/test/integration/fallout-ssl-grammar-differential.test.ts checks the
+ * list against the compiler.
+ */
+const RESERVED_WORDS = [
+    "and",
+    "andalso",
+    "begin",
+    "break",
+    "bwand",
+    "bwnot",
+    "bwor",
+    "bwxor",
+    "call",
+    "callstart",
+    "cancel",
+    "cancelall",
+    "case",
+    "continue",
+    "critical",
+    "default",
+    "detach",
+    "div",
+    "do",
+    "else",
+    "end",
+    "endcritical",
+    "exec",
+    "exit",
+    "export",
+    "false",
+    "floor",
+    "for",
+    "foreach",
+    "fork",
+    "if",
+    "import",
+    "in",
+    "inline",
+    "noop",
+    "not",
+    "or",
+    "orelse",
+    "procedure",
+    "pure",
+    "return",
+    "spawn",
+    "startcritical",
+    "switch",
+    "then",
+    "true",
+    "variable",
+    "when",
+    "while",
+];
+
+/** Keywords that compete with `identifier` where both are valid, so they need a lexical precedence (see kw()). */
+const KEYWORD_PRECEDENCE = { true: 1, false: 1 };
+
 export default grammar({
     name: "ssl",
 
@@ -25,6 +91,13 @@ export default grammar({
     ],
 
     word: ($) => $.identifier,
+
+    // The compiler's lexer turns every keyword into its token wherever it appears, so a keyword never reads as a
+    // name. Without this, tree-sitter reads one as an identifier wherever the keyword itself is not expected, and
+    // `foo(` typed before an `end` swallows the `end` and every procedure after it.
+    reserved: {
+        global: () => RESERVED_WORDS.map((word) => keywordToken(word, KEYWORD_PRECEDENCE[word] ?? 0)),
+    },
 
     // Conflicts arise from ambiguous parsing situations:
     // - var_init: `variable a = 1` could be parsed with `=` as assignment or initialization
@@ -84,6 +157,10 @@ export default grammar({
         // Line continuations (\<newline>) are in extras, so multi-line macros work transparently.
         // The final statement may omit its trailing `;` (valid: the C preprocessor pastes macro
         // bodies verbatim), so the body ends in an optional unterminated tail.
+        //
+        // Not supported: a body defining a whole procedure (`procedure Node##name begin ... end`, two shipped
+        // scripts). It costs about a sixth more parse states, since every statement inside it needs its own
+        // macro-body states; those scripts are on the known-parse-error allowlist instead.
         macro_body: ($) => choice(repeat1($._statement), seq(repeat($._statement), $._macro_tail)),
 
         // Unterminated final statement of a macro body: only statements that REQUIRE a `;` need a
@@ -307,6 +384,7 @@ export default grammar({
                 $.assignment,
                 $.expression_stmt, // Covers function calls, macro calls, bare identifiers
                 $.empty_statement,
+                $.else_clause,
                 // A bare `begin ... end` block is a statement in its own right, not only a loop or
                 // if-branch body. Macros that expand to a block rely on this; without it the `begin`
                 // lexes as a bare identifier and the block's `end` closes the enclosing procedure,
@@ -328,6 +406,14 @@ export default grammar({
                     optional(seq(kw("else"), field("else", $._stmt_or_block))),
                 ),
             ),
+
+        // The `else` of an `if ... then` that a macro expansion opened: `check_forced_dialog else begin ... end`,
+        // where `check_forced_dialog` expands to `if (...) then call Node1;`. The compiler sees the expansion, so
+        // the source is valid, and shipped scripts are full of it. The grammar does not expand macros, so the
+        // clause stands as a statement of its own after the macro's; tying it to the macro statement instead
+        // costs a GLR conflict on every statement and about a tenth more parse states. An if-branch's own `else`
+        // still binds to its `if`: if_stmt is right-associative.
+        else_clause: ($) => seq(kw("else"), field("else", $._stmt_or_block)),
 
         while_stmt: ($) => seq(kw("while"), field("cond", $._expression), kw("do"), field("body", $._stmt_or_block)),
 
@@ -408,9 +494,9 @@ export default grammar({
         return_stmt: ($) => seq(kw("return"), optional($._expression), ";"),
 
         // Process-control statements: the engine runs child scripts, suspends, cancels pending events and
-        // marks critical sections through these. They are keywords ONLY here, at the start of a statement,
-        // because a script may `#define WAIT (2)` and then use that name in an expression - reserving the
-        // word everywhere would turn such a file into a wall of syntax errors.
+        // marks critical sections through these. All but `wait` are reserved words (see RESERVED_WORDS): a
+        // shipped script does `#define WAIT (2)` and then uses that name in an expression, so reserving it
+        // would turn such a file into a wall of syntax errors.
         process_stmt: ($) =>
             choice(
                 seq(
@@ -585,9 +671,14 @@ export default grammar({
                     [kw("orelse"), 1], // short-circuit or
                     [kw("and"), 1],
                     [kw("andalso"), 1], // short-circuit and
+                    // There is no `in` operator: the language takes `in` only after a call target, a procedure
+                    // header and a foreach variable.
+                    //
+                    // The compiler takes one comparison between two operands and rejects a chain (`a < b < c`),
+                    // where this grammar groups one. Only source the compiler refuses can tell the two apart, so
+                    // no valid tree differs; the compiler's own diagnostic still reports it.
                     ["==", 6],
                     ["!=", 6],
-                    [kw("in"), 6], // membership test: expr in array
                     ["<", 7],
                     [">", 7],
                     ["<=", 7],
@@ -654,19 +745,12 @@ export default grammar({
 
         paren_expr: ($) => seq("(", $._expression, ")"),
 
-        // Terminals
-        // NOTE: SSL does not formally reserve most keywords - the language spec allows identifiers
-        // like `default` or `begin` as variable names. However, tree-sitter's `word` property
-        // (set to `$.identifier`) causes the lexer to prefer a keyword token over the identifier
-        // token whenever that keyword appears in the current lookahead set. In practice this means
-        // keywords such as `default` (used in switch) are effectively reserved in most parser
-        // states, because a switch statement can appear anywhere a statement is expected.
-        // Semantic detection of reserved-word identifiers is handled in the formatter, not here.
+        // Terminals. The keywords the compiler reserves never lex as this token: see RESERVED_WORDS.
         identifier: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
 
         number: ($) => token(choice(/\d+\.\d+/, /\.\d+/, /\d+/, /0x[0-9a-fA-F]+/)),
 
-        boolean: ($) => choice(kw("true", 1), kw("false", 1)),
+        boolean: ($) => choice(kw("true", KEYWORD_PRECEDENCE.true), kw("false", KEYWORD_PRECEDENCE.false)),
 
         // Adjacent literals are one string: `"ab" "cd"` is `abcd`, as in C. Only whitespace may separate
         // them - a comment between two literals ends the first one and starts a fresh expression.
@@ -704,8 +788,19 @@ export default grammar({
  *   loses the tie without it.
  */
 function kw(word, precedence = 0) {
+    return alias(keywordToken(word, precedence), word);
+}
+
+/**
+ * The token kw() aliases, unnamed: a reserved-word set takes tokens, and the alias only renames this one token, so
+ * reserving it reserves the keyword.
+ *
+ * @param {string} word - the keyword, spelled lowercase
+ * @param {number} precedence - see kw()
+ */
+function keywordToken(word, precedence) {
     const insensitive = [...word].map((c) => `[${c}${c.toUpperCase()}]`).join("");
-    return alias(token(prec(precedence, new RegExp(insensitive))), word);
+    return token(prec(precedence, new RegExp(insensitive)));
 }
 
 function commaSep(rule) {

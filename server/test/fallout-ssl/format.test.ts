@@ -199,3 +199,12 @@ describe("fallout-ssl formatter: string contents", () => {
         expect(output).toBe('#define SITE "http://example.com/page"    // note\n');
     });
 });
+
+describe("fallout-ssl formatter: else after a macro", () => {
+    it("formats the else of an if a macro opened like an if's own else", () => {
+        const output = format("procedure start begin\ncheck_forced_dialog\nELSE BEGIN\nx := 1;\nEND\nend\n");
+        expect(output).toBe(
+            "procedure start begin\n    check_forced_dialog\n    else begin\n        x := 1;\n    end\nend\n",
+        );
+    });
+});

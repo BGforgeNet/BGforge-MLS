@@ -1319,8 +1319,7 @@ class Lowering {
                 const right = node.childForFieldName("right");
                 const op = node.childForFieldName("op")?.text?.toLowerCase();
                 if (!left || !right || !op) throw new LowerError("malformed binary expression", node);
-                // The grammar carries one operator this does not: `in` tests array membership, which the
-                // language's own parser has no production for either.
+                // Every operator the grammar has is in BINARY_OPS; this catches one the grammar gains first.
                 if (!BINARY_OPS.has(op)) return this.report(`unsupported operator '${op}'`, node);
                 // A comparison takes one comparison, not a chain: the language reads a single
                 // `<expr> <op> <expr>` and stops, so `a == b == c` is a syntax error there. Parenthesise

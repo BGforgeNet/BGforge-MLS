@@ -230,6 +230,16 @@ else
     statement
 ```
 
+An `else` may also follow a macro that expands to an `if ... then` statement; it parses as an `else_clause` statement
+of its own after the macro's:
+
+```ssl
+check_forced_dialog
+else begin
+    // statements
+end
+```
+
 #### While Loop
 
 ```ssl
@@ -372,7 +382,6 @@ Bitwise:
 Comparison:
 
 - `==`, `!=` - equality
-- `in` - membership test (sfall): `expr in array`
 - `<`, `>`, `<=`, `>=` - relational
 
 Arithmetic:
@@ -500,7 +509,7 @@ false
 | 9          | `*`, `/`, `%`                                         |
 | 8          | `+`, `-`                                              |
 | 7          | `<`, `>`, `<=`, `>=`                                  |
-| 6          | `==`, `!=`, `in`                                      |
+| 6          | `==`, `!=`                                            |
 | 5          | `bwand`                                               |
 | 4          | `bwxor`                                               |
 | 3          | `bwor`                                                |
@@ -517,26 +526,11 @@ false
 
 ## Reserved Words
 
-The following words are reserved and cannot be used as identifiers:
-
-```
-begin end procedure variable if then else while do for foreach in
-switch case default return break continue call import export
-and or not bwand bwor bwxor bwnot
-```
+The words the reference compiler's lexer always reads as keywords are reserved: none can be a name, in any letter
+case, so a keyword is a syntax error where a name belongs rather than an identifier. The list is `RESERVED_WORDS` in
+`grammar.js`, which also says why `wait` and the opcode names stay names.
 
 ### Technical Notes
-
-SSL does not formally reserve most keywords - the language spec allows identifiers
-like `default` or `begin` as variable names. However, tree-sitter's `word` property
-(set to `$.identifier`) causes the lexer to prefer a keyword token over the identifier
-token whenever that keyword appears in the current lookahead set. In practice, keywords
-such as `default` (used in `switch`) are effectively reserved in most parser states,
-because a `switch` statement can appear anywhere a statement is expected.
-
-Tree-sitter's regex-based lexer cannot exclude keywords from the identifier pattern
-(negative lookahead is not supported). The formatter detects keyword-as-identifier
-usage and reports it as an error - this semantic check keeps the grammar simple.
 
 #### External Scanner
 
@@ -549,13 +543,6 @@ usage and reports it as an error - this semantic check keeps the grammar simple.
 
 The scanner runs in both native and WASM builds. `TREE_SITTER_WASM` is not defined
 by the build system, so there is no WASM-specific code path.
-
-For example, in `end begin` (missing `else`), the parser doesn't expect a keyword after
-`end`, so `begin` is parsed as an identifier. This is syntactically invalid but not
-caught at parse time.
-
-The formatter detects reserved words used as identifiers and reports them as errors.
-This semantic check ensures code correctness while keeping the grammar simple.
 
 ## Formatter
 

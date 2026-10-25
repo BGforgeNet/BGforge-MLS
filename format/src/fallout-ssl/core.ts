@@ -14,7 +14,14 @@ import type { Node as SyntaxNode } from "web-tree-sitter";
 // Mutual recursion, not a layering slip: a control-flow statement nests a block of statements, so
 // `control-flow` calls back into this module's `formatNode`/`formatBlock`, and `expressions` shares
 // its format context.
-import { formatIfStmt, formatWhileStmt, formatForStmt, formatForeachStmt, formatSwitchStmt } from "./control-flow";
+import {
+    formatElseClause,
+    formatIfStmt,
+    formatWhileStmt,
+    formatForStmt,
+    formatForeachStmt,
+    formatSwitchStmt,
+} from "./control-flow";
 import { formatExpression, formatCallStmt, formatAssignment, formatExpressionStmt } from "./expressions";
 import { SyntaxType } from "@bgforge/shared/syntax-types/fallout-ssl";
 
@@ -186,6 +193,8 @@ export function formatNode(node: SyntaxNode, depth: number): string {
             return formatExportDecl(node);
         case SyntaxType.IfStmt:
             return formatIfStmt(node, depth);
+        case SyntaxType.ElseClause:
+            return formatElseClause(node, depth);
         case SyntaxType.WhileStmt:
             return formatWhileStmt(node, depth);
         case SyntaxType.ForStmt:
@@ -356,9 +365,7 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
         if (scheduleIds.has(child.id)) return;
         // The keyword introducing the clause, dropped alongside the operand above.
         if (scheduleIds.size > 0 && /^(?:in|when)$/i.test(child.text)) return;
-        // Skip begin/end/procedure keywords - they may appear as identifiers due to macros
-        // (e.g., `else begin` after a macro that expands to if-then-begin-end).
-        // Content validation catches any actual semantic changes.
+        // Skip the procedure's own begin/end/procedure keywords; the header and footer above write them.
         if (BEGIN_END_PROCEDURE_REGEX.test(child.text)) {
             return;
         }

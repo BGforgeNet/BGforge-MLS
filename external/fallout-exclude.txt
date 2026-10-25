@@ -1,34 +1,13 @@
 # Files to exclude from external Fallout tests
 # Paths are relative to external/fallout/
 
-# SSL files using macros with `else` continuation. These macros expand to
-# `if...then begin...end`, so `else` after them is valid post-expansion.
-# But the parser sees raw source where `else` follows an expression statement.
+# Macro body defining a whole procedure with a pasted name (grammar limitation):
+# `#define NODESET(name) procedure Node##name begin ... end`. See macro_body in the grammar.
+Fallout2_Restoration_Project/scripts_src/generic/zccrpdel.ssl
+Fallout2_Restoration_Project/scripts_src/ncr/sccheat.ssl
 
-# check_forced_dialog macro
-Fallout2_Restoration_Project/scripts_src/den/dcjoey.ssl
-Fallout2_Restoration_Project/scripts_src/hubstash/hcguard2.ssl
-Fallout2_Restoration_Project/scripts_src/modoc/mcvegeir.ssl
-Fallout2_Restoration_Project/scripts_src/ncr/scdocjub.ssl
-Fallout2_Restoration_Project/scripts_src/newreno/ncangbis.ssl
-Fallout2_Restoration_Project/scripts_src/newreno/ncbisgrd.ssl
-Fallout2_Restoration_Project/scripts_src/newreno/nccorbro.ssl
-Fallout2_Restoration_Project/scripts_src/newreno/nclabish.ssl
-Fallout2_Restoration_Project/scripts_src/newreno/ncpitbos.ssl
-Fallout2_Restoration_Project/scripts_src/newreno/ncstulit.ssl
-Fallout2_Restoration_Project/scripts_src/sanfran/fcplntmn.ssl
-
-# start_tent_dialog macro
-Fallout2_Restoration_Project/scripts_src/main/ahhakun.ssl
-
-# anim_move_to_point_rate macro
-Fallout2_Restoration_Project/scripts_src/newreno/nceldrid.ssl
-
-# If_Companion_Needs_Healing macro
-Fallout2_Restoration_Project/scripts_src/valtcity/vcdrtroy.ssl
-
-# martin_sees_lockpick_block macro
-Fallout2_Restoration_Project/scripts_src/valtcity/vivltdr3.ssl
+# `in` used as an operator, which the reference compiler refuses too.
+FO2tweaks/source_test/gl_g_party_skills.ssl
 
 # Comment inside parenthesized expression (formatter limitation)
 sfall/artifacts/mods/gl_npcarmor.ssl
@@ -91,6 +70,7 @@ Fallout2_Restoration_Project/scripts_src/newreno/ncnikki.ssl
 # The call site supplies `then ...`, so post-expansion it is valid. The parser
 # sees a bare `if (condition)` with no `then`, which cannot complete the if_stmt rule.
 Fallout2_Restoration_Project/scripts_src/brokhill/hcdoc.ssl
+Fallout2_Restoration_Project/scripts_src/valtcity/vcdrtroy.ssl
 
 # MAP file with ambiguous script/object boundary in strict mode.
 # The current strict MAP parser reports:

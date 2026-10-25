@@ -66,6 +66,7 @@
 (if_stmt "if" @keyword.conditional)
 (if_stmt "then" @keyword.conditional)
 (if_stmt "else" @keyword.conditional)
+(else_clause "else" @keyword.conditional)
 
 (while_stmt "while" @keyword.repeat)
 (while_stmt "do" @keyword.repeat)
@@ -88,7 +89,7 @@
 "call" @keyword
 
 ; Process control: child scripts, suspension, event cancellation, critical sections. Captured through
-; the statement so the words stay ordinary identifiers everywhere else - a script may `#define WAIT (2)`.
+; the statement because `wait` stays an ordinary identifier everywhere else - a script may `#define WAIT (2)`.
 (process_stmt op: _ @keyword)
 
 ; ----- Ternary -----

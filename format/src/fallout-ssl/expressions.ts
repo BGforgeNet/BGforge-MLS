@@ -62,9 +62,6 @@ export function formatExpression(
             return `@${ident.text}`;
         }
         case "identifier":
-            // Note: Reserved word check removed here - macros can cause keywords to appear
-            // as identifiers in the parse tree (e.g., `else` after macro that expands to
-            // if-then-begin-end). Content validation catches any actual semantic changes.
             return node.text;
         case "boolean":
             return canonicalKeyword(node.text);

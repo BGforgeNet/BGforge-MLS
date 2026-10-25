@@ -1219,3 +1219,36 @@ end
           right: (binary_expr
             left: (identifier)
             right: (number)))))))
+
+================================================================================
+Else after a macro that expands to an if, and inside an if-branch
+================================================================================
+
+procedure foo begin
+    check_forced_dialog
+    else begin
+        x := 1;
+    end
+    if (a) then M else y := 2;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (expression_stmt
+      (identifier))
+    body: (else_clause
+      else: (block
+        (assignment
+          left: (identifier)
+          right: (number))))
+    body: (if_stmt
+      cond: (paren_expr
+        (identifier))
+      then: (expression_stmt
+        (identifier))
+      else: (assignment
+        left: (identifier)
+        right: (number)))))

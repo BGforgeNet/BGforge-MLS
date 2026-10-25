@@ -58,7 +58,6 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
 
     const kwIf = canonicalKeyword("if");
     const kwThen = canonicalKeyword("then");
-    const kwElse = canonicalKeyword("else");
 
     // If condition was broken across lines, put "then" on its own line
     let result: string;
@@ -84,17 +83,27 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
 
     if (elseBranch) {
         const elseSep = thenIsBlock && elseComments.length === 0 ? " " : "\n" + ctx.indent.repeat(depth);
-
-        if (elseBranch.type === SyntaxType.IfStmt) {
-            result += elseSep + kwElse + " " + formatIfStmt(elseBranch, depth, true);
-        } else if (elseBranch.type === SyntaxType.Block) {
-            result += elseSep + kwElse + " " + formatBlock(elseBranch, depth);
-        } else {
-            result += elseSep + kwElse + "\n" + ctx.indent.repeat(depth + 1) + formatNode(elseBranch, depth + 1);
-        }
+        result += elseSep + formatElse(elseBranch, depth);
     }
 
     return result;
+}
+
+/** `else` and its branch: an if's own, or an else_clause continuing an if a macro opened. */
+function formatElse(elseBranch: SyntaxNode, depth: number): string {
+    const kwElse = canonicalKeyword("else");
+    if (elseBranch.type === SyntaxType.IfStmt) {
+        return kwElse + " " + formatIfStmt(elseBranch, depth, true);
+    }
+    if (elseBranch.type === SyntaxType.Block) {
+        return kwElse + " " + formatBlock(elseBranch, depth);
+    }
+    return kwElse + "\n" + getCtx().indent.repeat(depth + 1) + formatNode(elseBranch, depth + 1);
+}
+
+export function formatElseClause(node: SyntaxNode, depth: number): string {
+    const elseBranch = node.childForFieldName("else");
+    return elseBranch ? formatElse(elseBranch, depth) : node.text;
 }
 
 export function formatWhileStmt(node: SyntaxNode, depth: number): string {

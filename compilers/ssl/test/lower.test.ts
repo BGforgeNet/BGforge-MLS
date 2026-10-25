@@ -1095,7 +1095,6 @@ describe.skipIf(!wasmPresent)("collecting semantic errors", () => {
                 " variable a;",
                 " variable b;",
                 " a := b++;", // the step operators are statements, not expressions
-                " a := a in b;", // membership: the grammar has the operator, the language does not
                 " a := '\\q';", // an escape outside the character table
                 " switch a begin end",
                 " nope := 1;",
@@ -1106,7 +1105,6 @@ describe.skipIf(!wasmPresent)("collecting semantic errors", () => {
 
         expect(errors.map((e) => e.detail)).toEqual([
             "unsupported unary operator '++'",
-            "unsupported operator 'in'",
             "unknown escape '\\q' in a character constant",
             "switch statement with no cases",
             "unknown identifier 'nope'",
