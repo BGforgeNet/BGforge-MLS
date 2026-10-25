@@ -244,6 +244,9 @@ class Emitter {
                 case "timedCallStmt":
                     value(stmt.delay);
                     break;
+                case "conditionalCallStmt":
+                    value(stmt.condition);
+                    break;
                 case "libStmt":
                 case "opStmt":
                     stmt.args.forEach(value);
@@ -498,6 +501,24 @@ class Emitter {
                 this.w.int(statement.target.index + 1);
                 this.w.op(Op.CALL_AT);
                 break;
+
+            // The condition is a guard block the engine runs on its own, as a conditional procedure's is, so it
+            // is jumped over here; `CALL_CONDITION` then takes the guard's address and the procedure slot.
+            case "conditionalCallStmt": {
+                const jumpPatch = this.w.tell() + OPCODE_SIZE;
+                this.w.int(0);
+                this.w.op(Op.JMP);
+                const conditionAt = this.w.tell();
+                this.w.op(Op.CRITICAL_START);
+                this.writeExpression(statement.condition);
+                this.w.op(Op.CRITICAL_DONE);
+                this.w.op(Op.STOP_PROG);
+                this.w.patchLong(jumpPatch, this.w.tell());
+                this.w.int(conditionAt);
+                this.w.int(statement.target.index + 1);
+                this.w.op(Op.CALL_CONDITION);
+                break;
+            }
 
             case "libStmt":
                 for (const argument of statement.args) this.writeExpression(argument);

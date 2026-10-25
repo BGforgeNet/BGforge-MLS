@@ -214,6 +214,8 @@ class Lowering {
     private readonly paramDefaults = new Map<number, (VariableDecl["initial"] | null)[]>();
     /** Where each procedure slot was first named, so an undefined one can be reported at its declaration. */
     private readonly declaredAt = new Map<number, SyntaxNode>();
+    /** Lowercased names of the procedures defined so far in the first pass; a later import or export is refused. */
+    private readonly definedNames = new Set<string>();
     /** Procedure slots declared `inline`, which may be called but never used as a value. */
     private readonly inlineProcedures = new Set<number>();
     /** Procedures declared `pure`, whose calls the optimiser may drop when nothing reads the result. */
@@ -310,42 +312,18 @@ class Lowering {
         for (const child of root.namedChildren) {
             if (!child) continue;
             switch (child.type) {
-                // The reference marks an imported or exported procedure in the procedure table, a flag this back
-                // end does not write; compiling one as a plain declaration would change the program silently.
-                case "procedure_forward_block":
-                    this.report("imported and exported procedures are not supported", child);
-                    break;
-                case "procedure_forward":
-                case "procedure": {
+                // Each entry of `import procedure begin ... end` is a declaration under the block's linkage.
+                case "procedure_forward_block": {
                     const linkage = child.childForFieldName("linkage");
-                    if (linkage) {
-                        this.report("imported and exported procedures are not supported", linkage);
-                        break;
+                    for (const entry of child.namedChildren) {
+                        if (entry?.type === "procedure_forward") this.collectProcedure(entry, linkage);
                     }
-                    const name = this.nameOf(child);
-                    this.checkModifiers(child);
-                    if (this.procedures.has(name.toLowerCase())) this.checkRedeclaration(child, name);
-                    this.recordParameters(child);
-                    if (this.procedures.has(name.toLowerCase())) break;
-                    this.declaredAt.set(this.procedures.size, child);
-                    this.procedures.set(name.toLowerCase(), this.procedures.size);
-                    const modifier = child.childForFieldName("modifier")?.text.toLowerCase();
-                    if (modifier === "inline") this.inlineProcedures.add(this.procedures.size - 1);
-                    if (modifier === "pure") this.pureProcedures.add(this.procedures.size - 1);
-                    this.declarations.push({
-                        kind: "procedure",
-                        procedure: {
-                            name,
-                            args: [],
-                            locals: [],
-                            body: [],
-                            ...(modifier === "pure" ? { pure: true } : {}),
-                            ...(modifier === "inline" ? { inline: true } : {}),
-                            ...(child.childForFieldName("critical") ? { critical: true } : {}),
-                        },
-                    });
                     break;
                 }
+                case "procedure_forward":
+                case "procedure":
+                    this.collectProcedure(child, child.childForFieldName("linkage"));
+                    break;
                 case "variable_decl":
                     this.collectVariables(child, child.text.trimStart().toLowerCase().startsWith("import"));
                     break;
@@ -354,6 +332,60 @@ class Lowering {
                     break;
             }
         }
+    }
+
+    /**
+     * Allocates a procedure's table slot on its first mention. `linkage` is the `import` or `export` keyword of
+     * a declaration carrying one: it may follow a plain forward declaration and sets the table's flag, but an
+     * imported procedure has no body here, so its parameters are the ones the table and its callers get.
+     */
+    private collectProcedure(node: SyntaxNode, linkage: SyntaxNode | null): void {
+        const name = this.nameOf(node);
+        const key = name.toLowerCase();
+        this.checkModifiers(node);
+        const known = this.procedures.has(key);
+        if (known) this.checkRedeclaration(node, name);
+        if (linkage && this.definedNames.has(key)) {
+            this.report(`'${name}' is already defined; it cannot be ${linkage.text.toLowerCase()}ed`, node);
+        }
+        if (node.type === "procedure") this.definedNames.add(key);
+        this.recordParameters(node);
+        if (!known) {
+            this.declaredAt.set(this.procedures.size, node);
+            this.procedures.set(key, this.procedures.size);
+            const modifier = node.childForFieldName("modifier")?.text.toLowerCase();
+            if (modifier === "inline") this.inlineProcedures.add(this.procedures.size - 1);
+            if (modifier === "pure") this.pureProcedures.add(this.procedures.size - 1);
+            this.declarations.push({
+                kind: "procedure",
+                procedure: {
+                    name,
+                    args: [],
+                    locals: [],
+                    body: [],
+                    ...(modifier === "pure" ? { pure: true } : {}),
+                    ...(modifier === "inline" ? { inline: true } : {}),
+                    ...(node.childForFieldName("critical") ? { critical: true } : {}),
+                },
+            });
+        }
+        if (!linkage) return;
+        const index = this.procedures.get(key)!;
+        const entry = this.declarations.filter((d) => d.kind === "procedure")[index];
+        if (entry?.kind !== "procedure") throw new LowerError(`no table entry for '${name}'`, node);
+        if (linkage.text.toLowerCase() === "import") {
+            // The engine enters a script at its own `start`, so that one must have a body here.
+            if (key === "start") this.report("'start' cannot be imported", node);
+            entry.procedure.imported = true;
+            entry.procedure.args = this.parameterNames(node);
+        } else {
+            entry.procedure.exported = true;
+        }
+    }
+
+    private parameterNames(node: SyntaxNode): string[] {
+        const params = node.childForFieldName("params");
+        return (params?.namedChildren ?? []).filter((p) => p?.type === "param").map((p) => this.nameOf(p!));
     }
 
     /**
@@ -442,28 +474,27 @@ class Lowering {
     }
 
     /**
-     * `export variable g := 1;`. The node carries its name and value directly rather than wrapping a
-     * `var_init`, so this cannot share `collectVariables`.
-     *
-     * Exporting a PROCEDURE is not handled: the grammar has no such form, and no script in the corpus
-     * uses one. It is a grammar gap rather than a lowering gap, so closing it starts there.
+     * `export variable g := 1;`, or a block of them, `export variable begin g := 1; h; end`. The single form
+     * carries its name and value directly rather than wrapping a `var_init`, so this cannot share
+     * `collectVariables`; the block's entries are `var_init`s.
      */
     private collectExport(node: SyntaxNode): void {
-        if (!node.childForFieldName("name")) {
-            this.report("an 'export variable begin ... end' block is not supported", node);
-            return;
+        const entries = node.childForFieldName("name")
+            ? [node]
+            : node.namedChildren.filter((c): c is SyntaxNode => c?.type === "var_init");
+        for (const entry of entries) {
+            const name = this.nameOf(entry);
+            const value = entry.childForFieldName("value");
+            this.externals.set(name.toLowerCase(), name);
+            this.declarations.push({
+                kind: "external",
+                variable: {
+                    name,
+                    initial: value ? this.constantOf(value) : { kind: "int", value: 0 },
+                    exported: true,
+                },
+            });
         }
-        const name = this.nameOf(node);
-        const value = node.childForFieldName("value");
-        this.externals.set(name.toLowerCase(), name);
-        this.declarations.push({
-            kind: "external",
-            variable: {
-                name,
-                initial: value ? this.constantOf(value) : { kind: "int", value: 0 },
-                exported: true,
-            },
-        });
     }
 
     private variableOf(init: SyntaxNode): VariableDecl {
@@ -573,19 +604,23 @@ class Lowering {
             const index = this.procedures.get(this.nameOf(child).toLowerCase());
             const entry = index === undefined ? undefined : byIndex[index];
             if (entry?.kind !== "procedure") continue;
+            if (entry.procedure.imported) {
+                this.report(`'${entry.procedure.name}' is imported; its body belongs to another script`, child);
+                continue;
+            }
             if (index !== undefined) defined.add(index);
             this.lowerProcedure(child, entry.procedure);
         }
 
         // A forward declaration allocates its slot with an empty body, so a name never defined would
         // otherwise emit a procedure that returns immediately - every call to it silently doing nothing.
-        // The language has no way to define one elsewhere: there is no import form for procedures, only
-        // for variables, so within a translation unit a declaration without a definition is always a
+        // Only an imported procedure is defined elsewhere, so any other declaration without a definition is a
         // defect in the source. Recorded rather than thrown here: the emitter is what refuses, and only
         // for the ones dead-code elimination has not already removed.
         for (const [index, node] of this.declaredAt) {
             if (defined.has(index)) continue;
             const entry = byIndex[index];
+            if (entry?.kind === "procedure" && entry.procedure.imported) continue;
             this.undefinedProcedures.push({
                 index,
                 name: entry?.kind === "procedure" ? entry.procedure.name : "?",
@@ -1079,19 +1114,13 @@ class Lowering {
     private lowerCallStatement(node: SyntaxNode, scope: Scope): Stmt | null {
         const target = node.childForFieldName("target");
         if (!target) throw new LowerError("call has no target", node);
-        const condition = node.childForFieldName("condition");
-        if (condition) {
-            // The reference emits a conditional-call form this back end has no instruction for. Compiling the
-            // call without its condition would run it unconditionally, so it is refused instead.
-            this.report("a conditional call ('call ... when') is not supported", condition);
-            return null;
-        }
         const delay = node.childForFieldName("delay");
-        if (delay) {
-            // The engine schedules the procedure instead of entering it, so a timed call takes no
-            // arguments - `call foo(1) in 5` is a syntax the language accepts but cannot express.
+        const condition = node.childForFieldName("condition");
+        if (delay || condition) {
+            // The engine schedules the procedure instead of entering it, so a timed or conditional call takes
+            // no arguments - `call foo(1) in 5` is a syntax the language accepts but cannot express.
             if (target.type === "call_expr") {
-                this.report("a timed call cannot pass arguments", node);
+                this.report(`a ${delay ? "timed" : "conditional"} call cannot pass arguments`, node);
                 return null;
             }
             const callee = this.procedureRef(target, scope);
@@ -1100,7 +1129,14 @@ class Lowering {
                 return null;
             }
             if (this.refusePureCallStatement(callee, target)) return null;
-            return { kind: "timedCallStmt", target: callee, delay: this.lowerExpression(delay, scope) };
+            if (condition) {
+                return {
+                    kind: "conditionalCallStmt",
+                    target: callee,
+                    condition: this.lowerExpression(condition, scope),
+                };
+            }
+            return { kind: "timedCallStmt", target: callee, delay: this.lowerExpression(delay!, scope) };
         }
         if (target.type === "call_expr") {
             const { callee, args, checkArgCount } = this.callParts(target, scope);

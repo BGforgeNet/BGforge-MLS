@@ -291,19 +291,22 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("procedure start begin\n variable &x;\nend\n")).toThrow(/^2:\d+: syntax error$/);
     });
 
-    it("refuses the forms the reference compiles to instructions this back end does not emit", () => {
-        // Compiled as the plain forms they look like, each would change what the program does without a word.
-        expect(refuse("import procedure foo;\nprocedure start begin\nend\n")).toThrow(
-            /^1:1: imported and exported procedures are not supported$/,
+    it("refuses an imported procedure the script defines, or an import or export after the definition", () => {
+        expect(refuse("import procedure ext;\nprocedure ext begin end\nprocedure start begin\nend\n")).toThrow(
+            /^2:1: 'ext' is imported; its body belongs to another script$/,
+        );
+        expect(refuse("procedure ext begin end\nimport procedure ext;\nprocedure start begin\nend\n")).toThrow(
+            /^2:1: 'ext' is already defined; it cannot be imported$/,
         );
         expect(refuse("procedure start begin\nend\nexport procedure begin\n start;\nend\n")).toThrow(
-            /^3:1: imported and exported procedures are not supported$/,
+            /^4:2: 'start' is already defined; it cannot be exported$/,
         );
-        expect(refuse("export variable begin\n gx := 1;\nend\nprocedure start begin\nend\n")).toThrow(
-            /^1:1: an 'export variable begin \.\.\. end' block is not supported$/,
-        );
-        expect(refuse("procedure p begin\nend\nprocedure start begin\n call p when 1;\nend\n")).toThrow(
-            /^4:14: a conditional call \('call \.\.\. when'\) is not supported$/,
+        expect(refuse("import procedure start;\n")).toThrow(/^1:1: 'start' cannot be imported$/);
+    });
+
+    it("refuses arguments to a conditional call, as to a timed one", () => {
+        expect(refuse("procedure p begin\nend\nprocedure start begin\n call p(1) when 1;\nend\n")).toThrow(
+            /^4:2: a conditional call cannot pass arguments$/,
         );
     });
 

@@ -258,6 +258,10 @@ function forEachExpr(statement: Stmt, visit: (expr: Expr) => void): void {
                 expression(stmt.target);
                 expression(stmt.delay);
                 break;
+            case "conditionalCallStmt":
+                expression(stmt.target);
+                expression(stmt.condition);
+                break;
             case "libStmt":
             case "opStmt":
                 stmt.args.forEach(expression);
@@ -333,12 +337,12 @@ function reachableProcedures(program: Program): Set<number> {
     };
 
     procedures.forEach((procedure, index) => {
-        // An engine entry point, an export and an import are all reached from outside the script; a
-        // timed or guarded procedure is scheduled by the engine off its table entry alone.
+        // An engine entry point and an export are reached from outside the script; a timed or guarded
+        // procedure is scheduled by the engine off its table entry alone. An import is only a way out of the
+        // script, so one nothing calls is dropped, as the reference drops it.
         if (
             ENGINE_ENTRY_POINTS.has(procedure.name.toLowerCase()) ||
             procedure.exported ||
-            procedure.imported ||
             procedure.timed !== undefined ||
             procedure.conditional
         ) {
@@ -426,6 +430,12 @@ function remapWith(statement: Stmt, leaf: (expr: Expr) => Expr): Stmt {
                     ...stmt,
                     target: expression(stmt.target) as Extract<Expr, { kind: "procRef" }>,
                     delay: expression(stmt.delay),
+                };
+            case "conditionalCallStmt":
+                return {
+                    ...stmt,
+                    target: expression(stmt.target) as Extract<Expr, { kind: "procRef" }>,
+                    condition: expression(stmt.condition),
                 };
             case "libStmt":
             case "opStmt":
@@ -990,7 +1000,7 @@ function propagateConstantGlobals(program: Program): Program {
         });
         const walk = (stmt: Stmt): void => {
             if (stmt.kind === "callStmt") note(stmt.target);
-            if (stmt.kind === "timedCallStmt") note(stmt.target);
+            if (stmt.kind === "timedCallStmt" || stmt.kind === "conditionalCallStmt") note(stmt.target);
             if (stmt.kind === "block") stmt.body.forEach(walk);
             if (stmt.kind === "if") {
                 walk(stmt.thenBranch);

@@ -83,6 +83,12 @@ export type Stmt =
      */
     | { kind: "timedCallStmt"; target: Extract<Expr, { kind: "procRef" }>; delay: Expr }
     /**
+     * `call foo when <condition>`. The engine runs the procedure once the condition holds, so like a timed
+     * call it takes no arguments; the condition is compiled as a guard block beside the call, as a
+     * conditional procedure's is.
+     */
+    | { kind: "conditionalCallStmt"; target: Extract<Expr, { kind: "procRef" }>; condition: Expr }
+    /**
      * A statement-position engine function. Some engine functions return a value even when called as a
      * statement; those set `popsResult` so the unused result is dropped rather than left on the stack.
      */

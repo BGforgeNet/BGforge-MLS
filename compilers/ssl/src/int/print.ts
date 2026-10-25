@@ -196,6 +196,10 @@ class Printer {
                 return [`${pad}call ${this.call(statement.target, statement.args)};`];
             case "timedCallStmt":
                 return [`${pad}call ${this.expression(statement.target)} in ${this.expression(statement.delay)};`];
+            case "conditionalCallStmt":
+                return [
+                    `${pad}call ${this.expression(statement.target)} when ${this.expression(statement.condition)};`,
+                ];
             case "libStmt":
                 return [
                     `${pad}${this.engineName(statement.opcode)}(${statement.args.map((a) => this.expression(a)).join(", ")});`,

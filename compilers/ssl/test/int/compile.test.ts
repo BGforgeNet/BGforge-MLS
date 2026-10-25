@@ -307,6 +307,30 @@ const CASES: Case[] = [
             " b := a andalso 1;\n b := a orelse 1;\n b := a div 2;\n b := bwnot a;\n" +
             " call inl;\n b := helper();\nend\n",
     },
+    {
+        name: "a conditional call compiles its condition as a guard",
+        source:
+            "procedure foo;\nprocedure start begin\n variable x := 1;\n call foo when x > 0;\nend\n" +
+            "procedure foo begin end\n",
+    },
+    {
+        name: "imported and exported procedures reach the table",
+        source:
+            "import procedure ext(variable a);\nexport procedure pub(variable a, variable b);\n" +
+            "procedure pub(variable a, variable b) begin end\n" +
+            "procedure start begin\n call ext(1);\n call pub(1, 2);\nend\n",
+    },
+    {
+        name: "imported and exported procedure blocks",
+        source:
+            "import procedure begin\n ext1;\n ext2(variable a);\nend\n" +
+            "export procedure begin\n pub;\nend\n" +
+            "procedure pub begin end\nprocedure start begin\n call ext1;\n call ext2(3);\nend\n",
+    },
+    {
+        name: "an exported variable block",
+        source: "export variable begin\n gx := 1;\n gy;\nend\nprocedure start begin\n gy := gx;\nend\n",
+    },
 ];
 
 describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to matching bytecode", () => {
@@ -385,6 +409,15 @@ const OPTIMIZED_CASES: Case[] = [
         // The callee being pure does not excuse the arguments: `random` still has to run.
         name: "a pure call with an impure argument stays",
         source: 'procedure start begin\n variable x;\n x := atoi("5" + random(1, 2));\nend\n',
+    },
+    {
+        // An export is reached from outside the script and stays; an import nothing calls leaves the table, and
+        // one called only through `call ... when` stays.
+        name: "unused imports go, exports and conditional-call targets stay",
+        source:
+            "import procedure never;\nimport procedure used;\nexport procedure pub(variable a);\n" +
+            "procedure pub(variable a) begin end\nprocedure guarded begin end\n" +
+            "procedure start begin\n call used when 1;\n call guarded when 2;\nend\n",
     },
 ];
 
