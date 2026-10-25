@@ -19,11 +19,10 @@ import {
     extractProcedures,
     findProcedure,
     findIdentifierAtPosition,
-    findDefinitionNode,
-    isLocalDefinition,
     extractMacros,
     extractParams,
 } from "../../src/fallout-ssl/utils";
+import { findDefinitionNode, isLocalDefinition } from "../../src/fallout-ssl/symbol-definitions";
 import { initParser, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 
 beforeAll(async () => {
@@ -192,8 +191,15 @@ procedure bar begin end
             expect(tree!).not.toBeNull();
 
             const def = findDefinitionNode(tree!.rootNode, "foo");
-            expect(def).not.toBeNull();
-            expect(def?.type).toBe("procedure");
+            expect(def?.parent?.type).toBe("procedure");
+        });
+
+        it("finds a local declared inside a nested block", () => {
+            const tree = parseWithCache(
+                "procedure foo begin\n    if (1) then begin\n        variable x;\n    end\nend\n",
+            );
+
+            expect(findDefinitionNode(tree!.rootNode, "x")?.startPosition).toEqual({ row: 2, column: 17 });
         });
 
         it("finds variable declaration in procedure", () => {

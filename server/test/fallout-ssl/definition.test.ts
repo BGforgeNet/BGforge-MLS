@@ -43,6 +43,22 @@ procedure helper begin end
             expect(result?.range.start.line).toBe(4);
         });
 
+        it("finds a local declared inside a nested block", () => {
+            const text = `
+procedure main begin
+    if (1) then begin
+        while (1) do begin
+            variable inner := 1;
+        end
+    end
+    inner += 1;
+end
+`;
+            const result = getLocalDefinition(text, "file:///test.ssl", { line: 7, character: 5 });
+
+            expect(result?.range.start).toEqual({ line: 4, character: 21 });
+        });
+
         // The definition wins over a forward declaration - and that has to hold when the two spell the name
         // differently, since SSL binds them as one procedure. Matched exactly, both were listed and the
         // declaration shadowed the definition, so this landed on `procedure Node005;` instead.

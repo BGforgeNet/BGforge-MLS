@@ -22,7 +22,7 @@ import {
 import * as jsdoc from "../shared/jsdoc";
 import type { SigInfoEx } from "../shared/signature";
 import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
-import { sslMapGet, sslNameKey, sslNamesEqual } from "@bgforge/shared/fallout-ssl-names";
+import { sslMapGet, sslNameKey } from "@bgforge/shared/fallout-ssl-names";
 import { buildTooltipBase } from "./jsdoc-format";
 import {
     type MacroData,
@@ -233,90 +233,6 @@ export function findIdentifierNodeAtPosition(root: Node, position: Position): No
     }
 
     return visit(root);
-}
-
-/**
- * Find the definition node for a symbol by name.
- * Handles: procedures, forward declarations, macros, variables, exports, params, for-loop vars, foreach vars.
- * Prefers procedure definitions over forward declarations.
- */
-export function findDefinitionNode(root: Node, symbol: string): Node | null {
-    // Check procedures first (with deduplication)
-    const procedures = extractProcedures(root);
-    const proc = sslMapGet(procedures, symbol);
-    if (proc) {
-        return proc.node;
-    }
-
-    // Check macros. Exact match, unlike everything else here: a macro name is resolved by the preprocessor,
-    // which does distinguish case (sslc rejects `my_macro` against `#define MY_MACRO`).
-    const macroNode = findMacroDefinition(root, symbol);
-    if (macroNode) {
-        return macroNode;
-    }
-
-    // Check inside procedures for params and local vars
-    function search(node: Node): Node | null {
-        if (node.type === SyntaxType.Procedure) {
-            // Check parameters
-            const params = node.childForFieldName("params");
-            if (params) {
-                for (const child of params.children) {
-                    if (child.type === SyntaxType.Param) {
-                        const paramName = child.childForFieldName("name");
-                        if (sslNamesEqual(paramName?.text, symbol)) {
-                            return child;
-                        }
-                    }
-                }
-            }
-            // Check inside procedure body
-            for (const child of node.children) {
-                const result = search(child);
-                if (result) return result;
-            }
-        } else if (node.type === SyntaxType.VariableDecl) {
-            for (const child of node.children) {
-                if (child.type === SyntaxType.VarInit) {
-                    const nameNode = child.childForFieldName("name");
-                    if (sslNamesEqual(nameNode?.text, symbol)) {
-                        return child;
-                    }
-                }
-            }
-        } else if (node.type === SyntaxType.ForVarDecl) {
-            const nameNode = node.childForFieldName("name");
-            if (sslNamesEqual(nameNode?.text, symbol)) {
-                return node;
-            }
-        } else if (node.type === SyntaxType.ForeachStmt) {
-            const declared = foreachDeclaredNames(node).find((name) => sslNamesEqual(name.text, symbol));
-            if (declared) {
-                return declared;
-            }
-        } else if (node.type === SyntaxType.ExportDecl) {
-            const exported = exportedVariables(node).find(({ name }) => sslNamesEqual(name.text, symbol));
-            if (exported) {
-                return exported.declaration;
-            }
-        }
-        return null;
-    }
-
-    for (const node of root.children) {
-        const result = search(node);
-        if (result) return result;
-    }
-
-    return null;
-}
-
-/**
- * Check if a symbol is defined locally.
- * Reuses findDefinitionNode for consistency.
- */
-export function isLocalDefinition(root: Node, symbol: string): boolean {
-    return findDefinitionNode(root, symbol) !== null;
 }
 
 /**

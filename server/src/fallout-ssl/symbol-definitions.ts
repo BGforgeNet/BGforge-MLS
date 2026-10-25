@@ -151,6 +151,26 @@ export function findFileScopeDefinitionNode(rootNode: Node, symbolName: string):
 }
 
 /**
+ * A definition of `symbolName` anywhere in the file, by name alone: at file scope, else as a local of any
+ * procedure, found through the same resolvers go-to-definition uses, nested blocks included. For a caller with
+ * no position to resolve from (rename deciding whether a name is this file's own).
+ */
+export function findDefinitionNode(rootNode: Node, symbolName: string): Node | null {
+    const fileScope = findFileScopeDefinitionNode(rootNode, symbolName);
+    if (fileScope) return fileScope;
+    for (const child of rootNode.children) {
+        if (child.type !== SyntaxType.Procedure) continue;
+        const local = findProcedureLocalDefinitionNode(child, symbolName);
+        if (local) return local;
+    }
+    return null;
+}
+
+export function isLocalDefinition(rootNode: Node, symbolName: string): boolean {
+    return findDefinitionNode(rootNode, symbolName) !== null;
+}
+
+/**
  * The rival-definition rule: a file OTHER than a symbol's own definition file that defines the same name at
  * file scope holds a rival symbol, not a reference - find-references must not report its occurrences and
  * rename must not rewrite them. SSL binds these names per file, so two scripts may each own a `start`.

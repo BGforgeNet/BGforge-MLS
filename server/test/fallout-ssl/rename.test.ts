@@ -511,6 +511,40 @@ end
             expect(result).toBeNull();
         });
 
+        // The local shadows the header's procedure for every use in its procedure, so renaming it must stay
+        // inside this file, wherever in the procedure the declaration sits.
+        it("returns null for a local declared inside a nested block that a header also defines", () => {
+            const headerUri = "file:///project/headers/utils.h";
+            const sslText = `
+procedure main begin
+    if (1) then begin
+        variable helper := 1;
+        helper += 1;
+    end
+end
+`;
+            const symbolStore = new Symbols();
+            symbolStore.updateFile(normalizeUri(headerUri), [
+                {
+                    name: "helper",
+                    kind: SymbolKind.Procedure,
+                    callable: {},
+                    location: {
+                        uri: headerUri,
+                        range: { start: { line: 0, character: 10 }, end: { line: 0, character: 16 } },
+                    },
+                    scope: { level: ScopeLevel.Workspace },
+                    source: { type: SourceType.Workspace, uri: headerUri, displayPath: "headers/utils.h" },
+                    completion: { label: "helper" },
+                    hover: { contents: { kind: MarkupKind.Markdown, value: "" } },
+                },
+            ]);
+
+            const result = prepareRenameSymbolWorkspace(sslText, { line: 4, character: 9 }, symbolStore, "/project");
+
+            expect(result).toBeNull();
+        });
+
         it("returns null for static (built-in) symbol", () => {
             const sslText = `
 procedure main begin

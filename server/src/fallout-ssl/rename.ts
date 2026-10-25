@@ -22,10 +22,10 @@ import type { ReferencesIndex } from "../shared/references-index";
 import { SourceType } from "../core/symbol";
 import type { Symbols } from "../core/symbol-index";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
-import { findIdentifierAtPosition, findIdentifierNodeAtPosition, isLocalDefinition, makeRange } from "./utils";
+import { findIdentifierAtPosition, findIdentifierNodeAtPosition, makeRange } from "./utils";
 import { ScopeKind } from "./scope-kinds";
 import { type SslSymbolScope, getSymbolScope } from "./symbol-scope";
-import { isFileScopeDef } from "./symbol-definitions";
+import { isFileScopeDef, isLocalDefinition } from "./symbol-definitions";
 import { findScopedReferences } from "./reference-finder";
 
 /** SSL identifiers: alphanumeric + underscore, must not be empty. */
