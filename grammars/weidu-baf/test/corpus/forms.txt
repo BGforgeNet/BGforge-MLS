@@ -1,0 +1,281 @@
+================================================================================
+Block: THEN with no response
+================================================================================
+
+IF
+  True()
+THEN
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause)))
+
+================================================================================
+Override: ActionOverride may omit its closing parenthesis
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    ActionOverride(Player1,Wait(1)
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (call_expr
+              func: (identifier)
+              args: (number))))
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Override: ActionOverride in any letter case, with its parenthesis
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    actionoverride(Player1,Wait(1))
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (call_expr
+              func: (identifier)
+              args: (number))))))))
+
+================================================================================
+Override: TriggerOverride must keep its closing parenthesis
+:error
+================================================================================
+
+IF
+  TriggerOverride(Player1,True()
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (ERROR))
+
+================================================================================
+Object: a rectangle after a bracket and after a name
+================================================================================
+
+IF
+  See([ENEMY][1.2.3.4])
+  See(Player1[1.2.-3.4])
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (rect_arg
+            object: (object_ref
+              (identifier))
+            rect: (rect
+              (number)
+              (number)
+              (number)
+              (number)))))
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (rect_arg
+            object: (identifier)
+            rect: (rect
+              (number)
+              (number)
+              (number)
+              (number))))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Object: an empty bracket
+================================================================================
+
+IF
+  See([])
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (object_ref))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Number: a hash integer and a negative hex integer
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    Wait(#5)
+    Wait(# 5)
+    Wait(-0x10)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (number)))
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (number)))
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (number)))))))
+
+================================================================================
+Identifier: a hash and a bang inside a name, and a name that starts with a hash
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    SetPlayerSound(Myself,A6#0,EXISTANCE5)
+    Dummy#X(#Y,B!C)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (identifier)
+            args: (identifier)))
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (identifier)))))))
+
+================================================================================
+Identifier: a negation still binds to the call that follows it
+================================================================================
+
+IF
+  !Dead(Myself)
+  Global("a","GLOBAL",1)!Dead(Player1)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (identifier)))
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (string)
+          args: (string)
+          args: (number)))
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))

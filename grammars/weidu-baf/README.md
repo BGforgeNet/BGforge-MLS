@@ -71,7 +71,7 @@ THEN
 END
 ```
 
-**Note:** A response must have at least one action. Empty responses are invalid.
+**Note:** A response may hold no actions, and a block may hold no response (`IF ... THEN END`).
 
 ### Function Arguments
 
@@ -81,9 +81,11 @@ Functions can take various argument types:
 | --------------------- | -------------------- | ---------------------------- |
 | String (double quote) | `"text"`             | Standard string              |
 | String (tilde)        | `~text~`             | Alternative string delimiter |
-| Number                | `123`, `-5`, `0xFF`  | Integer (decimal or hex)     |
+| Number                | `123`, `-5`, `-0x10` | Integer (decimal or hex)     |
+| Hash number           | `#5`, `# 5`          | Integer, same as `5`         |
 | Identifier            | `GLOBAL`, `Myself`   | Symbolic constant            |
 | Object reference      | `[PC]`, `[ANYONE]`   | Special object               |
+| Object with rectangle | `Player1[1.2.3.4]`   | Object plus a rectangle      |
 | Point                 | `[100.200]`          | Coordinates x.y              |
 | TRA reference         | `@123`               | Translation string reference |
 | Variable reference    | `%varname%`          | WeiDU variable substitution  |
@@ -91,14 +93,21 @@ Functions can take various argument types:
 
 ### Strings
 
-Two string delimiters are supported:
+Strings may span lines. There are no escape sequences. The forms:
 
 ```baf
 DisplayString(Myself, "double quoted")
 DisplayString(Myself, ~tilde quoted~)
+DisplayString(Myself, %percent-quoted%)
+DisplayString(Myself, ~~~~~five tildes may hold a ~ inside~~~~~)
+DisplayString(Myself, ~male text~ [SOUND] ~female text~ [SOUND2])
+Class(Myself, """""NAME BETWEEN FIVE QUOTES""""")
 ```
 
-Strings are single-line only. No escape sequences.
+A `~text~` or `%text%` may be followed by a sound in brackets, and by a second text (the female one) with its own
+sound; that is a `tlk_string` node. A comment marker inside a string is part of the string: `"// x"`. A string that
+never closes reads on to the next delimiter, as the reference does. A percent text stops at whitespace, so a lone
+`%` being typed cannot swallow the file. The five-quote form is a name, not a string.
 
 ### Points (Coordinates)
 
@@ -125,7 +134,13 @@ See([ANYONE])
 Detect([ENEMY])
 ```
 
-Valid characters: `A-Z`, `a-z`, `0-9`, `_`, `.`
+Components are separated by `.`: names (`A-Z`, `a-z`, `0-9`, `_`, `-`, `#`, `!`), numbers, `%variables%`, or
+`ANYONE`. The bracket may be empty (`[]`). A rectangle may follow an object, whatever its form:
+
+```baf
+See([ENEMY][1.2.3.4])
+See(Player1[1.2.3.4])
+```
 
 ### TRA References
 
@@ -147,12 +162,23 @@ SetGlobal(%variable_name%, "GLOBAL", 1)
 
 No spaces inside `%...%`. Variables follow identifier rules.
 
+A variable stands for a VALUE: a call name (`%RunAwayFrom%(...)`), an `OR` count, a bracket component, an
+argument. A variable standing for a whole condition or action (`IF %COND%`, or `%action%` on a line of its own) is
+structure, not a value, and is a syntax error, as it is for the reference.
+
+### Overrides
+
+`ActionOverride(Object, Action)` is a word of its own: it takes exactly an object and a call, and its closing
+parenthesis may be left off. `TriggerOverride` is an ordinary call and needs its parenthesis.
+
 ### Comments
+
+Block comments nest, so a commented-out block may hold comments of its own.
 
 ```baf
 // Line comment
 
-/* Block comment */
+/* Block comment /* with another inside */ still the same comment */
 
 IF
   True()  // Inline comment

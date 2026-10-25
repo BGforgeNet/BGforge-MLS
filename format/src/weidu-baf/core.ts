@@ -84,7 +84,9 @@ function formatCallExpr(node: SyntaxNode): string {
     const argNodes = node.childrenForFieldName("args");
     const args = argNodes.map((arg) => formatArgument(arg));
 
-    return funcName + "(" + args.join(", ") + ")";
+    // An ActionOverride may stand without its closing parenthesis; the text is kept as written, not completed.
+    const closed = node.children.some((child) => child.type === ")");
+    return funcName + "(" + args.join(", ") + (closed ? ")" : "");
 }
 
 // Format a condition: [!]CallExpr()

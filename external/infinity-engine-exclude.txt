@@ -2,11 +2,7 @@
 # Paths are relative to external/infinity-engine/
 
 # BAF files with syntax errors in original source
-Ascension/ascension/powers/baf/SLAYER_DOCUMENTATION.baf
-BGT-WeiDU/bgt/base/baf/aram00.baf
-BGT-WeiDU/bgt/modify/baf/a6bio.baf
 rr/rr/rr_core/compile/rr#wspi.baf
-rr/rr/rr_cyric/compile/rr#camb1.baf
 
 # BAF template files using WeiDU %variable% placeholders as standalone triggers/actions
 bg2-tweaks-and-tricks/tnt/components/easy_traps/baf/detection.baf
@@ -86,7 +82,6 @@ BG1NPC/bg1npc/phase2/baf/x#brint2.baf
 BG1NPC/bg1npc/phase2/baf/x#coint2.baf
 BG1NPC/bg1npc/phase2/baf/x#cosqu.baf
 BG1NPC/bg1npc/phase2/baf/x#david.baf
-BG1NPC/bg1npc/phase2/baf/x#davidx.BAF
 BG1NPC/bg1npc/phase2/baf/x#dora.baf
 BG1NPC/bg1npc/phase2/baf/x#drizzt2.baf
 BG1NPC/bg1npc/phase2/baf/x#dyint2.baf
@@ -95,14 +90,12 @@ BG1NPC/bg1npc/phase2/baf/x#dyqwin.baf
 BG1NPC/bg1npc/phase2/baf/x#edint2.baf
 BG1NPC/bg1npc/phase2/baf/x#elint2.baf
 BG1NPC/bg1npc/phase2/baf/x#faint2.baf
-BG1NPC/bg1npc/phase2/baf/x#fight2.baf
 BG1NPC/bg1npc/phase2/baf/x#fw3000xq.baf
 BG1NPC/bg1npc/phase2/baf/x#fw3500xq.baf
 BG1NPC/bg1npc/phase2/baf/x#fw4300.baf
 BG1NPC/bg1npc/phase2/baf/x#gaint2.baf
 BG1NPC/bg1npc/phase2/baf/x#garar.baf
 BG1NPC/bg1npc/phase2/baf/x#gobri.baf
-BG1NPC/bg1npc/phase2/baf/x#gpsht.BAF
 BG1NPC/bg1npc/phase2/baf/x#ihtia.baf
 BG1NPC/bg1npc/phase2/baf/x#imint2.baf
 BG1NPC/bg1npc/phase2/baf/x#jaint2.baf
@@ -119,9 +112,6 @@ BG1NPC/bg1npc/phase2/baf/x#kise1.baf
 BG1NPC/bg1npc/phase2/baf/x#kivantazok.baf
 BG1NPC/bg1npc/phase2/baf/x#krumm.baf
 BG1NPC/bg1npc/phase2/baf/x#lakep.baf
-BG1NPC/bg1npc/phase2/baf/x#lp1r.baf
-BG1NPC/bg1npc/phase2/baf/x#lp2r.baf
-BG1NPC/bg1npc/phase2/baf/x#lp3r.baf
 BG1NPC/bg1npc/phase2/baf/x#lprcajr.baf
 BG1NPC/bg1npc/phase2/baf/x#mareth.baf
 BG1NPC/bg1npc/phase2/baf/x#miint2.baf
@@ -143,7 +133,6 @@ BG1NPC/bg1npc/phase2/baf/x#tqkarris.baf
 BG1NPC/bg1npc/phase2/baf/x#tqtiax.baf
 BG1NPC/bg1npc/phase2/baf/x#xacut.baf
 BG1NPC/bg1npc/phase2/baf/x#xaint2.baf
-BG1NPC/bg1npc/phase2/baf/x#xqmerx.BAF
 BG1NPC/bg1npc/phase2/baf/x#xqxan.baf
 BG1NPC/bg1npc/phase2/baf/x#xzdqu.baf
 BG1NPC/bg1npc/phase2/baf/x#xzint2.baf

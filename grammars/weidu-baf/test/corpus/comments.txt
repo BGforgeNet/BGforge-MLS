@@ -1,0 +1,149 @@
+================================================================================
+Comment: block comments nest
+================================================================================
+
+/* a /* nested */ still a comment */
+IF
+  True()
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (comment)
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Comment: a commented-out block that holds a comment
+================================================================================
+
+/*
+IF
+  True()
+THEN
+  RESPONSE #100
+    /* old */ NoAction()
+END
+*/
+IF
+  False()
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (comment)
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Comment: a block comment between arguments, and a slash-star-slash that does not close
+================================================================================
+
+IF
+  Global("a" /*/ still open */, "GLOBAL", 1)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (string)
+          (comment)
+          args: (string)
+          args: (number))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Comment: a line comment holding a block-comment opener does not open one
+================================================================================
+
+// see /* below
+IF
+  True()
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (line_comment)
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Comment: a block comment opener inside a string is text
+================================================================================
+
+IF
+  Global("/* x","GLOBAL",1)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (string)
+          args: (string)
+          args: (number))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))

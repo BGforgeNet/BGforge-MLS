@@ -1,0 +1,155 @@
+================================================================================
+Macro: a variable as the name of an action
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    %RunAwayFrom%(NearestEnemyOf(Myself),30)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (variable_ref)
+            args: (call_expr
+              func: (identifier)
+              args: (identifier))
+            args: (number)))))))
+
+================================================================================
+Macro: a variable as the name of a condition
+================================================================================
+
+IF
+  %Check%(Myself)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (variable_ref)
+          args: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Macro: a variable as the count of an OR group
+================================================================================
+
+IF
+  OR(%n%)
+    True()
+    False()
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (or_marker
+        count: (variable_ref))
+      (condition
+        call: (call_expr
+          func: (identifier)))
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Macro: a variable as a component of an object specifier
+================================================================================
+
+IF
+  See([EA.%race%.0])
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (object_ref
+            (identifier)
+            (variable_ref)
+            (number)))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+Macro: a variable standing for a whole condition stays a syntax error
+:error
+================================================================================
+
+IF
+  %BGT_VAR%
+  True()
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (ERROR))
+
+================================================================================
+Macro: a variable standing for a whole action stays a syntax error
+:error
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    %action_bags%
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (ERROR))

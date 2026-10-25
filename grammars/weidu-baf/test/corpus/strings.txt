@@ -1,0 +1,282 @@
+================================================================================
+String: content starting with a line-comment marker is still one string
+================================================================================
+
+IF
+  Global("// x","GLOBAL",1)
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (string)
+          args: (string)
+          args: (number))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))
+
+================================================================================
+String: a double-quoted string may span lines
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    SetGlobal("two
+lines","GLOBAL",1)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (string)
+            args: (string)
+            args: (number)))))))
+
+================================================================================
+String: a tilde string may span lines
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    DisplayString(Myself,~two
+lines~)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (string)))))))
+
+================================================================================
+String: a five-tilde string may hold single tildes
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    DisplayString(Myself,~~~~~a ~ b~~~~~)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (string)))))))
+
+================================================================================
+String: a percent text that is not a bare name is an inline string, not a variable
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    DisplayString(Myself,%a-b%)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (string)))))))
+
+================================================================================
+String: a plain percent name stays a variable reference
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    DisplayString(Myself,%name%)
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (variable_ref)))))))
+
+================================================================================
+String: a sound after a tilde string
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    DisplayString(Myself,~hello~ [SND])
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (tlk_string
+              (string)
+              (sound
+                (identifier)))))))))
+
+================================================================================
+String: a female text, with and without sounds
+================================================================================
+
+IF
+  True()
+THEN
+  RESPONSE #100
+    DisplayString(Myself,~he~ ~she~)
+    DisplayString(Myself,~he~ [M1] ~she~ [F1])
+    DisplayString(Myself,~he~ ~she~ [F1])
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (tlk_string
+              (string)
+              (string))))
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (tlk_string
+              (string)
+              (sound
+                (identifier))
+              (string)
+              (sound
+                (identifier)))))
+        (action
+          call: (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (tlk_string
+              (string)
+              (string)
+              (sound
+                (identifier)))))))))
+
+================================================================================
+String: a five-quote symbol
+================================================================================
+
+IF
+  Class(Player1,"""""HUMANOID""""")
+THEN
+  RESPONSE #100
+    NoAction()
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (block
+    if: (if_clause
+      (condition
+        call: (call_expr
+          func: (identifier)
+          args: (identifier)
+          args: (quoted_symbol))))
+    then: (then_clause
+      (response
+        weight: (number)
+        (action
+          call: (call_expr
+            func: (identifier)))))))

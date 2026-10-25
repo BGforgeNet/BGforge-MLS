@@ -63,6 +63,13 @@ describe("findStrRefSites", () => {
         expect(found.map((site) => site.strref)).toEqual([11, 22, 33]);
     });
 
+    it("reads a hash number and a hex number as whole numbers", () => {
+        const found = sites(
+            "IF\n True()\nTHEN\n RESPONSE #100\n  SetName(# 46150)\n  DisplayString(Myself,0x10)\nEND\n",
+        );
+        expect(found.map((site) => site.strref)).toEqual([46150, 16]);
+    });
+
     it("skips an action the data has no signature for", () => {
         expect(sites("IF\n True()\nTHEN\n RESPONSE #100\n  NotARealAction(46150)\nEND\n")).toEqual([]);
     });

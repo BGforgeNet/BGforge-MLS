@@ -363,9 +363,9 @@ describe("compileBaf - what it will not guess at", () => {
 
     test("an override wrapping the wrong shape is refused", () => {
         expect(problemsOf(() => compile(script("TriggerOverride(Myself)")))[0]).toContain("TriggerOverride takes");
-        expect(problemsOf(() => compile(script("False()", ["ActionOverride(Myself)"])))[0]).toContain(
-            "ActionOverride takes",
-        );
+        // ActionOverride is a word of its own in the grammar, as in the reference, so the wrong shape never
+        // reaches the compiler as a call.
+        expect(problemsOf(() => compile(script("False()", ["ActionOverride(Myself)"])))).toEqual(["syntax error"]);
     });
 });
 

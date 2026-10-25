@@ -1,0 +1,22 @@
+/* outer /* inner */ still outer */
+IF
+    See([ENEMY.HUMANOID.ANYONE])
+    OR(%n%)
+    HPGT(Player1, #5)
+    !HPGT(Player1, -0x10)
+THEN
+    RESPONSE #100
+        ActionOverride(Player1, Attack(Player1[1.2.3.4])
+        %RunAwayFrom%(NearestEnemyOf(Myself), 30)
+        SetGlobal("// x", "GLOBAL", 1)
+        DisplayString(Myself, ~he~ [M1] ~she~ [F1])
+        DisplayString(Myself, ~two
+lines~)
+        SetPlayerSound(Myself, A6#0, EXISTANCE5)
+        Attack([])
+END
+
+IF
+    False()
+THEN
+END

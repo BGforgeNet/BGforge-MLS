@@ -75,6 +75,14 @@
 (call_expr
   args: (identifier) @constant)
 
+; The same name when a rectangle follows it (See(Player1[1.2.3.4])), written between five double quotes, or
+; as a text's sound ([SND]).
+(rect_arg
+  object: (identifier) @constant)
+(quoted_symbol) @constant
+(sound
+  (identifier) @string.special)
+
 ; ----- Operators -----
 
 "!" @operator

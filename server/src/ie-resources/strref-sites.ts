@@ -8,6 +8,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import type { Range } from "vscode-languageserver/node";
+import { bafIntegerValue } from "@bgforge/shared/baf-integer";
 import { SyntaxType } from "../weidu-baf/syntax-type";
 
 /** One strref argument found in the source. */
@@ -39,8 +40,8 @@ function collect(node: SyntaxNode, paramsOf: StrRefParams, sites: StrRefSite[]):
                 // mod's translation files, which the translation layer already annotates.
                 if (arg?.type !== SyntaxType.Number) continue;
                 sites.push({
-                    // The grammar admits only `-?\d+` and `0x...` here, so this is always a whole number.
-                    strref: Number(arg.text),
+                    // A `number` node is always a whole number, though its text may be hex or `#`-prefixed.
+                    strref: bafIntegerValue(arg.text),
                     range: {
                         start: { line: arg.startPosition.row, character: arg.startPosition.column },
                         end: { line: arg.endPosition.row, character: arg.endPosition.column },

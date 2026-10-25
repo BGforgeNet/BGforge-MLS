@@ -7,4 +7,8 @@ THEN
 //                         ^^^^ string.special
     SetGlobalTimer("%myvar%", "LOCALS", 10)
 //                 ^ string
+    See(Player1[1.2.3.4])
+//      ^ constant
+    DisplayString(Player1, ~hi~ [SND])
+//                               ^ string.special
 END
