@@ -97,6 +97,11 @@ const CASES: Case[] = [
     // `in` is not an operator: only `call`, `procedure` headers and `foreach` take it.
     { name: "in is not a membership operator", code: stmt("variable a; if 1 in a then a := 1;"), expect: "refuse" },
 
+    // A string ends on its own line; only adjacent literals and a line continuation span lines.
+    { name: "adjacent strings across lines", code: stmt('display_msg("a"\n    "b");'), expect: "accept" },
+    { name: "a string does not span lines", code: stmt('display_msg("a\nb");'), expect: "refuse" },
+    { name: "a line continuation inside a string", code: stmt('display_msg("a\\\nb");'), expect: "accept" },
+
     // Comparisons do not chain: the compiler takes one comparison per operand pair. The grammar groups a chain
     // rather than rejecting it, a recorded divergence (see binary_expr in grammar.js).
     {

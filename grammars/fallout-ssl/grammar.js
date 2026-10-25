@@ -294,10 +294,12 @@ export default grammar({
                         seq(kw("when"), field("condition", $._expression)),
                     ),
                 ),
-                kw("begin"),
-                field("body", repeat($._statement)),
-                kw("end"),
+                $._procedure_body,
             ),
+
+        // Its own rule only to share parse states: inline, the body is repeated after every combination of the
+        // optional header parts above, which costs about a twelfth of the parse states. The tree is the same.
+        _procedure_body: ($) => seq(kw("begin"), field("body", repeat($._statement)), kw("end")),
 
         // A trailing comma after the last parameter is accepted, as it is in shipped scripts.
         param_list: ($) => seq("(", optional(seq(commaSep($.param), optional(","))), ")"),
@@ -754,7 +756,12 @@ export default grammar({
 
         // Adjacent literals are one string: `"ab" "cd"` is `abcd`, as in C. Only whitespace may separate
         // them - a comment between two literals ends the first one and starts a fresh expression.
-        string: ($) => token(seq(/"([^"\\]|\\.)*"/, repeat(seq(/[ \t\r\n\v]*/, /"([^"\\]|\\.)*"/)))),
+        //
+        // One literal ends on its own line: the compiler's preprocessor refuses a newline inside a string
+        // ("Unterminated string literal"), and a backslash-newline is the only way to continue one. That also
+        // keeps an unclosed `"` from pairing with the next quote lines away and swallowing the file.
+        string: ($) =>
+            token(seq(/"([^"\\\n]|\\.|\\\r?\n)*"/, repeat(seq(/[ \t\r\n\v]*/, /"([^"\\\n]|\\.|\\\r?\n)*"/)))),
 
         // A character constant is an integer: `'A'` is 65. The escapes are the string table's, plus a
         // two- or three-digit octal form; anything else is rejected while lowering, where the message

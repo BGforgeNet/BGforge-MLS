@@ -486,6 +486,9 @@ false
 "string content"
 ```
 
+A literal ends on its own line: continue it with a backslash before the newline, or write adjacent literals, which
+join into one string.
+
 ### Comments
 
 ```ssl
