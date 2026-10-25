@@ -196,4 +196,16 @@ procedure run begin end
         expect(names).toContain("SPEED");
         expect(names).toContain("run");
     });
+
+    it("lists imported procedures in a block and exported variables in a block", () => {
+        const text =
+            "import procedure begin\n    first;\n    second;\nend\nexport variable begin\n    gx := 1;\n    gy;\nend\n";
+        const symbols = getDocumentSymbols(text);
+        expect(symbols.map((s) => [s.name, s.kind])).toEqual([
+            ["first", SymbolKind.Function],
+            ["second", SymbolKind.Function],
+            ["gx", SymbolKind.Variable],
+            ["gy", SymbolKind.Variable],
+        ]);
+    });
 });

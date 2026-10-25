@@ -208,3 +208,31 @@ describe("fallout-ssl formatter: else after a macro", () => {
         );
     });
 });
+
+/**
+ * Forms the reference compiler accepts that a corpus script rarely or never writes. Each must come back as the
+ * same construct: formatting that drops a `when` or an `import` changes what the script means.
+ */
+describe("fallout-ssl formatter: imports, exports, calls and loops", () => {
+    it.each([
+        ["an imported procedure", "import procedure foo(variable a);\n"],
+        ["an exported procedure", "export procedure foo;\n\nprocedure foo begin\nend\n"],
+        ["an import procedure block", "import procedure begin\n    foo(variable a);\n    bar;\nend\n"],
+        ["an import variable block", "import variable begin\n    gx;\n    gy;\nend\n"],
+        ["an export variable block", "export variable begin\n    gx := 1;\n    gy;\nend\n"],
+        ["a conditional call", "procedure p begin\nend\n\nprocedure start begin\n    call p when x > 1;\nend\n"],
+        ["a call through a string", 'procedure start begin\n    call "foo";\nend\n'],
+        [
+            "a for loop without parentheses",
+            "procedure start begin\n    variable i;\n    for i := 0; i < 3; i++; begin\n        x := i;\n    end\nend\n",
+        ],
+        ["a raw string", 'procedure start begin\n    display_msg(@"a\\b");\nend\n'],
+        ["numbers in their source spelling", "procedure start begin\n    variable a := 0XFF;\n    a := 5.;\nend\n"],
+    ])("keeps %s as written", (_name, source) => {
+        expect(format(source)).toBe(source);
+    });
+
+    it("canonicalises the case of the import keyword", () => {
+        expect(format("IMPORT PROCEDURE foo;\n")).toBe("import procedure foo;\n");
+    });
+});

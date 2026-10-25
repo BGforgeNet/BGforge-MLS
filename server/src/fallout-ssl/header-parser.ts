@@ -20,6 +20,7 @@ import {
     buildProcedureSymbol,
     buildMacroSymbol,
     buildVariableSymbol,
+    exportedVariables,
     extractMacros,
     extractParams,
     extractProcedures,
@@ -109,10 +110,9 @@ function extractSymbols(
         } else if (node.type === SyntaxType.ExportDecl) {
             const docComment = findPrecedingDocComment(node);
             const parsed = docComment ? jsdoc.parse(docComment) : null;
-            const nameNode = node.childForFieldName("name");
-            if (nameNode) {
+            for (const { declaration, name } of exportedVariables(node)) {
                 result.push(
-                    buildVariableSymbol(nameNode.text, uri, makeRange(node), "export variable", parsed, displayPath),
+                    buildVariableSymbol(name.text, uri, makeRange(declaration), "export variable", parsed, displayPath),
                 );
             }
         }

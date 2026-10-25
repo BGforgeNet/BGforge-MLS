@@ -102,6 +102,68 @@ const CASES: Case[] = [
     { name: "a string does not span lines", code: stmt('display_msg("a\nb");'), expect: "refuse" },
     { name: "a line continuation inside a string", code: stmt('display_msg("a\\\nb");'), expect: "accept" },
 
+    // Imported and exported procedures and variables, one at a time and in blocks.
+    { name: "import procedure", code: "import procedure foo;\n", expect: "accept" },
+    {
+        name: "import procedure with parameters",
+        code: "import procedure foo(variable a, variable b);\n",
+        expect: "accept",
+    },
+    { name: "import procedure block", code: "import procedure begin foo(variable a); bar; end\n", expect: "accept" },
+    { name: "export procedure", code: "export procedure foo;\nprocedure foo begin end\n", expect: "accept" },
+    {
+        name: "export procedure block",
+        code: "export procedure begin foo; end\nprocedure foo begin end\n",
+        expect: "accept",
+    },
+    { name: "import variable block", code: "import variable begin gx; gy; end\n", expect: "accept" },
+    { name: "export variable block", code: "export variable begin gx := 1; gy := 2; end\n", expect: "accept" },
+    { name: "import procedure cannot define a body", code: "import procedure foo begin end\n", expect: "refuse" },
+    {
+        name: "an import block holds no definitions",
+        code: "import procedure begin foo begin end end\n",
+        expect: "refuse",
+    },
+
+    // Calls.
+    { name: "conditional call", code: `procedure p begin end\n${stmt("call p when 1;")}`, expect: "accept" },
+    { name: "timed call", code: `procedure p begin end\n${stmt("call p in 10;")}`, expect: "accept" },
+    { name: "call through a string", code: stmt('call "foo";'), expect: "accept" },
+    { name: "call through a string with arguments", code: stmt('call "foo"(1, 2);'), expect: "accept" },
+
+    // for: the parentheses are optional; without them the update ends in `;`, inside them it may.
+    { name: "for without parentheses", code: stmt("variable i; for i := 0; i < 3; i++; begin end"), expect: "accept" },
+    {
+        name: "for without parentheses, declaring its variable",
+        code: stmt('for variable i := 0; i < 3; i++; display_msg("x");'),
+        expect: "accept",
+    },
+    { name: "for with parentheses", code: stmt("variable i; for (i := 0; i < 3; i++) begin end"), expect: "accept" },
+    {
+        name: "for with parentheses and a trailing semicolon",
+        code: stmt("variable i; for (i := 0; i < 3; i++;) begin end"),
+        expect: "accept",
+    },
+    {
+        name: "for without parentheses needs the semicolon after the update",
+        code: stmt("variable i; for i := 0; i < 3; i++ begin end"),
+        expect: "refuse",
+    },
+
+    // Literals.
+    { name: "raw string", code: stmt('display_msg(@"a\\b");'), expect: "accept" },
+    {
+        name: "a raw string still ends where an escaped quote would not",
+        code: stmt('display_msg(@"a\\");'),
+        expect: "refuse",
+    },
+    { name: "hex number with a capital X", code: stmt("variable a := 0XFF;"), expect: "accept" },
+    { name: "float without fraction digits", code: stmt("variable a := 5.;"), expect: "accept" },
+
+    // Variadic macros, as the sfall headers write them.
+    { name: "variadic macro", code: `#define F(a, ...) a\n${stmt("F(1, 2);")}`, expect: "accept" },
+    { name: "variadic macro with no named parameter", code: `#define F(...) 1\n${stmt("F(1, 2);")}`, expect: "accept" },
+
     // Comparisons do not chain: the compiler takes one comparison per operand pair. The grammar groups a chain
     // rather than rejecting it, a recorded divergence (see binary_expr in grammar.js).
     {

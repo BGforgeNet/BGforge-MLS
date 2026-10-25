@@ -115,6 +115,7 @@ export default grammar({
             choice(
                 $.preprocessor,
                 $.procedure_forward,
+                $.procedure_forward_block,
                 $.procedure,
                 $.variable_decl,
                 $.export_decl,
@@ -149,8 +150,14 @@ export default grammar({
         // Macro parameters: (a, b, c) - immediately after identifier, no whitespace.
         // Uses token.immediate("(") so the opening paren must immediately follow the name
         // (no whitespace), distinguishing `#define FOO(x) body` from `#define FOO (x)`.
-        // Unlike the old opaque token, params are parsed as real identifiers.
-        macro_params: ($) => seq(token.immediate("("), optional(commaSep($.identifier)), ")"),
+        // Unlike the old opaque token, params are parsed as real identifiers. A trailing `...` takes any further
+        // arguments as `__VA_ARGS__`, as the sfall headers use it.
+        macro_params: ($) =>
+            seq(
+                token.immediate("("),
+                optional(choice(seq(commaSep($.identifier), optional(seq(",", "..."))), "...")),
+                ")",
+            ),
 
         // Macro body: parsed as real SSL statements (expressions are covered via expression_stmt).
         // Terminated by LINE_END from the external scanner (bare newline = end of #define).
@@ -185,15 +192,7 @@ export default grammar({
 
         macro_final_return: ($) => seq(kw("return"), optional($._expression)),
 
-        macro_final_call: ($) =>
-            seq(
-                // SSL keywords are case-insensitive; real scripts write `Call Foo;`. Matched as a plain
-                // literal it lexes as an identifier and the statement silently becomes two expression
-                // statements rather than a call.
-                kw("call"),
-                choice(field("target", $.identifier), field("target", $.call_expr)),
-                optional(seq(kw("in"), field("delay", $._expression))),
-            ),
+        macro_final_call: ($) => callBody($),
 
         // An if/else whose taken branch is itself unterminated: `#define m if (c) then x := 0`.
         // The tail recurses through `else`, so an if/else-if chain ending in a bare assignment
@@ -266,14 +265,34 @@ export default grammar({
         // them, and only in this order: `critical pure` is accepted, `pure critical` is not.
         procedure_critical: ($) => kw("critical"),
 
+        // An imported or exported procedure is declared like a forward declaration, with no modifiers; the
+        // compiler refuses a body after one.
         procedure_forward: ($) =>
             seq(
-                optional(field("critical", $.procedure_critical)),
-                optional(field("modifier", $.procedure_modifier)),
+                choice(
+                    seq(
+                        optional(field("critical", $.procedure_critical)),
+                        optional(field("modifier", $.procedure_modifier)),
+                    ),
+                    field("linkage", $.linkage),
+                ),
                 kw("procedure"),
-                field("name", $.identifier),
-                optional(field("params", $.param_list)),
-                ";",
+                $._procedure_declarator,
+            ),
+
+        _procedure_declarator: ($) => seq(field("name", $.identifier), optional(field("params", $.param_list)), ";"),
+
+        linkage: ($) => choice(kw("import"), kw("export")),
+
+        // `import procedure begin a; b(variable x); end`: several declarations under one linkage. Each one is a
+        // procedure_forward, so whatever lists forward declarations finds these too.
+        procedure_forward_block: ($) =>
+            seq(
+                field("linkage", $.linkage),
+                kw("procedure"),
+                kw("begin"),
+                repeat(alias($._procedure_declarator, $.procedure_forward)),
+                kw("end"),
             ),
 
         // Procedure definition: procedure name begin ... end
@@ -335,7 +354,13 @@ export default grammar({
                 // the statement instead of being swallowed. Parenthesising works and is what the
                 // affected scripts can do; see the corpus allowlist entry.
                 prec.right(seq(optional(kw("import")), kw("variable"), commaSep($.var_init), optional(";"))),
-                seq(kw("variable"), kw("begin"), repeat(seq(commaSep($.var_init), ";")), kw("end")),
+                seq(
+                    optional(kw("import")),
+                    kw("variable"),
+                    kw("begin"),
+                    repeat(seq(commaSep($.var_init), ";")),
+                    kw("end"),
+                ),
             ),
 
         var_init: ($) =>
@@ -356,16 +381,20 @@ export default grammar({
                 optional(seq(choice(":=", "="), field("value", $._expression))),
             ),
 
-        // Export: export variable name := value; (with optional init and optional semicolon)
+        // Export: export variable name := value; (with optional init and optional semicolon), or a block of
+        // them, `export variable begin a := 1; b; end`, whose names are var_init children.
         export_decl: ($) =>
-            prec.right(
-                seq(
-                    kw("export"),
-                    kw("variable"),
-                    field("name", $.identifier),
-                    optional(seq(choice(":=", "="), field("value", $._expression))),
-                    optional(";"),
+            choice(
+                prec.right(
+                    seq(
+                        kw("export"),
+                        kw("variable"),
+                        field("name", $.identifier),
+                        optional(seq(choice(":=", "="), field("value", $._expression))),
+                        optional(";"),
+                    ),
                 ),
+                seq(kw("export"), kw("variable"), kw("begin"), repeat(seq($.var_init, optional(";"))), kw("end")),
             ),
 
         // Statements
@@ -419,17 +448,22 @@ export default grammar({
 
         while_stmt: ($) => seq(kw("while"), field("cond", $._expression), kw("do"), field("body", $._stmt_or_block)),
 
+        // The parentheses are optional. Without them the update ends in its own `;`; inside them a `;` after the
+        // update is allowed as well.
         for_stmt: ($) =>
             seq(
                 kw("for"),
-                "(",
+                choice(seq("(", $._for_header, optional(";"), ")"), seq($._for_header, ";")),
+                field("body", $._stmt_or_block),
+            ),
+
+        _for_header: ($) =>
+            seq(
                 field("init", optional(choice($.for_var_decl, $.for_init_assign, $._expression))),
                 ";",
                 field("cond", optional($._expression)),
                 ";",
                 field("update", optional(choice($.for_update_assign, $._expression))),
-                ")",
-                field("body", $._stmt_or_block),
             ),
 
         // Variable declaration in for loop init: variable i = 0
@@ -531,17 +565,8 @@ export default grammar({
 
         continue_stmt: ($) => seq(kw("continue"), ";"),
 
-        // call procedure_name; or call func(args); or call proc in ticks;
-        call_stmt: ($) =>
-            seq(
-                // SSL keywords are case-insensitive; real scripts write `Call Foo;`. Matched as a plain
-                // literal it lexes as an identifier and the statement silently becomes two expression
-                // statements rather than a call.
-                kw("call"),
-                choice(field("target", $.identifier), field("target", $.call_expr)),
-                optional(seq(kw("in"), field("delay", $._expression))),
-                ";",
-            ),
+        // call procedure_name; or call func(args); or call proc in ticks; or call proc when cond;
+        call_stmt: ($) => seq(callBody($), ";"),
 
         // Macro invocation at top-level (outside procedures).
         // Preprocessor macros can appear anywhere in SSL code:
@@ -734,11 +759,15 @@ export default grammar({
 
         // A STRING may be the callee: `"node_" + n` is not it, but a literal `"foo"(1)` calls the
         // procedure named by the string, resolved by the engine at run time.
+        //
+        // So may a call, for the macro idiom that picks a callee by argument count:
+        // `FUNC_SELECTOR_7(__VA_ARGS__, f7, ..., f1)(format, __VA_ARGS__)` expands to `fN(format, ...)`. The
+        // compiler only ever sees the expansion, and source written that way outside a macro is refused there.
         call_expr: ($) =>
             prec(
                 12,
                 seq(
-                    field("func", choice($.identifier, $.token_paste_identifier, $.string)),
+                    field("func", choice($.identifier, $.token_paste_identifier, $.string, $.call_expr)),
                     "(",
                     field("args", optional(commaSep($._expression))),
                     ")",
@@ -750,7 +779,8 @@ export default grammar({
         // Terminals. The keywords the compiler reserves never lex as this token: see RESERVED_WORDS.
         identifier: ($) => /[a-zA-Z_][a-zA-Z0-9_]*/,
 
-        number: ($) => token(choice(/\d+\.\d+/, /\.\d+/, /\d+/, /0x[0-9a-fA-F]+/)),
+        // A float may end at its point (`5.` is 5.0), and the hex prefix takes either case, as the compiler reads both.
+        number: ($) => token(choice(/\d+\.\d*/, /\.\d+/, /\d+/, /0[xX][0-9a-fA-F]+/)),
 
         boolean: ($) => choice(kw("true", KEYWORD_PRECEDENCE.true), kw("false", KEYWORD_PRECEDENCE.false)),
 
@@ -760,8 +790,17 @@ export default grammar({
         // One literal ends on its own line: the compiler's preprocessor refuses a newline inside a string
         // ("Unterminated string literal"), and a backslash-newline is the only way to continue one. That also
         // keeps an unclosed `"` from pairing with the next quote lines away and swallowing the file.
+        //
+        // `@"..."` is a raw string: the compiler takes its backslashes literally. It still ends where an escaped
+        // string would, because the preprocessor reads it as one before the compiler sees the `@`.
         string: ($) =>
-            token(seq(/"([^"\\\n]|\\.|\\\r?\n)*"/, repeat(seq(/[ \t\r\n\v]*/, /"([^"\\\n]|\\.|\\\r?\n)*"/)))),
+            token(
+                seq(
+                    optional("@"),
+                    /"([^"\\\n]|\\.|\\\r?\n)*"/,
+                    repeat(seq(/[ \t\r\n\v]*/, /"([^"\\\n]|\\.|\\\r?\n)*"/)),
+                ),
+            ),
 
         // A character constant is an integer: `'A'` is 65. The escapes are the string table's, plus a
         // two- or three-digit octal form; anything else is rejected while lowering, where the message
@@ -812,4 +851,24 @@ function keywordToken(word, precedence) {
 
 function commaSep(rule) {
     return seq(rule, repeat(seq(",", rule)));
+}
+
+/**
+ * A `call` up to its terminator, shared by call_stmt and the unterminated macro-body twin. The target is a
+ * procedure name or a string naming one, with or without arguments; `in` schedules the call after a delay and
+ * `when` makes it conditional.
+ *
+ * @param {GrammarSymbols<string>} $
+ */
+function callBody($) {
+    return seq(
+        // SSL keywords are case-insensitive; real scripts write `Call Foo;`. Matched as a plain
+        // literal it lexes as an identifier and the statement silently becomes two expression
+        // statements rather than a call.
+        kw("call"),
+        field("target", choice($.identifier, $.string, $.call_expr)),
+        optional(
+            choice(seq(kw("in"), field("delay", $._expression)), seq(kw("when"), field("condition", $._expression))),
+        ),
+    );
 }

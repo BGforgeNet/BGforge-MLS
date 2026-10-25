@@ -150,7 +150,10 @@ export function formatForStmt(node: SyntaxNode, depth: number): string {
     const condStr = cond ? formatExpression(cond) : "";
     const updateStr = update ? formatExpression(update) : "";
 
-    let result = `${canonicalKeyword("for")} (${initStr}; ${condStr}; ${updateStr})`;
+    // Without parentheses the update ends in its own `;`. Kept as the source wrote it, as foreach heads are.
+    const hasParens = node.children.some((c) => c.text === "(");
+    const header = `${initStr}; ${condStr}; ${updateStr}`;
+    let result = `${canonicalKeyword("for")} ${hasParens ? `(${header})` : `${header};`}`;
 
     if (body?.type === SyntaxType.Block) {
         result += " " + formatBlock(body, depth);

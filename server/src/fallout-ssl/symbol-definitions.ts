@@ -1,6 +1,6 @@
 import type { Node } from "web-tree-sitter";
 import type { Symbols } from "../core/symbol-index";
-import { extractProcedures, findMacroDefinition } from "./utils";
+import { exportedVariables, extractProcedures, findMacroDefinition } from "./utils";
 import { sslMapGet, sslNamesEqual } from "@bgforge/shared/fallout-ssl-names";
 import { SyntaxType } from "./syntax-type";
 
@@ -128,9 +128,9 @@ export function findFileScopeDefinitionNode(rootNode: Node, symbolName: string):
 
     for (const child of rootNode.children) {
         if (child.type === SyntaxType.ExportDecl) {
-            const nameNode = child.childForFieldName("name");
-            if (sslNamesEqual(nameNode?.text, symbolName)) {
-                return nameNode;
+            const exported = exportedVariables(child).find(({ name }) => sslNamesEqual(name.text, symbolName));
+            if (exported) {
+                return exported.name;
             }
         }
     }

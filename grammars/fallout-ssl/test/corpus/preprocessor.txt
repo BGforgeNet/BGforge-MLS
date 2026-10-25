@@ -29,6 +29,52 @@ Constant macros
           (number))))))
 
 ==================
+Variadic macros
+==================
+
+#define string_format(format, ...) sprintf_array(format, [__VA_ARGS__])
+#define any(...) 1
+#define pick(a, ...) SELECT(__VA_ARGS__, f2, f1)(a, __VA_ARGS__)
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier))
+      body: (macro_body
+        (expression_stmt
+          (call_expr
+            func: (identifier)
+            args: (identifier)
+            args: (array_expr
+              (identifier)))))))
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params)
+      body: (macro_body
+        (expression_stmt
+          (number)))))
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier))
+      body: (macro_body
+        (expression_stmt
+          (call_expr
+            func: (call_expr
+              func: (identifier)
+              args: (identifier)
+              args: (identifier)
+              args: (identifier))
+            args: (identifier)
+            args: (identifier)))))))
+
+==================
 Function-like macros
 ==================
 

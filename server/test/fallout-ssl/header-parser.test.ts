@@ -316,4 +316,29 @@ procedure init_items begin end
             expect(symbols.find((s) => s.name === "init_items")?.kind).toBe(SymbolKind.Procedure);
         });
     });
+
+    describe("imports and exports", () => {
+        it("indexes imported procedures, one at a time and in a block, and exported variable blocks", () => {
+            const input = `
+import procedure single(variable a);
+import procedure begin
+    first(variable x);
+    second;
+end
+export variable begin
+    gx := 1;
+    gy;
+end
+`;
+            const symbols = parseHeaderToSymbols(testUri, input, workspaceRoot);
+
+            expect(symbols.map((s) => [s.name, s.kind])).toEqual([
+                ["single", SymbolKind.Procedure],
+                ["first", SymbolKind.Procedure],
+                ["second", SymbolKind.Procedure],
+                ["gx", SymbolKind.Variable],
+                ["gy", SymbolKind.Variable],
+            ]);
+        });
+    });
 });

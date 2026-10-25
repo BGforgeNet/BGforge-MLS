@@ -19,6 +19,7 @@ import {
     buildProcedureSymbol,
     buildMacroSymbol,
     buildVariableSymbol,
+    exportedVariables,
 } from "./utils";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
@@ -87,9 +88,8 @@ function parseLocalSymbols(text: string, uri: string): LocalSymbolsData | null {
         } else if (node.type === SyntaxType.ExportDecl) {
             const docComment = findPrecedingDocComment(node);
             const parsed = docComment ? jsdoc.parse(docComment) : null;
-            const nameNode = node.childForFieldName("name");
-            if (nameNode) {
-                symbols.push(buildVariableSymbol(nameNode.text, uri, makeRange(node), "export variable", parsed));
+            for (const { declaration, name } of exportedVariables(node)) {
+                symbols.push(buildVariableSymbol(name.text, uri, makeRange(declaration), "export variable", parsed));
             }
         }
     }

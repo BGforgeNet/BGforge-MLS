@@ -185,6 +185,8 @@ export function formatNode(node: SyntaxNode, depth: number): string {
             return normalizeComment(node.text);
         case SyntaxType.ProcedureForward:
             return formatProcedureForward(node);
+        case SyntaxType.ProcedureForwardBlock:
+            return formatProcedureForwardBlock(node);
         case SyntaxType.Procedure:
             return formatProcedure(node, depth);
         case SyntaxType.VariableDecl:
@@ -314,9 +316,10 @@ function formatChildren(node: SyntaxNode, depth: number): string {
  * silently, on a file the user only asked to reformat.
  */
 function formatProcedureModifiers(node: SyntaxNode): string {
-    const critical = node.childForFieldName("critical");
-    const modifier = node.childForFieldName("modifier");
-    return `${critical ? `${canonicalKeyword(critical.text)} ` : ""}${modifier ? `${canonicalKeyword(modifier.text)} ` : ""}`;
+    return ["linkage", "critical", "modifier"]
+        .map((field) => node.childForFieldName(field))
+        .map((word) => (word ? `${canonicalKeyword(word.text)} ` : ""))
+        .join("");
 }
 
 /** The `in <constant>` or `when <expr>` clause that sits between the parameter list and `begin`. */
@@ -328,13 +331,24 @@ function formatProcedureSchedule(node: SyntaxNode): string {
 }
 
 function formatProcedureForward(node: SyntaxNode): string {
+    return `${formatProcedureModifiers(node)}${canonicalKeyword("procedure")} ${formatProcedureDeclarator(node)}`;
+}
+
+/** `name(params);`: a forward declaration after its `procedure` keyword, or one entry of an import block. */
+function formatProcedureDeclarator(node: SyntaxNode): string {
     const name = node.childForFieldName("name")?.text || "";
     const params = node.childForFieldName("params");
-    const prefix = `${formatProcedureModifiers(node)}${canonicalKeyword("procedure")} ${name}`;
-    if (params) {
-        return `${prefix}${formatParamList(params)};`;
-    }
-    return `${prefix};`;
+    return `${name}${params ? formatParamList(params) : ""};`;
+}
+
+/** `import procedure begin ... end`, one declaration per line. A comment inside keeps the block verbatim. */
+function formatProcedureForwardBlock(node: SyntaxNode): string {
+    if (node.children.some((child) => isComment(child))) return node.text;
+    const lines = node.namedChildren
+        .filter((child) => child?.type === SyntaxType.ProcedureForward)
+        .map((child) => ctx.indent + formatProcedureDeclarator(child!));
+    const header = `${formatProcedureModifiers(node)}${canonicalKeyword("procedure")} ${canonicalKeyword("begin")}`;
+    return [header, ...lines, canonicalKeyword("end")].join("\n");
 }
 
 function formatProcedure(node: SyntaxNode, depth: number): string {
@@ -438,6 +452,7 @@ function formatParam(node: SyntaxNode): string {
 }
 
 function formatVariableDecl(node: SyntaxNode, depth: number = 0): string {
+    const importKw = node.children.find((c) => c.type === "import");
     const hasBegin = node.children.some((c) => c.text.match(/^begin$/i));
     if (hasBegin) {
         // Group var_inits by semicolon - comma-separated inits share a line
@@ -457,11 +472,9 @@ function formatVariableDecl(node: SyntaxNode, depth: number = 0): string {
         if (currentGroup.length > 0) {
             lines.push(ctx.indent + currentGroup.join(", ") + ";");
         }
-        const kwVariable = canonicalKeyword("variable");
-        return `${kwVariable} ${canonicalKeyword("begin")}\n${lines.join("\n")}\n${canonicalKeyword("end")}`;
+        return formatDeclarationBlock(importKw ? "import" : undefined, lines);
     }
 
-    const importKw = node.children.find((c) => c.type === "import");
     const hasSemicolon = node.children.some((c) => c.text === ";");
     const prefix = `${importKw ? `${canonicalKeyword("import")} ` : ""}${canonicalKeyword("variable")} `;
     const varInits: string[] = [];
@@ -493,7 +506,22 @@ function formatVarInit(node: SyntaxNode, depth: number = 0, prefixLen: number = 
     return result;
 }
 
+/** `[import|export] variable begin`, the formatted lines, `end`. */
+function formatDeclarationBlock(linkage: "import" | "export" | undefined, lines: string[]): string {
+    const header = `${linkage ? `${canonicalKeyword(linkage)} ` : ""}${canonicalKeyword("variable")} ${canonicalKeyword("begin")}`;
+    return [header, ...lines, canonicalKeyword("end")].join("\n");
+}
+
 function formatExportDecl(node: SyntaxNode): string {
+    const varInits = node.namedChildren.filter((child) => child?.type === SyntaxType.VarInit);
+    if (varInits.length > 0) {
+        // One per line, each with its `;`: in an export block the `;` is optional, and joining two entries with a
+        // comma, as a plain variable block may, is a syntax error here.
+        return formatDeclarationBlock(
+            "export",
+            varInits.map((child) => `${ctx.indent}${formatVarInit(child!, 1)};`),
+        );
+    }
     const name = node.childForFieldName("name")?.text || "";
     const value = node.childForFieldName("value");
     const declaration = `${canonicalKeyword("export")} ${canonicalKeyword("variable")} ${name}`;

@@ -10,7 +10,7 @@
 import { type DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
-import { extractProcedures, makeRange, extractMacros } from "./utils";
+import { exportedVariables, extractProcedures, makeRange, extractMacros } from "./utils";
 import { SyntaxType } from "./syntax-type";
 
 function makeSymbol(
@@ -156,9 +156,8 @@ function extractSymbols(root: Node): DocumentSymbol[] {
                 }
             }
         } else if (node.type === SyntaxType.ExportDecl) {
-            const nameNode = node.childForFieldName("name");
-            if (nameNode) {
-                const sym = makeSymbol(node, nameNode, SymbolKind.Variable);
+            for (const { declaration, name } of exportedVariables(node)) {
+                const sym = makeSymbol(declaration, name, SymbolKind.Variable);
                 if (sym) variables.push(sym);
             }
         }

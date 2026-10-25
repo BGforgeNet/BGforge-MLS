@@ -291,6 +291,22 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("procedure start begin\n variable &x;\nend\n")).toThrow(/^2:\d+: syntax error$/);
     });
 
+    it("refuses the forms the reference compiles to instructions this back end does not emit", () => {
+        // Compiled as the plain forms they look like, each would change what the program does without a word.
+        expect(refuse("import procedure foo;\nprocedure start begin\nend\n")).toThrow(
+            /^1:1: imported and exported procedures are not supported$/,
+        );
+        expect(refuse("procedure start begin\nend\nexport procedure begin\n start;\nend\n")).toThrow(
+            /^3:1: imported and exported procedures are not supported$/,
+        );
+        expect(refuse("export variable begin\n gx := 1;\nend\nprocedure start begin\nend\n")).toThrow(
+            /^1:1: an 'export variable begin \.\.\. end' block is not supported$/,
+        );
+        expect(refuse("procedure p begin\nend\nprocedure start begin\n call p when 1;\nend\n")).toThrow(
+            /^4:14: a conditional call \('call \.\.\. when'\) is not supported$/,
+        );
+    });
+
     it("names a construct the source left unfinished", () => {
         expect(refuse("procedure start begin\n variable x := 1;\n")).toThrow(/^3:1: missing end$/);
     });

@@ -283,6 +283,10 @@ export function formatCallStmt(node: SyntaxNode): string {
     if (delay) {
         result += ` in ${formatExpression(delay)}`;
     }
+    const condition = node.childForFieldName("condition");
+    if (condition) {
+        result += ` ${canonicalKeyword("when")} ${formatExpression(condition)}`;
+    }
 
     return result + ";";
 }

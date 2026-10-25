@@ -1252,3 +1252,158 @@ end
       else: (assignment
         left: (identifier)
         right: (number)))))
+
+================================================================================
+Number forms: capital hex prefix and a float without fraction digits
+================================================================================
+
+procedure foo begin
+    a := 0XFF;
+    b := 5.;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (number))
+    body: (assignment
+      left: (identifier)
+      right: (number))))
+
+================================================================================
+Raw string
+================================================================================
+
+procedure foo begin
+    a := @"C:\dir\file";
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (string))))
+
+================================================================================
+Import and export procedures
+================================================================================
+
+import procedure foo(variable a);
+export procedure bar;
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure_forward
+    linkage: (linkage)
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier))))
+  (procedure_forward
+    linkage: (linkage)
+    name: (identifier)))
+
+================================================================================
+Import procedure block
+================================================================================
+
+import procedure begin
+    foo(variable a);
+    bar;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure_forward_block
+    linkage: (linkage)
+    (procedure_forward
+      name: (identifier)
+      params: (param_list
+        (param
+          name: (identifier))))
+    (procedure_forward
+      name: (identifier))))
+
+================================================================================
+Import and export variable blocks
+================================================================================
+
+import variable begin
+    gx;
+    gy;
+end
+export variable begin
+    ex := 1;
+    ey := 2;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (variable_decl
+    (var_init
+      name: (identifier))
+    (var_init
+      name: (identifier)))
+  (export_decl
+    (var_init
+      name: (identifier)
+      value: (number))
+    (var_init
+      name: (identifier)
+      value: (number))))
+
+================================================================================
+Conditional call and call through a string
+================================================================================
+
+procedure foo begin
+    call bar when x;
+    call "baz";
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (call_stmt
+      target: (identifier)
+      condition: (identifier))
+    body: (call_stmt
+      target: (string))))
+
+================================================================================
+For loop without parentheses
+================================================================================
+
+procedure foo begin
+    for i := 0; i < 3; i++; x := i;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (for_stmt
+      init: (for_init_assign
+        name: (identifier)
+        value: (number))
+      cond: (binary_expr
+        left: (identifier)
+        right: (number))
+      update: (unary_expr
+        expr: (identifier))
+      body: (assignment
+        left: (identifier)
+        right: (identifier)))))

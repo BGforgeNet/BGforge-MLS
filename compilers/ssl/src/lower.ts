@@ -310,8 +310,18 @@ class Lowering {
         for (const child of root.namedChildren) {
             if (!child) continue;
             switch (child.type) {
+                // The reference marks an imported or exported procedure in the procedure table, a flag this back
+                // end does not write; compiling one as a plain declaration would change the program silently.
+                case "procedure_forward_block":
+                    this.report("imported and exported procedures are not supported", child);
+                    break;
                 case "procedure_forward":
                 case "procedure": {
+                    const linkage = child.childForFieldName("linkage");
+                    if (linkage) {
+                        this.report("imported and exported procedures are not supported", linkage);
+                        break;
+                    }
                     const name = this.nameOf(child);
                     this.checkModifiers(child);
                     if (this.procedures.has(name.toLowerCase())) this.checkRedeclaration(child, name);
@@ -439,6 +449,10 @@ class Lowering {
      * uses one. It is a grammar gap rather than a lowering gap, so closing it starts there.
      */
     private collectExport(node: SyntaxNode): void {
+        if (!node.childForFieldName("name")) {
+            this.report("an 'export variable begin ... end' block is not supported", node);
+            return;
+        }
         const name = this.nameOf(node);
         const value = node.childForFieldName("value");
         this.externals.set(name.toLowerCase(), name);
@@ -1065,6 +1079,13 @@ class Lowering {
     private lowerCallStatement(node: SyntaxNode, scope: Scope): Stmt | null {
         const target = node.childForFieldName("target");
         if (!target) throw new LowerError("call has no target", node);
+        const condition = node.childForFieldName("condition");
+        if (condition) {
+            // The reference emits a conditional-call form this back end has no instruction for. Compiling the
+            // call without its condition would run it unconditionally, so it is refused instead.
+            this.report("a conditional call ('call ... when') is not supported", condition);
+            return null;
+        }
         const delay = node.childForFieldName("delay");
         if (delay) {
             // The engine schedules the procedure instead of entering it, so a timed call takes no
@@ -1617,13 +1638,21 @@ function* quotedRuns(text: string): Generator<string> {
  */
 const SELF_ESCAPES = new Set(["\\", '"']);
 
-/** Decodes one string literal, or several written adjacently - the grammar hands those over as one node. */
+/**
+ * Decodes one string literal, or several written adjacently - the grammar hands those over as one node. A raw
+ * literal (`@"..."`) keeps its backslashes, and so do the literals written after it, which the reference reads
+ * in the same raw mode.
+ */
 function unquote(text: string): string {
     let out = "";
     for (const segment of quotedRuns(text)) {
-        out += segment.replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
+        out += isRaw(text) ? segment : segment.replaceAll(/\\(.)/g, (_, char: string) => ESCAPES[char] ?? char);
     }
     return out;
+}
+
+function isRaw(text: string): boolean {
+    return text.startsWith("@");
 }
 
 /**
@@ -1634,6 +1663,7 @@ function unquote(text: string): string {
  */
 function unknownEscapes(text: string): string[] {
     const out: string[] = [];
+    if (isRaw(text)) return out;
     for (const segment of quotedRuns(text)) {
         for (const [, char] of segment.matchAll(/\\(.)/g)) {
             if (char !== undefined && ESCAPES[char] === undefined && !SELF_ESCAPES.has(char)) out.push(char);

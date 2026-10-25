@@ -141,7 +141,11 @@ export function extractProcedures(root: Node): Map<string, { node: Node; isForwa
     // keyed as the source spells each entry, since callers display the key; this tracks which key holds each.
     const keyOf = new Map<string, string>();
 
-    for (const node of root.children) {
+    // An `import procedure begin ... end` block holds forward declarations of its own.
+    const nodes = root.children.flatMap((node) =>
+        node.type === SyntaxType.ProcedureForwardBlock ? node.namedChildren.filter((child) => child !== null) : [node],
+    );
+    for (const node of nodes) {
         if (node.type === SyntaxType.Procedure) {
             const nameNode = node.childForFieldName("name");
             if (nameNode) {
@@ -163,6 +167,19 @@ export function extractProcedures(root: Node): Map<string, { node: Node; isForwa
     }
 
     return procedures;
+}
+
+/**
+ * The variables an `export variable` declaration exports, each as its declaring node and its name: the
+ * declaration itself for the one-name form, one var_init per name for the `export variable begin ... end` block.
+ */
+export function exportedVariables(node: Node): { declaration: Node; name: Node }[] {
+    const single = node.childForFieldName("name");
+    if (single) return [{ declaration: node, name: single }];
+    return node.namedChildren.flatMap((child) => {
+        const name = child?.type === SyntaxType.VarInit ? child.childForFieldName("name") : null;
+        return child && name ? [{ declaration: child, name }] : [];
+    });
 }
 
 /**
@@ -276,9 +293,9 @@ export function findDefinitionNode(root: Node, symbol: string): Node | null {
                 return valueNode;
             }
         } else if (node.type === SyntaxType.ExportDecl) {
-            const nameNode = node.childForFieldName("name");
-            if (sslNamesEqual(nameNode?.text, symbol)) {
-                return node;
+            const exported = exportedVariables(node).find(({ name }) => sslNamesEqual(name.text, symbol));
+            if (exported) {
+                return exported.declaration;
             }
         }
         return null;

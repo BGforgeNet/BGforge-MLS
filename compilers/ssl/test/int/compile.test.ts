@@ -274,6 +274,11 @@ const CASES: Case[] = [
         source: 'procedure start begin\n variable s := "a\\ab\\bc\\fd\\ne\\rf\\tg\\vh\\\\i\\"j\\zk";\nend\n',
     },
     {
+        // A raw literal keeps its backslashes, and so does a literal written after it.
+        name: "a raw string keeps its backslashes",
+        source: 'procedure start begin\n variable s := @"a\\nb" "\\t";\n variable t := "a\\nb";\nend\n',
+    },
+    {
         // The pragma turns short-circuit evaluation on for the whole program, so it is placed AFTER the
         // operators it governs: a compiler that acted on it where it sits would agree on any other
         // placement. Without it these bytes are the plain form, which is what made the miss silent.

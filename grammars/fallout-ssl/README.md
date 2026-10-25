@@ -45,7 +45,7 @@ Tree-sitter grammar for Fallout 2 Star-Trek Scripting Language (SSL).
 A source file consists of top-level declarations:
 
 ```
-source_file = (preprocessor | procedure_forward | procedure | variable_decl | export_decl | macro_call_stmt)*
+source_file = (preprocessor | procedure_forward | procedure_forward_block | procedure | variable_decl | export_decl | macro_call_stmt)*
 ```
 
 ### Preprocessor
@@ -65,7 +65,8 @@ Preprocessor directives start with `#`. Supports line continuation with `\`.
 
 Function-like macros require the opening `(` immediately after the macro name.
 `#define MACRO(x)` is parameterized; `#define MACRO (x)` is an object-like macro whose
-replacement text starts with parentheses.
+replacement text starts with parentheses. A trailing `...` parameter takes the remaining arguments as
+`__VA_ARGS__`: `#define MACRO(format, ...)`.
 
 #### Token Pasting (`##`)
 
@@ -140,6 +141,18 @@ Parameter defaults are limited to simple values: identifiers, numbers, strings, 
 optional parentheses around a simple value, and unary forms such as `-1` or `not false`.
 Function calls and compound expressions are not valid parameter defaults.
 
+Imported and exported procedures are declared like forward declarations, one at a time or in a block whose entries
+are `procedure_forward` nodes:
+
+```ssl
+import procedure name(variable arg1);
+export procedure name;
+import procedure begin
+    first(variable arg1);
+    second;
+end
+```
+
 ### Variables
 
 Global variables:
@@ -161,8 +174,12 @@ variable begin
     c = 2, d = 3;  // comma-separated on same line
 end
 
-// Imported
+// Imported, one at a time or in a block
 import variable name;
+import variable begin
+    a;
+    b;
+end
 ```
 
 Export declaration:
@@ -170,6 +187,10 @@ Export declaration:
 ```ssl
 export variable name;
 export variable name = value;
+export variable begin
+    a := 1;
+    b;
+end
 ```
 
 #### Variable Scoping Rules
@@ -265,6 +286,11 @@ end
 for (i = 0; i < 10; i++) begin
     // statements
 end
+
+// Without parentheses the update ends in its own `;`
+for i = 0; i < 10; i++; begin
+    // statements
+end
 ```
 
 #### Foreach Loop (sfall)
@@ -324,6 +350,8 @@ end
 call procedure_name;
 call procedure_name(arg1, arg2);
 call procedure_name in ticks;    // delayed call
+call procedure_name when cond;   // conditional call
+call "procedure_name";           // a string names the procedure
 ```
 
 #### Assignment
@@ -470,7 +498,8 @@ obj.list[5].value
 42          // integer
 3.14        // float
 .5          // float
-0xFF        // hexadecimal
+5.          // float
+0xFF        // hexadecimal, `0X` as well
 ```
 
 #### Boolean
@@ -484,6 +513,7 @@ false
 
 ```ssl
 "string content"
+@"C:\raw\path"   // raw: backslashes stay as written
 ```
 
 A literal ends on its own line: continue it with a backslash before the newline, or write adjacent literals, which
