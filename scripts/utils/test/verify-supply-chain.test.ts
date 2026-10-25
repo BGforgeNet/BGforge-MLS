@@ -53,7 +53,7 @@ describe("verify-supply-chain.sh", () => {
         "  build:",
         "    steps:",
         "      - name: SBOM",
-        "        run: pnpm dlx @cyclonedx/cyclonedx-npm@4.2.1 --output-file dist/sbom.cdx.json",
+        "        run: pnpm sbom --sbom-format cyclonedx --sbom-type application --out dist/sbom.cdx.json",
         "  provenance:",
         "    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0",
         "",
@@ -96,7 +96,7 @@ describe("verify-supply-chain.sh", () => {
                 "jobs:",
                 "  build:",
                 "    steps:",
-                "      - run: pnpm dlx @cyclonedx/cyclonedx-npm@4.2.1",
+                "      - run: pnpm sbom --sbom-format cyclonedx",
                 "",
             ].join("\n"),
         });

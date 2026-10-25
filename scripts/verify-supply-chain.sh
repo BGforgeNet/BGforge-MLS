@@ -35,10 +35,10 @@ else
 fi
 
 # (b) CycloneDX SBOM step present in build.yml.
-# Match the npm package specifier `@cyclonedx/cyclonedx-npm` directly so a stray
+# Match the generator's run line, `run: pnpm sbom --sbom-format cyclonedx`, so a stray
 # comment mentioning the keyword cannot satisfy the gate; only an actual run
 # step that invokes the generator counts.
-if [[ -f "$WORKFLOWS_DIR/build.yml" ]] && grep -q "@cyclonedx/cyclonedx-npm" "$WORKFLOWS_DIR/build.yml"; then
+if [[ -f "$WORKFLOWS_DIR/build.yml" ]] && grep -q "run: pnpm sbom --sbom-format cyclonedx" "$WORKFLOWS_DIR/build.yml"; then
     check "build.yml contains CycloneDX SBOM step" "ok"
 else
     check "build.yml contains CycloneDX SBOM step" "missing"
