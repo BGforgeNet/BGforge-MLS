@@ -2,10 +2,11 @@
  * Quick fixes against the real corpus.
  *
  * The handler's input is whatever the tree-sitter pass publishes for real mod sources, not a
- * hand-typed diagnostic, and the two shapes it must tell apart both occur there in bulk: a MISSING
- * node names the token the grammar expected, an ERROR node names nothing. This drives the registered
- * `onCodeAction` callback over every corpus file known to parse with errors and checks the offer on
- * each diagnostic the server would really send.
+ * hand-typed diagnostic. It must tell two shapes apart: a MISSING node names the token the grammar
+ * expected, an ERROR node names nothing. This drives the registered `onCodeAction` callback over every
+ * corpus file known to parse with errors and checks the offer on each diagnostic the server would
+ * really send. The corpus no longer holds a missing-punctuation error (the files that had one now parse),
+ * so only the unnamed class is required here; handlers/code-action.test.ts covers the insert on a real parse.
  *
  * The file set is the same committed allowlist `grammar-corpus-parse.test.ts` pins, so it is exactly
  * the corpus files that produce any parse diagnostic at all. Requires external repos
@@ -92,7 +93,6 @@ describe("code-action quick fixes over the real corpus", () => {
             // single assertion and a divergence prints as a diff naming the file and the diagnostic.
             const offers: string[] = [];
             const expected: string[] = [];
-            let fixesOffered = 0;
             let unfixableSeen = 0;
 
             // Chained rather than Promise.all: parser init is sequential by the WASM TRANSFER_BUFFER
@@ -120,8 +120,6 @@ describe("code-action quick fixes over the real corpus", () => {
                         const where = `${rel} ${at} ${String(diagnostic.message)}`;
                         if (token === undefined) {
                             unfixableSeen++;
-                        } else {
-                            fixesOffered++;
                         }
                         expected.push(`${where} -> ${token === undefined ? "no fix" : `insert '${token}' at ${at}`}`);
                         offers.push(`${where} -> ${describeOffer(actions)}`);
@@ -131,11 +129,8 @@ describe("code-action quick fixes over the real corpus", () => {
             }
 
             expect(offers).toEqual(expected);
-            // Both classes must actually occur, or the assertion above compared two empty sets.
-            expect({ fixable: fixesOffered > 0, unfixable: unfixableSeen > 0 }).toEqual({
-                fixable: true,
-                unfixable: true,
-            });
+            // The unnamed class must actually occur, or the assertion above compared two empty sets.
+            expect(unfixableSeen).toBeGreaterThan(0);
         },
         180_000,
     );
