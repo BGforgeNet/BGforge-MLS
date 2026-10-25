@@ -35,7 +35,7 @@ Tree-sitter grammar for Fallout 2 Star-Trek Scripting Language (SSL).
     - [Parenthesized Expression](#parenthesized-expression)
   - [Terminals](#terminals)
   - [Comments](#comments)
-- [Operator Precedence](#operator-precedence-high-to-low)
+- [Operator Precedence](#operator-precedence)
 - [Notes](#notes)
 
 ## Syntax Reference
@@ -394,7 +394,7 @@ value_if_true if condition else value_if_false
 
 #### Binary Operators
 
-Logical (precedence low to high):
+Logical:
 
 - `or` - logical OR
 - `orelse` - short-circuit OR (sfall)
@@ -416,6 +416,7 @@ Arithmetic:
 
 - `+`, `-` - addition, subtraction
 - `*`, `/`, `%` - multiplication, division, modulo
+- `div` - integer division
 - `^` - exponentiation
 
 All logical and bitwise operators are case-insensitive.
@@ -423,9 +424,10 @@ All logical and bitwise operators are case-insensitive.
 #### Unary Operators
 
 - `not` - logical NOT
-- `bnot` - bitwise NOT
+- `bwnot` - bitwise NOT
+- `floor` - conversion to an integer
 - `-` - negation
-- `++`, `--` - increment/decrement (pre and post)
+- `++`, `--` - increment/decrement, postfix only
 
 #### Function Call
 
@@ -532,23 +534,11 @@ join into one string.
 */
 ```
 
-## Operator Precedence (high to low)
+## Operator Precedence
 
-| Precedence | Operators                                             |
-| ---------- | ----------------------------------------------------- |
-| 12         | `()` function call, `[]` subscript, `.` member access |
-| 11         | `not`, `bnot`, `-` (unary), `++`, `--`                |
-| 10         | `^` exponentiation                                    |
-| 9          | `*`, `/`, `%`                                         |
-| 8          | `+`, `-`                                              |
-| 7          | `<`, `>`, `<=`, `>=`                                  |
-| 6          | `==`, `!=`                                            |
-| 5          | `bwand`                                               |
-| 4          | `bwxor`                                               |
-| 3          | `bwor`                                                |
-| 2          | `and`, `andalso`                                      |
-| 1          | `or`, `orelse`                                        |
-| -1         | ternary `x if c else y`                               |
+The tiers and their associativity are the `prec` values on `binary_expr`, `unary_expr`, `ternary_expr`,
+`call_expr`, `subscript_expr` and `member_expr` in [grammar.js](./grammar.js), with the reasons beside them; they
+follow the language's own grouping, not C's.
 
 ## Notes
 
