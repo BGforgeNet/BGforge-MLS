@@ -25,7 +25,9 @@ interface Token {
 }
 
 const MARKER_LINE = /^(.*?)(SC|CR|CO|TR|RS|RE|AC|OB)$/;
-const FIELDS = /(-?\d+)|"([^"]*)"|\[([^\]]*)\]/g;
+// A group's body excludes "[" as well as "]": a run of unclosed openers would otherwise rescan the rest of the
+// line from each one, quadratic in its length, and a stray "[" would be read into the group as a number.
+const FIELDS = /(-?\d+)|"([^"]*)"|\[([^[\]]*)\]/g;
 
 /**
  * Splits a line into its fields and its marker. Fields are matched as whole tokens - a number, a quoted

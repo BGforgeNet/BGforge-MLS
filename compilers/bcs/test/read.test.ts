@@ -321,6 +321,15 @@ describe("readBcs - engine variants", () => {
 
         expect(() => readBcs(text)).toThrow(/Unreadable BCS fields \(line 6\)/);
     });
+
+    test("refuses a bracket inside a bracketed group, rather than reading it as a number", () => {
+        const bad = '0 0 0 0 0 0 0 0 0 0 0 0 [-1.[-1.-1.-1] ""OB';
+        const text = ["SC", "CR", "CO", "TR", '1 0 0 0 0 "" "" OB', bad, "TR", "CO", "RS", "RS", "CR", "SC", ""].join(
+            "\n",
+        );
+
+        expect(() => readBcs(text)).toThrow(/Unreadable BCS fields \(line 6\)/);
+    });
 });
 
 describe("readBcs - rejected input", () => {

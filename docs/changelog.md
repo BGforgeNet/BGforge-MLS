@@ -64,6 +64,8 @@
   a string starting with `//` is a string. Highlighting follows.
 - The BAF compiler stores object rectangles where the game has them, accepts `ANYONE` in any bracket position, reads
   `#5`, `-0x10` and a quoted number in a number slot, and refuses `~text~` in a string or object slot, as WeiDU does.
+- A compiled BCS whose object rectangle holds a stray `[` is reported as unreadable rather than opened with a broken
+  rectangle, and a line of unclosed `[` no longer stalls opening the file.
 - BAF string-reference hints work whatever the letter case of the action, and the formatter indents under
   `OR(#2)`.
 - TRA accepts `^`, bare words, `#N`, `@N` and `(AT name)` values and nested comments; an unclosed string or comment
