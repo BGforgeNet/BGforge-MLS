@@ -124,15 +124,15 @@ allowBuilds:
 # risk: no fixed release exists (3.0.3 is the newest), and the shipped path, fast-glob in
 # server/ and client/, only ever expands patterns built from fixed extension lists;
 # the user-chosen directory is passed as `cwd`, which is not brace-expanded.
-# @azure/msal-node <7.1.0 under @vscode/vsce -> @azure/identity (GHSA-xcx6-jx8p-x3h5, high) is an
-# accepted risk: it affects only the auth_code flow (acquireTokenByCode), and vsce builds a credential
-# chain of environment, CLI, managed-identity and developer-CLI credentials, none of which uses it, and
-# only for `publish --azure-credential`, which this repo never runs. No override: @azure/identity 4.14.0,
-# the newest, declares msal-node ^6 and the fix exists only on 7.x. Revisit when identity admits 7.1.
+# @azure/msal-node under @vscode/vsce -> @azure/identity (GHSA-xcx6-jx8p-x3h5, high: the auth_code flow;
+# fixed only in 7.1.0) is overridden across identity's declared ^6. vsce reaches identity only for
+# `publish --azure-credential`, which this repo never runs, and identity and vsce's auth module load
+# against 7.1.0 and `pnpm package` builds the VSIX. Drop the pin once an @azure/identity release admits 7.1.
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.0.5"
   oxfmt>tinypool: ">=2.1.2 <3"
+  "@azure/identity>@azure/msal-node": ">=7.1.0"
   qs: ">=6.16.0"
 
 # A version must have been published for 7 days (in minutes) before it resolves into the lockfile, and
