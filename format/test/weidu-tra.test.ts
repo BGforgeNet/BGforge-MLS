@@ -131,6 +131,24 @@ describe("weidu-tra/format", () => {
         noop("@1 = ~text~\n");
     });
 
+    it.each([
+        ["a percent sign", "@1 = ~a~ // 100% done"],
+        ["a single quote", "@1 = ~a~ // don't use"],
+        ["a double quote", '@1 = ~a~ // say "hi'],
+        ["a tilde", "@1 = ~a~ // a ~ b"],
+        ["a block opener", "@1 = ~a~ // /* never closed"],
+    ])("keeps formatting the entries after a trailing comment holding %s", (_name, entryLine) => {
+        expect(fmt(`${entryLine}\n@2   =   ~b~\n`)).toBe(`${entryLine}\n@2 = ~b~\n`);
+    });
+
+    it("keeps formatting after a block comment closing an entry line", () => {
+        expect(fmt("@1 = ~a~ /* 100% ~ */\n@2   =   ~b~\n")).toBe("@1 = ~a~ /* 100% ~ */\n@2 = ~b~\n");
+    });
+
+    it("ends a double-quoted string at the next quote, a backslash being an ordinary character", () => {
+        expect(fmt('@1 = "path\\"\n@2   =   ~x~\n')).toBe('@1 = "path\\"\n@2 = ~x~\n');
+    });
+
     it("adds trailing newline when original lacks one", () => {
         const result = formatTra("@ 1 = ~text~");
         expect(result.text).toMatch(/\n$/);

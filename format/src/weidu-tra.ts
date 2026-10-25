@@ -33,17 +33,34 @@ function scanTildeString(text: string, pos: number): number {
 
 /**
  * Scan forward from `pos` past a double-quoted string.
- * Handles backslash escapes.
+ * A backslash is an ordinary character: the string ends at the next `"`.
  * Returns the index immediately after the closing `"`.
  */
 function scanQuotedString(text: string, pos: number): number {
-    pos++; // skip opening "
-    while (pos < text.length && text[pos] !== '"') {
-        if (text[pos] === "\\") pos++; // skip escaped char
-        pos++;
+    const close = text.indexOf('"', pos + 1);
+    // An unclosed string runs to the end of the text, so the rest of it is preserved verbatim.
+    return close === -1 ? text.length : close + 1;
+}
+
+/**
+ * Scan forward from `pos` (at a `/*`) past a block comment. Block comments nest.
+ * Returns the index immediately after the matching closer, or `text.length` if it is never closed.
+ */
+function scanBlockComment(text: string, pos: number): number {
+    let depth = 0;
+    while (pos < text.length) {
+        if (text.startsWith("/*", pos)) {
+            depth++;
+            pos += 2;
+        } else if (text.startsWith("*/", pos)) {
+            depth--;
+            pos += 2;
+            if (depth === 0) return pos;
+        } else {
+            pos++;
+        }
     }
-    // If pos === text.length the string was unclosed; do not advance past the end.
-    return pos < text.length ? pos + 1 : pos;
+    return text.length;
 }
 
 interface ProcessedLine {
@@ -63,7 +80,13 @@ function scanEntryRest(text: string, pos: number): { rest: string; nextPos: numb
     let lastFlush = pos;
 
     while (pos < text.length) {
-        if (text[pos] === "~") {
+        if (text[pos] === "/" && text[pos + 1] === "/") {
+            // A line comment: delimiters inside it are text. It runs to the end of the line.
+            const nlPos = text.indexOf("\n", pos);
+            pos = nlPos === -1 ? text.length : nlPos;
+        } else if (text[pos] === "/" && text[pos + 1] === "*") {
+            pos = scanBlockComment(text, pos);
+        } else if (text[pos] === "~") {
             // Flush the code segment verbatim (spaces between strings must be kept)
             parts.push(text.slice(lastFlush, pos));
             const strEnd = scanTildeString(text, pos);
