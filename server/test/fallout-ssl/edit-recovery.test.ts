@@ -28,9 +28,9 @@ const AFTER = "\nend\nprocedure c begin\n  variable z;\nend\nprocedure d begin e
 /**
  * Procedure `b` in a typing state, between a finished `a` and finished `c` and `d`.
  *
- * Not here, because recovery still drops `c` (and sometimes `d`): an unclosed array or map literal, a ternary with
- * no `else`, a `for` header with no close paren, a parameter list with no close paren, and a header with neither
- * `begin` nor a body. Each needs two or more tokens inserted before the `end` fits, and recovery inserts one.
+ * Not here, because recovery still drops `b` or `c`: an unclosed array or map literal, a parameter list with no
+ * close paren, and a header with neither `begin` nor a body. Each needs two or more tokens inserted before the
+ * `end` fits, and recovery inserts one.
  */
 const STATES: [string, string][] = [
     ["a call with only its open paren", "procedure b begin\n  foo("],
@@ -43,6 +43,8 @@ const STATES: [string, string][] = [
     ["a while with no do", 'procedure b begin\n  while (x)\n    display_msg("y");'],
     ["an if condition with no close paren", "procedure b begin\n  if (x then\n    y := 1;"],
     ["a foreach with no iterable", "procedure b begin\n  foreach x in"],
+    ["a ternary with no else", "procedure b begin\n  x := 1 if y"],
+    ["a for header with no close paren", "procedure b begin\n  for (i := 0; i < 3"],
     ["an unclosed string", 'procedure b begin\n  display_msg("abc'],
     ["an unclosed character constant", "procedure b begin\n  x := 'a"],
     ["an unclosed block comment", "procedure b begin\n  /* note"],
