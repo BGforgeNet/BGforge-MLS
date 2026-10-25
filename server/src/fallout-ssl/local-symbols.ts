@@ -24,16 +24,21 @@ import {
 import { findPrecedingDocComment } from "../core/doc-comment";
 import * as jsdoc from "../shared/jsdoc";
 import { SyntaxType } from "./syntax-type";
+import { sslNameKey } from "@bgforge/shared/fallout-ssl-names";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
 // Inlined by esbuild at bundle time.
 import engineProcDocs from "@bgforge/shared/data/fallout-ssl-engine-proc-docs.json";
 
 const ENGINE_PROC_DOCS = engineProcDocs as Record<string, string>;
 
-/** Cached local symbols data: symbols array + name lookup map */
+/**
+ * Cached local symbols data: symbols array + name lookup maps. Procedures and variables are keyed by their folded
+ * name, since SSL binds those case-insensitively; a `#define` name is keyed exactly, as the preprocessor matches it.
+ */
 interface LocalSymbolsData {
     symbols: IndexedSymbol[];
-    byName: Map<string, IndexedSymbol>;
+    byExactName: Map<string, IndexedSymbol>;
+    byFoldedName: Map<string, IndexedSymbol>;
 }
 
 /** LRU cache for local symbols */
@@ -94,15 +99,17 @@ function parseLocalSymbols(text: string, uri: string): LocalSymbolsData | null {
         }
     }
 
-    // Build name lookup map (first definition wins)
-    const byName = new Map<string, IndexedSymbol>();
+    // Build name lookup maps (first definition wins)
+    const byExactName = new Map<string, IndexedSymbol>();
+    const byFoldedName = new Map<string, IndexedSymbol>();
     for (const sym of symbols) {
-        if (!byName.has(sym.name)) {
-            byName.set(sym.name, sym);
+        const [map, key] = sym.nameCase === "exact" ? [byExactName, sym.name] : [byFoldedName, sslNameKey(sym.name)];
+        if (!map.has(key)) {
+            map.set(key, sym);
         }
     }
 
-    return { symbols, byName };
+    return { symbols, byExactName, byFoldedName };
 }
 
 /**
@@ -116,7 +123,8 @@ export function getLocalSymbols(text: string, version: number | undefined, uri: 
 }
 
 /**
- * Look up a local symbol by name. O(1) via cached map.
+ * Look up a local symbol by name. O(1) via cached maps. A macro wins over a same-spelled procedure or variable:
+ * the preprocessor replaces the name before the compiler ever binds it.
  *
  * @param version Document version counter (LSP `TextDocument.version`) used as
  *   cache key; pass `undefined` to bypass the cache.
@@ -127,7 +135,8 @@ export function lookupLocalSymbol(
     version: number | undefined,
     uri: string,
 ): IndexedSymbol | undefined {
-    return cache.getOrParse(uri, version, text, parseLocalSymbols)?.byName.get(name);
+    const data = cache.getOrParse(uri, version, text, parseLocalSymbols);
+    return data?.byExactName.get(name) ?? data?.byFoldedName.get(sslNameKey(name));
 }
 
 /**

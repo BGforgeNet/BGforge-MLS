@@ -218,17 +218,24 @@ end
             expect(def).toBeNull();
         });
 
-        it("finds foreach loop variable", () => {
+        it("finds a foreach loop variable the loop declares", () => {
             const text = `
 procedure foo begin
-    foreach (item in mylist) begin end
+    foreach (variable item in mylist) begin end
 end
 `;
             const tree = parseWithCache(text);
             expect(tree!).not.toBeNull();
 
             const def = findDefinitionNode(tree!.rootNode, "item");
-            expect(def).not.toBeNull();
+            expect(def?.text).toBe("item");
+            expect(def?.startPosition.row).toBe(2);
+        });
+
+        it("does not take a foreach loop variable without the variable keyword for a definition", () => {
+            // The loop assigns to an existing name there; it declares nothing.
+            const tree = parseWithCache("procedure foo begin\n    foreach (item in mylist) begin end\nend\n");
+            expect(findDefinitionNode(tree!.rootNode, "item")).toBeNull();
         });
 
         it("finds export variable declaration", () => {

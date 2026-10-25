@@ -101,8 +101,17 @@ function extractSymbols(
                 if (child.type === SyntaxType.VarInit) {
                     const nameNode = child.childForFieldName("name");
                     if (nameNode) {
+                        const value = child.childForFieldName("value")?.text;
                         result.push(
-                            buildVariableSymbol(nameNode.text, uri, makeRange(child), undefined, parsed, displayPath),
+                            buildVariableSymbol(
+                                nameNode.text,
+                                uri,
+                                makeRange(child),
+                                undefined,
+                                parsed,
+                                displayPath,
+                                value,
+                            ),
                         );
                     }
                 }
@@ -111,8 +120,17 @@ function extractSymbols(
             const docComment = findPrecedingDocComment(node);
             const parsed = docComment ? jsdoc.parse(docComment) : null;
             for (const { declaration, name } of exportedVariables(node)) {
+                const value = declaration.childForFieldName("value")?.text;
                 result.push(
-                    buildVariableSymbol(name.text, uri, makeRange(declaration), "export variable", parsed, displayPath),
+                    buildVariableSymbol(
+                        name.text,
+                        uri,
+                        makeRange(declaration),
+                        "export variable",
+                        parsed,
+                        displayPath,
+                        value,
+                    ),
                 );
             }
         }

@@ -210,6 +210,9 @@ export interface CallableInfo {
 
     /** Definition type: function or macro (for WeiDU) */
     readonly dtype?: CallableDefType;
+
+    /** Replacement text of a parameterised preprocessor macro (for Fallout SSL) */
+    readonly body?: string;
 }
 
 // =============================================================================

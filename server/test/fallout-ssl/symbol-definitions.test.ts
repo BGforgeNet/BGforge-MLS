@@ -33,6 +33,26 @@ end
         expect(isParameterDefinitionNode(definitionNode!)).toBe(true);
         expect(definitionNode?.startPosition.row).toBe(1);
     });
+
+    it("resolves a foreach loop variable to the declaration it reuses, unless the loop declares it", () => {
+        // Without `variable` the loop assigns to a name that must already exist; with it, the loop declares a local.
+        const text = `variable g;
+procedure start begin
+    variable arr;
+    foreach g in arr begin
+        display_msg(g);
+    end
+    foreach variable e in arr begin
+        display_msg(e);
+    end
+end
+`;
+        const tree = parseWithCache(text)!;
+        const global = resolveIdentifierDefinitionNode(tree.rootNode, findIdentifierNodeByText(tree.rootNode, "g", 2)!);
+        expect(global?.startPosition.row).toBe(0);
+        const local = resolveIdentifierDefinitionNode(tree.rootNode, findIdentifierNodeByText(tree.rootNode, "e", 1)!);
+        expect(local?.startPosition.row).toBe(6);
+    });
 });
 
 function findIdentifierNodeByText(

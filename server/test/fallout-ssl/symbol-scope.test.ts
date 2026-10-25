@@ -106,7 +106,19 @@ end
             expect(isLocalToProc(procNode, "i")).toBe(true);
         });
 
-        it("returns true for foreach var", () => {
+        it("returns true for a foreach var the loop declares", () => {
+            const text = `
+procedure foo begin
+    foreach (variable item in list) begin
+    end
+end
+`;
+            const tree = parseWithCache(text)!;
+            const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
+            expect(isLocalToProc(procNode, "item")).toBe(true);
+        });
+
+        it("returns false for a foreach var that reuses an existing name", () => {
             const text = `
 procedure foo begin
     foreach (item in list) begin
@@ -115,7 +127,7 @@ end
 `;
             const tree = parseWithCache(text)!;
             const procNode = tree.rootNode.children.find((c) => c.type === "procedure")!;
-            expect(isLocalToProc(procNode, "item")).toBe(true);
+            expect(isLocalToProc(procNode, "item")).toBe(false);
         });
 
         it("returns false for procedure name", () => {

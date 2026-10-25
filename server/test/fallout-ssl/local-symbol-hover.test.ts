@@ -280,4 +280,18 @@ export variable my_export := 0;
         expect(value).toContain("int");
         expect(value).toContain("export variable");
     });
+
+    it("finds a procedure or variable however a reference cases it, as the language binds names", () => {
+        const text = "variable My_Flag;\nprocedure Foo(variable a) begin\nend\n";
+        clearAllLocalSymbolsCache();
+        expect(lookupLocalSymbol("foo", text, 1, "file:///mymod/scripts/test.ssl")?.name).toBe("Foo");
+        expect(lookupLocalSymbol("MY_FLAG", text, 1, "file:///mymod/scripts/test.ssl")?.name).toBe("My_Flag");
+    });
+
+    it("matches a macro name exactly, as the preprocessor does", () => {
+        const text = "#define MY_MACRO 1\nprocedure my_macro2 begin\nend\n";
+        clearAllLocalSymbolsCache();
+        expect(lookupLocalSymbol("MY_MACRO", text, 1, "file:///mymod/scripts/test.ssl")?.name).toBe("MY_MACRO");
+        expect(lookupLocalSymbol("my_macro", text, 1, "file:///mymod/scripts/test.ssl")).toBeUndefined();
+    });
 });

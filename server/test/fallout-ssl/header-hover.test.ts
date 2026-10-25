@@ -462,4 +462,43 @@ end`;
         const completions = falloutSslProvider.getCompletions!(normalizeUri("file:///mymod/scripts/test.ssl"));
         expect(completions.filter((c) => c.label === "PIPBOY")).toHaveLength(1);
     });
+
+    /** How many completions two headers defining `name` as `a` and as `b` yield. */
+    async function completionsFor(name: string, a: string, b: string): Promise<number> {
+        await falloutSslProvider.init({ workspaceRoot: "/mymod", settings: {} as MLSsettings });
+        falloutSslProvider.reloadFileData!(normalizeUri("file:///mymod/headers/a.h"), a);
+        falloutSslProvider.reloadFileData!(normalizeUri("file:///mymod/headers/b.h"), b);
+        const completions = falloutSslProvider.getCompletions!(normalizeUri("file:///mymod/scripts/test.ssl"));
+        return completions.filter((c) => c.label === name).length;
+    }
+
+    it.each([
+        ["variables with different values", "gx", "variable gx := 1;", "variable gx := 2;"],
+        [
+            "multi-line constants that differ after the first line",
+            "MY_BLOCK",
+            '#define MY_BLOCK begin \\\n    display_msg("A"); \\\nend',
+            '#define MY_BLOCK begin \\\n    display_msg("B"); \\\nend',
+        ],
+        [
+            "parameterised macros with different bodies",
+            "MY_MACRO",
+            "#define MY_MACRO(x) (x + 1)",
+            "#define MY_MACRO(x) (x * 2)",
+        ],
+    ])("getCompletions keeps both %s", async (_name, name, a, b) => {
+        expect(await completionsFor(name, a, b)).toBe(2);
+    });
+
+    it.each([
+        ["variables with the same value", "gx", "variable gx := 1;", "variable gx := 1;"],
+        [
+            "parameterised macros with the same body",
+            "MY_MACRO",
+            "#define MY_MACRO(x) (x + 1)",
+            "#define MY_MACRO(x) (x + 1)",
+        ],
+    ])("getCompletions merges %s", async (_name, name, a, b) => {
+        expect(await completionsFor(name, a, b)).toBe(1);
+    });
 });

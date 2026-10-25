@@ -183,6 +183,16 @@ export function exportedVariables(node: Node): { declaration: Node; name: Node }
 }
 
 /**
+ * The loop variables a foreach declares: its key and value, but only after the `variable` keyword. Without it the
+ * loop assigns to names that must already exist, as the compiler reads it, and declares nothing.
+ */
+export function foreachDeclaredNames(node: Node): Node[] {
+    // The keyword is an unnamed token; no SyntaxType member spells it.
+    if (!node.children.some((child) => !child.isNamed && child.type === "variable")) return [];
+    return ["key", "value"].flatMap((field) => node.childForFieldName(field) ?? []);
+}
+
+/**
  * Find a procedure by name, preferring definition over forward.
  */
 export function findProcedure(root: Node, symbol: string): Node | null {
@@ -280,17 +290,9 @@ export function findDefinitionNode(root: Node, symbol: string): Node | null {
                 return node;
             }
         } else if (node.type === SyntaxType.ForeachStmt) {
-            const varNode = node.childForFieldName("var");
-            if (sslNamesEqual(varNode?.text, symbol)) {
-                return varNode;
-            }
-            const keyNode = node.childForFieldName("key");
-            if (sslNamesEqual(keyNode?.text, symbol)) {
-                return keyNode;
-            }
-            const valueNode = node.childForFieldName("value");
-            if (sslNamesEqual(valueNode?.text, symbol)) {
-                return valueNode;
+            const declared = foreachDeclaredNames(node).find((name) => sslNamesEqual(name.text, symbol));
+            if (declared) {
+                return declared;
             }
         } else if (node.type === SyntaxType.ExportDecl) {
             const exported = exportedVariables(node).find(({ name }) => sslNamesEqual(name.text, symbol));
@@ -617,14 +619,15 @@ export function buildMacroSymbol(macro: MacroData, uri: string, displayPath?: st
         return {
             ...base,
             kind: SymbolKind.Macro,
-            callable: { parameters: macro.params?.map((p) => ({ name: p })) },
+            callable: { parameters: macro.params?.map((p) => ({ name: p })), body: macro.body },
         } satisfies CallableSymbol;
     }
 
+    // The whole body, not its first line: two multi-line macros that differ further down are different definitions.
     return {
         ...base,
         kind: SymbolKind.Constant,
-        constant: { value: macro.firstline ?? "" },
+        constant: { value: macro.body ?? "" },
     } satisfies ConstantSymbol;
 }
 
@@ -642,6 +645,7 @@ export function buildVariableSymbol(
     description?: string,
     parsed?: jsdoc.JSdoc | null,
     displayPath?: string,
+    value?: string,
 ): VariableSymbol {
     const sigText = parsed?.type
         ? `${parsed.type} ${name}`
@@ -679,8 +683,10 @@ export function buildVariableSymbol(
             }),
         },
         hover: { contents: hoverContents },
+        // The initial value's source text tells two same-named globals apart (see unique-completions.ts).
         variable: {
             description: parsed?.desc ?? description,
+            ...(value !== undefined && { value }),
         },
     };
 }

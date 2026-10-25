@@ -152,6 +152,15 @@ procedure bar begin end
         expect(proc!.children).toBeUndefined();
     });
 
+    it("lists the variables a foreach declares with the variable keyword", () => {
+        const text = `procedure my_proc begin
+            foreach (variable k: v in arr) begin
+            end
+        end`;
+        const proc = getDocumentSymbols(text).find((s) => s.name === "my_proc");
+        expect(proc!.children!.map((c) => c.name)).toEqual(["k", "v"]);
+    });
+
     it("collects nested vars from inside conditionals as flat children", () => {
         const text = `procedure my_proc begin
             if (true) then begin

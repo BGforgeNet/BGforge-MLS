@@ -1,6 +1,6 @@
 import type { Node } from "web-tree-sitter";
 import type { Symbols } from "../core/symbol-index";
-import { exportedVariables, extractProcedures, findMacroDefinition } from "./utils";
+import { exportedVariables, extractProcedures, findMacroDefinition, foreachDeclaredNames } from "./utils";
 import { sslMapGet, sslNamesEqual } from "@bgforge/shared/fallout-ssl-names";
 import { SyntaxType } from "./syntax-type";
 
@@ -99,11 +99,9 @@ function searchProcBody(node: Node, symbolName: string): Node | null {
             return nameNode;
         }
     } else if (node.type === SyntaxType.ForeachStmt) {
-        for (const field of ["var", "key", "value"] as const) {
-            const fieldNode = node.childForFieldName(field);
-            if (sslNamesEqual(fieldNode?.text, symbolName)) {
-                return fieldNode;
-            }
+        const declared = foreachDeclaredNames(node).find((name) => sslNamesEqual(name.text, symbolName));
+        if (declared) {
+            return declared;
         }
     }
 

@@ -2,15 +2,15 @@
  * Document symbol provider for Fallout SSL files.
  * Extracts procedures (with local variables as children), macros, and global
  * variables. Procedure children include params, variable declarations, and
- * for loop declarations - all as flat children (two-level nesting max).
+ * for and foreach loop declarations - all as flat children (two-level nesting max).
  * Only actual declarations (using the `variable` keyword) are collected,
- * not assignments or loop iteration variables.
+ * not assignments or loop variables that reuse an existing name.
  */
 
 import { type DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
-import { exportedVariables, extractProcedures, makeRange, extractMacros } from "./utils";
+import { exportedVariables, extractProcedures, foreachDeclaredNames, makeRange, extractMacros } from "./utils";
 import { SyntaxType } from "./syntax-type";
 
 function makeSymbol(
@@ -57,6 +57,11 @@ function collectProcBodyVars(node: Node, procName: string): DocumentSymbol[] {
         const nameNode = node.childForFieldName("name");
         if (nameNode) {
             const sym = makeSymbol(node, nameNode, SymbolKind.Variable, procName);
+            if (sym) vars.push(sym);
+        }
+    } else if (node.type === SyntaxType.ForeachStmt) {
+        for (const nameNode of foreachDeclaredNames(node)) {
+            const sym = makeSymbol(nameNode, nameNode, SymbolKind.Variable, procName);
             if (sym) vars.push(sym);
         }
     }
