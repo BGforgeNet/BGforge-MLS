@@ -6,6 +6,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { SyntaxType } from "./syntax-type";
+import { labelName } from "./label-refs";
 import type { DDialogTarget } from "@bgforge/shared/dialog-types";
 
 // ---------------------------------------------------------------------------
@@ -203,17 +204,11 @@ export function extractReplyText(transitionNode: SyntaxNode): string | undefined
 export function extractTarget(node: SyntaxNode): DDialogTarget | undefined {
     for (const child of node.children) {
         switch (child.type) {
-            case SyntaxType.GotoNext: {
-                const labelNode = child.childForFieldName("label");
-                if (labelNode) {
-                    return { kind: "goto", label: labelNode.text };
-                }
-                break;
-            }
+            case SyntaxType.GotoNext:
             case SyntaxType.ShortGoto: {
                 const labelNode = child.childForFieldName("label");
                 if (labelNode) {
-                    return { kind: "goto", label: labelNode.text };
+                    return { kind: "goto", label: labelName(labelNode) };
                 }
                 break;
             }
@@ -221,18 +216,15 @@ export function extractTarget(node: SyntaxNode): DDialogTarget | undefined {
                 const fileNode = child.childForFieldName("file");
                 const labelNode = child.childForFieldName("label");
                 if (fileNode && labelNode) {
-                    return { kind: "extern", file: fileNode.text, label: labelNode.text };
+                    return { kind: "extern", file: fileNode.text, label: labelName(labelNode) };
                 }
                 break;
             }
             case SyntaxType.ExitNext:
                 return { kind: "exit" };
             case SyntaxType.CopyTrans: {
-                const fileNode = child.childForFieldName("file");
-                const stateNode = child.childForFieldName("state");
-                if (fileNode && stateNode) {
-                    return { kind: "copy_trans", file: fileNode.text, label: stateNode.text };
-                }
+                const target = copyTransTarget(child);
+                if (target) return target;
                 break;
             }
         }
@@ -242,6 +234,32 @@ export function extractTarget(node: SyntaxNode): DDialogTarget | undefined {
         if (nested) return nested;
     }
     return undefined;
+}
+
+/** The target of a COPY_TRANS transition: the state whose transitions it copies. */
+export function copyTransTarget(node: SyntaxNode): DDialogTarget | undefined {
+    const fileNode = node.childForFieldName("file");
+    const stateNode = node.childForFieldName("state");
+    if (!fileNode || !stateNode) return undefined;
+    return { kind: "copy_trans", file: fileNode.text, label: labelName(stateNode) };
+}
+
+/**
+ * Where a CHAIN or INTERJECT epilogue sends the chain's last line, for the forms that name one target: EXIT, and
+ * `END file label` or `EXTERN file label`, which both leave for that state, and COPY_TRANS. `END` followed by
+ * transitions carries them as transition nodes instead, so it has no single target here.
+ */
+export function chainEpilogueTarget(epilogue: SyntaxNode): DDialogTarget | undefined {
+    // The epilogue's leading keyword is an anonymous token, so it has no SyntaxType member to compare against.
+    const keyword = epilogue.firstChild?.type;
+    if (keyword === "EXIT") return { kind: "exit" };
+    const fileNode = epilogue.childForFieldName("file");
+    const labelNode = epilogue.childForFieldName("label");
+    if (!fileNode || !labelNode) return undefined;
+    const label = labelName(labelNode);
+    if (keyword === "COPY_TRANS" || keyword === "COPY_TRANS_LATE")
+        return { kind: "copy_trans", file: fileNode.text, label };
+    return { kind: "extern", file: fileNode.text, label };
 }
 
 /**

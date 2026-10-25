@@ -177,17 +177,12 @@ describe("weidu-d/dialog - sample files", () => {
         });
 
         it("chain states have transitions or connect sequentially", () => {
-            // Each synthetic state that is not the last must carry at least one explicit
-            // transition (GOTO or REPLY). The last state may exit with 0 transitions when
-            // the chain ends with an EXIT action not captured as a transition node.
+            // Each synthetic state carries at least one transition; the chain's EXIT ends the last one.
             const lastIdx = result.states.length - 1;
             for (const [i, state] of result.states.entries()) {
-                // The last state is exempt, so it is asserted to its own floor of 0 rather than skipped -
-                // a branch that asserts on only some iterations reports green over the ones it skipped.
-                expect(state.transitions.length, `state[${i}] transitions`).toBeGreaterThanOrEqual(i < lastIdx ? 1 : 0);
+                expect(state.transitions.length, `state[${i}] transitions`).toBeGreaterThanOrEqual(1);
             }
-            // The last state has no outgoing transitions (chain ends with EXIT).
-            expect(result.states[lastIdx]!.transitions.length).toBe(0);
+            expect(result.states[lastIdx]!.transitions.map((t) => t.target)).toEqual([{ kind: "exit" }]);
         });
     });
 

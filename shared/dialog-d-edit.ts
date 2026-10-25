@@ -19,7 +19,7 @@
  */
 
 import type { DialogChoice, DialogModel, DialogState, DialogTarget } from "./dialog-model";
-import { serializeChoice, serializeSayValue, serializeState } from "./dialog-d-serialize";
+import { serializeChoice, serializeLabel, serializeSayValue, serializeState } from "./dialog-d-serialize";
 import { applySplices, type SpliceOp } from "./dialog-splice";
 
 function targetsEqual(a: DialogTarget, b: DialogTarget): boolean {
@@ -129,7 +129,11 @@ function fieldEditOps(original: DialogState, edited: DialogState): SpliceOp[] | 
             ec.target.kind === "state" &&
             oc.targetRange
         ) {
-            ops.push({ start: oc.targetRange.start, end: oc.targetRange.end, replacement: ec.target.stateId });
+            ops.push({
+                start: oc.targetRange.start,
+                end: oc.targetRange.end,
+                replacement: serializeLabel(ec.target.stateId),
+            });
             continue;
         }
         if (!oc.sourceRange) return null;
@@ -370,7 +374,11 @@ function derivedReferenceOps(originalText: string, originalModel: DialogModel, e
                 const ec = es.choices[ci]!;
                 if (oc.target.kind !== "state" || !oc.targetRange || sameTarget(oc.target, ec.target)) continue;
                 if (ec.target.kind === "state") {
-                    ops.push({ start: oc.targetRange.start, end: oc.targetRange.end, replacement: ec.target.stateId });
+                    ops.push({
+                        start: oc.targetRange.start,
+                        end: oc.targetRange.end,
+                        replacement: serializeLabel(ec.target.stateId),
+                    });
                 } else if (ec.target.kind === "exit") {
                     // Flip `GOTO <label>` -> `EXIT`: scan back from the label over whitespace to the GOTO keyword
                     // so the jump verb goes too (leaving just the label would be a syntax error). If the keyword

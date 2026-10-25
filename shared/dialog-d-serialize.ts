@@ -69,13 +69,32 @@ export function serializeSayValue(state: DialogState): string {
     return [state.text, ...state.sayTexts.slice(1)].map((t) => serializeTextValue(t)).join(" = ");
 }
 
+/**
+ * The shape of a bare state label: the D grammar's identifier token (grammars/weidu-d/grammar.js), copied because
+ * this module also runs in the webview, where the grammar is not loaded. server/test/dialog-d-serialize.test.ts
+ * pins the copy to the generated grammar.
+ */
+export const BARE_LABEL_PATTERN = "[A-Za-z0-9_][A-Za-z0-9_#.-]*";
+const BARE_LABEL = new RegExp(`^${BARE_LABEL_PATTERN}$`);
+
+/**
+ * A state label as D source. The model holds a label as WeiDU reads it, delimiters stripped, so `~q1~` and `q1`
+ * are one state; a label that cannot stand as a bare word (`my label`) is written quoted.
+ */
+export function serializeLabel(label: string): string {
+    return BARE_LABEL.test(label) ? label : `~${label}~`;
+}
+
 export function serializeState(state: DialogState): string[] {
     const lines: string[] = [];
 
     // Build the IF header: optional WEIGHT, trigger, state id
     const weight = state.weight != null ? `WEIGHT #${state.weight} ` : "";
     const trigger = state.trigger ?? "";
-    lines.push(`  IF ${weight}~${trigger}~ THEN BEGIN ${state.id}`, `    SAY ${serializeSayValue(state)}`);
+    lines.push(
+        `  IF ${weight}~${trigger}~ THEN BEGIN ${serializeLabel(state.id)}`,
+        `    SAY ${serializeSayValue(state)}`,
+    );
 
     for (const choice of state.choices) {
         lines.push(`    ${serializeChoice(choice)}`);
@@ -122,7 +141,7 @@ export function serializeChoice(choice: DialogChoice): string {
  * shared target serializer (`EXIT` / `EXTERN ~file~ state` / `COPY_TRANS ...`).
  */
 function serializeNextShort(target: DialogTarget): string {
-    if (target.kind === "state") return `+ ${target.stateId}`;
+    if (target.kind === "state") return `+ ${serializeLabel(target.stateId)}`;
     return serializeTarget(target);
 }
 
@@ -142,7 +161,7 @@ function stripTildes(s: string): string {
 function serializeTarget(target: DialogTarget): string {
     switch (target.kind) {
         case "state":
-            return `GOTO ${target.stateId}`;
+            return `GOTO ${serializeLabel(target.stateId)}`;
         case "exit":
             return "EXIT";
         case "external": {
@@ -158,7 +177,7 @@ function serializeTarget(target: DialogTarget): string {
                 }
                 const file = stripTildes(rest.slice(0, colon));
                 const stateId = rest.slice(colon + 1);
-                return `COPY_TRANS ~${file}~ ${stateId}`;
+                return `COPY_TRANS ~${file}~ ${serializeLabel(stateId)}`;
             }
             // Regular extern: "file:state" (file may have tilde delimiters from the parser)
             const colon = target.label.indexOf(":");
@@ -167,7 +186,7 @@ function serializeTarget(target: DialogTarget): string {
             }
             const file = stripTildes(target.label.slice(0, colon));
             const stateId = target.label.slice(colon + 1);
-            return `EXTERN ~${file}~ ${stateId}`;
+            return `EXTERN ~${file}~ ${serializeLabel(stateId)}`;
         }
         default: {
             // Exhaustiveness: a new DialogTarget kind must be given an explicit serialization here.

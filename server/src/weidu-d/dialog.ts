@@ -27,8 +27,11 @@ import {
     extractReplyText,
     extractTarget,
     extractTargetLabelRange,
+    extractTextContent,
+    chainEpilogueTarget,
     getNodeFieldText,
 } from "./dialog-utils";
+import { labelName } from "./label-refs";
 import {
     parseAlterTrans,
     parseAddStateTrigger,
@@ -167,7 +170,7 @@ function parseChainAction(node: SyntaxNode, blocks: DDialogBlock[], states: DDia
     if (!file) return;
 
     const labelNode = node.childForFieldName("label");
-    const label = labelNode ? labelNode.text : undefined;
+    const label = labelNode ? labelName(labelNode) : undefined;
 
     blocks.push({
         kind: "chain",
@@ -184,7 +187,7 @@ function parseExtendAction(node: SyntaxNode, blocks: DDialogBlock[], states: DDi
     if (!file) return;
 
     const statesField = node.childrenForFieldName("states");
-    const stateRefs = statesField.map((s) => s.text).join(", ");
+    const stateRefs = statesField.map((s) => labelName(s)).join(", ");
     const line = node.startPosition.row + 1;
 
     blocks.push({
@@ -224,7 +227,7 @@ function parseInterjectAction(node: SyntaxNode, blocks: DDialogBlock[], states: 
     if (!file) return;
 
     const labelNode = node.childForFieldName("label");
-    const label = labelNode ? labelNode.text : undefined;
+    const label = labelNode ? labelName(labelNode) : undefined;
 
     blocks.push({
         kind: "interject",
@@ -245,7 +248,7 @@ function parseState(node: SyntaxNode, speaker: string): DDialogState | undefined
     const labelNode = node.childForFieldName("label");
     if (!labelNode) return undefined;
 
-    const label = labelNode.text;
+    const label = labelName(labelNode);
     const sayText = extractSayText(node);
     const sayTexts = extractSayTexts(node);
     const trigger = extractTrigger(node);
@@ -365,7 +368,7 @@ function parseTransitionShort(node: SyntaxNode): DDialogTransition {
 function parseCopyTrans(node: SyntaxNode): DDialogTransition {
     const file = getNodeFieldText(node, "file") ?? "";
     const stateNode = node.childForFieldName("state");
-    const label = stateNode ? stateNode.text : "";
+    const label = stateNode ? labelName(stateNode) : "";
 
     return {
         line: node.startPosition.row + 1,
@@ -379,7 +382,10 @@ function parseCopyTrans(node: SyntaxNode): DDialogTransition {
 // ---------------------------------------------------------------------------
 
 /**
- * Flatten a CHAIN (or INTERJECT) into synthetic states connected by GOTO transitions.
+ * Flatten a CHAIN (or INTERJECT) into synthetic states, one per speaker run, BRANCH speakers included, linked the
+ * way WeiDU links a chain's lines: each state goes to the next, guarded by that state's condition, and past a
+ * conditional state also to the one after it, until an unconditional state or the end, where the epilogue's
+ * transitions apply. A false condition so skips its line instead of ending the chain.
  */
 function flattenChain(
     node: SyntaxNode,
@@ -388,22 +394,25 @@ function flattenChain(
     states: DDialogState[],
     derivedFrom: "CHAIN" | "INTERJECT",
 ): void {
-    const syntheticStates: DDialogState[] = [];
+    const lines: Array<{ state: DDialogState; condition: string | undefined }> = [];
+    let epilogue: DDialogTransition[] = [];
     let currentSpeaker = initialSpeaker;
-    let stateIndex = 0;
 
-    const pushChainState = (child: SyntaxNode): void => {
+    const pushChainState = (child: SyntaxNode, branchConditions: readonly string[]): void => {
         // Record the FULL multisay list (parity with parseState); sayText stays the first for the flat display.
         const sayTexts = extractChainTexts(child);
         const sayText = sayTexts[0]?.text ?? "";
-        const trigger = extractChainTextTrigger(child);
-        const label = stateIndex === 0 && chainLabel ? chainLabel : `${chainLabel ?? "chain"}_${stateIndex}`;
-        syntheticStates.push({
+        // A BRANCH trigger guards every line inside it, outer branches first, as WeiDU joins them.
+        const ownTrigger = extractChainTextTrigger(child);
+        const condition = [...branchConditions, ...(ownTrigger ? [ownTrigger] : [])].join(" ") || undefined;
+        const index = lines.length;
+        const label = index === 0 && chainLabel ? chainLabel : `${chainLabel ?? "chain"}_${index}`;
+        const state: DDialogState = {
             label,
             line: child.startPosition.row + 1,
             sayText,
             ...(sayTexts.length > 0 ? { sayTexts } : {}),
-            trigger: trigger || undefined,
+            trigger: condition,
             speaker: currentSpeaker,
             // Owning dialog is the chain's target file, never the per-line switched speaker.
             blockFile: initialSpeaker,
@@ -412,49 +421,50 @@ function flattenChain(
             // Synthetic: a CHAIN/INTERJECT link has no standalone source block, so the
             // editor renders it read-only (no range to splice an edit back into).
             derivedFrom,
-        });
-        stateIndex++;
+        };
+        lines.push({ state, condition });
     };
 
-    const attachToLast = (transitions: DDialogTransition[]): void => {
-        if (syntheticStates.length > 0) {
-            syntheticStates[syntheticStates.length - 1]!.transitions.push(...transitions);
-        }
-    };
-
-    for (const child of node.children) {
-        if (child.type === SyntaxType.ChainText) {
-            // The entry speaker's lines; each `== ~file~ @text` speaker that follows is a sibling
-            // chain_speaker. Both produce states, and a speaker line also switches the speaking actor.
-            pushChainState(child);
-        } else if (child.type === SyntaxType.ChainSpeaker) {
-            const speakerFile = getNodeFieldText(child, "file");
-            if (speakerFile) {
-                currentSpeaker = speakerFile;
+    const visit = (container: SyntaxNode, branchConditions: readonly string[]): void => {
+        for (const child of container.children) {
+            if (child.type === SyntaxType.ChainText) {
+                // The entry speaker's lines; each `== ~file~ @text` speaker that follows is a sibling
+                // chain_speaker. Both produce states, and a speaker line also switches the speaking actor.
+                pushChainState(child, branchConditions);
+            } else if (child.type === SyntaxType.ChainSpeaker) {
+                const speakerFile = getNodeFieldText(child, "file");
+                if (speakerFile) {
+                    currentSpeaker = speakerFile;
+                }
+                pushChainState(child, branchConditions);
+            } else if (child.type === SyntaxType.ChainBranch) {
+                const triggerNode = child.childForFieldName("trigger");
+                const trigger = triggerNode ? extractTextContent(triggerNode) : "";
+                visit(child, trigger ? [...branchConditions, trigger] : branchConditions);
+            } else if (child.type === SyntaxType.ChainEpilogue) {
+                epilogue = parseChainEpilogue(child);
             }
-            pushChainState(child);
-        } else if (child.type === SyntaxType.ChainEpilogue) {
-            // Epilogue holds the chain's terminal transition(s) (GOTO/EXTERN/EXIT).
-            attachToLast(parseChainEpilogue(child));
-        } else if (child.type === SyntaxType.ChainBranch) {
-            attachToLast(parseChainBranch(child));
         }
-    }
+    };
+    visit(node, []);
 
-    // Connect sequential chain states with GOTO transitions
-    for (let i = 0; i < syntheticStates.length - 1; i++) {
-        const current = syntheticStates[i]!;
-        const next = syntheticStates[i + 1]!;
-        // Only add auto-transition if no explicit transitions exist
-        if (current.transitions.length === 0) {
-            current.transitions.push({
-                line: current.line,
-                target: { kind: "goto", label: next.label },
+    for (const [i, { state }] of lines.entries()) {
+        let reachesEnd = true;
+        for (const next of lines.slice(i + 1)) {
+            state.transitions.push({
+                line: state.line,
+                trigger: next.condition,
+                target: { kind: "goto", label: next.state.label },
             });
+            if (next.condition === undefined) {
+                reachesEnd = false;
+                break;
+            }
         }
+        if (reachesEnd) state.transitions.push(...epilogue.map((t) => ({ ...t })));
     }
 
-    states.push(...syntheticStates);
+    states.push(...lines.map((l) => l.state));
 }
 
 function parseChainEpilogue(node: SyntaxNode): DDialogTransition[] {
@@ -465,29 +475,8 @@ function parseChainEpilogue(node: SyntaxNode): DDialogTransition[] {
             transitions.push(...parseTransitionContainer(child));
         }
     }
+    if (transitions.length > 0) return transitions;
 
-    // Direct target on epilogue itself
-    if (transitions.length === 0) {
-        const target = extractTarget(node);
-        if (target) {
-            transitions.push({
-                line: node.startPosition.row + 1,
-                target,
-            });
-        }
-    }
-
-    return transitions;
-}
-
-function parseChainBranch(node: SyntaxNode): DDialogTransition[] {
-    const transitions: DDialogTransition[] = [];
-
-    for (const child of node.children) {
-        if (child.type === SyntaxType.Transition) {
-            transitions.push(...parseTransitionContainer(child));
-        }
-    }
-
-    return transitions;
+    const target = chainEpilogueTarget(node);
+    return target ? [{ line: node.startPosition.row + 1, target }] : [];
 }

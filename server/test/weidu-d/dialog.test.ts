@@ -13,6 +13,7 @@ vi.mock("../../src/server", () => ({
 }));
 
 import { parseDDialog } from "../../src/weidu-d/dialog";
+import { modelFromD } from "@bgforge/shared/dialog-model";
 import { initParser } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {
@@ -615,6 +616,96 @@ END
             expect(result.states.map((s) => [s.label, s.trigger, s.sayText])).toEqual([["s", "foo", "bar"]]);
             expect(result.states[0]!.transitions.map((t) => [t.trigger, t.replyText, t.action, t.target])).toEqual([
                 ["t", "r", "act", { kind: "exit" }],
+            ]);
+        });
+
+        // Each epilogue form is where the chain's last line goes; END file label leaves for that state as EXTERN does.
+        it.each([
+            ["EXIT", { kind: "exit" }],
+            ["END B next", { kind: "extern", file: "B", label: "next" }],
+            ["EXTERN B next", { kind: "extern", file: "B", label: "next" }],
+            ["COPY_TRANS B next", { kind: "copy_trans", file: "B", label: "next" }],
+        ])("a CHAIN ending in %s gives its last state that exit", (epilogue, target) => {
+            const result = parseDDialog(`CHAIN A c\n~one~\n== B ~two~\n${epilogue}\n`);
+
+            expect(result.states.map((s) => s.transitions.map((t) => t.target))).toEqual([
+                [{ kind: "goto", label: "c_1" }],
+                [target],
+            ]);
+        });
+
+        it("BRANCH speakers are chain states, reached only when the branch trigger holds", () => {
+            // As WeiDU builds a chain: each line links to the next, and past a conditional line to the one after
+            // it too, so a false branch is skipped. A nested BRANCH adds its trigger after the outer one.
+            const text = `
+CHAIN A c
+~one~
+BRANCH ~T1~ BEGIN
+  == B ~two~
+  BRANCH ~T2~ BEGIN
+    == C IF ~own~ THEN ~three~
+  END
+END
+== A ~four~
+EXIT
+`;
+            const result = parseDDialog(text);
+
+            expect(result.states.map((s) => [s.label, s.speaker, s.sayText, s.trigger])).toEqual([
+                ["c", "A", "one", undefined],
+                ["c_1", "B", "two", "T1"],
+                ["c_2", "C", "three", "T1 T2 own"],
+                ["c_3", "A", "four", undefined],
+            ]);
+            expect(result.states.map((s) => s.transitions.map((t) => [t.trigger, t.target]))).toEqual([
+                [
+                    ["T1", { kind: "goto", label: "c_1" }],
+                    ["T1 T2 own", { kind: "goto", label: "c_2" }],
+                    [undefined, { kind: "goto", label: "c_3" }],
+                ],
+                [
+                    ["T1 T2 own", { kind: "goto", label: "c_2" }],
+                    [undefined, { kind: "goto", label: "c_3" }],
+                ],
+                [[undefined, { kind: "goto", label: "c_3" }]],
+                [[undefined, { kind: "exit" }]],
+            ]);
+        });
+
+        it("a CHAIN whose last line is conditional exits from the line before it too", () => {
+            const result = parseDDialog("CHAIN A c\n~one~\nBRANCH ~T~ BEGIN == B ~two~ END\nEXIT\n");
+
+            expect(result.states.map((s) => s.transitions.map((t) => [t.trigger, t.target]))).toEqual([
+                [
+                    ["T", { kind: "goto", label: "c_1" }],
+                    [undefined, { kind: "exit" }],
+                ],
+                [[undefined, { kind: "exit" }]],
+            ]);
+        });
+
+        it("a label written quoted and bare links in the editor model", () => {
+            // WeiDU strips a quoted label's delimiters, so ~q1~ and q1 are one state.
+            const text = `
+BEGIN DIALOG
+IF ~~ THEN BEGIN ~q1~ SAY ~a~ IF ~~ THEN GOTO q2 END
+IF ~~ THEN BEGIN q2 SAY ~b~ IF ~~ THEN GOTO ~q1~ END
+IF ~~ THEN BEGIN "q3" SAY ~c~ ++ ~r~ + ~q1~ COPY_TRANS DIALOG ~q2~ END
+CHAIN DIALOG ~c1~ ~x~ EXTERN OTHER ~s9~
+`;
+            const model = modelFromD(parseDDialog(text));
+
+            expect(model.roots[0]!.states.map((s) => [s.id, s.choices.map((c) => c.target)])).toEqual([
+                ["q1", [{ kind: "state", stateId: "q2" }]],
+                ["q2", [{ kind: "state", stateId: "q1" }]],
+                [
+                    "q3",
+                    [
+                        { kind: "state", stateId: "q1" },
+                        { kind: "external", label: "COPY_TRANS DIALOG:q2", resolved: false },
+                    ],
+                ],
+                ["c1", [{ kind: "external", label: "OTHER:s9", resolved: true }]],
             ]);
         });
 

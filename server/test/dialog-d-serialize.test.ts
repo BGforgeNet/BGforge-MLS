@@ -1,8 +1,10 @@
+import { readFileSync } from "fs";
+import path from "path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { modelFromD, type DialogModel, type DialogState } from "@bgforge/shared/dialog-model";
-import { modelToD } from "@bgforge/shared/dialog-d-serialize";
+import { BARE_LABEL_PATTERN, modelToD } from "@bgforge/shared/dialog-d-serialize";
 
 // ---------------------------------------------------------------------------
 // Round-trip helpers
@@ -291,6 +293,41 @@ END
             };
             const out = modelToD(model);
             expect(out).toContain("COPY_TRANS ~sourcefile~ 3");
+        });
+
+        it("keeps its bare-label shape the grammar's identifier token", () => {
+            const grammar = JSON.parse(
+                readFileSync(path.resolve(__dirname, "../../grammars/weidu-d/src/grammar.json"), "utf8"),
+            ) as { rules: { identifier: { type: string; value: string } } };
+            expect(grammar.rules.identifier).toEqual({ type: "PATTERN", value: BARE_LABEL_PATTERN });
+        });
+
+        // The model holds a label as WeiDU reads it, delimiters stripped, so one that cannot stand bare is quoted.
+        it("quotes a label that cannot stand bare, wherever it writes one", () => {
+            const source = [
+                "BEGIN x",
+                "IF ~~ THEN BEGIN ~my label~ SAY ~a~ IF ~~ THEN GOTO ~my label~ END",
+                "IF ~~ THEN BEGIN s SAY ~b~ ++ ~r~ + ~my label~ IF ~~ THEN EXTERN y ~his label~ END",
+                "",
+            ].join("\n");
+            const out = modelToD(modelFromD(parseDDialog(source)));
+
+            expect(out).toContain("BEGIN ~my label~");
+            expect(out).toContain("GOTO ~my label~");
+            expect(out).toContain("+ ~my label~");
+            expect(out).toContain("EXTERN ~y~ ~his label~");
+            expect(out).toContain("BEGIN s\n");
+            const reparsed = modelFromD(parseDDialog(out));
+            expect(allStates(reparsed).map((s) => [s.id, s.choices.map((c) => c.target)])).toEqual([
+                ["my label", [{ kind: "state", stateId: "my label" }]],
+                [
+                    "s",
+                    [
+                        { kind: "state", stateId: "my label" },
+                        { kind: "external", label: "~y~:his label", resolved: true },
+                    ],
+                ],
+            ]);
         });
     });
 
