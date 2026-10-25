@@ -27,6 +27,7 @@ import {
 } from "vscode-languageserver/node";
 import type { LanguageProvider, ProviderContext, FormatResult } from "../src/language-provider";
 import { scanWorkspaceFiles } from "../src/core/workspace-scanner";
+import { IDENTIFIER_EXTRA_CHARS } from "../src/core/languages";
 import {
     LANG_FALLOUT_SSL,
     LANG_WEIDU_BAF,
@@ -160,8 +161,9 @@ describe("ProviderRegistry", () => {
         it("should return the characters declared for a language", async () => {
             const registry = await createRegistry();
 
-            expect(registry.identifierExtraChars(LANG_WEIDU_BAF)).toBe("-");
-            expect(registry.identifierExtraChars(LANG_WEIDU_TP2)).toBe("#-");
+            // The values themselves are pinned against the grammars in identifier-extra-chars.test.ts.
+            expect(registry.identifierExtraChars(LANG_WEIDU_BAF)).toBe(IDENTIFIER_EXTRA_CHARS[LANG_WEIDU_BAF]);
+            expect(registry.identifierExtraChars(LANG_WEIDU_TP2)).toBe(IDENTIFIER_EXTRA_CHARS[LANG_WEIDU_TP2]);
         });
 
         it("should return an empty string for a language declaring none", async () => {
@@ -178,8 +180,8 @@ describe("ProviderRegistry", () => {
             registry.registerAlias(LANG_WEIDU_SSL, LANG_WEIDU_BAF);
             registry.registerAlias(LANG_WEIDU_SLB, LANG_WEIDU_BAF);
 
-            expect(registry.identifierExtraChars(LANG_WEIDU_SSL)).toBe("-");
-            expect(registry.identifierExtraChars(LANG_WEIDU_SLB)).toBe("-");
+            expect(registry.identifierExtraChars(LANG_WEIDU_SSL)).toBe(IDENTIFIER_EXTRA_CHARS[LANG_WEIDU_BAF]);
+            expect(registry.identifierExtraChars(LANG_WEIDU_SLB)).toBe(IDENTIFIER_EXTRA_CHARS[LANG_WEIDU_BAF]);
         });
     });
 
