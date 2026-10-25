@@ -10,6 +10,7 @@ import type { Hover, Position } from "vscode-languageserver/node";
 import { CONSUMER_EXTENSIONS_MSG, CONSUMER_EXTENSIONS_TRA } from "../core/languages";
 import { REGEX_MSG_HOVER, REGEX_TRANSPILER_TRA_HOVER } from "../core/patterns";
 import { stringPreview } from "../shared/string-preview";
+import { readMsgEntries, readTraEntries } from "./entry-readers";
 
 export interface TraEntry {
     source: string;
@@ -33,75 +34,54 @@ export interface TraData extends Map<string, TraEntries> {}
 
 export type TraExt = "msg" | "tra";
 
-/** Parses text and returns a map of index => entry */
-export function parseEntries(text: string, traType: TraExt): TraEntries {
-    let regex: RegExp;
-    if (traType === "tra") {
-        regex = /@(\d+)\s*=\s*~([^~]*)~/gm;
-    } else {
-        regex = /{(\d+)}\s*{\w*}\s*{([^}]*)}/gm;
+/** The offsets at which each line of `text` starts, for turning an offset into a line and a character. */
+function lineStarts(text: string): number[] {
+    const starts = [0];
+    for (let i = text.indexOf("\n"); i !== -1; i = text.indexOf("\n", i + 1)) starts.push(i + 1);
+    return starts;
+}
+
+/** The 0-based line holding `offset`: the last line that starts at or before it. */
+function lineOf(starts: readonly number[], offset: number): number {
+    let low = 0;
+    let high = starts.length - 1;
+    while (low < high) {
+        const mid = (low + high + 1) >> 1;
+        if ((starts[mid] ?? 0) <= offset) low = mid;
+        else high = mid - 1;
     }
+    return low;
+}
+
+/**
+ * Parses text and returns a map of index => entry. A `.tra` file is read as the installer reads it and a
+ * `.msg` file as the game loads it (see entry-readers.ts), so what is indexed is what the game would see. Where
+ * two entries share a number the last one wins, as in the game.
+ */
+export function parseEntries(text: string, traType: TraExt): TraEntries {
+    const raw = traType === "tra" ? readTraEntries(text) : readMsgEntries(text);
+    const starts = lineStarts(text);
     const entries: TraEntries = new Map();
-    let currentLine = 0;
-    let lineStartIndex = 0;
-    let match = regex.exec(text);
-    while (match !== null) {
-        if (match.index === regex.lastIndex) {
-            regex.lastIndex++;
-        }
-        const num = match[1];
-        const str = match[2];
-        // Check undefined only -- empty string is a valid translation entry (e.g., @0 = ~~)
-        if (num === undefined || str === undefined) {
-            match = regex.exec(text);
-            continue;
-        }
-
-        // Track line/character position by scanning newlines up to match start.
-        // This loop and the end-position loop below scan disjoint ranges
-        // (lineStartIndex..match.index and match.index..matchEnd) so newlines
-        // are never double-counted, even for multiline values.
-        for (let i = lineStartIndex; i < match.index; i++) {
-            if (text[i] === "\n") {
-                currentLine++;
-                lineStartIndex = i + 1;
-            }
-        }
-        const startLine = currentLine;
-        const character = match.index - lineStartIndex;
-
-        // Compute end position by scanning newlines through the full match.
-        // This also advances currentLine/lineStartIndex past multiline values
-        // so the next iteration starts from the correct position.
-        const matchEnd = match.index + match[0].length;
-        for (let i = match.index; i < matchEnd; i++) {
-            if (text[i] === "\n") {
-                currentLine++;
-                lineStartIndex = i + 1;
-            }
-        }
-        const endLine = currentLine;
-        const endCharacter = matchEnd - lineStartIndex;
-
+    for (const { key, source, start, end } of raw) {
+        const line = lineOf(starts, start);
+        const endLine = lineOf(starts, end);
         // Previews are built here, not on demand, so a hover or inlay hint is a field read. Deferring and
         // memoising them was measured and dropped: a small share of load time and retained heap, against a
         // derivation on every preview's first access.
-        const preview = stringPreview(str);
-
+        const preview = stringPreview(source);
         const entry: TraEntry = {
-            source: str,
+            source,
             hover: preview.hover,
             inlay: preview.inlay,
-            line: startLine,
-            character,
+            line,
+            character: start - (starts[line] ?? 0),
             endLine,
-            endCharacter,
+            endCharacter: end - (starts[endLine] ?? 0),
         };
         if (preview.inlayTooltip !== undefined) {
             entry.inlayTooltip = preview.inlayTooltip;
         }
-        entries.set(num, entry);
-        match = regex.exec(text);
+        entries.set(key, entry);
     }
     return entries;
 }
