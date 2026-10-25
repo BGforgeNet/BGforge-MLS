@@ -442,6 +442,9 @@ const CASES: Case[] = [
     // Lexer-level changes.
     { name: "subtraction written without spaces", code: patch("WRITE_LONG 0 (%SOURCE_SIZE%-12)") },
     { name: "a string whose whole content is //", code: patch("REPLACE_TEXTUALLY ~//~ ~x~") },
+    // Block comments nest: the comment ends at the closer matching its own opener, not at the first one.
+    { name: "a block comment nested in another", code: component("/* a /* b */ c */\nPRINT ~x~") },
+    { name: "a nested block comment left open", code: component("/* a /* b */ c\nPRINT ~x~") },
     {
         name: "digit-leading parameter name (TPA context)",
         code: "DEFINE_ACTION_FUNCTION ~f~ STR_VAR 2da = ~~ BEGIN\n  PRINT ~hi~\nEND\n",
