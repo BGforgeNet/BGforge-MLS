@@ -28,12 +28,15 @@
     const range = $derived(visibleRange({ scrollTop, viewportHeight, rowHeight, overscan, total }));
 
     // Scroll a host-selected row into view, centred, once per scroll token. Setting scrollTop fires the
-    // onscroll handler, which moves the window so the target row is fetched and highlighted.
+    // onscroll handler, which moves the window so the target row is fetched and highlighted. The token is spent only
+    // once the list can hold the row, since before the first fetch sets `total` the browser clamps scrollTop to 0;
+    // reading the count re-runs this effect when it arrives, whichever order the framework flushes them in.
     let lastScrollToken = -1;
     $effect(() => {
         const req = scrollTo;
         const el = vlistEl;
-        if (req === undefined || el === undefined || req.token === lastScrollToken) return;
+        const count = fixedRows?.length ?? total;
+        if (req === undefined || el === undefined || req.token === lastScrollToken || req.index >= count) return;
         lastScrollToken = req.token;
         el.scrollTop = Math.max(0, req.index * rowHeight - Math.max(0, (viewportHeight - rowHeight) / 2));
     });
