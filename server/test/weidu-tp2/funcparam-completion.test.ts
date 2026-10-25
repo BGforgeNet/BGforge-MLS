@@ -41,9 +41,10 @@ beforeAll(async () => {
 /** Parameter completions at the `|` in `marked`, a file with no END after the cursor's call. */
 function paramLabels(marked: string, file: string): string[] {
     const at = marked.indexOf("|");
-    const lines = marked.slice(0, at).split("\n");
+    const before = marked.slice(0, at);
+    const lines = before.split("\n");
     const position: Position = { line: lines.length - 1, character: lines.at(-1)!.length };
-    const text = marked.replace("|", "");
+    const text = before + marked.slice(at + 1);
     const uri = normalizeUri(file);
     const all = weiduTp2Provider.getCompletions?.(uri) ?? [];
     return (weiduTp2Provider.filterCompletions?.(all, text, position, uri) ?? [])

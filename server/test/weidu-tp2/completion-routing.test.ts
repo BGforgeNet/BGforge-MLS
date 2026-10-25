@@ -53,9 +53,9 @@ describe("weidu-tp2: functions defined in the file being edited", () => {
         const uri = normalizeUri(file);
         const text = `DEFINE_ACTION_FUNCTION own_fn BEGIN END\nBEGIN ~c~\nDEFINE_ACTION_FUNCTION nested_fn BEGIN END\nLAF |\n`;
         const at = text.indexOf("|");
-        const before = text.slice(0, at).split("\n");
-        const position = { line: before.length - 1, character: before.at(-1)!.length };
-        const clean = text.replace("|", "");
+        const lines = text.slice(0, at).split("\n");
+        const position = { line: lines.length - 1, character: lines.at(-1)!.length };
+        const clean = text.slice(0, at) + text.slice(at + 1);
         weiduTp2Provider.reloadFileData!(uri, clean);
         const items = weiduTp2Provider.filterCompletions!(weiduTp2Provider.getCompletions!(uri), clean, position, uri);
         expect(items.map((item) => item.label)).toEqual(expect.arrayContaining(["own_fn", "nested_fn"]));
