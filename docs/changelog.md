@@ -13,6 +13,28 @@
   `tokenize` is `string tokenize(str, prevToken, delimiter)`; `drop_obj`, `gSay_Option`, `gSay_Reply`,
   `move_obj_inven_to_obj` and `play_sfx` return nothing, `get_pc_stat` an int, `message_str` a string; argument
   types of `obj_is_carrying_obj_pid`, `set_exit_grids` and `giQ_Option` are fixed.
+- Keywords are never read as names, so a half-typed call, declaration, parameter list, array, map or `begin` keeps
+  the procedures after it in the outline, and the missing token is reported; an unclosed string ends at its line. A
+  macro may still name itself or a parameter like a keyword (`#define season_morning(when)`).
+- `import`/`export` procedures and blocks, `call ... when`, a string as call target, `for` without parentheses, raw
+  strings `@"..."`, `0X` hex, `5.`, variadic macros and an `else` after a macro that opens an `if` parse; `sfall.h`
+  shows no false errors. `in` is not an operator, as in the compiler.
+- Hover finds a procedure or variable whatever its letter case. Go to definition on a `foreach` variable without
+  `variable` goes to the existing declaration, and the outline lists `foreach variable` loop variables. Renaming a
+  local declared in a block no longer offers to rename a same-named header symbol.
+- Formatting puts the `end` of an empty block at its statement's indentation. Highlighting covers raw strings, `0X`
+  hex, floats and call targets.
+- The built-in compiler compiles `call ... when`, imported and exported procedures and blocks, and `export variable`
+  blocks as the reference does, keeps the backslashes of a raw string, and drops an unused imported procedure at
+  `-O1` and above.
+
+### Fallout MSG
+
+- MSG files are checked as the game loads them: a stray `}`, a padded number such as `{ 100 }` and a field of 1024
+  bytes or more are errors; text outside the braces is not, and a `#` or `//` line holding an entry is live and
+  highlighted as one.
+- Hover and inlay hints find entries with signed numbers or a space in the audio field; formatting keeps indented
+  entries and audio fields as written.
 
 ### WeiDU
 
@@ -25,10 +47,35 @@
   `PHP_EACH` arrays, and resolves `LPF` to the patch function when an action function shares its name.
 - TP2 functions defined inside a component or block appear in the outline, completion and call hierarchy.
 - TP2 formatting keeps the name in `INNER_PATCH_SAVE EVAL`; hover pairs each parameter with its own default.
+- D accepts what WeiDU accepts: sounds, female text, `^` and `!strref` in any text, bare words as strings, `%var%`
+  as a trigger or action, `FLAGS` and other numbers in hex or quoted, `IF` and `DO` on each `=` line of a `CHAIN`,
+  `IF_FILE_EXISTS` and `BRANCH` in `INTERJECT`, nested comments, `~~~~~` strings and the `A_S_T`-style aliases. A
+  keyword is never read as a name.
+- A D state missing its `END`, or a `GOTO` still being typed, no longer hides the states after it; the missing `END`
+  is still reported.
+- D go to definition, references and rename find states in `REPLACE` blocks, `CHAIN` labels, `CHAIN` epilogues and
+  the states `ALTER_TRANS` and kin name; `~13~` and `13` are one label; definition reaches other files.
+- The dialog editor shows a female text as part of its `CHAIN` line, shows `BRANCH` speakers and a `CHAIN`'s exit,
+  links quoted labels, and keeps a transition's `FLAGS` and journal entries when it saves. A D file with a syntax
+  error opens read-only.
+- BAF: nested comments, multi-line strings, sounds and female text, five-tilde and five-quote forms, object
+  rectangles, `#5`, `[]`, `#` and `!` in names, `%var%` as a call name, `OR` count or bracket component,
+  `IF ... THEN END` and an `ActionOverride` missing its `)` parse as in WeiDU; `0x` takes decimal digits only, and
+  a string starting with `//` is a string. Highlighting follows.
+- The BAF compiler stores object rectangles where the game has them, accepts `ANYONE` in any bracket position, reads
+  `#5`, `-0x10` and a quoted number in a number slot, and refuses `~text~` in a string or object slot, as WeiDU does.
+- BAF string-reference hints work whatever the letter case of the action, and the formatter indents under
+  `OR(#2)`.
+- TRA accepts `^`, bare words, `#N`, `@N` and `(AT name)` values and nested comments; an unclosed string or comment
+  is reported where it is. Highlighting follows.
+- `@N` hints, hover and find-references cover `"..."`, `%...%`, `^` and negative entries, and skip entries in
+  comments and `@N` inside strings. The dialog editor saves `.tra` and `.msg` text through the same reader, changing
+  only the entries it edits.
 
 ### All languages
 
-- Completion offers a name several headers define identically once.
+- Completion offers a name several headers define identically once; differing values or macro bodies each show with
+  their header.
 - Formatting a file with a syntax error leaves it unchanged, without a warning on every save.
 
 ### Icons
