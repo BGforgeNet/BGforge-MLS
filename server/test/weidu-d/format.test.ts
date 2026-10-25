@@ -43,6 +43,16 @@ describe("weidu-d/format/core", () => {
         });
     });
 
+    describe("state WEIGHT", () => {
+        it("keeps the weight of a state too long for one line", () => {
+            const say = "x".repeat(120);
+            const input = `BEGIN ~dlg~\nIF WEIGHT #-1 ~True()~ THEN BEGIN st SAY ~${say}~ IF ~~ THEN EXIT END\n`;
+            const output = format(input);
+
+            expect(output.split("\n")[1]).toBe("    IF WEIGHT #-1 ~True()~ st");
+        });
+    });
+
     describe("END indentation", () => {
         it("END aligns with IF, not with body content", () => {
             const input = `BEGIN ~dlg~\nIF ~~ THEN BEGIN state\n  SAY ~hello~\n  IF ~~ THEN EXIT\nEND\n`;

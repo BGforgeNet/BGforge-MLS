@@ -94,8 +94,15 @@
 ; TRA references (@123) - translation string lookups
 (tra_ref) @string.special
 
-; TLK references (#123) - game string references
+; TLK references (#123) - game string references, and the !123 that forces a text into one
 (tlk_ref) @number
+(forced_strref) @number
+
+; Weights and positions (#-1)
+(weight_value) @number
+
+; Sound resources ([SND01]) attached to a text
+(sound) @string.special
 
 ; AT variable references
 (at_var_ref) @variable
@@ -108,10 +115,10 @@
 "==" @operator
 "=" @operator
 "+" @operator
+"^" @operator
 
 ; ----- Punctuation -----
 
-"#" @punctuation.special
 "(" @punctuation.bracket
 ")" @punctuation.bracket
 "~" @punctuation.delimiter

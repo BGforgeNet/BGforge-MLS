@@ -117,7 +117,7 @@ interface GrammarCfg {
  * Reason shared by every alias below: WeiDU still accepts these older spellings, so the grammar parses them
  * rather than reporting a false error - but only the canonical spelling is highlighted and offered in
  * completion, so the tooling keeps nudging toward one way of writing it. Each alias is checked against the
- * real binary by server/test/integration/weidu-tp2-grammar-differential.test.ts.
+ * real binary by server/test/integration/weidu-tp2-grammar-differential.test.ts or its weidu-d sibling.
  */
 const LEGACY_ALIAS = "legacy WeiDU alias; canonical spelling is the highlighted one";
 
@@ -181,7 +181,14 @@ const GRAMMARS: GrammarCfg[] = [
         // data.keywords includes GLOBAL/LOCALS/MYAREA/nonPausing/OR/RESPONSE, none of which are grammar tokens.
         dataSubsetBlocks: [],
         caseInsensitive: false,
-        textmateAbsenceAllow: {},
+        textmateAbsenceAllow: {
+            A_S_T: LEGACY_ALIAS,
+            A_T_T: LEGACY_ALIAS,
+            EXTEND: LEGACY_ALIAS,
+            R_A_T: LEGACY_ALIAS,
+            R_S_T: LEGACY_ALIAS,
+            R_T_T: LEGACY_ALIAS,
+        },
     },
 ];
 

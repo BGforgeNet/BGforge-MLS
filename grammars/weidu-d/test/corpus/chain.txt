@@ -1,0 +1,144 @@
+================================================================================
+CHAIN line with a female variant is one line
+================================================================================
+
+CHAIN ~a~ st
+~m~ ~f~
+== ~b~ ~x~ ~y~
+EXIT
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (chain_action
+    file: (string
+      (tilde_string
+        (tilde_content)))
+    label: (state_label_alnum)
+    (chain_text
+      text: (compound_text
+        male: (string
+          (tilde_string
+            (tilde_content)))
+        female: (string
+          (tilde_string
+            (tilde_content)))))
+    (chain_speaker
+      file: (string
+        (tilde_string
+          (tilde_content)))
+      text: (compound_text
+        male: (string
+          (tilde_string
+            (tilde_content)))
+        female: (string
+          (tilde_string
+            (tilde_content)))))
+    (chain_epilogue)))
+
+================================================================================
+CHAIN lines joined by = each take an IF and a DO
+================================================================================
+
+CHAIN IF WEIGHT #2 ~t~ THEN a st
+@1 DO ~x~ = IF ~c~ THEN @2
+== b IF ~d~ @3 = @4 DO ~y~
+EXIT
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (chain_action
+    weight: (weight_value)
+    trigger: (string
+      (tilde_string
+        (tilde_content)))
+    file: (identifier)
+    label: (state_label_alnum)
+    (chain_text
+      text: (tra_ref)
+      (do_feature
+        action: (string
+          (tilde_string
+            (tilde_content))))
+      trigger: (string
+        (tilde_string
+          (tilde_content)))
+      text: (tra_ref))
+    (chain_speaker
+      file: (identifier)
+      trigger: (string
+        (tilde_string
+          (tilde_content)))
+      text: (tra_ref)
+      text: (tra_ref)
+      (do_feature
+        action: (string
+          (tilde_string
+            (tilde_content)))))
+    (chain_epilogue)))
+
+================================================================================
+BRANCH nests and holds speakers
+================================================================================
+
+INTERJECT IF_FILE_EXISTS a st ~gv~
+BRANCH ~t~ BEGIN
+  == b @1
+  BRANCH ~u~ BEGIN == c @2 END
+END
+END d next
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (interject_action
+    file: (identifier)
+    label: (state_label_alnum)
+    global_var: (string
+      (tilde_string
+        (tilde_content)))
+    (chain_branch
+      trigger: (string
+        (tilde_string
+          (tilde_content)))
+      (chain_speaker
+        file: (identifier)
+        text: (tra_ref))
+      (chain_branch
+        trigger: (string
+          (tilde_string
+            (tilde_content)))
+        (chain_speaker
+          file: (identifier)
+          text: (tra_ref))))
+    (chain_epilogue
+      file: (identifier)
+      label: (state_label_alnum))))
+
+================================================================================
+A keyword is never read as a label
+================================================================================
+
+BEGIN d
+IF ~~ THEN BEGIN s SAY ~x~ IF ~~ THEN GOTO EXIT END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (identifier)
+    (state
+      trigger: (string
+        (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text
+        (string
+          (tilde_string
+            (tilde_content))))
+      (transition
+        (transition_full
+          trigger: (string
+            (tilde_string))
+          (ERROR)
+          (exit_next))))))

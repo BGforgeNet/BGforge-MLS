@@ -1,0 +1,154 @@
+================================================================================
+Say text with a female variant and sounds
+================================================================================
+
+REPLACE_SAY d 0 ~m~ [SM] ~f~ [SF]
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (replace_say
+    file: (identifier)
+    state: (state_label_alnum)
+    text: (compound_text
+      male: (string
+        (tilde_string
+          (tilde_content)))
+      male_sound: (sound)
+      female: (string
+        (tilde_string
+          (tilde_content)))
+      female_sound: (sound))))
+
+================================================================================
+Say text with a sound only
+================================================================================
+
+REPLACE_SAY d 0 ~m~ [SND01]
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (replace_say
+    file: (identifier)
+    state: (state_label_alnum)
+    text: (compound_text
+      male: (string
+        (tilde_string
+          (tilde_content)))
+      male_sound: (sound))))
+
+================================================================================
+Concatenated text, forced strref and negative references
+================================================================================
+
+BEGIN d
+IF ~~ THEN BEGIN s
+  SAY ~a~ ^ %b% = !5 ~c~ ~d~ = @-1 = #-2
+  IF ~~ THEN EXIT
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (identifier)
+    (state
+      trigger: (string
+        (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text
+        (concat_string
+          (string
+            (tilde_string
+              (tilde_content)))
+          (variable_ref))
+        (forced_text
+          strref: (forced_strref)
+          text: (compound_text
+            male: (string
+              (tilde_string
+                (tilde_content)))
+            female: (string
+              (tilde_string
+                (tilde_content)))))
+        (tra_ref)
+        (tlk_ref))
+      (transition
+        (transition_full
+          trigger: (string
+            (tilde_string))
+          (exit_next))))))
+
+================================================================================
+AT references take any string
+================================================================================
+
+REPLACE_SAY d 0 (AT foo)
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (replace_say
+    file: (identifier)
+    state: (state_label_alnum)
+    text: (at_var_ref
+      (identifier))))
+
+================================================================================
+A weight and a position are one token each
+================================================================================
+
+EXTEND_TOP d 0 #-1
+  IF ~~ THEN EXIT
+END
+SET_WEIGHT d 0 #3
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (extend_action
+    file: (identifier)
+    states: (state_label_alnum)
+    position: (weight_value)
+    (transition
+      (transition_full
+        trigger: (string
+          (tilde_string))
+        (exit_next))))
+  (set_weight
+    file: (identifier)
+    state: (state_label_alnum)
+    weight: (weight_value)))
+
+================================================================================
+Five-tilde strings, nested comments and comment openers inside strings
+================================================================================
+
+/* outer /* inner */ still a comment */
+REPLACE_SAY d 0 ~~~~~he said ~hi~ ok~~~~~
+REPLACE_SAY d 1 ~//~
+REPLACE_SAY d 2 "/*"
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (comment)
+  (replace_say
+    file: (identifier)
+    state: (state_label_alnum)
+    text: (string
+      (five_tilde_string
+        (five_tilde_content))))
+  (replace_say
+    file: (identifier)
+    state: (state_label_alnum)
+    text: (string
+      (tilde_string
+        (tilde_content))))
+  (replace_say
+    file: (identifier)
+    state: (state_label_alnum)
+    text: (string
+      (double_string
+        (double_content)))))

@@ -380,7 +380,7 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
     // so it needs a spelling policy instead - see fallout-ssl/canonical-keyword.ts.
     let ifLine = indent + "IF";
     if (weight) {
-        ifLine += " WEIGHT #" + weight.text;
+        ifLine += " WEIGHT " + weight.text;
     }
     ifLine += " " + (trigger ? normalizeDelimitedString(trigger.text) : "~~");
     ifLine += " " + (label?.text ?? "");
@@ -500,10 +500,7 @@ function getExtendHeader(node: SyntaxNode): string {
         if (child.type === SyntaxType.Transition || isTransitionBody(child) || isComment(child) || isCopyTrans(child))
             break;
         if (child.text === "END") break;
-        // Don't insert space after "#" - keep "#N" as a single token (position number).
-        // TODO: fix in grammar instead - tokenize "#N" as a single node (like tlk_ref does),
-        // also for _weight_value. Then this workaround can be removed.
-        if (result.length > 0 && !result.endsWith("#")) {
+        if (result.length > 0) {
             result += " ";
         }
         result += child.text;

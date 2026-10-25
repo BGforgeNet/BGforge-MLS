@@ -321,7 +321,8 @@ IF ~~ THEN BEGIN s1
 END
 
 INTERJECT_COPY_TRANS DIALOG s1 myInterject
-    DO ~SetGlobal("foo","GLOBAL",1)~ EXIT
+== OTHER ~Interjection~ DO ~SetGlobal("foo","GLOBAL",1)~
+END
 `;
             const result = parseDDialog(text);
 
@@ -566,25 +567,40 @@ ADD_STATE_TRIGGER DIALOG 4 ~Global("Quest","GLOBAL",1)~
             expect(result.blocks[0]!.actionName).toBe("ADD_STATE_TRIGGER");
         });
 
-        it("CHAIN with multiple text segments auto-links states (line 402 branch)", () => {
-            // Two chain_text segments with no explicit transitions between them.
-            // flattenChain auto-adds a GOTO from the first to the second (line 402).
+        it("CHAIN speaker lines auto-link their states", () => {
+            // No explicit transitions between the lines: flattenChain adds a GOTO from each to the next.
             const text = `
 CHAIN DIALOG chainlabel
 ~First text~
-~Second text~
+== OTHER ~Second text~
 EXIT
 `;
             const result = parseDDialog(text);
 
-            // Both chain text segments should become states
             const chainStates = result.states.filter((s) => s.blockLabel === "chainlabel");
-            expect(chainStates.length).toBeGreaterThanOrEqual(2);
+            expect(chainStates.map((s) => [s.label, s.speaker, s.sayText])).toEqual([
+                ["chainlabel", "DIALOG", "First text"],
+                ["chainlabel_1", "OTHER", "Second text"],
+            ]);
+            expect(chainStates[0]!.transitions.map((t) => t.target)).toEqual([{ kind: "goto", label: "chainlabel_1" }]);
+        });
 
-            // The first state must have an auto-added GOTO transition to the second
-            const firstState = chainStates[0]!;
-            expect(firstState.transitions).toHaveLength(1);
-            expect(firstState.transitions[0]!.target.kind).toBe("goto");
+        it("a CHAIN line with a female variant is one state, not two", () => {
+            // `~m~ ~f~` is one line holding the male and the female text; only `=` or `==` starts a new line.
+            const text = `
+CHAIN DIALOG chainlabel
+~Male text~ ~Female text~
+== OTHER ~Reply~ [SND] ~Her reply~
+EXIT
+`;
+            const result = parseDDialog(text);
+
+            const chainStates = result.states.filter((s) => s.blockLabel === "chainlabel");
+            expect(chainStates.map((s) => [s.label, s.speaker, s.sayText])).toEqual([
+                ["chainlabel", "DIALOG", "Male text"],
+                ["chainlabel_1", "OTHER", "Reply"],
+            ]);
+            expect(chainStates.map((s) => s.sayTexts?.map((t) => t.text))).toEqual([["Male text"], ["Reply"]]);
         });
 
         it("CHAIN with BRANCH transitions (parseChainBranch branch)", () => {

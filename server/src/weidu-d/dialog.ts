@@ -18,7 +18,6 @@ import {
     extractSayText,
     extractSayTexts,
     extractSayTextContent,
-    extractChainText,
     extractChainTexts,
     extractChainTextTrigger,
     extractTrigger,
@@ -396,7 +395,7 @@ function flattenChain(
     const pushChainState = (child: SyntaxNode): void => {
         // Record the FULL multisay list (parity with parseState); sayText stays the first for the flat display.
         const sayTexts = extractChainTexts(child);
-        const sayText = sayTexts[0]?.text ?? extractChainText(child);
+        const sayText = sayTexts[0]?.text ?? "";
         const trigger = extractChainTextTrigger(child);
         const label = stateIndex === 0 && chainLabel ? chainLabel : `${chainLabel ?? "chain"}_${stateIndex}`;
         syntheticStates.push({
@@ -425,23 +424,15 @@ function flattenChain(
 
     for (const child of node.children) {
         if (child.type === SyntaxType.ChainText) {
-            // The grammar nests the whole screenplay inside one chain_text: its own
-            // say_text is the entry line, and each `== ~file~ @text` speaker line is a
-            // nested chain_speaker. Both produce states (a speaker line also switches the
-            // speaking actor). Previously only the entry line was captured, collapsing
-            // every chain to a single node with no body or links.
+            // The entry speaker's lines; each `== ~file~ @text` speaker that follows is a sibling
+            // chain_speaker. Both produce states, and a speaker line also switches the speaking actor.
             pushChainState(child);
-            for (const sub of child.children) {
-                if (sub.type === SyntaxType.ChainSpeaker) {
-                    const speakerFile = getNodeFieldText(sub, "file");
-                    if (speakerFile) {
-                        currentSpeaker = speakerFile;
-                    }
-                    pushChainState(sub);
-                } else if (sub.type === SyntaxType.ChainBranch) {
-                    attachToLast(parseChainBranch(sub));
-                }
+        } else if (child.type === SyntaxType.ChainSpeaker) {
+            const speakerFile = getNodeFieldText(child, "file");
+            if (speakerFile) {
+                currentSpeaker = speakerFile;
             }
+            pushChainState(child);
         } else if (child.type === SyntaxType.ChainEpilogue) {
             // Epilogue holds the chain's terminal transition(s) (GOTO/EXTERN/EXIT).
             attachToLast(parseChainEpilogue(child));

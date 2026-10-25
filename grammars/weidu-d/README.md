@@ -8,13 +8,19 @@ D files define Infinity Engine dialogues for WeiDU modding.
 
 ### String Types
 
-| Type          | Example          | Status                                       |
-| ------------- | ---------------- | -------------------------------------------- |
-| Double quote  | `"text"`         | Supported                                    |
-| Tilde         | `~text~`         | Supported                                    |
-| Percent       | `%text%`         | Not supported (conflicts with variable refs) |
-| Five tildes   | `~~~~~text~~~~~` | Not supported (regex limitation)             |
-| Concatenation | `"a" ^ "b"`      | Not supported                                |
+| Type          | Example          | Status                                          |
+| ------------- | ---------------- | ----------------------------------------------- |
+| Double quote  | `"text"`         | Supported                                       |
+| Tilde         | `~text~`         | Supported                                       |
+| Percent       | `%text%`         | Supported as `%var%`; a run stops at whitespace |
+| Five tildes   | `~~~~~text~~~~~` | Supported (may hold single tildes)              |
+| Concatenation | `"a" ^ "b"`      | Supported in text slots                         |
+
+### Keywords
+
+Every keyword of WeiDU's D lexer is reserved, so it is never read as a dialog name, a state label or a variable:
+`GOTO EXIT` is an error, as in WeiDU. `EXTEND_TOP_REGEXP` and `EXTEND_BOTTOM_REGEXP`, keywords no D construct uses,
+are the exception: they read as names here.
 
 ### D Actions
 
@@ -39,23 +45,29 @@ Also: `APPEND_EARLY`
 
 ```d
 CHAIN [IF [WEIGHT #n] ~trigger~ THEN] [IF_FILE_EXISTS] filename label
-  ~sayText~
+  ~sayText~ [DO ~action~] = [IF ~condition~ [THEN]] ~next line~ [DO ~action~]
   == otherFile ~otherSpeaker says~
   == anotherFile IF ~condition~ THEN ~conditional text~
+  BRANCH ~condition~ BEGIN == speaker ~text~ ... END
 END filename stateLabel
 ```
+
+Each `=` line takes its own condition and action. A line is one text slot, so `~male~ ~female~` is one line with
+a female variant; only `=` or `==` starts a new line. A `BRANCH` holds speakers and other `BRANCH`es.
 
 Chain epilogue options: `END file state`, `EXTERN file state`, `COPY_TRANS file state`, `EXIT`
 
 #### INTERJECT - One-Time Interjection
 
 ```d
-INTERJECT filename label globalVar
-  ~interjection text~
+INTERJECT [IF_FILE_EXISTS] filename label globalVar
+  == speaker ~interjection text~
 END filename stateLabel
 ```
 
-Also: `INTERJECT_COPY_TRANS`, `INTERJECT_COPY_TRANS2`, `INTERJECT_COPY_TRANS3`, `INTERJECT_COPY_TRANS4`
+Also: `INTERJECT_COPY_TRANS [SAFE] [IF_FILE_EXISTS]`, `INTERJECT_COPY_TRANS2`, `INTERJECT_COPY_TRANS3`,
+`INTERJECT_COPY_TRANS4` (aliases `I_C_T`, `I_C_T2`, `I_C_T3`, `I_C_T4`), which end in a plain `END`. The global
+variable is any string: a bare word, `~quoted~` or `%var%`.
 
 #### EXTEND_TOP / EXTEND_BOTTOM - Add Transitions
 
@@ -64,6 +76,9 @@ EXTEND_TOP filename stateLabel [#position]
   transition list...
 END
 ```
+
+`EXTEND` is an alias for `EXTEND_BOTTOM`. The state list may be empty. A `#position` or `#weight` is one token:
+`# 1` is an error, as in WeiDU.
 
 #### States
 
@@ -109,13 +124,14 @@ COPY_TRANS_LATE [SAFE] filename stateLabel
 
 ### Text (Player-Visible Strings)
 
-| Form           | Example                           | Status        |
-| -------------- | --------------------------------- | ------------- |
-| String         | `~text~`                          | Supported     |
-| String + sound | `~text~ [sound]`                  | Not supported |
-| Male/female    | `~male~ [m.wav] ~female~ [f.wav]` | Not supported |
-| Forced ref     | `!123 ~text~`                     | Not supported |
-| Reference      | `@123`, `#123`                    | Supported     |
+| Form           | Example                           | Node            |
+| -------------- | --------------------------------- | --------------- |
+| String         | `~text~`, `%var%`                 | `string`        |
+| Concatenation  | `~a~ ^ ~b~`                       | `concat_string` |
+| String + sound | `~text~ [sound]`                  | `compound_text` |
+| Male/female    | `~male~ [m.wav] ~female~ [f.wav]` | `compound_text` |
+| Forced ref     | `!123 ~text~`                     | `forced_text`   |
+| Reference      | `@123`, `#-1`, `(AT ~var~)`       | `tra_ref`, ...  |
 
 ### Identifiers and Labels
 
@@ -141,9 +157,11 @@ EXTERN ~RR#VEND~ ~13~             // string as state label
 
 ```d
 // Line comment
-/* Block comment */
+/* Block comment /* nested */ still the same comment */
 /** @tra file.tra */   // MLS TRA directive
 ```
+
+Block comments nest, as in WeiDU.
 
 ### dActionWhen (Conditional)
 
@@ -158,51 +176,37 @@ UNLESS ~regexp~   // Skip if element matches
 
 - `BEGIN`
 - `APPEND` / `APPEND_EARLY`
-- `EXTEND_TOP` / `EXTEND_BOTTOM`
+- `EXTEND_TOP` / `EXTEND_BOTTOM` / `EXTEND`
 - `REPLACE`
 
 ### Chain/Interject
 
-- `CHAIN`
+- `CHAIN` / `CHAIN3`
 - `INTERJECT`
 - `INTERJECT_COPY_TRANS` / `INTERJECT_COPY_TRANS2` / `INTERJECT_COPY_TRANS3` / `INTERJECT_COPY_TRANS4`
 
 ### Modify Existing
 
 - `ALTER_TRANS`
-- `ADD_STATE_TRIGGER`
-- `ADD_TRANS_TRIGGER`
+- `ADD_STATE_TRIGGER` / `A_S_T`
+- `ADD_TRANS_TRIGGER` / `A_T_T`
 - `ADD_TRANS_ACTION`
 - `SET_WEIGHT`
 - `REPLACE_SAY`
-- `REPLACE_STATE_TRIGGER`
+- `REPLACE_STATE_TRIGGER` / `R_S_T`
 
 ### Replace Text
 
-- `REPLACE_ACTION_TEXT` / `REPLACE_ACTION_TEXT_REGEXP`
+- `REPLACE_ACTION_TEXT` / `R_A_T` / `REPLACE_ACTION_TEXT_REGEXP`
 - `REPLACE_ACTION_TEXT_PROCESS` / `R_A_T_P_R`
 - `REPLACE_TRANS_TRIGGER`
 - `REPLACE_TRANS_ACTION`
-- `REPLACE_TRIGGER_TEXT` / `REPLACE_TRIGGER_TEXT_REGEXP`
+- `REPLACE_TRIGGER_TEXT` / `R_T_T` / `REPLACE_TRIGGER_TEXT_REGEXP`
 
-## Not Supported
+### Legacy, inside a state list (WeiDU doc says "avoid")
 
-### String Types
-
-- `%text%` - conflicts with `%variable%` refs
-- `~~~~~text~~~~~` - five tildes (regex limitation)
-- `String ^ String` - concatenation
-
-### Text Features
-
-- `String [WAVEFILE]` - sound file attachment
-- `String [WAVEFILE] String [WAVEFILE]` - male/female variants
-- `!integer text` - forced string reference
-
-### Legacy (WeiDU doc says "avoid")
-
-- `APPENDI` - use `APPEND` instead
-- `CHAIN2` - use `CHAIN` instead
+- `APPENDI` (`inline_append`) - use `APPEND` instead
+- `CHAIN2` (`inline_chain`) - use `CHAIN` instead
 
 ## Building
 

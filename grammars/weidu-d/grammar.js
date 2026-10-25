@@ -9,6 +9,79 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
+/**
+ * The words WeiDU reserves in D code: its D lexer returns each one as a keyword, never as a bare name, so none can be
+ * a dialog name, a state label or a global variable. Taken from WeiDU 251, the version scripts/ensure-weidu.sh pins;
+ * on a WeiDU upgrade, re-derive the list from that release's D lexer keyword table. That table also holds
+ * EXTEND_TOP_REGEXP and EXTEND_BOTTOM_REGEXP, which no WeiDU rule uses; tree-sitter reserves only words the grammar
+ * uses as tokens, so those two stay out and read as names here.
+ * server/test/integration/weidu-d-grammar-differential.test.ts checks every entry, and those two, against the binary.
+ */
+const RESERVED_WORDS = [
+    "ADD_STATE_TRIGGER",
+    "ADD_TRANS_ACTION",
+    "ADD_TRANS_TRIGGER",
+    "ALTER_TRANS",
+    "APPEND",
+    "APPENDI",
+    "APPEND_EARLY",
+    "AT",
+    "A_S_T",
+    "A_T_T",
+    "BEGIN",
+    "BRANCH",
+    "CHAIN",
+    "CHAIN2",
+    "CHAIN3",
+    "COPY_TRANS",
+    "COPY_TRANS_LATE",
+    "DO",
+    "END",
+    "EXIT",
+    "EXTEND",
+    "EXTEND_BOTTOM",
+    "EXTEND_TOP",
+    "EXTERN",
+    "FLAGS",
+    "GOTO",
+    "IF",
+    "IF_FILE_EXISTS",
+    "INTERJECT",
+    "INTERJECT_COPY_TRANS",
+    "INTERJECT_COPY_TRANS2",
+    "INTERJECT_COPY_TRANS3",
+    "INTERJECT_COPY_TRANS4",
+    "I_C_T",
+    "I_C_T2",
+    "I_C_T3",
+    "I_C_T4",
+    "JOURNAL",
+    "REPLACE",
+    "REPLACE_ACTION_TEXT",
+    "REPLACE_ACTION_TEXT_PROCESS",
+    "REPLACE_ACTION_TEXT_PROCESS_REGEXP",
+    "REPLACE_ACTION_TEXT_REGEXP",
+    "REPLACE_SAY",
+    "REPLACE_STATE_TRIGGER",
+    "REPLACE_TRANS_ACTION",
+    "REPLACE_TRANS_TRIGGER",
+    "REPLACE_TRIGGER_TEXT",
+    "REPLACE_TRIGGER_TEXT_REGEXP",
+    "REPLY",
+    "R_A_T",
+    "R_A_T_P_R",
+    "R_S_T",
+    "R_T_T",
+    "SAFE",
+    "SAY",
+    "SET_WEIGHT",
+    "SOLVED_JOURNAL",
+    "THEN",
+    "UNLESS",
+    "UNSOLVED_JOURNAL",
+    "WEIGHT",
+];
+
 // =========================================
 // HELPER FUNCTIONS
 // =========================================
@@ -19,14 +92,13 @@ const kw = (...keywords) => (keywords.length === 1 ? keywords[0] : choice(...key
 /** Replace text action: KEYWORD file old new [moreFiles] [when] */
 const replaceTextAction =
     (...keywords) =>
-    (fileType) =>
     ($) =>
         seq(
             kw(...keywords),
-            field("file", fileType($)),
+            field("file", $._filename),
             field("old_text", $.string),
             field("new_text", $.string),
-            repeat(fileType($)),
+            repeat($._filename),
             repeat($.d_action_when),
         );
 
@@ -42,19 +114,50 @@ const replaceTransAction = (keyword) => ($) =>
         repeat($.d_action_when),
     );
 
+/** State trigger action: KEYWORD file state trigger [moreStates] ... [when] - the extra states share the field. */
+const stateTriggerAction =
+    (keywords, ...tail) =>
+    ($) =>
+        seq(
+            keywords,
+            field("file", $._filename),
+            field("state", $._state_label),
+            field("trigger", $.string),
+            repeat(field("state", $._state_label)),
+            ...tail.map((t) => t($)),
+            repeat($.d_action_when),
+        );
+
 export default grammar({
     name: "weidu_d",
 
     // The literal and %var% pieces of an interpolated name, scanned in src/scanner.c. As
     // token.immediate they duplicated the identifier machine into a second lex mode across every
     // state a filename can reach; see the scanner's header for what that cost at runtime.
-    externals: ($) => [$._immediate_identifier, $._immediate_variable_ref],
+    // Block comments nest, which no internal token can express. String contents are scanned there too: the
+    // scanner is asked for a comment wherever one may appear, which includes right after a string's opening
+    // delimiter, so only it can tell that `~/* b */~` is text.
+    externals: ($) => [
+        $._immediate_identifier,
+        $._immediate_variable_ref,
+        $.comment,
+        $.tilde_content,
+        $.double_content,
+        $.five_tilde_content,
+    ],
 
     extras: ($) => [/\s/, $.comment, $.line_comment],
 
     // Keyword extraction: without it every keyword is spelled out character by character in each
     // lex state that admits an identifier, rather than once in the generated keyword lexer.
     word: ($) => $.identifier,
+
+    // WeiDU's lexer turns every keyword into its token wherever it appears, so a keyword never reads as a bare
+    // name. Without this, tree-sitter would read one as an identifier wherever the keyword itself is not expected:
+    // `GOTO EXIT` as a jump to a state named EXIT, or a state's closing END as the label of a GOTO being typed.
+    reserved: {
+        global: () => RESERVED_WORDS,
+    },
 
     rules: {
         source_file: ($) => repeat($._d_action),
@@ -84,9 +187,14 @@ export default grammar({
                 $.add_trans_action,
             ),
 
-        // BEGIN filename [nonPausing] state list
+        // BEGIN filename [nonPausing] state list. WeiDU reads the flag as any string and converts it.
         begin_action: ($) =>
-            seq("BEGIN", field("file", $._filename), optional(field("non_pausing", $.number)), repeat($.state)),
+            seq(
+                "BEGIN",
+                field("file", $._filename),
+                optional(field("non_pausing", choice($.number, $.string))),
+                repeat($._state_item),
+            ),
 
         // APPEND [IF_FILE_EXISTS] filename state list END
         append_action: ($) =>
@@ -94,47 +202,56 @@ export default grammar({
                 choice("APPEND", "APPEND_EARLY"),
                 optional("IF_FILE_EXISTS"),
                 field("file", $._filename),
-                repeat($.state),
+                repeat($._state_item),
                 "END",
             ),
 
-        // EXTEND_TOP/EXTEND_BOTTOM filename stateLabel list [#positionNumber] transition list END
+        // EXTEND_TOP/EXTEND_BOTTOM filename stateLabel list [#positionNumber] transition list END.
+        // EXTEND is WeiDU's alias for EXTEND_BOTTOM. WeiDU takes an empty state list too.
         extend_action: ($) =>
             seq(
-                choice("EXTEND_TOP", "EXTEND_BOTTOM"),
+                choice("EXTEND_TOP", "EXTEND_BOTTOM", "EXTEND"),
                 field("file", $._filename),
-                field("states", repeat1($._state_label)),
-                optional(seq("#", $.number)),
+                repeat(field("states", $._state_label)),
+                optional(field("position", $._weight_value)),
                 repeat($.transition),
                 "END",
             ),
 
-        // CHAIN [IF [WEIGHT #weight] trigger THEN] [IF_FILE_EXISTS] entryFile entryLabel chainText chainEpilogue
+        // CHAIN [IF [WEIGHT #weight] trigger THEN] [IF_FILE_EXISTS] entryFile entryLabel chainText
+        // (== speaker | BRANCH)* chainEpilogue. The entry condition needs its THEN, unlike a line's.
         chain_action: ($) =>
             seq(
                 field("keyword", choice("CHAIN", "CHAIN3")),
                 optional(
-                    seq("IF", optional(seq("WEIGHT", $._weight_value)), field("trigger", $.string), optional("THEN")),
+                    seq(
+                        "IF",
+                        optional(seq("WEIGHT", field("weight", $._weight_value))),
+                        field("trigger", $.string),
+                        "THEN",
+                    ),
                 ),
                 optional("IF_FILE_EXISTS"),
                 field("file", $._filename),
                 field("label", $._state_label),
-                repeat($.chain_text),
+                $.chain_text,
+                repeat($._chain_block),
                 $.chain_epilogue,
             ),
 
-        // INTERJECT entryFile entryLabel globalVar chain_speaker* chainEpilogue
+        // INTERJECT [IF_FILE_EXISTS] entryFile entryLabel globalVar (== speaker | BRANCH)* chainEpilogue
         interject_action: ($) =>
             seq(
                 "INTERJECT",
+                optional("IF_FILE_EXISTS"),
                 field("file", $._filename),
                 field("label", $._state_label),
-                field("global_var", $.identifier),
-                repeat($.chain_speaker),
+                field("global_var", $._global_var),
+                repeat($._chain_block),
                 $.chain_epilogue,
             ),
 
-        // INTERJECT_COPY_TRANS[2-4] [SAFE] entryFile entryLabel globalVar chain_speaker* chainEpilogue
+        // INTERJECT_COPY_TRANS[2-4] [SAFE] [IF_FILE_EXISTS] entryFile entryLabel globalVar (== speaker | BRANCH)* END
         interject_copy_trans: ($) =>
             seq(
                 choice(
@@ -150,37 +267,35 @@ export default grammar({
                     "I_C_T4",
                 ),
                 optional("SAFE"),
+                optional("IF_FILE_EXISTS"),
                 field("file", $._filename),
                 field("label", $._state_label),
-                field("global_var", $.identifier),
-                repeat($.chain_speaker),
+                field("global_var", $._global_var),
+                repeat($._chain_block),
                 // Plain END, not a chain_epilogue: the construct already implies the copy, so WeiDU
                 // gives it no epilogue choice where a bare INTERJECT takes the full set.
                 "END",
             ),
 
-        // chainText: [IF trigger THEN] sayText [== ... | BRANCH ...]
-        chain_text: ($) =>
-            seq(
-                optional($._if_trigger_then),
-                $.say_text,
-                optional($.do_feature),
-                repeat(choice($.chain_speaker, $.chain_branch)),
-            ),
+        // A global variable name: any string WeiDU's lexer produces, a bare word, ~quoted~ or %var%.
+        _global_var: ($) => choice($.identifier, $.string, $.variable_ref),
 
-        // == [IF_FILE_EXISTS] fileName [IF trigger [THEN]] sayText [DO action]
-        chain_speaker: ($) =>
-            seq(
-                "==",
-                optional("IF_FILE_EXISTS"),
-                field("file", $._filename),
-                optional($._if_trigger_then),
-                $.say_text,
-                optional($.do_feature),
-            ),
+        // The entry speaker's lines of a CHAIN: `line (= line)*`.
+        chain_text: ($) => $._chain_lines,
 
-        // BRANCH trigger BEGIN [== fileName [IF trigger THEN] sayText ...] END
-        chain_branch: ($) => seq("BRANCH", field("trigger", $.string), "BEGIN", repeat($.chain_speaker), "END"),
+        // == [IF_FILE_EXISTS] fileName line (= line)*
+        chain_speaker: ($) => seq("==", optional("IF_FILE_EXISTS"), field("file", $._filename), $._chain_lines),
+
+        // BRANCH trigger BEGIN (== speaker | BRANCH)* END - the trigger guards every line inside, nested ones too.
+        chain_branch: ($) => seq("BRANCH", field("trigger", $.string), "BEGIN", repeat($._chain_block), "END"),
+
+        _chain_block: ($) => choice($.chain_speaker, $.chain_branch),
+
+        // One speaker's run of lines. Each line has its own optional condition and DO action, and a line is one
+        // text slot, so `~m~ ~f~` is a male and a female text: only `=` starts the next line.
+        _chain_lines: ($) => seq($._chain_line, repeat(seq("=", $._chain_line))),
+
+        _chain_line: ($) => seq(optional($._if_trigger_then), field("text", $._text), optional($.do_feature)),
 
         // chainEpilogue: END file state | EXTERN file state | COPY_TRANS file state | EXIT | END transitions
         chain_epilogue: ($) =>
@@ -198,20 +313,21 @@ export default grammar({
             ),
 
         // REPLACE filename state list END
-        replace_action: ($) => seq("REPLACE", field("file", $._filename), repeat($.state), "END"),
+        replace_action: ($) => seq("REPLACE", field("file", $._filename), repeat($._state_item), "END"),
 
-        // Text replacement actions (using helpers)
-        replace_action_text: replaceTextAction("REPLACE_ACTION_TEXT")(($) => $._filename),
+        // Text replacement actions. R_A_T is WeiDU's alias for REPLACE_ACTION_TEXT. A regexp file
+        // pattern is a string token like any other, so a bare word is one too.
+        replace_action_text: replaceTextAction("REPLACE_ACTION_TEXT", "R_A_T"),
 
-        replace_action_text_regexp: replaceTextAction("REPLACE_ACTION_TEXT_REGEXP")(($) => $.string),
+        replace_action_text_regexp: replaceTextAction("REPLACE_ACTION_TEXT_REGEXP"),
 
         replace_action_text_process: replaceTextAction(
             "REPLACE_ACTION_TEXT_PROCESS",
             "REPLACE_ACTION_TEXT_PROCESS_REGEXP",
             "R_A_T_P_R",
-        )(($) => $._filename),
+        ),
 
-        // ALTER_TRANS filename BEGIN stateNumber list END BEGIN transNumber list END BEGIN changes END
+        // ALTER_TRANS filename BEGIN stateNumber list END BEGIN transNumber list END BEGIN changes END [dActionWhen]
         alter_trans: ($) =>
             seq(
                 "ALTER_TRANS",
@@ -221,20 +337,22 @@ export default grammar({
                 "BEGIN",
                 repeat($.alter_trans_change),
                 "END",
+                repeat($.d_action_when),
             ),
 
         // A change is `field value`, where field is a WeiDU trans field. It is usually a bareword
-        // (ACTION, TRIGGER, EPILOGUE, ...) but a quoted "field" form is also accepted.
-        alter_trans_change: ($) => seq(choice($.double_string, $.identifier), $.string),
+        // (ACTION, TRIGGER, EPILOGUE, ...), but REPLY, JOURNAL, SOLVED_JOURNAL, UNSOLVED_JOURNAL and FLAGS are
+        // keywords, so those take the quoted form, which any field may use.
+        alter_trans_change: ($) => seq(choice($.string, $.identifier, $.variable_ref), $.string),
 
         // Trans replacement actions (using helper)
         replace_trans_trigger: replaceTransAction("REPLACE_TRANS_TRIGGER"),
         replace_trans_action: replaceTransAction("REPLACE_TRANS_ACTION"),
 
-        // REPLACE_TRIGGER_TEXT filename oldText newText [dActionWhen]
+        // REPLACE_TRIGGER_TEXT filename oldText newText [dActionWhen]; R_T_T is its alias.
         replace_trigger_text: ($) =>
             seq(
-                "REPLACE_TRIGGER_TEXT",
+                kw("REPLACE_TRIGGER_TEXT", "R_T_T"),
                 field("file", $._filename),
                 field("old_text", $.string),
                 field("new_text", $.string),
@@ -245,22 +363,14 @@ export default grammar({
         replace_trigger_text_regexp: ($) =>
             seq(
                 "REPLACE_TRIGGER_TEXT_REGEXP",
-                field("file", $.string),
+                field("file", $._filename),
                 field("old_text", $.string),
                 field("new_text", $.string),
                 repeat($.d_action_when),
             ),
 
-        // REPLACE_STATE_TRIGGER filename stateNumber triggerString [moreStateNumbers] [dActionWhen]
-        replace_state_trigger: ($) =>
-            seq(
-                "REPLACE_STATE_TRIGGER",
-                field("file", $._filename),
-                field("state", $._state_label),
-                field("trigger", $.string),
-                repeat($._state_label),
-                repeat($.d_action_when),
-            ),
+        // REPLACE_STATE_TRIGGER filename stateNumber triggerString [moreStateNumbers] [dActionWhen]; R_S_T alias.
+        replace_state_trigger: stateTriggerAction(kw("REPLACE_STATE_TRIGGER", "R_S_T")),
 
         // REPLACE_SAY filename stateLabel sayText
         replace_say: ($) =>
@@ -275,48 +385,35 @@ export default grammar({
                 field("weight", $._weight_value),
             ),
 
-        // ADD_STATE_TRIGGER filename stateN triggerString [stateN ...] [dActionWhen ...]
+        // ADD_STATE_TRIGGER filename stateN triggerString [stateN ...] [dActionWhen ...]; A_S_T alias.
         // WeiDU allows the trigger to apply to multiple additional states listed after the trigger
         // string, and takes the IF/UNLESS guards only AFTER those - not between the state and the
         // trigger, a position it rejects.
-        add_state_trigger: ($) =>
-            seq(
-                "ADD_STATE_TRIGGER",
-                field("file", $._filename),
-                field("state", $._state_label),
-                field("trigger", $.string),
-                repeat($._state_label),
-                repeat($.d_action_when),
-            ),
+        add_state_trigger: stateTriggerAction(kw("ADD_STATE_TRIGGER", "A_S_T")),
 
-        // ADD_TRANS_TRIGGER filename stateN triggerString [moreStates] [DO transNumbers] [dActionWhen]
-        add_trans_trigger: ($) =>
-            seq(
-                "ADD_TRANS_TRIGGER",
-                field("file", $._filename),
-                field("state", $._state_label),
-                field("trigger", $.string),
-                repeat($._state_label),
-                optional(seq("DO", repeat1($.number))),
-                repeat($.d_action_when),
-            ),
+        // ADD_TRANS_TRIGGER filename stateN triggerString [moreStates] [DO transNumbers] [dActionWhen]; A_T_T alias.
+        add_trans_trigger: stateTriggerAction(kw("ADD_TRANS_TRIGGER", "A_T_T"), ($) =>
+            optional(seq("DO", repeat1($.number))),
+        ),
 
-        // ADD_TRANS_ACTION filename BEGIN states END BEGIN trans END [dActionWhen] actionString
+        // ADD_TRANS_ACTION filename BEGIN states END BEGIN trans END actionString [dActionWhen]. The guards
+        // follow the action string only: WeiDU rejects one before it.
         add_trans_action: ($) =>
             seq(
                 "ADD_TRANS_ACTION",
                 field("file", $._filename),
                 $._state_label_list,
                 $._trans_number_list,
-                optional($.d_action_when),
                 field("action", $.string),
-                // The IF/UNLESS guard may also trail the action string (WeiDU accepts both positions).
-                optional($.d_action_when),
+                repeat($.d_action_when),
             ),
 
         // dActionWhen - conditional for D actions
         d_action_when: ($) =>
             choice(seq("IF", field("condition", $.string)), seq("UNLESS", field("condition", $.string))),
+
+        // What a state list holds: states, plus the two older in-state forms WeiDU still reads.
+        _state_item: ($) => choice($.state, $.inline_append, $.inline_chain),
 
         // IF [WEIGHT #n] ~trigger~ [THEN] [BEGIN] label SAY text [= text...] transitions END
         state: ($) =>
@@ -331,6 +428,23 @@ export default grammar({
                 field("say", $.say_text),
                 repeat($.transition),
                 "END",
+            ),
+
+        // APPENDI filename state list END, inside a state list: appends the states to another dialog.
+        inline_append: ($) => seq("APPENDI", field("file", $._filename), repeat($._state_item), "END"),
+
+        // CHAIN2 entryFile entryLabel text ((= | ==) text)* END exitFile exitLabel, inside a state list: the
+        // two-speaker chain that predates CHAIN, where == switches the speaker.
+        inline_chain: ($) =>
+            seq(
+                "CHAIN2",
+                field("file", $._filename),
+                field("label", $._state_label),
+                field("text", $._text),
+                repeat(seq(choice("=", "=="), field("text", $._text))),
+                "END",
+                field("exit_file", $._filename),
+                field("exit_label", $._state_label),
             ),
 
         // SAY text [= text ...]
@@ -417,11 +531,11 @@ export default grammar({
         // admissible, which cost more than the keywords did.
         _state_label: ($) => choice(alias($.identifier, $.state_label_alnum), $.variable_ref, $.string),
 
-        // Weight value: #[-]number
-        _weight_value: ($) => seq("#", optional("-"), $.number),
+        // A weight or a position: `#[-]number`, one token, which WeiDU lexes the same way as a strref.
+        _weight_value: ($) => alias($.tlk_ref, $.weight_value),
 
         // BEGIN...END state label list
-        _state_label_list: ($) => seq("BEGIN", repeat($._state_label), "END"),
+        _state_label_list: ($) => seq("BEGIN", repeat(field("state", $._state_label)), "END"),
 
         // BEGIN...END transaction number list
         _trans_number_list: ($) => seq("BEGIN", repeat($.number), "END"),
@@ -429,27 +543,52 @@ export default grammar({
         // IF trigger [THEN] pattern
         _if_trigger_then: ($) => seq("IF", field("trigger", $.string), optional("THEN")),
 
-        // Text types. %var% belongs here because WeiDU lexes a %...% run as a plain string token, so a
-        // variable stands wherever a string does - a say text among them (`CHAIN ... %kivan17%`, which
-        // OUTER_SPRINT sets to a strref). It substitutes a value, not structure.
-        _text: ($) => choice($.string, $.tra_ref, $.tlk_ref, $.at_var_ref, $.variable_ref),
+        // A text slot: a male text with an optional [sound], then an optional female text with its own [sound];
+        // or a tra/tlk/AT reference; or `!strref text`, which forces the text into that strref.
+        _text: ($) => choice($._text_string, $.compound_text, $.tra_ref, $.tlk_ref, $.at_var_ref, $.forced_text),
 
-        // String literals
-        string: ($) => choice($.tilde_string, $.double_string),
+        // A text written out: one string or a `^`-joined run. %var% belongs here because WeiDU lexes a %...% run
+        // as a plain string token, so a variable stands wherever a string does - a say text among them
+        // (`CHAIN ... %kivan17%`, which OUTER_SPRINT sets to a strref). It substitutes a value, not structure.
+        _text_string: ($) => choice($.string, $.variable_ref, $.concat_string),
+
+        concat_string: ($) =>
+            seq(choice($.string, $.variable_ref), repeat1(seq("^", choice($.string, $.variable_ref)))),
+
+        compound_text: ($) =>
+            choice(
+                seq(field("male", $._text_string), field("male_sound", $.sound)),
+                seq(
+                    field("male", $._text_string),
+                    optional(field("male_sound", $.sound)),
+                    field("female", $._text_string),
+                    optional(field("female_sound", $.sound)),
+                ),
+            ),
+
+        forced_text: ($) => seq(field("strref", $.forced_strref), field("text", $._text)),
+
+        forced_strref: ($) => token(seq("!", optional("-"), /[0-9]+/)),
+
+        sound: ($) => token(seq("[", /[^\]]*/, "]")),
+
+        // String literals. A five-tilde string may hold single tildes.
+        string: ($) => choice($.tilde_string, $.double_string, $.five_tilde_string),
 
         tilde_string: ($) => seq("~", optional($.tilde_content), "~"),
-        tilde_content: ($) => /[^~]+/,
 
         double_string: ($) => seq('"', optional($.double_content), '"'),
-        double_content: ($) => /[^"]+/,
+
+        five_tilde_string: ($) => seq("~~~~~", optional($.five_tilde_content), "~~~~~"),
 
         // References
-        tra_ref: ($) => token(seq("@", /[0-9]+/)),
-        tlk_ref: ($) => token(seq("#", /[0-9]+/)),
-        at_var_ref: ($) => seq("(", "AT", $.double_string, ")"),
+        tra_ref: ($) => token(seq("@", optional("-"), /[0-9]+/)),
+        tlk_ref: ($) => token(seq("#", optional("-"), /[0-9]+/)),
+        at_var_ref: ($) => seq("(", "AT", choice($.string, $.variable_ref, $.identifier), ")"),
 
-        // WeiDU variable reference %name% (allows # in names for namespacing)
-        variable_ref: ($) => token(seq("%", /[A-Za-z_][A-Za-z0-9_#]*/, "%")),
+        // WeiDU variable reference %name%. WeiDU reads to the next %, whatever lies between; this stops at
+        // whitespace, as the TP2 grammar does, so a % still being typed cannot run on to the next % lines away.
+        variable_ref: ($) => token(seq("%", /[^%\s]*/, "%")),
 
         // Basic tokens. The one identifier-shaped token in the grammar: it also carries state labels
         // (aliased at _state_label), and its shape is WeiDU's own bare-word token, which WeiDU matches
@@ -466,8 +605,7 @@ export default grammar({
         // bare word and calls int_of_string on it where an integer is wanted.
         number: ($) => token(prec(1, /[0-9]+/)),
 
-        // Comments
-        comment: ($) => seq("/*", /[^*]*\*+([^/*][^*]*\*+)*/, "/"),
+        // comment is produced by the external scanner (nesting); only line_comment is internal.
         line_comment: ($) => seq("//", /[^\n]*/),
     },
 });

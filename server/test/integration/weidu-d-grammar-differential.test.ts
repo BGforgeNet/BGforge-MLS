@@ -16,7 +16,7 @@
  */
 
 import { execFileSync } from "child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
 import os from "os";
 import path from "path";
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
@@ -27,6 +27,17 @@ import {
     WEIDU_TIMEOUT_MS,
 } from "../../../scripts/utils/src/weidu-binary.ts";
 import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
+
+/**
+ * The words the grammar reserves, read from the generated grammar.json: its `reserved` set is the RESERVED_WORDS
+ * list in grammar.js. Not skipped when absent - this suite needs a built grammar anyway.
+ */
+const GRAMMAR_RESERVED_WORDS =
+    (
+        JSON.parse(readFileSync(path.resolve(__dirname, "../../../grammars/weidu-d/src/grammar.json"), "utf8")) as {
+            reserved?: { global?: { value: string }[] };
+        }
+    ).reserved?.global?.map((rule) => rule.value) ?? [];
 
 /**
  * WeiDU exits 0 when the file parsed and 4 on a parse error. Anything else (crash, missing binary,
@@ -149,6 +160,155 @@ const CASES: Case[] = [
         name: "say text as %var%",
         code: asSayText("%kivan17%"),
     },
+    // A text slot holds a male text and an optional female one, each with an optional [sound] and each a
+    // run of strings joined by ^; a !strref in front forces the text into that strref.
+    { name: "say text with a female variant", code: asSayText("~m~ ~f~") },
+    { name: "say text with a sound", code: asSayText("~m~ [SND01]") },
+    { name: "male and female say text with sounds", code: asSayText("~m~ [A] ~f~ [B]") },
+    { name: "female say text with a sound", code: asSayText("~m~ ~f~ [B]") },
+    { name: "concatenated say text", code: asSayText("~m~ ^ ~n~") },
+    { name: "concatenated male and female say text", code: asSayText('~a~ ^ "b" ~c~ ^ %d%') },
+    { name: "say text forced into a strref", code: asSayText("!5 ~m~") },
+    { name: "say text forced into a negative strref", code: asSayText("!-1 ~m~ ~f~") },
+    { name: "say text as a negative tra reference", code: asSayText("@-1") },
+    { name: "say text as a negative strref", code: asSayText("#-1") },
+    { name: "say text as (AT tilde string)", code: asSayText("(AT ~foo~)") },
+    { name: "say text as (AT double string)", code: asSayText('(AT "foo")') },
+    { name: "say text as (AT bare word)", code: asSayText("(AT foo)") },
+    { name: "a sound after a tra reference is rejected", code: asSayText("@1 [SND]") },
+    { name: "a third string in a text slot is rejected", code: asSayText("~a~ ~b~ ~c~") },
+    { name: "REPLY with a female variant", code: inState("IF ~~ THEN REPLY ~a~ ~b~ EXIT") },
+    { name: "short transition reply with a sound", code: inState("+ ~~ + ~a~ [SND] EXIT") },
+    { name: "JOURNAL with a sound", code: inState("IF ~~ THEN JOURNAL ~a~ [S] EXIT") },
+    { name: "REPLACE_SAY with a female variant", code: file("REPLACE_SAY ~dlg~ 0 ~a~ ~b~") },
+    { name: "REPLACE_SAY with a sound", code: file("REPLACE_SAY ~dlg~ 0 ~a~ [S]") },
+    { name: "CHAIN text with a sound", code: file("CHAIN ~a~ st\n~m~ [SND]\nEXIT") },
+    { name: "%var% with a dash as say text", code: asSayText("%a-b%") },
+    { name: "%var% with a leading digit as say text", code: asSayText("%1a%") },
+    { name: "%var% with a dot as a dialog name", code: file("SET_WEIGHT %a.b% 0 #1") },
+    {
+        name: "%var% with a space is rejected although WeiDU accepts it",
+        code: asSayText("%a b%"),
+        divergence:
+            "A %...% run stops at whitespace here, as in the TP2 grammar, so a % still being typed cannot run " +
+            "on to the next % lines away and swallow everything between; WeiDU reads to the next % whatever " +
+            "lies between.",
+    },
+
+    // A #weight or #position is one token: WeiDU has no `#` on its own.
+    { name: "EXTEND_TOP with no state", code: file("EXTEND_TOP ~dlg~\n  IF ~~ THEN EXIT\nEND") },
+    { name: "EXTEND_TOP with a negative #position", code: file("EXTEND_TOP ~dlg~ 0 #-1\n  IF ~~ THEN EXIT\nEND") },
+    { name: "a #position split by a space is rejected", code: file("EXTEND_TOP ~dlg~ 0 # 1\n  IF ~~ THEN EXIT\nEND") },
+    {
+        name: "a WEIGHT split by a space is rejected",
+        code: file("BEGIN ~dlg~\nIF WEIGHT # 1 ~~ THEN BEGIN st\n  SAY ~hi~\nEND"),
+    },
+
+    // Strings and comments, at the lexer level.
+    { name: "a five-tilde string holding tildes", code: asSayText("~~~~~he said ~hi~ ok~~~~~") },
+    { name: "a block comment nested in another", code: file("/* a /* b */ c */\nBEGIN ~dlg~") },
+    { name: "a nested block comment left open", code: file("/* a /* b */ c\nBEGIN ~dlg~") },
+    { name: "a string whose whole content is //", code: asSayText("~//~") },
+    { name: "a string whose whole content is /*", code: asSayText("~/*~") },
+    { name: "a double-quoted string whose whole content is //", code: asSayText('"//"') },
+
+    // CHAIN lines: each `=` line takes its own IF condition and DO action, `~m~ ~f~` is one line with a
+    // female variant, and only `=` or `==` starts a new line.
+    { name: "CHAIN line with a female variant", code: file("CHAIN ~a~ st\n~m~ ~f~\nEXIT") },
+    { name: "CHAIN speaker line with a female variant", code: file("CHAIN ~a~ st\n~m~\n== ~b~ ~x~ ~y~\nEXIT") },
+    { name: "CHAIN DO before =", code: file("CHAIN ~a~ st\n~m~ DO ~x~ = ~n~\nEXIT") },
+    { name: "CHAIN IF and DO after =", code: file("CHAIN ~a~ st\n~m~ = IF ~c~ THEN ~n~ DO ~x~\nEXIT") },
+    { name: "CHAIN speaker line with =", code: file("CHAIN ~a~ st\n~m~\n== ~b~ ~x~ = IF ~c~ ~y~\nEXIT") },
+    {
+        name: "CHAIN BRANCH inside a BRANCH",
+        code: file("CHAIN ~a~ st\n~m~\nBRANCH ~t~ BEGIN\nBRANCH ~u~ BEGIN\n== ~b~ ~x~\nEND\nEND\nEXIT"),
+    },
+    { name: "CHAIN with an empty BRANCH", code: file("CHAIN ~a~ st\n~m~\nBRANCH ~t~ BEGIN END\nEXIT") },
+    { name: "CHAIN with IF_FILE_EXISTS", code: file("CHAIN IF_FILE_EXISTS ~a~ st\n~m~\nEXIT") },
+    { name: "CHAIN entry condition without THEN is rejected", code: file("CHAIN IF ~t~ ~a~ st\n~m~\nEXIT") },
+    {
+        name: "CHAIN lines not joined by = are rejected",
+        code: file("CHAIN ~a~ st\n~m~ IF ~c~ THEN ~n~\nEXIT"),
+    },
+    {
+        name: "CHAIN text after a BRANCH is rejected",
+        code: file("CHAIN ~a~ st\n~m~\nBRANCH ~t~ BEGIN\n== ~b~ ~x~\nEND ~stray~\nEXIT"),
+    },
+    { name: "INTERJECT with IF_FILE_EXISTS", code: file("INTERJECT IF_FILE_EXISTS ~a~ st v\n== ~b~ ~x~\nEND ~c~ n") },
+    { name: "INTERJECT with a BRANCH", code: file("INTERJECT ~a~ st v\nBRANCH ~t~ BEGIN\n== ~b~ ~x~\nEND\nEND ~c~ n") },
+    { name: "INTERJECT with a tilde global variable", code: file("INTERJECT ~a~ st ~gv~\n== ~b~ ~x~\nEND ~c~ n") },
+    { name: "INTERJECT with a %var% global variable", code: file("INTERJECT ~a~ st %gv%\n== ~b~ ~x~\nEND ~c~ n") },
+    { name: "I_C_T with IF_FILE_EXISTS", code: file("I_C_T IF_FILE_EXISTS ~a~ st v\n== ~b~ ~x~\nEND") },
+    { name: "I_C_T with SAFE and IF_FILE_EXISTS", code: file("I_C_T SAFE IF_FILE_EXISTS ~a~ st v\n== ~b~ ~x~\nEND") },
+    {
+        name: "INTERJECT_COPY_TRANS2 with IF_FILE_EXISTS",
+        code: file("INTERJECT_COPY_TRANS2 IF_FILE_EXISTS ~a~ st v\n== ~b~ ~x~\nEND"),
+    },
+    { name: "I_C_T with a BRANCH", code: file("I_C_T ~a~ st v\nBRANCH ~t~ BEGIN\n== ~b~ ~x~\nEND\nEND") },
+
+    // Aliases and the older in-state forms.
+    { name: "alias A_S_T", code: file("A_S_T ~dlg~ 0 ~trig~") },
+    { name: "alias A_T_T", code: file("A_T_T ~dlg~ 0 ~trig~") },
+    { name: "alias R_A_T", code: file("R_A_T ~dlg~ ~old~ ~new~") },
+    { name: "alias R_S_T", code: file("R_S_T ~dlg~ 0 ~trig~") },
+    { name: "alias R_T_T", code: file("R_T_T ~dlg~ ~old~ ~new~") },
+    { name: "alias EXTEND", code: file("EXTEND ~dlg~ 0\n  IF ~~ THEN EXIT\nEND") },
+    {
+        name: "APPENDI inside a state list",
+        code: file(
+            "APPEND ~d~\nIF ~~ THEN BEGIN s SAY ~x~ IF ~~ THEN EXIT END\n" +
+                "APPENDI ~e~\nIF ~~ THEN BEGIN t SAY ~x~ IF ~~ THEN EXIT END\nEND\nEND",
+        ),
+    },
+    { name: "CHAIN2 inside a state list", code: file("BEGIN ~d~\nCHAIN2 ~a~ s ~m~ = ~n~ == ~o~ END ~b~ t") },
+    { name: "EXTEND_TOP_REGEXP is rejected", code: file("EXTEND_TOP_REGEXP ~dlg~ 0\n  IF ~~ THEN EXIT\nEND") },
+
+    // Patch actions: guards, quoted keys, bare-word file names.
+    {
+        name: "ALTER_TRANS with a trailing IF guard",
+        code: file("ALTER_TRANS ~d~ BEGIN 0 END BEGIN 0 END BEGIN TRIGGER ~x~ END IF ~c~"),
+    },
+    {
+        name: "ALTER_TRANS with a quoted REPLY key",
+        code: file("ALTER_TRANS ~d~ BEGIN 0 END BEGIN 0 END BEGIN ~REPLY~ ~x~ END"),
+    },
+    {
+        name: "ALTER_TRANS with a bare REPLY key is rejected",
+        code: file("ALTER_TRANS ~d~ BEGIN 0 END BEGIN 0 END BEGIN REPLY ~x~ END"),
+    },
+    {
+        name: "ADD_TRANS_ACTION with an IF guard before the action is rejected",
+        code: file("ADD_TRANS_ACTION ~dlg~ BEGIN 0 END BEGIN 0 END IF ~c~ ~act~"),
+    },
+    {
+        name: "ADD_TRANS_ACTION with two trailing guards",
+        code: file("ADD_TRANS_ACTION ~dlg~ BEGIN 0 END BEGIN 0 END ~act~ IF ~c~ UNLESS ~e~"),
+    },
+    { name: "BEGIN with a quoted non-pausing flag", code: file("BEGIN ~dlg~ ~1~") },
+    {
+        name: "REPLACE_TRIGGER_TEXT_REGEXP with a bare-word file",
+        code: file("REPLACE_TRIGGER_TEXT_REGEXP FOO ~a~ ~b~"),
+    },
+    { name: "REPLACE_ACTION_TEXT_REGEXP with a bare-word file", code: file("REPLACE_ACTION_TEXT_REGEXP FOO ~a~ ~b~") },
+
+    // A keyword is never a name, in any name slot.
+    { name: "GOTO EXIT is rejected", code: inState("IF ~~ THEN GOTO EXIT") },
+    { name: "GOTO DO is rejected", code: inState("IF ~~ THEN GOTO DO") },
+    { name: "a state labelled SAY is rejected", code: asLabel("SAY") },
+    { name: "a state labelled END is rejected", code: asLabel("END") },
+    { name: "a dialog named IF is rejected", code: file("BEGIN IF") },
+    { name: "a dialog named AT is rejected", code: file("SET_WEIGHT AT 0 #1") },
+    { name: "an EXTERN dialog named REPLY is rejected", code: inState("IF ~~ THEN EXTERN REPLY 5") },
+    // Every word the grammar reserves, as a state label: WeiDU rejects each, so the list holds no plain word.
+    ...GRAMMAR_RESERVED_WORDS.map((word) => ({ name: `reserved word ${word} is not a label`, code: asLabel(word) })),
+    // WeiDU's D lexer also keeps these two as keywords, though no rule uses them.
+    ...["EXTEND_TOP_REGEXP", "EXTEND_BOTTOM_REGEXP"].map((word) => ({
+        name: `unused keyword ${word} is accepted as a label although WeiDU rejects it`,
+        code: asLabel(word),
+        divergence:
+            "tree-sitter reserves only words the grammar uses as tokens, and no D construct uses this one, so it " +
+            "stays an ordinary name here.",
+    })),
 
     // State labels.
     { name: "numeric state label", code: asLabel("100") },
@@ -224,6 +384,8 @@ describe("WeiDU D differential (grammar vs the real binary)", () => {
     it("has a WeiDU binary and a case for every construct under test", () => {
         expect(weidu).not.toBe("");
         expect(CASES.length).toBeGreaterThan(0);
+        // The reserved-word cases are generated from the grammar, so an empty set would drop them silently.
+        expect(GRAMMAR_RESERVED_WORDS.length).toBeGreaterThan(0);
         // Case names are the failure labels, so a duplicate would silently hide one of the two.
         expect(new Set(CASES.map((c) => c.name)).size).toBe(CASES.length);
     });

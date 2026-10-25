@@ -27,6 +27,9 @@ const SAY_TEXT_KINDS: ReadonlySet<string> = new Set<string>([
     SyntaxType.TlkRef,
     SyntaxType.AtVarRef,
     SyntaxType.DoubleString,
+    SyntaxType.CompoundText,
+    SyntaxType.ConcatString,
+    SyntaxType.ForcedText,
 ]);
 
 /**
@@ -75,6 +78,9 @@ function extractStringContent(node: SyntaxNode): string {
         if (child.type === SyntaxType.DoubleString) {
             return extractDoubleContent(child);
         }
+        if (child.type === SyntaxType.FiveTildeString) {
+            return child.namedChildren.find((c) => c.type === SyntaxType.FiveTildeContent)?.text ?? "";
+        }
     }
     return node.text;
 }
@@ -104,53 +110,35 @@ export function extractTextContent(node: SyntaxNode): string {
             return node.text;
         case SyntaxType.DoubleString:
             return extractDoubleContent(node);
+        // A male/female pair shows its male text, the one the game falls back to; sounds are not text.
+        case SyntaxType.CompoundText: {
+            const male = node.childForFieldName("male");
+            return male ? extractTextContent(male) : "";
+        }
+        // A `^`-joined run is one text: WeiDU concatenates the parts.
+        case SyntaxType.ConcatString:
+            return node.namedChildren.map((part) => extractTextContent(part)).join("");
+        case SyntaxType.ForcedText: {
+            const text = node.childForFieldName("text");
+            return text ? extractTextContent(text) : "";
+        }
         default:
             // For say_text or other wrapper nodes
             return extractSayTextContent(node);
     }
 }
 
-export function extractChainText(chainTextNode: SyntaxNode): string {
-    // chain_text children include say_text nodes
-    for (const child of chainTextNode.children) {
-        if (child.type === SyntaxType.SayText) {
-            return extractSayTextContent(child);
-        }
-    }
-    // Fallback: look for direct text content nodes
-    for (const child of chainTextNode.children) {
-        switch (child.type) {
-            case SyntaxType.TildeString:
-                return extractTildeContent(child);
-            case SyntaxType.String:
-                return extractStringContent(child);
-            case SyntaxType.TraRef:
-            case SyntaxType.TlkRef:
-            case SyntaxType.AtVarRef:
-                return child.text;
-        }
-    }
-    return chainTextNode.text.trim();
-}
-
 /**
- * Every text of a chain line's SAY, in source order with ranges - the multisay-aware analog of the
- * take-first `extractChainText`. A chain line's texts live in its `say_text` child (or, without one, directly
- * on the chain_text), so a `@a = @b = @c` chain entry yields one entry per text instead of dropping all but
- * the first. Mirrors `extractSayTexts` for the state case.
+ * Every text of one speaker's chain lines (a chain_text or chain_speaker), in source order with ranges. Each
+ * `=`-joined line holds one `text` field, so `@a = @b = @c` yields one entry per line, the multisay analog of
+ * `extractSayTexts` for the state case.
  */
 export function extractChainTexts(
     chainTextNode: SyntaxNode,
 ): Array<{ text: string; range: { start: number; end: number } }> {
-    const sayTextNode = chainTextNode.children.find((c) => c.type === SyntaxType.SayText);
-    const scope = sayTextNode ?? chainTextNode;
-    const texts = scope.children
-        .filter((c) => SAY_TEXT_KINDS.has(c.type))
+    return chainTextNode
+        .childrenForFieldName("text")
         .map((c) => ({ text: extractTextContent(c), range: { start: c.startIndex, end: c.endIndex } }));
-    if (texts.length > 0) return texts;
-    // No typed text child (an untyped/wrapper say_text): fall back to the take-first content as a single entry.
-    const text = extractChainText(chainTextNode);
-    return text ? [{ text, range: { start: chainTextNode.startIndex, end: chainTextNode.endIndex } }] : [];
 }
 
 export function extractChainTextTrigger(chainTextNode: SyntaxNode): string | undefined {
@@ -169,28 +157,11 @@ export function extractTrigger(stateNode: SyntaxNode): string | undefined {
 }
 
 export function extractWeight(stateNode: SyntaxNode): number | undefined {
-    // The grammar's `_weight_value` (`# [-] number`) is a hidden rule, so its tokens
-    // inline as direct children of the state: `WEIGHT`, `#`, optional `-`, `number`.
-    // The `weight` field resolves to the `#` token, not the number, so walk instead.
-    // (`WEIGHT`/`#`/`-` are anonymous tokens with no SyntaxType member.)
-    let sawWeight = false;
-    let negative = false;
-    for (const child of stateNode.children) {
-        if (child.type === "WEIGHT") {
-            sawWeight = true;
-        } else if (!sawWeight) {
-            continue;
-        } else if (child.type === "-") {
-            negative = true;
-        } else if (child.type === SyntaxType.Number) {
-            const value = parseInt(child.text, 10);
-            if (Number.isNaN(value)) return undefined;
-            return negative ? -value : value;
-        } else if (child.type !== "#") {
-            break; // reached the trigger/body without a number: malformed
-        }
-    }
-    return undefined;
+    // The `weight` field is one `#[-]number` token.
+    const weightNode = stateNode.childForFieldName("weight");
+    if (!weightNode) return undefined;
+    const value = parseInt(weightNode.text.slice(1), 10);
+    return Number.isNaN(value) ? undefined : value;
 }
 
 export function extractTransitionTrigger(transitionNode: SyntaxNode): string | undefined {
