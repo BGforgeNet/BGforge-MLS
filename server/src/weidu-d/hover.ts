@@ -13,6 +13,7 @@ import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { findPrecedingDocComment } from "../core/doc-comment";
 import { findLabelNodeAtPosition, findStateInDialog } from "./state-utils";
+import { labelName } from "./label-refs";
 import { parse as parseJSDoc } from "../shared/jsdoc";
 import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
 
@@ -38,7 +39,8 @@ export function getStateLabelHover(text: string, _symbol: string, _uri: string, 
     }
 
     // Find the state definition in the matching dialog scope
-    const state = findStateInDialog(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
+    const name = labelName(labelInfo.labelNode);
+    const state = findStateInDialog(tree.rootNode, labelInfo.dialogFile, name);
     if (!state) {
         return HR.notHandled();
     }
@@ -56,7 +58,7 @@ export function getStateLabelHover(text: string, _symbol: string, _uri: string, 
     }
 
     // Build hover content
-    const signature = `state ${labelInfo.labelNode.text}`;
+    const signature = `state ${name}`;
     const value = buildSignatureBlock(signature, LANG_WEIDU_D_TOOLTIP) + "\n\n---\n\n" + jsdoc.desc;
 
     return HR.found({

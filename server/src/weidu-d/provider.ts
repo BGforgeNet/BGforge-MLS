@@ -153,7 +153,7 @@ class WeiduDProvider
     }
 
     definition(text: string, position: Position, uri: NormalizedUri): Location | null {
-        return getDefinition(text, uri, position);
+        return getDefinition(text, uri, position, (key) => this.fileIndex?.symbols.lookupDefinition(key) ?? null);
     }
 
     references(

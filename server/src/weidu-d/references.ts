@@ -12,13 +12,15 @@ import type { ReferencesIndex } from "../shared/references-index";
 import { parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import { findLabelNodeAtPosition } from "./state-utils";
 import { findAllDialogLabelRefs } from "./reference-finder";
+import { labelKey, labelName } from "./label-refs";
 
 /**
  * Find all references to the state label at the given position.
- * Returns empty array if the position is not on a label or no definition exists.
+ * Returns empty array if the position is not on a label.
  *
  * When a ReferencesIndex is provided, cross-file references are included
- * for state labels using the "dialogFile:labelName" composite key.
+ * for state labels using the "dialogFile:labelName" composite key; without one,
+ * a label with no definition in this file has no references.
  */
 export function findReferences(
     text: string,
@@ -37,8 +39,8 @@ export function findReferences(
         return [];
     }
 
-    const labelName = labelInfo.labelNode.text;
-    const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelName);
+    const name = labelName(labelInfo.labelNode);
+    const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, name);
     const hasLocalDefinition = refs.some((r) => r.isDefinition);
 
     const localLocations = refs
@@ -48,16 +50,10 @@ export function findReferences(
             range: makeRange(ref.node),
         }));
 
-    // Add cross-file references from the index
+    // Add cross-file references from the index. A label defined in another file (an EXTEND_TOP or EXTERN
+    // naming it) still keeps this file's own references, the one under the cursor among them.
     if (refsIndex) {
-        const compositeKey = `${labelInfo.dialogFile}:${labelName}`;
-        const crossFileRefs = refsIndex.lookup(compositeKey).filter((loc) => loc.uri !== uri);
-
-        // If no local definition, return only cross-file results (e.g., EXTEND_TOP
-        // referencing a label defined in another file).
-        if (!hasLocalDefinition) {
-            return crossFileRefs;
-        }
+        const crossFileRefs = refsIndex.lookup(labelKey(labelInfo.dialogFile, name)).filter((loc) => loc.uri !== uri);
         return [...localLocations, ...crossFileRefs];
     }
 

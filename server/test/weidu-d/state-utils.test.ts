@@ -10,7 +10,8 @@ vi.mock("../../src/server", () => ({
     },
 }));
 
-import { normalizeDialogFile, findLabelNodeAtPosition, findStateInDialog } from "../../src/weidu-d/state-utils";
+import { findLabelNodeAtPosition, findStateInDialog } from "../../src/weidu-d/state-utils";
+import { normalizeDialogFile } from "../../src/weidu-d/label-refs";
 import { parseWithCache, initParser } from "@bgforge/shared/parsers/weidu-d";
 
 beforeAll(async () => {

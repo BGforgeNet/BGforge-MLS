@@ -3,8 +3,20 @@
  */
 
 import { type DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
+import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
 import { SyntaxType } from "./syntax-type";
+import { labelName } from "./label-refs";
+
+/**
+ * Nodes whose `label` names a state they create: a state, and a CHAIN or CHAIN2, whose entry label is its first
+ * state's. The walk visits every node, ERROR subtrees included, so a state in a recovered tree stays listed.
+ */
+const LABELLED_STATE_TYPES: ReadonlySet<string> = new Set<string>([
+    SyntaxType.State,
+    SyntaxType.ChainAction,
+    SyntaxType.InlineChain,
+]);
 
 export function getDocumentSymbols(text: string): DocumentSymbol[] {
     if (!isInitialized()) {
@@ -18,15 +30,15 @@ export function getDocumentSymbols(text: string): DocumentSymbol[] {
 
     const symbols: DocumentSymbol[] = [];
 
-    // Walk the tree to find state nodes and extract their labels
-    function visit(node: import("web-tree-sitter").Node) {
-        if (node.type === SyntaxType.State) {
+    function visit(node: SyntaxNode) {
+        if (LABELLED_STATE_TYPES.has(node.type)) {
             const label = node.childForFieldName("label");
-            if (label && label.text) {
+            const name = label ? labelName(label) : "";
+            if (label && name) {
                 const startPos = label.startPosition;
                 const endPos = label.endPosition;
                 symbols.push({
-                    name: label.text,
+                    name,
                     kind: SymbolKind.Function,
                     range: {
                         start: { line: node.startPosition.row, character: node.startPosition.column },

@@ -218,9 +218,11 @@ BEGIN ~MYMOD~
 
             // cursor on "missing_state" - EXTERN to OTHER dialog (starts at col 30)
             const refs = findReferences(text, { line: 4, character: 30 }, TEST_URI, true, index);
-            // No local definition, but cross-file index has the definition in other.d
-            expect(refs).toHaveLength(1);
-            expect(refs[0]!.uri).toBe(OTHER_URI);
+            // No local definition: the EXTERN here, then the definition the index holds in other.d
+            expect(refs.map((r) => [r.uri, r.range.start.line])).toEqual([
+                [TEST_URI, 4],
+                [OTHER_URI, 1],
+            ]);
         });
 
         it("merges local refs with cross-file refs when local definition exists and refsIndex provided (line 62)", () => {

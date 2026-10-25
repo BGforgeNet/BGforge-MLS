@@ -15,11 +15,28 @@
 import type { Position, Range, TextEdit, WorkspaceEdit } from "vscode-languageserver/node";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
+import type { Node as SyntaxNode } from "web-tree-sitter";
 import { findLabelNodeAtPosition } from "./state-utils";
 import { findAllDialogLabelRefs } from "./reference-finder";
+import { labelName, quotedLabelContent } from "./label-refs";
+import { SyntaxType } from "./syntax-type";
 
-/** WeiDU D state labels: alphanumeric identifiers. */
-const VALID_STATE_LABEL = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+/**
+ * A new name must stand as a bare label everywhere the old one did, so it is checked by the grammar itself: a
+ * bare word WeiDU accepts as a label (`100`, `KHPC1.1`, `RR#ZA00`), never a keyword or anything with a space.
+ */
+function isValidLabel(name: string): boolean {
+    const tree = parseWithCache(`BEGIN d\nIF ~~ THEN BEGIN ${name} SAY ~~ END\n`);
+    if (!tree || tree.rootNode.hasError) return false;
+    const label = tree.rootNode.firstNamedChild?.namedChildren.find((n) => n.type === SyntaxType.State);
+    const labelNode = label?.childForFieldName("label");
+    return labelNode?.type === SyntaxType.StateLabelAlnum && labelNode.text === name;
+}
+
+/** The span a rename replaces: a quoted label keeps its quotes, so only the name inside them changes. */
+function nameRange(labelNode: SyntaxNode): Range {
+    return makeRange(quotedLabelContent(labelNode) ?? labelNode);
+}
 
 /**
  * Prepares for rename by validating the position and returning the range and placeholder.
@@ -44,7 +61,8 @@ export function prepareRenameSymbol(
     }
 
     // Ensure there's a definition for this label in the file
-    const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
+    const name = labelName(labelInfo.labelNode);
+    const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, name);
     const hasDefinition = refs.some((r) => r.isDefinition);
     if (!hasDefinition) {
         lastPrepareResult = null;
@@ -55,13 +73,13 @@ export function prepareRenameSymbol(
     lastPrepareResult = {
         text,
         dialogFile: labelInfo.dialogFile,
-        labelName: labelInfo.labelNode.text,
-        ranges: refs.map((ref) => makeRange(ref.node)),
+        labelName: name,
+        ranges: refs.map((ref) => nameRange(ref.node)),
     };
 
     return {
-        range: makeRange(labelInfo.labelNode),
-        placeholder: labelInfo.labelNode.text,
+        range: nameRange(labelInfo.labelNode),
+        placeholder: name,
     };
 }
 
@@ -70,7 +88,7 @@ export function prepareRenameSymbol(
  * Returns null if the symbol cannot be renamed.
  */
 export function renameSymbol(text: string, position: Position, newName: string, uri: string): WorkspaceEdit | null {
-    if (!isInitialized() || !VALID_STATE_LABEL.test(newName)) {
+    if (!isInitialized() || !isValidLabel(newName)) {
         return null;
     }
 
@@ -86,22 +104,18 @@ export function renameSymbol(text: string, position: Position, newName: string, 
 
     // Reuse the ranges prepareRename found if the text and label match. Only a definition-bearing label is
     // ever cached, so a hit needs no second definition check.
+    const name = labelName(labelInfo.labelNode);
     const cached = lastPrepareResult;
     lastPrepareResult = null;
     let ranges: readonly Range[];
-    if (
-        cached &&
-        cached.text === text &&
-        cached.dialogFile === labelInfo.dialogFile &&
-        cached.labelName === labelInfo.labelNode.text
-    ) {
+    if (cached && cached.text === text && cached.dialogFile === labelInfo.dialogFile && cached.labelName === name) {
         ranges = cached.ranges;
     } else {
-        const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, labelInfo.labelNode.text);
+        const refs = findAllDialogLabelRefs(tree.rootNode, labelInfo.dialogFile, name);
         if (!refs.some((r) => r.isDefinition)) {
             return null;
         }
-        ranges = refs.map((ref) => makeRange(ref.node));
+        ranges = refs.map((ref) => nameRange(ref.node));
     }
 
     const edits: TextEdit[] = ranges.map((range) => ({ range, newText: newName }));

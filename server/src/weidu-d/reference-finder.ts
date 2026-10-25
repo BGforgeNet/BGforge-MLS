@@ -9,7 +9,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { forEachDialogLabelRef } from "./label-refs";
+import { forEachDialogLabelRef, labelName as nameOf } from "./label-refs";
 
 /** A reference to a state label in the AST. */
 export interface LabelRef {
@@ -25,7 +25,7 @@ export interface LabelRef {
 export function findAllDialogLabelRefs(root: SyntaxNode, dialogFile: string, labelName: string): readonly LabelRef[] {
     const refs: LabelRef[] = [];
     forEachDialogLabelRef(root, (dialog, labelNode, isDefinition) => {
-        if (dialog === dialogFile && labelNode.text === labelName) {
+        if (dialog === dialogFile && nameOf(labelNode) === labelName) {
             refs.push({ node: labelNode, isDefinition });
         }
     });

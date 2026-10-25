@@ -20,15 +20,10 @@ import { ScopeLevel, type StateSymbol, SourceType, SymbolKind } from "../core/sy
 import { buildSignatureBlock } from "@bgforge/shared/tooltip-format";
 import { LANG_WEIDU_D_TOOLTIP } from "../core/languages";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
-import { forEachDialogLabelRef } from "./label-refs";
-
-/** Build the composite key for dialog-scoped labels. */
-function labelKey(dialogFile: string, labelName: string): string {
-    return `${dialogFile}:${labelName}`;
-}
+import { forEachDialogLabelRef, labelKey, labelName } from "./label-refs";
 
 function createStateSymbol(uri: string, dialogFile: string, labelNode: SyntaxNode, displayPath: string): StateSymbol {
-    const label = labelNode.text;
+    const label = labelName(labelNode);
     const scopedName = labelKey(dialogFile, label);
     return {
         name: scopedName,
@@ -74,8 +69,8 @@ export function parseFile(uri: string, text: string, options: ParseFileOptions =
     const refs = new Map<string, Location[]>();
     const displayPath = computeDisplayPath(uri, workspaceRoot) || extractFilename(uri);
 
-    function addRef(dialogFile: string, labelName: string, loc: Location): void {
-        const key = labelKey(dialogFile, labelName);
+    function addRef(dialogFile: string, name: string, loc: Location): void {
+        const key = labelKey(dialogFile, name);
         let locs = refs.get(key);
         if (!locs) {
             locs = [];
@@ -85,7 +80,7 @@ export function parseFile(uri: string, text: string, options: ParseFileOptions =
     }
 
     forEachDialogLabelRef(tree.rootNode, (dialog, labelNode, isDefinition) => {
-        addRef(dialog, labelNode.text, { uri, range: makeRange(labelNode) });
+        addRef(dialog, labelName(labelNode), { uri, range: makeRange(labelNode) });
         if (isDefinition) {
             symbols.push(createStateSymbol(uri, dialog, labelNode, displayPath));
         }
