@@ -72,15 +72,16 @@ export const MSG_LANGUAGES: string[] = [
 
 /**
  * Characters beyond `\w` that a language's grammar admits inside a name, for the cursor word-scan
- * in cursor-utils.ts. BAF IDS names carry `-` (KUO-TOA), TP2 and D macro and state names carry `#`
- * (tb#factorial, RR#ZA00), and D state labels also carry `.` and `-` (KHPC1.1, Quayle_Shar-Teel_1).
+ * in cursor-utils.ts. BAF IDS names carry `-` (KUO-TOA) and BAF names also `#` and `!` (A6#0), TP2
+ * and D macro and state names carry `#` (tb#factorial, RR#ZA00), and D state labels also carry `.` and
+ * `-` (KHPC1.1, Quayle_Shar-Teel_1).
  *
  * Per-language rather than global because the same character is an operator elsewhere: widening the
  * scan everywhere would return "a-b" for SSL subtraction. Kept in step with the grammars by
  * server/test/core/identifier-extra-chars.test.ts, which asks each parser what it actually accepts.
  */
 export const IDENTIFIER_EXTRA_CHARS: Readonly<Record<string, string>> = {
-    [LANG_WEIDU_BAF]: "-",
+    [LANG_WEIDU_BAF]: "!#-",
     [LANG_WEIDU_TP2]: "#-",
     [LANG_WEIDU_D]: "#.-",
 };
