@@ -178,6 +178,33 @@ describe("an object's rectangle", () => {
 });
 
 /**
+ * An action's first stored object is its acting-object override. IWD2 keeps two of an object's fields after the
+ * name, so an override that sets only those still acts on someone, while one whose every field is zero is none.
+ */
+describe("an IWD2 acting object", () => {
+    const EMPTY = '0 0 0 0 0 0 0 0 0 0 0 0 0 [-1.-1.-1.-1] "" 0 0 ';
+
+    function acting(objectLine: string): string {
+        const text =
+            `SC\nCR\nCO\nTR\n${SEE} 0 0 0 0 "" "" OB\n${EMPTY}OB\nTR\nCO\nRS\nRE\n100AC\n36OB\n${objectLine}OB\n` +
+            `OB\n${EMPTY}OB\nOB\n${EMPTY}OB\n0 0 0 0 0"" "" AC\nRE\nRS\nCR\nSC\n`;
+        return decompileBcs(readBcs(text), symbols({ AVCLASS: { 4: "CLERIC" } }), "iwd2")
+            .split("\n")[4]!
+            .trim();
+    }
+
+    test("that sets only the fields stored after the name is kept", () => {
+        expect(acting('0 0 0 0 0 0 0 0 0 0 0 0 0 [-1.-1.-1.-1] "" 4 0 ')).toBe(
+            "ActionOverride([0.0.0.0.0.0.0.0.CLERIC],UnknownAction36())",
+        );
+    });
+
+    test("with every field zero is no override", () => {
+        expect(acting(EMPTY)).toBe("UnknownAction36()");
+    });
+});
+
+/**
  * A PST trigger's stored point is its `P:` argument. The name below is a stand-in: no Torment install is
  * available here to read a real point-taking row off, and the behaviour under test is which stored field the
  * argument is drawn from, not what the row is called.
