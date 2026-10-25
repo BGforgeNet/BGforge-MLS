@@ -2,6 +2,30 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## 0.9.0
+
+### Changed
+
+- Output differs from 0.8.0 in three places: Fallout SSL indents the `end` of an empty block to its statement;
+  WeiDU BAF indents the conditions under `OR(#2)` or `OR(0x2)` as under `OR(2)`, and keeps them flat under an
+  unknown `%n%` count; Fallout `.msg` keeps indented entries as written.
+- A keyword used as a name is a syntax error in WeiDU TP2 and D and in Fallout SSL, as WeiDU and the SSL
+  compiler read it, so such a file is refused. An SSL macro may still name itself or a parameter like a keyword,
+  and `in` is no longer an SSL operator.
+
+### Fixed
+
+- Files refused as syntax errors are formatted where WeiDU, the SSL compiler or the game accept them:
+  - WeiDU TP2: the remaining actions, patches, values, operators and clause shapes, `AND` between predicates, an
+    assignment after a list, a comment inside a string.
+  - WeiDU D: sounds, female text, `^` and `!strref` in any text, bare words as strings, `%var%` as a trigger or
+    action, numbers in hex or quoted, nested comments, `~~~~~` strings.
+  - WeiDU BAF: nested comments, multi-line strings, sounds and female text, object rectangles, `#5`, `#` and `!`
+    in names, `%var%` as a call name, `IF ... THEN END`.
+  - Fallout SSL: `import` and `export` procedures and blocks, `call ... when`, raw strings `@"..."`, `for` without
+    parentheses, `0X` hex, `5.`, variadic macros, an `else` after a macro that opens an `if`.
+- WeiDU .tra: formatting continues past a comment holding a quote or a percent sign.
+
 ## 0.8.0
 
 ### Changed

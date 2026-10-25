@@ -1,6 +1,6 @@
 {
     "name": "@bgforge/ssl",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "description": "Fallout SSL compiler: preprocessor, parser, optimizer and INT back end, with the ssl CLI.",
     "keywords": [
         "compiler",
