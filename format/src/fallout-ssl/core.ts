@@ -591,7 +591,7 @@ export function formatBlock(node: SyntaxNode, depth: number): string {
     const kwBegin = canonicalKeyword("begin");
     const kwEnd = canonicalKeyword("end");
     if (stmts.length === 0) {
-        return `${kwBegin}${beginComment}\n${kwEnd}${endComment}`;
+        return `${kwBegin}${beginComment}\n${ctx.indent.repeat(depth)}${kwEnd}${endComment}`;
     }
 
     return `${kwBegin}${beginComment}\n${stmts.join("\n")}\n${ctx.indent.repeat(depth)}${kwEnd}${endComment}`;

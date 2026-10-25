@@ -1352,7 +1352,7 @@ procedure Node054 begin
         NOption(126, Node06a, 004);
     NOption(798, Node055, 004);
     if (dude_found_geck) then begin
-end else begin
+    end else begin
         NOption(799, Node056, 004);
     end
     NOption(800, Node057, 004);

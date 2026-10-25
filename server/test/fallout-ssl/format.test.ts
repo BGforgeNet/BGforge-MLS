@@ -200,6 +200,20 @@ describe("fallout-ssl formatter: string contents", () => {
     });
 });
 
+describe("fallout-ssl formatter: empty loop bodies", () => {
+    // The `end` of an empty body sits at the loop's own indentation, whatever the loop's header looks like.
+    it.each([
+        ["a for loop", "for (i := 0; i < 3; i++) begin end"],
+        ["a for loop without parentheses", "for i := 0; i < 3; i++; begin end"],
+        ["a while loop", "while (i < 3) do begin end"],
+        ["a foreach loop", "foreach v in arr begin end"],
+    ])("closes %s at its own indentation", (_name, loop) => {
+        const lines = format(`procedure start begin\n    if (1) then begin\n${loop}\nend\nend\n`).split("\n");
+
+        expect(lines.slice(2, 4)).toEqual([expect.stringMatching(/^ {8}\S.* begin$/), "        end"]);
+    });
+});
+
 describe("fallout-ssl formatter: else after a macro", () => {
     it("formats the else of an if a macro opened like an if's own else", () => {
         const output = format("procedure start begin\ncheck_forced_dialog\nELSE BEGIN\nx := 1;\nEND\nend\n");
