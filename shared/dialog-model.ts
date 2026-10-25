@@ -687,7 +687,9 @@ export function modelFromD(data: DDialogData): DialogModel {
 
     return {
         sourceLang: "d",
-        editable: true,
+        // A file with a syntax error is shown from its recovered tree but not edited: a write-back would splice at
+        // ranges of a tree that does not read the file as WeiDU does.
+        editable: data.syntaxError === undefined,
         roots: [...dialogRoots, ...patchRoots],
         messages: data.messages,
         ...(data.tdWiring ? { tdWiring: data.tdWiring } : {}),

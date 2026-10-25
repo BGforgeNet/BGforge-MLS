@@ -94,6 +94,9 @@ IF [WEIGHT #n] ~trigger~ [THEN] [BEGIN] stateLabel
 END
 ```
 
+A state missing its `END` is closed where the next state's `IF ~...~ THEN BEGIN` starts, by a zero-width
+`implicit_end` node, so the next state keeps its shape; the file is still a syntax error (a missing `END`).
+
 ### Transitions
 
 #### Full Form

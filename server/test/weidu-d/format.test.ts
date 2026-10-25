@@ -261,6 +261,13 @@ describe("weidu-d/format/core", () => {
         });
     });
 
+    // The grammar closes such a state where the next one begins so the rest of the file keeps its shape, but the
+    // file is still broken, so it is not formatted.
+    it("refuses a file with a state missing its END", () => {
+        const input = "BEGIN d\nIF ~~ THEN BEGIN s1 SAY ~one~ IF ~~ THEN EXIT\nIF ~~ THEN BEGIN s2 SAY ~two~ END\n";
+        expect(() => format(input)).toThrow("3:1: Parse MISSING");
+    });
+
     // A bare word is a string wherever WeiDU takes one, and an integer slot takes a quoted or hex number.
     describe("bare-word strings and quoted numbers", () => {
         const longState =

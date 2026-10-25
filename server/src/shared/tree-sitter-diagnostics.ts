@@ -16,7 +16,7 @@
 
 import { type Diagnostic, DiagnosticSeverity } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { collectParseErrors } from "@bgforge/shared/parse-errors";
+import { collectParseErrors, isImplicitEnd } from "@bgforge/shared/parse-errors";
 
 /**
  * Diagnostic source label - distinct from the compiler's "BGforge MLS" so hovers say which engine
@@ -32,9 +32,13 @@ const MAX_TOKEN_LEN = 32;
  * the same nodes with different wording; only the phrasing and the LSP range are this file's business.
  */
 export function collectParseDiagnostics(rootNode: SyntaxNode): Diagnostic[] {
-    return collectParseErrors(rootNode).map((node) =>
-        makeDiagnostic(node, node.isMissing ? `missing '${node.type}'` : errorMessage(node)),
-    );
+    return collectParseErrors(rootNode).map((node) => makeDiagnostic(node, diagnosticMessage(node)));
+}
+
+function diagnosticMessage(node: SyntaxNode): string {
+    // An implicit END is zero-width like a MISSING node and stands for the same thing: the END the source lacks.
+    if (isImplicitEnd(node)) return "missing 'END'";
+    return node.isMissing ? `missing '${node.type}'` : errorMessage(node);
 }
 
 /** "Syntax error near '<token>'", or bare "Syntax error" when no token text is recoverable. */

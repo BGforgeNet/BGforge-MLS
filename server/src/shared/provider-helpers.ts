@@ -6,6 +6,8 @@
  */
 
 import type { CompletionItem } from "vscode-languageserver/node";
+import type { Node as SyntaxNode } from "web-tree-sitter";
+import { hasSyntaxError } from "@bgforge/shared/parse-errors";
 import type { IndexedSymbol } from "../core/symbol";
 import type { Symbols } from "../core/symbol-index";
 import type { FormatResult } from "../language-provider";
@@ -82,10 +84,7 @@ export function getStaticCompletions(symbols: Symbols | undefined): CompletionIt
 // ============================================
 
 /** Options for the formatWithValidation helper. Generic parameters allow type-safe usage without `any`. */
-interface FormatWithValidationOptions<
-    TRoot extends { readonly hasError: boolean } = { readonly hasError: boolean },
-    TOpts = unknown,
-> {
+interface FormatWithValidationOptions<TRoot extends SyntaxNode = SyntaxNode, TOpts = unknown> {
     /** Current document text */
     text: string;
     /** Document URI */
@@ -108,7 +107,7 @@ interface FormatWithValidationOptions<
  * Shared format method with parse, format, validate, and error handling.
  * Used by BAF, D, and TP2 providers.
  */
-export function formatWithValidation<TRoot extends { readonly hasError: boolean }, TOpts>(
+export function formatWithValidation<TRoot extends SyntaxNode, TOpts>(
     opts: FormatWithValidationOptions<TRoot, TOpts>,
 ): FormatResult {
     if (!opts.isInitialized()) {
@@ -122,7 +121,7 @@ export function formatWithValidation<TRoot extends { readonly hasError: boolean 
 
     // A file with a syntax error is not formatted, and says nothing about it: the error is already a diagnostic,
     // and format-on-save mid-edit would otherwise raise a warning on every save.
-    if (tree.rootNode.hasError) {
+    if (hasSyntaxError(tree.rootNode)) {
         conlog(`${opts.languageName} formatter: skipped, the document has a syntax error`, "debug");
         return { edits: [] };
     }

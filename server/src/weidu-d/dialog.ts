@@ -11,6 +11,7 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-d";
+import { findParseError } from "@bgforge/shared/parse-errors";
 import { conlog } from "../logger";
 import { SyntaxType } from "./syntax-type";
 import type { DDialogBlock, DDialogData, DDialogState, DDialogTransition } from "@bgforge/shared/dialog-types";
@@ -133,7 +134,8 @@ export function parseDDialog(text: string): DDialogData {
         }
     }
 
-    return { blocks, states };
+    const error = findParseError(tree.rootNode);
+    return { blocks, states, ...(error ? { syntaxError: { line: error.startPosition.row + 1 } } : {}) };
 }
 
 // ---------------------------------------------------------------------------

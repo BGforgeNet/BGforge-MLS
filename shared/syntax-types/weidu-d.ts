@@ -62,6 +62,7 @@ export enum SyntaxType {
   FiveTildeContent = "five_tilde_content",
   ForcedStrref = "forced_strref",
   Identifier = "identifier",
+  ImplicitEnd = "implicit_end",
   Number = "number",
   Sound = "sound",
   StateLabelAlnum = "state_label_alnum",

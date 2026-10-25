@@ -455,6 +455,11 @@ export interface TDWiring {
 export interface DDialogData {
     blocks: DDialogBlock[];
     states: DDialogState[];
+    /**
+     * The first syntax error in the source (1-based line), absent when it parses clean. The model is still built
+     * from the recovered tree for viewing, but a broken file is not written back (`modelFromD` marks it so).
+     */
+    syntaxError?: { line: number };
     /** Translation messages keyed by index. Populated by the client before rendering; not set by the server. */
     messages?: Record<string, string>;
     /** TD only: state-list wiring + new-state insertion anchors (see `TDWiring`). Set by the TD source parser;

@@ -10,6 +10,18 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
+/**
+ * The zero-width node a grammar's scanner plants where it closed a construct the source left open (the WeiDU D
+ * grammar's state END), so that what follows keeps its shape. It parses as valid structure, so tree-sitter flags
+ * nothing; this module is where every consumer learns it is a syntax error all the same: a missing END.
+ */
+export const IMPLICIT_END = "implicit_end";
+
+/** Whether this node is an implicit END: a construct's closer the source lacks. */
+export function isImplicitEnd(node: SyntaxNode): boolean {
+    return node.type === IMPLICIT_END;
+}
+
 /** Whether this node is itself a parse error, as opposed to merely containing one. */
 function isParseError(node: SyntaxNode): boolean {
     // oxlint-disable-next-line bgforge-syntax/no-node-type-literal -- grammar-agnostic: every grammar's enum spells ERROR the same way, and this module serves all of them
@@ -17,24 +29,55 @@ function isParseError(node: SyntaxNode): boolean {
 }
 
 /**
- * The first ERROR or MISSING node in document order, or null when the tree is clean. Kept separate from
- * `collectParseErrors` for its short circuit: a clean tree costs one check rather than a full walk, and a
+ * The implicit ENDs under `node` that sit outside any ERROR node, in document order. Their ancestors carry no
+ * error flag, so they are found by type; a grammar without the node type is skipped without a walk.
+ */
+function implicitEnds(node: SyntaxNode): SyntaxNode[] {
+    if (node.tree.language.idForNodeType(IMPLICIT_END, true) === null) return [];
+    return node.descendantsOfType(IMPLICIT_END).filter((end): end is SyntaxNode => end !== null && !insideError(end));
+}
+
+function insideError(node: SyntaxNode): boolean {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+        if (isParseError(parent)) return true;
+    }
+    return false;
+}
+
+/**
+ * Whether the tree under `node` has a syntax error: an ERROR or MISSING node, or an implicit END. The one check
+ * every consumer that must not treat a broken file as valid - diagnostics, a formatter, a model writer - makes.
+ */
+export function hasSyntaxError(node: SyntaxNode): boolean {
+    return findParseError(node) !== null;
+}
+
+/**
+ * The first syntax error (see `hasSyntaxError`) in document order, or null when the tree is clean. Kept separate
+ * from `collectParseErrors` for its short circuit: a clean tree costs one check rather than a full walk, and a
  * broken one stops at the first hit instead of walking every damaged region. It returns exactly what
- * `collectParseErrors(node)[0]` would - the two walk the tree the same way, which a test pins.
+ * `collectParseErrors(node)[0]` would, which a test pins.
  */
 export function findParseError(node: SyntaxNode): SyntaxNode | null {
+    const error = findErrorNode(node);
+    const end = implicitEnds(node)[0];
+    if (!end) return error;
+    return error && error.startIndex <= end.startIndex ? error : end;
+}
+
+function findErrorNode(node: SyntaxNode): SyntaxNode | null {
     if (isParseError(node)) return node;
     if (!node.hasError) return null;
     for (const child of node.children) {
         if (!child) continue;
-        const error = findParseError(child);
+        const error = findErrorNode(child);
         if (error) return error;
     }
     return null;
 }
 
 /**
- * Every ERROR or MISSING node, in document order.
+ * Every syntax error: each ERROR or MISSING node and each implicit END, in document order.
  *
  * An ERROR node's descendants are recovery debris rather than further mistakes, so the walk does not
  * descend into one - reporting them too would bury the real problem under a pile of derived noise. That
@@ -44,7 +87,9 @@ export function findParseError(node: SyntaxNode): SyntaxNode | null {
 export function collectParseErrors(node: SyntaxNode): SyntaxNode[] {
     const errors: SyntaxNode[] = [];
     collect(node, errors);
-    return errors;
+    const ends = implicitEnds(node);
+    if (ends.length === 0) return errors;
+    return [...errors, ...ends].sort((a, b) => a.startIndex - b.startIndex);
 }
 
 function collect(node: SyntaxNode, errors: SyntaxNode[]): void {

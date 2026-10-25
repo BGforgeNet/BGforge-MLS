@@ -3,7 +3,8 @@
  * Validates symbol resolution, formatting, and completions.
  */
 
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeAll, beforeEach } from "vitest";
+import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import type { IndexedSymbol } from "../src/core/symbol";
 import type { Symbols } from "../src/core/symbol-index";
 
@@ -135,6 +136,13 @@ describe("getStaticCompletions", () => {
 
 describe("formatWithValidation", () => {
     let formatWithValidation: typeof import("../src/shared/provider-helpers").formatWithValidation;
+    /** Real trees: the syntax-error check walks the tree, so a stand-in root would not exercise it. */
+    const VALID_D = "BEGIN d\n";
+    const dTree = (text: string) => parseWithCache(text);
+
+    beforeAll(async () => {
+        await initParser();
+    });
 
     beforeEach(async () => {
         ({ formatWithValidation } = await import("../src/shared/provider-helpers"));
@@ -175,7 +183,25 @@ describe("formatWithValidation", () => {
             uri: "file:///a.ts",
             languageName: "TEST",
             isInitialized: () => true,
-            parse: () => ({ rootNode: { hasError: true } }),
+            parse: () => dTree("BEGIN d IF\n"),
+            formatAst,
+            getFormatOptions: () => ({}),
+            normalizeForCompare: (t: string) => t,
+        });
+        expect(result).toEqual({ edits: [] });
+        expect(formatAst).not.toHaveBeenCalled();
+    });
+
+    // The grammar closes a state missing its END where the next state begins, which leaves no ERROR node; the
+    // file is still broken.
+    it("skips a tree whose state lacks its END in the same way", () => {
+        const formatAst = vi.fn(() => ({ text: "x" }));
+        const result = formatWithValidation({
+            text: "code",
+            uri: "file:///a.d",
+            languageName: "TEST",
+            isInitialized: () => true,
+            parse: () => dTree("BEGIN d\nIF ~~ THEN BEGIN a SAY ~x~ IF ~~ THEN EXIT\nIF ~~ THEN BEGIN b SAY ~y~ END\n"),
             formatAst,
             getFormatOptions: () => ({}),
             normalizeForCompare: (t: string) => t,
@@ -190,7 +216,7 @@ describe("formatWithValidation", () => {
             uri: "file:///a.ts",
             languageName: "TEST",
             isInitialized: () => true,
-            parse: () => ({ rootNode: { hasError: false } }),
+            parse: () => dTree(VALID_D),
             formatAst: () => ({ text: "code" }),
             getFormatOptions: () => ({}),
             normalizeForCompare: (t: string) => t,
@@ -204,7 +230,7 @@ describe("formatWithValidation", () => {
             uri: "file:///a.ts",
             languageName: "TEST",
             isInitialized: () => true,
-            parse: () => ({ rootNode: { hasError: false } }),
+            parse: () => dTree(VALID_D),
             formatAst: () => {
                 throw new Error("parse fail");
             },
@@ -221,7 +247,7 @@ describe("formatWithValidation", () => {
             uri: "file:///a.ts",
             languageName: "TEST",
             isInitialized: () => true,
-            parse: () => ({ rootNode: { hasError: false } }),
+            parse: () => dTree(VALID_D),
             formatAst: () => ({ text: "xyz" }),
             getFormatOptions: () => ({}),
             normalizeForCompare: (t: string) => t,

@@ -230,3 +230,48 @@ ADD_TRANS_TRIGGER d 0 ~t~ DO ~0~ 1
         (tilde_content)))
     (number)
     (number)))
+
+================================================================================
+A state missing its END is closed where the next state begins
+================================================================================
+
+BEGIN d
+IF ~~ THEN BEGIN s1 SAY ~one~
+  IF ~~ THEN EXIT
+IF WEIGHT #1 ~~ THEN BEGIN s2 SAY ~two~
+  IF ~~ THEN EXIT
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (identifier)
+    (state
+      trigger: (string
+        (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text
+        (string
+          (tilde_string
+            (tilde_content))))
+      (transition
+        (transition_full
+          trigger: (string
+            (tilde_string))
+          (exit_next)))
+      (implicit_end))
+    (state
+      weight: (weight_value)
+      trigger: (string
+        (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text
+        (string
+          (tilde_string
+            (tilde_content))))
+      (transition
+        (transition_full
+          trigger: (string
+            (tilde_string))
+          (exit_next))))))

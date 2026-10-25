@@ -149,6 +149,8 @@ export default grammar({
         $.tilde_content,
         $.double_content,
         $.five_tilde_content,
+        // Zero-width: closes a state the source left open where the next state begins (see the scanner).
+        $.implicit_end,
     ],
 
     extras: ($) => [/\s/, $.comment, $.line_comment],
@@ -430,7 +432,9 @@ export default grammar({
                 "SAY",
                 field("say", $.say_text),
                 repeat($.transition),
-                "END",
+                // `implicit_end` stands for an END the source lacks, so the next state still parses as a state;
+                // consumers report it as a syntax error through shared/parse-errors.ts.
+                choice("END", $.implicit_end),
             ),
 
         // APPENDI filename state list END, inside a state list: appends the states to another dialog.

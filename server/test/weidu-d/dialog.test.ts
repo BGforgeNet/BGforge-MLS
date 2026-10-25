@@ -709,6 +709,17 @@ CHAIN DIALOG ~c1~ ~x~ EXTERN OTHER ~s9~
             ]);
         });
 
+        it("reports a file with a syntax error, so the editor does not write it back", () => {
+            const valid = parseDDialog("BEGIN d\nIF ~~ THEN BEGIN s1 SAY ~one~ IF ~~ THEN EXIT END\n");
+            const missingEnd = parseDDialog(
+                "BEGIN d\nIF ~~ THEN BEGIN s1 SAY ~one~ IF ~~ THEN EXIT\nIF ~~ THEN BEGIN s2 SAY ~two~ END\n",
+            );
+
+            expect([valid.syntaxError, modelFromD(valid).editable]).toEqual([undefined, true]);
+            expect(missingEnd.states.map((s) => s.label)).toEqual(["s1", "s2"]);
+            expect([missingEnd.syntaxError, modelFromD(missingEnd).editable]).toEqual([{ line: 3 }, false]);
+        });
+
         it("reads a %var% trigger and action as the variable they name", () => {
             const result = parseDDialog("BEGIN DIALOG\nIF %t% s SAY ~x~\n  IF %c% THEN DO %a% EXIT\nEND\n");
 

@@ -3,7 +3,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { findParseError } from "@bgforge/shared/parse-errors";
+import { findParseError, isImplicitEnd } from "@bgforge/shared/parse-errors";
 
 /** Library-shape formatter output. Wrappers convert to LSP TextEdit[] at the LSP boundary. */
 export interface FormatOutput {
@@ -24,14 +24,14 @@ export function stripBom(text: string): string {
 export type CompareNormalizer = (text: string) => string;
 
 /**
- * Throw if the tree contains any ERROR or MISSING nodes.
+ * Throw if the tree has a syntax error: an ERROR or MISSING node, or an implicit END (see shared/parse-errors.ts).
  * Call at the top of every formatDocument() to prevent formatting malformed input.
  */
 export function throwOnParseError(root: SyntaxNode): void {
     const node = findParseError(root);
     if (node) {
         const { row, column } = node.startPosition;
-        const kind = node.isMissing ? "MISSING" : "ERROR";
+        const kind = node.isMissing || isImplicitEnd(node) ? "MISSING" : "ERROR";
         throw new Error(`${row + 1}:${column + 1}: Parse ${kind}`);
     }
 }

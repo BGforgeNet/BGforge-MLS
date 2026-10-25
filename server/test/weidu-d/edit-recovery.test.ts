@@ -14,6 +14,8 @@ vi.mock("../../src/server", () => ({
 
 import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
 import { getDocumentSymbols } from "../../src/weidu-d/symbol";
+import { DiagnosticSeverity } from "vscode-languageserver/node";
+import { collectParseDiagnostics, DIAG_SOURCE } from "../../src/shared/tree-sitter-diagnostics";
 
 beforeAll(async () => {
     await initParser();
@@ -35,5 +37,28 @@ describe("a GOTO whose label is still being typed", () => {
 
     it("reports the missing label", () => {
         expect(parseWithCache(text)!.rootNode.hasError).toBe(true);
+    });
+});
+
+describe("a state missing its END", () => {
+    const text =
+        "BEGIN ~dlg~\n" +
+        "IF ~~ THEN BEGIN s1 SAY ~one~\n  IF ~~ THEN EXIT\n" +
+        "IF ~~ THEN BEGIN s2 SAY ~two~\n  IF ~~ THEN EXIT\nEND\n" +
+        APPEND_AFTER;
+
+    it("keeps the next state in the outline", () => {
+        expect(getDocumentSymbols(text).map((s) => s.name)).toEqual(["s1", "s2", "a1"]);
+    });
+
+    it("reports the missing END where it belongs, before the next state", () => {
+        expect(collectParseDiagnostics(parseWithCache(text)!.rootNode)).toEqual([
+            {
+                severity: DiagnosticSeverity.Error,
+                range: { start: { line: 3, character: 0 }, end: { line: 3, character: 1 } },
+                message: "missing 'END'",
+                source: DIAG_SOURCE,
+            },
+        ]);
     });
 });
