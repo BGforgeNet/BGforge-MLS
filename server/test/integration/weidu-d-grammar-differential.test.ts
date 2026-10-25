@@ -310,6 +310,89 @@ const CASES: Case[] = [
             "stays an ordinary name here.",
     })),
 
+    // A bare word is the same string token as a quoted one wherever WeiDU takes a string: a trigger, an action,
+    // a text, a patch action's old and new text. A keyword stays a keyword there too.
+    { name: "bare-word state trigger", code: file("BEGIN ~d~\nIF foo THEN BEGIN s SAY ~x~ IF ~~ THEN EXIT END") },
+    { name: "bare-word state trigger without THEN", code: file("BEGIN ~d~\nIF foo s SAY ~x~ IF ~~ THEN EXIT END") },
+    { name: "a keyword as a state trigger is rejected", code: file("BEGIN ~d~\nIF SAY THEN BEGIN s SAY ~x~ END") },
+    { name: "bare-word say text", code: asSayText("foo") },
+    { name: "bare-word say text with a female variant", code: asSayText("foo bar") },
+    { name: "bare-word say text joined by ^", code: asSayText("foo ^ bar") },
+    { name: "bare-word say text with a sound", code: asSayText("foo [SND]") },
+    { name: "a digit run as say text", code: asSayText("123") },
+    { name: "a keyword as say text is rejected", code: asSayText("REPLY") },
+    { name: "bare-word transition trigger", code: inState("IF foo THEN EXIT") },
+    { name: "a keyword as a transition trigger is rejected", code: inState("IF GOTO THEN EXIT") },
+    { name: "bare-word short transition trigger", code: inState("+ foo + ~r~ EXIT") },
+    { name: "a short goto followed by a short transition", code: inState("IF ~~ THEN + foo\n  + bar + ~r~ EXIT") },
+    { name: "bare-word DO action", code: inState("IF ~~ THEN DO foo EXIT") },
+    { name: "bare-word CHAIN entry trigger", code: file("CHAIN IF foo THEN ~a~ st\n~m~\nEXIT") },
+    { name: "bare-word CHAIN texts", code: file("CHAIN ~a~ st\nm\n== ~b~ n\nEXIT") },
+    { name: "a keyword as CHAIN text is rejected", code: file("CHAIN ~a~ st\nGOTO\nEXIT") },
+    { name: "bare-word CHAIN line condition", code: file("CHAIN ~a~ st\n~m~ = IF c THEN ~n~\nEXIT") },
+    { name: "bare-word BRANCH trigger", code: file("CHAIN ~a~ st\n~m~\nBRANCH t BEGIN\n== ~b~ ~x~\nEND\nEXIT") },
+    { name: "bare-word IF guard on a patch action", code: file("ADD_STATE_TRIGGER ~d~ 0 ~t~ IF c") },
+    { name: "bare-word REPLACE_TRIGGER_TEXT texts", code: file("REPLACE_TRIGGER_TEXT ~d~ old new") },
+    { name: "bare-word REPLACE_TRIGGER_TEXT_REGEXP texts", code: file("REPLACE_TRIGGER_TEXT_REGEXP ~d~ old new") },
+    { name: "bare-word R_A_T texts", code: file("R_A_T ~d~ old new") },
+    {
+        name: "bare-word REPLACE_TRANS_ACTION texts",
+        code: file("REPLACE_TRANS_ACTION ~d~ BEGIN 0 END BEGIN 0 END a b"),
+    },
+    { name: "bare-word A_S_T trigger", code: file("A_S_T ~d~ 0 trig") },
+    { name: "a keyword as an A_S_T trigger is rejected", code: file("A_S_T ~d~ 0 EXIT") },
+    { name: "bare-word ADD_TRANS_ACTION action", code: file("ADD_TRANS_ACTION ~d~ BEGIN 0 END BEGIN 0 END act") },
+    { name: "bare-word ALTER_TRANS value", code: file("ALTER_TRANS ~d~ BEGIN 0 END BEGIN 0 END BEGIN TRIGGER x END") },
+
+    // An integer slot (FLAGS, the non-pausing flag, a transition-number list) takes any string WeiDU can convert
+    // to an integer: bare, in hex, octal or binary, with `_` separators, or quoted with a sign. Anything else is
+    // an error there.
+    { name: "FLAGS in hex", code: inState("IF ~~ THEN FLAGS 0x4 EXIT") },
+    { name: "FLAGS in octal and binary", code: inState("IF ~~ THEN FLAGS 0o7 EXIT\n  IF ~~ THEN FLAGS 0b11 EXIT") },
+    { name: "FLAGS with a digit separator", code: inState("IF ~~ THEN FLAGS 1_0 EXIT") },
+    { name: "FLAGS quoted", code: inState('IF ~~ THEN FLAGS ~4~ EXIT\n  IF ~~ THEN FLAGS "4" EXIT') },
+    { name: "FLAGS quoted with a sign", code: inState('IF ~~ THEN FLAGS ~-4~ EXIT\n  IF ~~ THEN FLAGS "+4" EXIT') },
+    { name: "FLAGS quoted in hex", code: inState("IF ~~ THEN FLAGS ~0x4~ EXIT") },
+    { name: "FLAGS in a five-tilde string", code: inState("IF ~~ THEN FLAGS ~~~~~4~~~~~ EXIT") },
+    { name: "FLAGS as a %var% holding a number", code: inState("IF ~~ THEN FLAGS %4% EXIT") },
+    { name: "FLAGS with a bare word is rejected", code: inState("IF ~~ THEN FLAGS abc EXIT") },
+    { name: "FLAGS with a quoted word is rejected", code: inState("IF ~~ THEN FLAGS ~abc~ EXIT") },
+    { name: "FLAGS with digits then letters is rejected", code: inState("IF ~~ THEN FLAGS 4x EXIT") },
+    { name: "FLAGS with a space inside the quotes is rejected", code: inState("IF ~~ THEN FLAGS ~ 4~ EXIT") },
+    { name: "FLAGS with an empty string is rejected", code: inState("IF ~~ THEN FLAGS ~~ EXIT") },
+    {
+        name: "FLAGS as a %var% holding a word is accepted although WeiDU rejects it",
+        code: inState("IF ~~ THEN FLAGS %abc% EXIT"),
+        divergence:
+            "A %var% substitutes a value once the file is installed, so a variable stands wherever its value may; " +
+            "a standalone parse converts the name itself to an integer and fails.",
+    },
+    { name: "BEGIN with a hex non-pausing flag", code: file("BEGIN ~dlg~ 0x1") },
+    { name: "BEGIN with a quoted negative non-pausing flag", code: file("BEGIN ~dlg~ ~-1~") },
+    { name: "BEGIN with a quoted word as the flag is rejected", code: file("BEGIN ~dlg~ ~abc~") },
+    { name: "a quoted transition number", code: file('ADD_TRANS_ACTION ~d~ BEGIN 0 END BEGIN ~0~ "1" END ~a~') },
+    { name: "a hex transition number", code: file("ADD_TRANS_ACTION ~d~ BEGIN 0 END BEGIN 0x1 END ~a~") },
+    {
+        name: "a word as a transition number is rejected",
+        code: file("ADD_TRANS_ACTION ~d~ BEGIN 0 END BEGIN a END ~a~"),
+    },
+    {
+        name: "a quoted word as a transition number is rejected",
+        code: file("ADD_TRANS_ACTION ~d~ BEGIN 0 END BEGIN ~abc~ END ~a~"),
+    },
+
+    // ADD_TRANS_TRIGGER's DO list names transitions, possibly none (then every transition gets the trigger).
+    { name: "ADD_TRANS_TRIGGER with an empty DO list", code: file("ADD_TRANS_TRIGGER ~dlg~ 0 ~trig~ DO") },
+    { name: "ADD_TRANS_TRIGGER with an empty DO list and a guard", code: file("A_T_T ~dlg~ 0 ~trig~ DO IF ~c~") },
+    { name: "ADD_TRANS_TRIGGER with quoted and hex DO numbers", code: file("A_T_T ~dlg~ 0 ~trig~ DO ~1~ 0x2") },
+    {
+        name: "ADD_TRANS_TRIGGER with a word in the DO list is rejected although WeiDU accepts it",
+        code: file("ADD_TRANS_TRIGGER ~dlg~ 0 ~trig~ DO abc"),
+        divergence:
+            "WeiDU parses the DO list as plain strings and converts each to a transition number only when the " +
+            "action is applied, where a word fails the install; the grammar reports it where it is written.",
+    },
+
     // State labels.
     { name: "numeric state label", code: asLabel("100") },
     { name: "alphanumeric state label", code: asLabel("4a") },

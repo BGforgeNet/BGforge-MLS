@@ -152,3 +152,81 @@ REPLACE_SAY d 2 "/*"
     text: (string
       (double_string
         (double_content)))))
+
+================================================================================
+A bare word is a string wherever WeiDU takes one
+================================================================================
+
+BEGIN d
+IF foo s
+  SAY bar baz
+  IF t THEN DO a EXIT
+END
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (identifier)
+    (state
+      trigger: (string)
+      label: (state_label_alnum)
+      say: (say_text
+        (compound_text
+          male: (string)
+          female: (string)))
+      (transition
+        (transition_full
+          trigger: (string)
+          (do_feature
+            action: (string))
+          (exit_next))))))
+
+================================================================================
+An integer slot takes a number bare, in hex or quoted
+================================================================================
+
+BEGIN d ~1~
+IF ~~ THEN BEGIN s
+  SAY ~x~
+  IF ~~ THEN FLAGS 0x4 EXIT
+  IF ~~ THEN FLAGS "-4" EXIT
+END
+ADD_TRANS_TRIGGER d 0 ~t~ DO ~0~ 1
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (begin_action
+    file: (identifier)
+    non_pausing: (number)
+    (state
+      trigger: (string
+        (tilde_string))
+      label: (state_label_alnum)
+      say: (say_text
+        (string
+          (tilde_string
+            (tilde_content))))
+      (transition
+        (transition_full
+          trigger: (string
+            (tilde_string))
+          (flags_feature
+            (number))
+          (exit_next)))
+      (transition
+        (transition_full
+          trigger: (string
+            (tilde_string))
+          (flags_feature
+            (number))
+          (exit_next)))))
+  (add_trans_trigger
+    file: (identifier)
+    state: (state_label_alnum)
+    trigger: (string
+      (tilde_string
+        (tilde_content)))
+    (number)
+    (number)))

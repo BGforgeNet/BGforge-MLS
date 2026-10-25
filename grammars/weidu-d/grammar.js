@@ -82,6 +82,11 @@ const RESERVED_WORDS = [
     "WEIGHT",
 ];
 
+/** An integer as WeiDU converts one: decimal, hex, octal or binary, with `_` separators after the first digit. */
+const INTEGER = /[0-9][0-9_]*|0[xX][0-9a-fA-F][0-9a-fA-F_]*|0[oO][0-7][0-7_]*|0[bB][01][01_]*/;
+/** The same, signed, which only a quoted number can be: a bare word cannot start with a sign. */
+const SIGNED_INTEGER = new RegExp(`[-+]?(${INTEGER.source})`);
+
 // =========================================
 // HELPER FUNCTIONS
 // =========================================
@@ -96,8 +101,8 @@ const replaceTextAction =
         seq(
             kw(...keywords),
             field("file", $._filename),
-            field("old_text", $.string),
-            field("new_text", $.string),
+            field("old_text", $._string_value),
+            field("new_text", $._string_value),
             repeat($._filename),
             repeat($.d_action_when),
         );
@@ -109,8 +114,8 @@ const replaceTransAction = (keyword) => ($) =>
         field("file", $._filename),
         $._state_label_list,
         $._trans_number_list,
-        field("old_text", $.string),
-        field("new_text", $.string),
+        field("old_text", $._string_value),
+        field("new_text", $._string_value),
         repeat($.d_action_when),
     );
 
@@ -122,7 +127,7 @@ const stateTriggerAction =
             keywords,
             field("file", $._filename),
             field("state", $._state_label),
-            field("trigger", $.string),
+            field("trigger", $._string_value),
             repeat(field("state", $._state_label)),
             ...tail.map((t) => t($)),
             repeat($.d_action_when),
@@ -187,14 +192,9 @@ export default grammar({
                 $.add_trans_action,
             ),
 
-        // BEGIN filename [nonPausing] state list. WeiDU reads the flag as any string and converts it.
+        // BEGIN filename [nonPausing] state list.
         begin_action: ($) =>
-            seq(
-                "BEGIN",
-                field("file", $._filename),
-                optional(field("non_pausing", choice($.number, $.string))),
-                repeat($._state_item),
-            ),
+            seq("BEGIN", field("file", $._filename), optional(field("non_pausing", $._integer)), repeat($._state_item)),
 
         // APPEND [IF_FILE_EXISTS] filename state list END
         append_action: ($) =>
@@ -227,7 +227,7 @@ export default grammar({
                     seq(
                         "IF",
                         optional(seq("WEIGHT", field("weight", $._weight_value))),
-                        field("trigger", $.string),
+                        field("trigger", $._string_value),
                         "THEN",
                     ),
                 ),
@@ -287,7 +287,7 @@ export default grammar({
         chain_speaker: ($) => seq("==", optional("IF_FILE_EXISTS"), field("file", $._filename), $._chain_lines),
 
         // BRANCH trigger BEGIN (== speaker | BRANCH)* END - the trigger guards every line inside, nested ones too.
-        chain_branch: ($) => seq("BRANCH", field("trigger", $.string), "BEGIN", repeat($._chain_block), "END"),
+        chain_branch: ($) => seq("BRANCH", field("trigger", $._string_value), "BEGIN", repeat($._chain_block), "END"),
 
         _chain_block: ($) => choice($.chain_speaker, $.chain_branch),
 
@@ -343,7 +343,7 @@ export default grammar({
         // A change is `field value`, where field is a WeiDU trans field. It is usually a bareword
         // (ACTION, TRIGGER, EPILOGUE, ...), but REPLY, JOURNAL, SOLVED_JOURNAL, UNSOLVED_JOURNAL and FLAGS are
         // keywords, so those take the quoted form, which any field may use.
-        alter_trans_change: ($) => seq(choice($.string, $.identifier, $.variable_ref), $.string),
+        alter_trans_change: ($) => seq(choice($.string, $.identifier, $.variable_ref), $._string_value),
 
         // Trans replacement actions (using helper)
         replace_trans_trigger: replaceTransAction("REPLACE_TRANS_TRIGGER"),
@@ -354,8 +354,8 @@ export default grammar({
             seq(
                 kw("REPLACE_TRIGGER_TEXT", "R_T_T"),
                 field("file", $._filename),
-                field("old_text", $.string),
-                field("new_text", $.string),
+                field("old_text", $._string_value),
+                field("new_text", $._string_value),
                 repeat($.d_action_when),
             ),
 
@@ -364,8 +364,8 @@ export default grammar({
             seq(
                 "REPLACE_TRIGGER_TEXT_REGEXP",
                 field("file", $._filename),
-                field("old_text", $.string),
-                field("new_text", $.string),
+                field("old_text", $._string_value),
+                field("new_text", $._string_value),
                 repeat($.d_action_when),
             ),
 
@@ -392,8 +392,11 @@ export default grammar({
         add_state_trigger: stateTriggerAction(kw("ADD_STATE_TRIGGER", "A_S_T")),
 
         // ADD_TRANS_TRIGGER filename stateN triggerString [moreStates] [DO transNumbers] [dActionWhen]; A_T_T alias.
+        // An empty DO list is the same as none: every transition gets the trigger. WeiDU parses the list as plain
+        // strings and converts each to a number only when it applies the action, so a word there fails the install;
+        // an integer slot reports it where it is written.
         add_trans_trigger: stateTriggerAction(kw("ADD_TRANS_TRIGGER", "A_T_T"), ($) =>
-            optional(seq("DO", repeat1($.number))),
+            optional(seq("DO", repeat($._integer))),
         ),
 
         // ADD_TRANS_ACTION filename BEGIN states END BEGIN trans END actionString [dActionWhen]. The guards
@@ -404,13 +407,13 @@ export default grammar({
                 field("file", $._filename),
                 $._state_label_list,
                 $._trans_number_list,
-                field("action", $.string),
+                field("action", $._string_value),
                 repeat($.d_action_when),
             ),
 
         // dActionWhen - conditional for D actions
         d_action_when: ($) =>
-            choice(seq("IF", field("condition", $.string)), seq("UNLESS", field("condition", $.string))),
+            choice(seq("IF", field("condition", $._string_value)), seq("UNLESS", field("condition", $._string_value))),
 
         // What a state list holds: states, plus the two older in-state forms WeiDU still reads.
         _state_item: ($) => choice($.state, $.inline_append, $.inline_chain),
@@ -420,7 +423,7 @@ export default grammar({
             seq(
                 "IF",
                 optional(seq("WEIGHT", field("weight", $._weight_value))),
-                field("trigger", $.string),
+                field("trigger", $._string_value),
                 optional("THEN"),
                 optional("BEGIN"),
                 field("label", $._state_label),
@@ -459,13 +462,13 @@ export default grammar({
 
         // IF ~trigger~ [THEN] transFeatures transNext
         transition_full: ($) =>
-            seq("IF", field("trigger", $.string), optional("THEN"), repeat($._trans_feature), $._trans_next),
+            seq("IF", field("trigger", $._string_value), optional("THEN"), repeat($._trans_feature), $._trans_next),
 
         // + [~trigger~] + replyText transFeatures transNext
         transition_short: ($) =>
             seq(
                 "+",
-                optional(field("trigger", $.string)),
+                optional(field("trigger", $._string_value)),
                 "+",
                 field("reply", $._text),
                 repeat($._trans_feature),
@@ -486,11 +489,11 @@ export default grammar({
 
         reply_feature: ($) => seq("REPLY", field("text", $._text)),
 
-        do_feature: ($) => seq("DO", field("action", $.string)),
+        do_feature: ($) => seq("DO", field("action", $._string_value)),
 
         journal_feature: ($) => seq(choice("JOURNAL", "SOLVED_JOURNAL", "UNSOLVED_JOURNAL"), field("text", $._text)),
 
-        flags_feature: ($) => seq("FLAGS", $.number),
+        flags_feature: ($) => seq("FLAGS", $._integer),
 
         // Transaction next (where to go)
         _trans_next: ($) => choice($.goto_next, $.extern_next, $.exit_next, $.short_goto),
@@ -538,10 +541,14 @@ export default grammar({
         _state_label_list: ($) => seq("BEGIN", repeat(field("state", $._state_label)), "END"),
 
         // BEGIN...END transaction number list
-        _trans_number_list: ($) => seq("BEGIN", repeat($.number), "END"),
+        _trans_number_list: ($) => seq("BEGIN", repeat($._integer), "END"),
+
+        // An integer slot. WeiDU reads any string token here and converts it, so a number may be written bare, in
+        // hex, octal or binary, or quoted (see `number`); a %var% substitutes one.
+        _integer: ($) => choice($.number, $.variable_ref),
 
         // IF trigger [THEN] pattern
-        _if_trigger_then: ($) => seq("IF", field("trigger", $.string), optional("THEN")),
+        _if_trigger_then: ($) => seq("IF", field("trigger", $._string_value), optional("THEN")),
 
         // A text slot: a male text with an optional [sound], then an optional female text with its own [sound];
         // or a tra/tlk/AT reference; or `!strref text`, which forces the text into that strref.
@@ -550,10 +557,10 @@ export default grammar({
         // A text written out: one string or a `^`-joined run. %var% belongs here because WeiDU lexes a %...% run
         // as a plain string token, so a variable stands wherever a string does - a say text among them
         // (`CHAIN ... %kivan17%`, which OUTER_SPRINT sets to a strref). It substitutes a value, not structure.
-        _text_string: ($) => choice($.string, $.variable_ref, $.concat_string),
+        _text_string: ($) => choice($._string_value, $.variable_ref, $.concat_string),
 
         concat_string: ($) =>
-            seq(choice($.string, $.variable_ref), repeat1(seq("^", choice($.string, $.variable_ref)))),
+            seq(choice($._string_value, $.variable_ref), repeat1(seq("^", choice($._string_value, $.variable_ref)))),
 
         compound_text: ($) =>
             choice(
@@ -574,6 +581,11 @@ export default grammar({
 
         // String literals. A five-tilde string may hold single tildes.
         string: ($) => choice($.tilde_string, $.double_string, $.five_tilde_string),
+
+        // A slot WeiDU fills with a plain string: a trigger, an action, a text, a patch action's old and new text.
+        // WeiDU lexes a bare word as the same string token as a quoted one, so a bare word is a string here (a
+        // keyword is not: it is reserved). Name and label slots take identifiers on their own terms instead.
+        _string_value: ($) => choice($.string, alias($.identifier, $.string)),
 
         tilde_string: ($) => seq("~", optional($.tilde_content), "~"),
 
@@ -601,9 +613,23 @@ export default grammar({
         // Higher lexical precedence than `identifier`, which also matches a digit run now that it
         // carries state labels. Where both are admissible - the non-pausing flag after `BEGIN file`,
         // a BEGIN/END number list - a bare digit run has to lex as the number, or the word token wins
-        // and the number position never matches. WeiDU has no number token at all here: it lexes one
-        // bare word and calls int_of_string on it where an integer is wanted.
-        number: ($) => token(prec(1, /[0-9]+/)),
+        // and the number position never matches. WeiDU has no number token at all here: it lexes any
+        // string token and converts it to an integer where one is wanted, so the integer forms that
+        // conversion takes are a number written bare (a bare word cannot start with a sign) or quoted.
+        // Only integer slots admit this token, and none of them admits a string, so `~4~` never competes
+        // with a string's opening tilde.
+        number: ($) =>
+            token(
+                prec(
+                    1,
+                    choice(
+                        INTEGER,
+                        seq("~", SIGNED_INTEGER, "~"),
+                        seq('"', SIGNED_INTEGER, '"'),
+                        seq("~~~~~", SIGNED_INTEGER, "~~~~~"),
+                    ),
+                ),
+            ),
 
         // comment is produced by the external scanner (nesting); only line_comment is internal.
         line_comment: ($) => seq("//", /[^\n]*/),

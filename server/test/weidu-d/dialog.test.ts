@@ -603,6 +603,21 @@ EXIT
             expect(chainStates.map((s) => s.sayTexts?.map((t) => t.text))).toEqual([["Male text"], ["Reply"]]);
         });
 
+        it("reads bare-word triggers and texts as the strings they are", () => {
+            const text = `
+BEGIN DIALOG
+IF foo s SAY bar
+  IF t THEN REPLY r DO act EXIT
+END
+`;
+            const result = parseDDialog(text);
+
+            expect(result.states.map((s) => [s.label, s.trigger, s.sayText])).toEqual([["s", "foo", "bar"]]);
+            expect(result.states[0]!.transitions.map((t) => [t.trigger, t.replyText, t.action, t.target])).toEqual([
+                ["t", "r", "act", { kind: "exit" }],
+            ]);
+        });
+
         it("CHAIN with BRANCH transitions (parseChainBranch branch)", () => {
             // BRANCH inside a CHAIN adds conditional speaker transitions.
             // This exercises parseChainBranch (lines 436-444 in dialog.ts).

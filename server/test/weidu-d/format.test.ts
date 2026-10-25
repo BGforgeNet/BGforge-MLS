@@ -260,4 +260,27 @@ describe("weidu-d/format/core", () => {
             expect(output).toContain("\n\nEXTEND_BOTTOM dlg 2");
         });
     });
+
+    // A bare word is a string wherever WeiDU takes one, and an integer slot takes a quoted or hex number.
+    describe("bare-word strings and quoted numbers", () => {
+        const longState =
+            "BEGIN d ~1~\nIF foo THEN BEGIN s SAY bar baz IF t THEN REPLY ~a reply long enough to push the state " +
+            "past the line limit~ FLAGS ~4~ DO act EXIT IF ~~ THEN FLAGS 0x4 EXIT END\n";
+
+        it("keeps them as written when it splits a long state", () => {
+            const output = format(longState);
+            expect(output).toBe(
+                "BEGIN d ~1~\n" +
+                    "    IF foo s SAY bar baz\n" +
+                    "        IF t THEN REPLY ~a reply long enough to push the state past the line limit~ FLAGS ~4~ DO act EXIT\n" +
+                    "        IF ~~ THEN FLAGS 0x4 EXIT\n" +
+                    "    END\n",
+            );
+        });
+
+        it("is idempotent on them", () => {
+            const first = format(longState);
+            expect(format(first)).toBe(first);
+        });
+    });
 });

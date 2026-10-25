@@ -15,6 +15,11 @@ D files define Infinity Engine dialogues for WeiDU modding.
 | Percent       | `%text%`         | Supported as `%var%`; a run stops at whitespace |
 | Five tildes   | `~~~~~text~~~~~` | Supported (may hold single tildes)              |
 | Concatenation | `"a" ^ "b"`      | Supported in text slots                         |
+| Bare word     | `text`           | Supported wherever WeiDU takes a string         |
+
+A bare word is the same string token as a quoted one, so a trigger, an action or a text may be written without
+quotes (a keyword may not). An integer slot (`FLAGS`, the `BEGIN` non-pausing flag, a transition-number list, the
+`ADD_TRANS_TRIGGER ... DO` list) takes a number bare, in hex, octal or binary, or quoted (`~-1~`), and nothing else.
 
 ### Keywords
 
@@ -120,7 +125,7 @@ COPY_TRANS_LATE [SAFE] filename stateLabel
 - `JOURNAL text` - Add to journal
 - `SOLVED_JOURNAL text` - Add to solved section
 - `UNSOLVED_JOURNAL text` - Add to unsolved section
-- `FLAGS integer` - Binary flags
+- `FLAGS integer` - Binary flags (`4`, `0x4`, `~4~`)
 
 ### Text (Player-Visible Strings)
 
