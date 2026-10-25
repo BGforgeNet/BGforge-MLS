@@ -13,10 +13,9 @@
  * `display_msg`) are reserved the same way but stay names here, since completion and hover resolve them as
  * symbols. Two keywords stay out: `include` is a token the grammar never uses (tree-sitter reserves only words the
  * grammar uses), and `wait` is a macro name in shipped scripts (`#define WAIT (2)`), which the preprocessor expands
- * before the compiler's lexer sees it. A macro parameter may carry a keyword's name for the same reason; one shipped
- * header does (`#define season_morning(when)`), and its two macros are syntax errors here, the price of a keyword
- * never reading as a name elsewhere. server/test/integration/fallout-ssl-grammar-differential.test.ts checks the
- * list against the compiler.
+ * before the compiler's lexer sees it. A #define is exempt for the same reason: its name may be any identifier (the
+ * `macro` set), and so may its parameters (see _macro_param). src/scanner.c keeps a copy of this list.
+ * server/test/integration/fallout-ssl-grammar-differential.test.ts checks the list against the compiler.
  */
 const RESERVED_WORDS = [
     "and",
@@ -80,6 +79,8 @@ export default grammar({
         $._newline, // Newline as whitespace (outside #define)
         $._line_end, // Newline as macro terminator (inside #define)
         $._token_paste, // ## operator, only emitted inside #define bodies (see scanner.c)
+        $._keyword_param, // A macro parameter spelled like a reserved word (see _macro_param)
+        $._keyword_param_ref, // That parameter's use in the macro's body (see scanner.c)
     ],
 
     extras: ($) => [
@@ -97,6 +98,8 @@ export default grammar({
     // `foo(` typed before an `end` swallows the `end` and every procedure after it.
     reserved: {
         global: () => RESERVED_WORDS.map((word) => keywordToken(word, KEYWORD_PRECEDENCE[word] ?? 0)),
+        // The preprocessor takes any identifier as a macro name.
+        macro: () => [],
     },
 
     // Conflicts arise from ambiguous parsing situations:
@@ -141,7 +144,7 @@ export default grammar({
         define: ($) =>
             seq(
                 alias(token(prec(1, seq("#", "define"))), "#define"),
-                field("name", $.identifier),
+                field("name", reserved("macro", $.identifier)),
                 optional(field("params", $.macro_params)),
                 optional(field("body", $.macro_body)),
                 $._line_end,
@@ -155,9 +158,17 @@ export default grammar({
         macro_params: ($) =>
             seq(
                 token.immediate("("),
-                optional(choice(seq(commaSep($.identifier), optional(seq(",", "..."))), "...")),
+                optional(choice(seq(commaSep($._macro_param), optional(seq(",", "..."))), "...")),
                 ")",
             ),
+
+        // The preprocessor takes any identifier as a parameter name and substitutes it in the body before the
+        // compiler's lexer sees a keyword, so `#define season_morning(when) (... (when) ...)` compiles. The
+        // reserved-word sets cannot express this: a set given to a rule reaches only the first token of that rule,
+        // never a name nested inside the body's expressions. So the external scanner reads a parameter spelled like
+        // a reserved word, remembers it until the end of the #define, and reads that word in the body as a name
+        // wherever an expression may start; the same word stays a keyword everywhere else.
+        _macro_param: ($) => choice($.identifier, alias($._keyword_param, $.identifier)),
 
         // Macro body: parsed as real SSL statements (expressions are covered via expression_stmt).
         // Terminated by LINE_END from the external scanner (bare newline = end of #define).
@@ -628,6 +639,7 @@ export default grammar({
                 $.proc_ref,
                 $.token_paste_identifier, // ## token-pasting (macro bodies only)
                 $.identifier,
+                alias($._keyword_param_ref, $.identifier), // macro bodies only, see _macro_param
                 $.number,
                 $.boolean,
                 $.string,

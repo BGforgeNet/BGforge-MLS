@@ -164,6 +164,37 @@ const CASES: Case[] = [
     { name: "variadic macro", code: `#define F(a, ...) a\n${stmt("F(1, 2);")}`, expect: "accept" },
     { name: "variadic macro with no named parameter", code: `#define F(...) 1\n${stmt("F(1, 2);")}`, expect: "accept" },
 
+    // A macro parameter may carry a keyword's name: the preprocessor substitutes it before the compiler sees a
+    // keyword. It does so case-sensitively, and only inside that macro.
+    {
+        name: "a macro parameter named after a keyword",
+        code: `#define M(when) ((when) + 1)\n${stmt("variable a; a := M(2);")}`,
+        expect: "accept",
+    },
+    {
+        name: "a keyword parameter beside other keywords",
+        code: `procedure p begin end\n#define C(proc, when) if (when) then call proc\n${stmt("C(p, 1);")}`,
+        expect: "accept",
+    },
+    // The preprocessor replaces every occurrence, so the body cannot use the parameter's word as a keyword. The
+    // grammar still reads it as one where no expression may start, accepting a body the compiler refuses.
+    {
+        name: "a keyword parameter replaces the keyword everywhere in its body",
+        code: `procedure p begin end\n#define C(proc, when) call proc when when\n${stmt("C(p, 1);")}`,
+        expect: "refuse",
+        referenceOnly: true,
+    },
+    {
+        name: "a keyword parameter is substituted only in its own spelling",
+        code: `#define M(When) (when)\n${stmt("variable a; a := M(1);")}`,
+        expect: "refuse",
+    },
+    {
+        name: "after its macro a keyword parameter's word is a keyword again",
+        code: `#define M(when) (when)\n${stmt("variable a; a := when;")}`,
+        expect: "refuse",
+    },
+
     // Comparisons do not chain: the compiler takes one comparison per operand pair. The grammar groups a chain
     // rather than rejecting it, a recorded divergence (see binary_expr in grammar.js).
     {

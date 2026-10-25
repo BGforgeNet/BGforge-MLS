@@ -306,6 +306,7 @@
                 "token": "readonly",
                 "field": "readonly",
                 "alias": "readonly",
+                "reserved": "readonly",
                 "LANGUAGE": "readonly",
                 "LRULE": "readonly"
             },

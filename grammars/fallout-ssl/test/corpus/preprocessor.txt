@@ -600,3 +600,71 @@ Token paste ## in return expression
               (identifier)
               (identifier))))))))
 
+==================
+A macro parameter named after a keyword
+==================
+
+#define season_morning(when)            ((game_time_hour >= (when)) and (game_time_hour < (when + 100)))
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier))
+      body: (macro_body
+        (expression_stmt
+          (paren_expr
+            (binary_expr
+              left: (paren_expr
+                (binary_expr
+                  left: (identifier)
+                  right: (paren_expr
+                    (identifier))))
+              right: (paren_expr
+                (binary_expr
+                  left: (identifier)
+                  right: (paren_expr
+                    (binary_expr
+                      left: (identifier)
+                      right: (number))))))))))))
+
+==================
+A keyword parameter beside other keywords in a macro body
+==================
+
+#define call_if(proc, when) if when then call proc
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier)
+        (identifier))
+      body: (macro_body
+        (if_stmt
+          cond: (identifier)
+          then: (call_stmt
+            target: (identifier)))))))
+
+==================
+A keyword named as a macro
+==================
+
+#define when 1
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      body: (macro_body
+        (expression_stmt
+          (number))))))
+
