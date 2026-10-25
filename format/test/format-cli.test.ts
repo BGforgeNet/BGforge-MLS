@@ -271,8 +271,7 @@ describe("format CLI integration", () => {
     });
 
     describe(".msg format support", () => {
-        // The msg formatter trims number and audio fields but preserves text content verbatim.
-        // So "{ text }" becomes "{ text }" (spaces inside text field are kept).
+        // The msg formatter trims the number and audio fields but keeps the text field verbatim.
         const unformatted = "{ 100 }{ }{ text }\n";
         const formatted = "{100}{}{ text }\n";
 

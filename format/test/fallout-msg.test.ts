@@ -38,13 +38,14 @@ describe("fallout-msg/format", () => {
         expect(fmt("{ 100 }{}{text}\n")).toBe("{100}{}{text}\n");
     });
 
-    it("keeps the spaces of an audio field, which the game reads as part of it", () => {
-        noop("{100}{ audio }{text}\n");
+    it("trims whitespace at both ends of an audio field and keeps the spaces inside it", () => {
+        expect(fmt("{100}{ audio }{text}\n")).toBe("{100}{audio}{text}\n");
+        expect(fmt("{100}{ }{text}\n")).toBe("{100}{}{text}\n");
         noop("{800}{Weapon Damage}{Light}\n");
     });
 
-    it("trims the number and leaves the audio alone", () => {
-        expect(fmt("{ 100 }{ audio }{text}\n")).toBe("{100}{ audio }{text}\n");
+    it("trims the number and the audio", () => {
+        expect(fmt("{ 100 }{ audio }{text}\n")).toBe("{100}{audio}{text}\n");
     });
 
     it("keeps an indented multi-line entry as written, trailing spaces inside the text included", () => {
@@ -127,7 +128,7 @@ describe("fallout-msg/format", () => {
 
     it("formats multiple entries", () => {
         const input = "{ 100 }{}{text}\n{ 200 }{ snd }{other}\n";
-        expect(fmt(input)).toBe("{100}{}{text}\n{200}{ snd }{other}\n");
+        expect(fmt(input)).toBe("{100}{}{text}\n{200}{snd}{other}\n");
     });
 
     it("is a no-op for empty input", () => {

@@ -34,7 +34,7 @@
   bytes or more are errors; text outside the braces is not, and a `#` or `//` line holding an entry is live and
   highlighted as one.
 - Hover and inlay hints find entries with signed numbers or a space in the audio field; formatting keeps indented
-  entries and audio fields as written.
+  entries as written.
 
 ### WeiDU
 

@@ -4,7 +4,8 @@
  * The game reads a file as a run of brace groups - every byte from a `{` to the next `}` is one field, newlines
  * and all - and skips whatever lies between them. Three groups make an entry: {number}{audio}{text}. So:
  *   - number group: whitespace is trimmed inside the braces (the game takes no padded number)
- *   - audio and text groups: content is preserved verbatim, spaces and newlines included
+ *   - audio group: whitespace is trimmed at both ends; it names a speech file, which padding is never part of
+ *   - text group: content is preserved verbatim, spaces and newlines included
  *   - text between the groups (notes, blank lines): trailing whitespace is trimmed and runs of blank lines
  *     collapse to one, but only where a line ends outside a group
  *
@@ -13,8 +14,9 @@
 
 import { stripBom, type FormatOutput } from "./format-utils";
 
-/** Every group is read as the engine reads it; the first of each three is a number. */
+/** Every group is read as the engine reads it; the first of each three is a number, the second an audio name. */
 const GROUPS_PER_ENTRY = 3;
+const AUDIO_GROUP = 1;
 
 /**
  * Split the text into lines that end outside a brace group. A newline inside a group is part of that
@@ -29,9 +31,10 @@ function splitLogicalLines(text: string): string[] {
         if (groupStart !== -1) {
             current += char;
             if (char === "}") {
-                if (groupIndex % GROUPS_PER_ENTRY === 0) {
-                    const number = current.slice(groupStart + 1, -1).trim();
-                    current = `${current.slice(0, groupStart)}{${number}}`;
+                // The text group is kept verbatim; the number and audio groups lose their surrounding whitespace.
+                if (groupIndex % GROUPS_PER_ENTRY <= AUDIO_GROUP) {
+                    const field = current.slice(groupStart + 1, -1).trim();
+                    current = `${current.slice(0, groupStart)}{${field}}`;
                 }
                 groupIndex++;
                 groupStart = -1;
