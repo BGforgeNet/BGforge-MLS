@@ -9,7 +9,17 @@ import * as path from "path";
 import pLimit from "p-limit";
 import { type Hover, type InlayHint, type Location, type Range, MarkupKind } from "vscode-languageserver/node";
 import { conlog } from "../logger";
-import { EXT_TBAF, EXT_TD, EXT_TSSL, LANG_TYPESCRIPT, MSG_LANGUAGES, TRA_LANGUAGES } from "../core/languages";
+import {
+    EXT_TBAF,
+    EXT_TD,
+    EXT_TSSL,
+    EXT_WEIDU_BAF,
+    EXT_WEIDU_D,
+    EXT_WEIDU_TP2,
+    LANG_TYPESCRIPT,
+    MSG_LANGUAGES,
+    TRA_LANGUAGES,
+} from "../core/languages";
 import {
     REGEX_MSG_HOVER,
     REGEX_MSG_INLAY,
@@ -322,7 +332,7 @@ export function generateInlayHints(
     if (ctx?.kind !== "loaded") return [];
 
     const hints: InlayHint[] = [];
-    const lines = blankComments(text).split("\n");
+    const lines = blankNonCode(text, filePath).split("\n");
     const lastLine = Math.min(range.end.line, lines.length);
     for (let line = range.start.line; line < lastLine; line++) {
         for (const ref of scanLineRefs(lines[line]!, ctx.traExt, filePath)) {
@@ -351,44 +361,67 @@ export interface UnresolvedRef {
     fileKey: string;
 }
 
-/**
- * Blank out line and block comment content, replacing each comment character with a space (newlines
- * kept) so every other character keeps its exact line/column - reference ranges stay accurate. Used so
- * the diagnostic never flags a commented-out reference (commenting dialog with a line comment is
- * ubiquitous in WeiDU mods). Not string-aware: a line-comment marker inside a `~...~` string is treated
- * as a comment, acceptable here since a @N inside a string is not a real reference either.
- */
-function blankComments(text: string): string {
-    const out = [...text];
-    let state: "code" | "line" | "block" = "code";
-    for (let i = 0; i < text.length; i++) {
-        const c = text[i];
-        const next = text[i + 1];
-        if (state === "code") {
-            if (c === "/" && next === "/") {
-                state = "line";
-                out[i] = " ";
-                out[i + 1] = " ";
-                i++;
-            } else if (c === "/" && next === "*") {
-                state = "block";
-                out[i] = " ";
-                out[i + 1] = " ";
-                i++;
-            }
-        } else if (state === "line") {
-            if (c === "\n") state = "code";
-            else out[i] = " ";
-        } else {
-            if (c === "*" && next === "/") {
-                out[i] = " ";
-                out[i + 1] = " ";
-                state = "code";
-                i++;
-            } else if (c !== "\n") {
-                out[i] = " ";
-            }
+/** The WeiDU script files, whose strings and nested block comments hide a `@N` from the reference scans. */
+const WEIDU_SCRIPT_EXTENSIONS: ReadonlySet<string> = new Set([...EXT_WEIDU_TP2, EXT_WEIDU_BAF, EXT_WEIDU_D]);
+
+/** The offset just past the end of the block comment opened at `open`, or the end of text if it never closes. */
+function blockCommentEnd(text: string, open: number, nests: boolean): number {
+    let depth = 1;
+    for (let i = open + 2; i < text.length; i++) {
+        if (text[i] === "*" && text[i + 1] === "/") {
+            depth--;
+            i++;
+            if (depth === 0) return i + 1;
+        } else if (nests && text[i] === "/" && text[i + 1] === "*") {
+            depth++;
+            i++;
         }
+    }
+    return text.length;
+}
+
+/** The offset just past the delimiter closing the string opened at `open` (or the end of text if it never does). */
+function stringEnd(text: string, open: number, closer: string): number {
+    const close = text.indexOf(closer, open + closer.length);
+    return close === -1 ? text.length : close + closer.length;
+}
+
+/**
+ * Blank out comments, and in a WeiDU script the strings too, replacing each character with a space (newlines
+ * kept) so every other character keeps its exact line/column - reference ranges stay accurate. Used so the
+ * scans never find a commented-out reference (commenting dialog with a line comment is ubiquitous in WeiDU
+ * mods) nor a `@N` that is only a string's text.
+ *
+ * A WeiDU script (TP2, BAF, D) reads `"..."`, `~...~` and `~~~~~...~~~~~` as strings that may span lines, and
+ * block comments that nest; neither a comment marker inside a string nor a quote inside a comment counts.
+ * Other consumers (SSL, the TypeScript transpiler sources) keep the plain reading: comments only, not nested.
+ */
+function blankNonCode(text: string, filePath: string): string {
+    const weidu = WEIDU_SCRIPT_EXTENSIONS.has(path.extname(filePath).toLowerCase());
+    // UTF-16 units, not the code points a spread yields: every offset below indexes `text`.
+    // oxlint-disable-next-line unicorn/prefer-spread -- a spread splits by code point and would shift every offset after an astral character.
+    const out = text.split("");
+    const blank = (from: number, to: number): void => {
+        for (let i = from; i < to; i++) if (out[i] !== "\n") out[i] = " ";
+    };
+    for (let i = 0; i < text.length;) {
+        const char = text[i];
+        let end = i + 1;
+        if (char === "/" && text[i + 1] === "/") {
+            const newline = text.indexOf("\n", i);
+            end = newline === -1 ? text.length : newline;
+        } else if (char === "/" && text[i + 1] === "*") {
+            end = blockCommentEnd(text, i, weidu);
+        } else if (weidu && char === '"') {
+            end = stringEnd(text, i, '"');
+        } else if (weidu && char === "~") {
+            end = stringEnd(text, i, text.startsWith("~~~~~", i) ? "~~~~~" : "~");
+        } else {
+            i = end;
+            continue;
+        }
+        blank(i, end);
+        i = end;
     }
     return out.join("");
 }
@@ -412,7 +445,7 @@ export function collectUnresolvedRefs(
     if (ctx?.kind !== "loaded") return [];
 
     const unresolved: UnresolvedRef[] = [];
-    blankComments(text)
+    blankNonCode(text, filePath)
         .split("\n")
         .forEach((lineText, line) => {
             for (const ref of scanLineRefs(lineText, ctx.traExt, filePath)) {
@@ -434,11 +467,13 @@ export function collectUnresolvedRefs(
  */
 function scanFileForReferences(
     text: string,
+    filePath: string,
     entryNum: string,
     traExt: TraExt,
 ): Array<{ line: number; character: number; endCharacter: number }> {
     const results: Array<{ line: number; character: number; endCharacter: number }> = [];
-    const lines = text.split("\n");
+    // The same reading of the document as the hints and the diagnostic, so all three agree on what is a reference.
+    const lines = blankNonCode(text, filePath).split("\n");
 
     // MSG references (mstr(num), NOption(num), floater_rand(x, num)) use a
     // combined regex covering both first-arg and floater_rand second-arg
@@ -505,7 +540,7 @@ export async function findReferencesInConsumers(
     for (const read of reads) {
         if (!read) continue;
         const { absPath, text } = read;
-        const refs = scanFileForReferences(text, entryNum, traExt);
+        const refs = scanFileForReferences(text, absPath, entryNum, traExt);
         const fileUri = pathToUri(absPath);
         for (const ref of refs) {
             locations.push({

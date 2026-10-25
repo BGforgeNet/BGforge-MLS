@@ -1378,6 +1378,95 @@ translation~`;
         });
     });
 
+    // A `@N` inside a string is the string's text, not a reference, in every WeiDU script language. The
+    // `@100` entry exists and `@999` does not, so a read of either shows in the hints and the diagnostics.
+    describe.each([
+        { langId: "weidu-baf", file: "test.baf", inString: 'SetGlobal("@100@999","GLOBAL",1)' },
+        { langId: "weidu-baf", file: "test.baf", inString: "DisplayString(Myself,~@100 @999~)" },
+        { langId: "weidu-d", file: "test.d", inString: "SAY ~@100 @999~" },
+        { langId: "weidu-d", file: "test.d", inString: 'IF ~Global("@100@999","GLOBAL",1)~ THEN' },
+        { langId: "weidu-tp2", file: "test.tp2", inString: "PRINT ~@100 @999~" },
+        { langId: "weidu-tp2", file: "test.tp2", inString: 'PRINT "@100 @999"' },
+    ])("a @N inside a string in $file: $inString", ({ langId, file, inString }) => {
+        const range = { start: { line: 0, character: 0 }, end: { line: 2, character: 0 } };
+
+        it("shows no inlay hint and flags nothing", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/${file}`;
+
+            expect(translation.getInlayHints(uri, langId, inString, range)).toEqual([]);
+            expect(translation.getDiagnostics(uri, langId, inString)).toEqual([]);
+        });
+
+        it("still reads the reference after the string on the same line", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/${file}`;
+            const text = `${inString} @100 @999`;
+            const tail = text.length;
+
+            expect(translation.getInlayHints(uri, langId, text, range).map((hint) => hint.position)).toEqual([
+                { line: 0, character: tail - " @999".length },
+            ]);
+            expect(translation.getDiagnostics(uri, langId, text).map((diagnostic) => diagnostic.range.start)).toEqual([
+                { line: 0, character: tail - "@999".length },
+            ]);
+        });
+
+        it("is no reference for find-references either", async () => {
+            fs.writeFileSync(path.join(tempDir, file), `${inString}\n`);
+            await translation.init();
+
+            const refs = await translation.getReferences(
+                `file://${tempDir}/test.tra`,
+                "weidu-tra",
+                { line: 0, character: 0 },
+                false,
+            );
+
+            expect(refs).toEqual([]);
+        });
+    });
+
+    describe("a comment marker inside a string is text, and a string marker inside a comment is no string", () => {
+        const range = { start: { line: 0, character: 0 }, end: { line: 3, character: 0 } };
+
+        it("reads a reference after a string holding //", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            const text = "SAY ~http://x~ @100 @999";
+
+            expect(translation.getInlayHints(uri, "weidu-d", text, range)).toHaveLength(1);
+            expect(translation.getDiagnostics(uri, "weidu-d", text)).toHaveLength(1);
+        });
+
+        it("ignores a lone quote inside a comment", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            const text = "// it's ~ here\nSAY @100 @999";
+
+            expect(translation.getInlayHints(uri, "weidu-d", text, range)).toHaveLength(1);
+            expect(translation.getDiagnostics(uri, "weidu-d", text)).toHaveLength(1);
+        });
+
+        it("reads a reference after a nested block comment", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.baf`;
+            const text = "/* a /* b */ @999 */ DisplayString(Myself,@100)";
+
+            expect(translation.getInlayHints(uri, "weidu-baf", text, range)).toHaveLength(1);
+            expect(translation.getDiagnostics(uri, "weidu-baf", text)).toEqual([]);
+        });
+
+        it("reads a reference after a five-tilde string holding a single tilde", async () => {
+            await translation.init();
+            const uri = `file://${tempDir}/test.d`;
+            const text = "SAY ~~~~~a ~ @999 b~~~~~ @100";
+
+            expect(translation.getInlayHints(uri, "weidu-d", text, range)).toHaveLength(1);
+            expect(translation.getDiagnostics(uri, "weidu-d", text)).toEqual([]);
+        });
+    });
+
     describe("unified missing-reference handling across hover / inlay / diagnostic", () => {
         it("hover on a missing entry returns nothing - the diagnostic is the single signal", async () => {
             await translation.init();
