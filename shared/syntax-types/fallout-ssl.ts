@@ -70,3 +70,6 @@ export enum SyntaxType {
   OtherPreprocessor = "other_preprocessor",
   String = "string",
 }
+
+/** The pattern of the grammar's word token (its bare names). */
+export const WORD_PATTERN = "[a-zA-Z_][a-zA-Z0-9_]*";

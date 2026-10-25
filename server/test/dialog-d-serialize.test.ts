@@ -1,10 +1,8 @@
-import { readFileSync } from "fs";
-import path from "path";
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "@bgforge/shared/parsers/weidu-d";
 import { parseDDialog } from "../src/weidu-d/dialog";
 import { modelFromD, type DialogModel, type DialogState } from "@bgforge/shared/dialog-model";
-import { BARE_LABEL_PATTERN, modelToD } from "@bgforge/shared/dialog-d-serialize";
+import { modelToD, serializeLabel } from "@bgforge/shared/dialog-d-serialize";
 
 // ---------------------------------------------------------------------------
 // Round-trip helpers
@@ -295,11 +293,15 @@ END
             expect(out).toContain("COPY_TRANS ~sourcefile~ 3");
         });
 
-        it("keeps its bare-label shape the grammar's identifier token", () => {
-            const grammar = JSON.parse(
-                readFileSync(path.resolve(__dirname, "../../grammars/weidu-d/src/grammar.json"), "utf8"),
-            ) as { rules: { identifier: { type: string; value: string } } };
-            expect(grammar.rules.identifier).toEqual({ type: "PATTERN", value: BARE_LABEL_PATTERN });
+        // A keyword can name a state only quoted (`~END~`), so it is written quoted even though it has a word's shape.
+        it.each([
+            ["q1", "q1"],
+            ["KHPC1.1", "KHPC1.1"],
+            ["my label", "~my label~"],
+            ["END", "~END~"],
+            ["EXIT", "~EXIT~"],
+        ])("writes the label %s as %s", (label, written) => {
+            expect(serializeLabel(label)).toBe(written);
         });
 
         // The model holds a label as WeiDU reads it, delimiters stripped, so one that cannot stand bare is quoted.

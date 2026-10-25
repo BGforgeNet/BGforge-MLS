@@ -302,6 +302,11 @@ export interface DDialogTransition {
     trigger?: string;
     action?: string;
     target: DDialogTarget;
+    /**
+     * WeiDU D only: the transition's features the model does not edit (FLAGS, JOURNAL, SOLVED_JOURNAL,
+     * UNSOLVED_JOURNAL), as their source text in source order, so a re-serialized transition writes them back.
+     */
+    verbatimFeatures?: string[];
     /** Span of the target identifier (the `goTo(<id>)` / `extern(file, <id>)` argument) in the source,
      * for a token-splice retarget without reflowing the transition. Set by the TD source parser. */
     targetRange?: { start: number; end: number };

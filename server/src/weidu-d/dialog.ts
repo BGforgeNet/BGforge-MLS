@@ -28,6 +28,7 @@ import {
     extractTarget,
     extractTargetLabelRange,
     extractTextContent,
+    extractVerbatimFeatures,
     chainEpilogueTarget,
     getNodeFieldText,
 } from "./dialog-utils";
@@ -326,6 +327,7 @@ function parseTransitionFull(node: SyntaxNode): DDialogTransition {
     const replyText = extractReplyText(node);
     const action = extractDoAction(node);
     const target = extractTarget(node) ?? { kind: "exit" as const };
+    const verbatimFeatures = extractVerbatimFeatures(node);
 
     return {
         line: node.startPosition.row + 1,
@@ -335,6 +337,7 @@ function parseTransitionFull(node: SyntaxNode): DDialogTransition {
         trigger: trigger || undefined,
         action: action || undefined,
         target,
+        ...(verbatimFeatures ? { verbatimFeatures } : {}),
         range: { start: node.startIndex, end: node.endIndex },
         targetRange: extractTargetLabelRange(node),
     };
@@ -351,6 +354,7 @@ function parseTransitionShort(node: SyntaxNode): DDialogTransition {
 
     // Short transitions use short_goto for target
     const target = extractTarget(node) ?? { kind: "exit" as const };
+    const verbatimFeatures = extractVerbatimFeatures(node);
 
     return {
         line: node.startPosition.row + 1,
@@ -360,6 +364,7 @@ function parseTransitionShort(node: SyntaxNode): DDialogTransition {
         trigger: trigger || undefined,
         action: action || undefined,
         target,
+        ...(verbatimFeatures ? { verbatimFeatures } : {}),
         range: { start: node.startIndex, end: node.endIndex },
         targetRange: extractTargetLabelRange(node),
     };

@@ -53,7 +53,26 @@ const subtypesBlock =
               })
               .join("") +
           "} as const;\n";
-fs.writeFileSync(outPath, header + block + "\n" + subtypesBlock);
+// The grammar's word token and reserved words, read from the grammar.json beside the .d.ts, for code that writes
+// source where the grammar is not loaded (a webview) and must know which names can stand bare.
+const grammarJson = JSON.parse(fs.readFileSync(path.join(path.dirname(dtsPath), "grammar.json"), "utf8"));
+const wordRule = grammarJson.word ? grammarJson.rules[grammarJson.word] : undefined;
+const wordBlock =
+    wordRule?.type === "PATTERN"
+        ? "\n/** The pattern of the grammar's word token (its bare names). */\n" +
+          `export const WORD_PATTERN = ${JSON.stringify(wordRule.value)};\n`
+        : "";
+const reserved = (grammarJson.reserved?.global ?? [])
+    .filter((rule) => rule.type === "STRING")
+    .map((rule) => rule.value);
+const reservedBlock =
+    reserved.length === 0
+        ? ""
+        : "\n/** The words the grammar reserves: never a bare name. */\n" +
+          "export const RESERVED_WORDS: ReadonlySet<string> = new Set<string>([\n" +
+          reserved.map((word) => `  ${JSON.stringify(word)},`).join("\n") +
+          "\n]);\n";
+fs.writeFileSync(outPath, header + block + "\n" + subtypesBlock + wordBlock + reservedBlock);
 
 dts =
     `import type { SyntaxType } from "./syntax-type";\n\n` +

@@ -629,4 +629,72 @@ describe("applyDDialogEdits - stale-range edited model (mid-edit reconcile seque
         expect(doc3.match(/BEGIN new_state/g)).toHaveLength(1);
         expect(doc3).toContain("~A new line.~");
     });
+
+    it("retargets a jump to a state labelled with a keyword, keeping the label quoted", () => {
+        const source = [
+            "BEGIN ~d~",
+            "IF ~~ THEN BEGIN ~END~ SAY ~a~ IF ~~ THEN EXIT END",
+            "IF ~~ THEN BEGIN s SAY ~b~ IF ~~ THEN REPLY ~r~ GOTO s END",
+            "",
+        ].join("\n");
+        const original = modelFromD(parseDDialog(source));
+        const edited = structuredClone(original);
+        edited.roots[0]!.states.find((s) => s.id === "s")!.choices[0]!.target = { kind: "state", stateId: "END" };
+
+        const out = applyDDialogEdits(source, edited, original);
+
+        expect(out).toBe(source.replace("GOTO s", "GOTO ~END~"));
+    });
+
+    // An edit re-serializes the transition it changes; every feature the edit did not touch must survive it.
+    it("keeps a transition's FLAGS and journal entries when it re-serializes the transition", () => {
+        const source = [
+            "BEGIN ~d~",
+            "IF ~~ THEN BEGIN s",
+            "  SAY ~x~",
+            "  IF ~~ THEN REPLY ~a~ JOURNAL ~j~ FLAGS 0x4 EXIT",
+            "  IF ~~ THEN REPLY ~b~ SOLVED_JOURNAL @5 UNSOLVED_JOURNAL ~u~ DO ~act~ GOTO s",
+            "END",
+            "",
+        ].join("\n");
+        const original = modelFromD(parseDDialog(source));
+        const edited = structuredClone(original);
+        const [first, second] = edited.roots[0]!.states[0]!.choices;
+        first!.text = "a2";
+        second!.target = { kind: "exit" };
+
+        const out = applyDDialogEdits(source, edited, original);
+
+        expect(out).toBe(
+            [
+                "BEGIN ~d~",
+                "IF ~~ THEN BEGIN s",
+                "  SAY ~x~",
+                "  ++ ~a2~ JOURNAL ~j~ FLAGS 0x4 EXIT",
+                "  ++ ~b~ DO ~act~ SOLVED_JOURNAL @5 UNSOLVED_JOURNAL ~u~ EXIT",
+                "END",
+                "",
+            ].join("\n"),
+        );
+    });
+
+    it("keeps a transition's FLAGS and journal entries when it re-serializes the whole state", () => {
+        const source = [
+            "BEGIN ~d~",
+            "IF ~~ THEN BEGIN s",
+            "  SAY ~x~",
+            "  IF ~~ THEN JOURNAL ~j~ FLAGS 4 EXIT",
+            "END",
+            "",
+        ].join("\n");
+        const original = modelFromD(parseDDialog(source));
+        const edited = structuredClone(original);
+        // A rename re-serializes the whole state.
+        edited.roots[0]!.states[0]!.id = "t";
+
+        const out = applyDDialogEdits(source, edited, original);
+
+        expect(out).toContain("IF ~~ THEN JOURNAL ~j~ FLAGS 4 EXIT");
+        expect(out).toContain("BEGIN t");
+    });
 });

@@ -361,6 +361,8 @@ export interface DialogChoice {
     condition?: string;
     action?: string;
     target: DialogTarget;
+    /** WeiDU D only: as `DDialogTransition.verbatimFeatures`, written back unchanged whenever the choice is. */
+    verbatimFeatures?: string[];
     reaction?: DialogReaction;
     /**
      * SSL only: true when the option is a low-INT variant (`NLowOption`/`GLowOption`/`BLowOption`),
@@ -626,6 +628,7 @@ function stateFromD(s: DDialogState): DialogState {
             condition: tr.trigger,
             action: tr.action,
             target: targetFromD(tr.target),
+            ...(tr.verbatimFeatures ? { verbatimFeatures: tr.verbatimFeatures } : {}),
             sourceRange: tr.range,
             targetRange: tr.targetRange,
             targetCallRange: tr.targetCallRange,

@@ -42,6 +42,7 @@ function choiceEqual(a: DialogChoice, b: DialogChoice): boolean {
         (a.text ?? null) === (b.text ?? null) &&
         (a.condition ?? "") === (b.condition ?? "") &&
         (a.action ?? null) === (b.action ?? null) &&
+        (a.verbatimFeatures ?? []).join("\n") === (b.verbatimFeatures ?? []).join("\n") &&
         targetsEqual(a.target, b.target)
     );
 }

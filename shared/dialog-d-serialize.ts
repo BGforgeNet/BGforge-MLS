@@ -4,6 +4,7 @@
  */
 
 import type { DialogChoice, DialogModel, DialogRoot, DialogState, DialogTarget } from "./dialog-model";
+import { RESERVED_WORDS, WORD_PATTERN } from "./syntax-types/weidu-d";
 
 /**
  * Emit WeiDU D source text from a DialogModel.
@@ -69,20 +70,15 @@ export function serializeSayValue(state: DialogState): string {
     return [state.text, ...state.sayTexts.slice(1)].map((t) => serializeTextValue(t)).join(" = ");
 }
 
-/**
- * The shape of a bare state label: the D grammar's identifier token (grammars/weidu-d/grammar.js), copied because
- * this module also runs in the webview, where the grammar is not loaded. server/test/dialog-d-serialize.test.ts
- * pins the copy to the generated grammar.
- */
-export const BARE_LABEL_PATTERN = "[A-Za-z0-9_][A-Za-z0-9_#.-]*";
-const BARE_LABEL = new RegExp(`^${BARE_LABEL_PATTERN}$`);
+/** A bare state label: the D grammar's word token, generated from the grammar since the webview has no parser. */
+const BARE_LABEL = new RegExp(`^(?:${WORD_PATTERN})$`);
 
 /**
  * A state label as D source. The model holds a label as WeiDU reads it, delimiters stripped, so `~q1~` and `q1`
- * are one state; a label that cannot stand as a bare word (`my label`) is written quoted.
+ * are one state; a label that cannot stand as a bare word (`my label`, or a keyword such as `END`) is written quoted.
  */
 export function serializeLabel(label: string): string {
-    return BARE_LABEL.test(label) ? label : `~${label}~`;
+    return BARE_LABEL.test(label) && !RESERVED_WORDS.has(label) ? label : `~${label}~`;
 }
 
 export function serializeState(state: DialogState): string[] {
@@ -119,7 +115,7 @@ export function serializeChoice(choice: DialogChoice): string {
         if (choice.action != null) {
             parts.push(`DO ~${choice.action}~`);
         }
-        parts.push(serializeNextShort(choice.target));
+        parts.push(...(choice.verbatimFeatures ?? []), serializeNextShort(choice.target));
         return parts.join(" ");
     }
 
@@ -130,7 +126,7 @@ export function serializeChoice(choice: DialogChoice): string {
     if (choice.action != null) {
         parts.push(`DO ~${choice.action}~`);
     }
-    parts.push(serializeTarget(choice.target));
+    parts.push(...(choice.verbatimFeatures ?? []), serializeTarget(choice.target));
 
     return parts.join(" ");
 }

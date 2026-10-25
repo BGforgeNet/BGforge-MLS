@@ -185,6 +185,14 @@ export function extractDoAction(transitionNode: SyntaxNode): string | undefined 
     return undefined;
 }
 
+/** The transition features the model does not edit (FLAGS and the JOURNAL kinds), as source text in source order. */
+export function extractVerbatimFeatures(transitionNode: SyntaxNode): string[] | undefined {
+    const features = transitionNode.children
+        .filter((c) => c.type === SyntaxType.FlagsFeature || c.type === SyntaxType.JournalFeature)
+        .map((c) => c.text);
+    return features.length > 0 ? features : undefined;
+}
+
 export function extractReplyText(transitionNode: SyntaxNode): string | undefined {
     for (const child of transitionNode.children) {
         if (child.type === SyntaxType.ReplyFeature) {
