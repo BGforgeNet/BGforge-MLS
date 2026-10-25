@@ -4,53 +4,36 @@
 
 ### Fallout SSL
 
-- Signature help covers the built-in and sfall functions, about 580 of them, marking the argument being typed.
-  It used to show for one function only.
-- Built-in functions describe their arguments - the constants an argument takes, its units, special values - in
-  signature help and in the completion tooltip.
-- `SetOneOptPause` is no longer offered in completion or highlighted: it has no effect in the engine, and its
-  description promised one. Scripts using it still compile.
-- `ActivateRegion` is documented as what it does - it simulates a mouse event on a region, with the event numbers
-  listed - instead of as enabling or disabling the region. `AddButtonProc` and `AddRegionProc` name their
-  procedures in the order the engine uses: enter, exit, press, release.
-- `tokenize` shows its real signature, `string tokenize(str, prevToken, delimiter)`: it returns the next token, and
-  the previous token comes before the delimiter.
-- `roll_dice` is no longer offered in completion or highlighted: the engine never implemented it, and the call
-  only reports a script error and returns 0. Scripts using it still compile.
-- Corrected signatures: `AddButtonGFX` takes its images as pressed, normal, hover; `drop_obj`, `gSay_Option`,
-  `gSay_Reply`, `move_obj_inven_to_obj` and `play_sfx` return nothing and `get_pc_stat` returns an int;
-  `message_str` returns a string; misspelled argument types in `obj_is_carrying_obj_pid`, `set_exit_grids` and
-  `giQ_Option` are fixed.
+- Signature help covers about 580 built-in and sfall functions, and with the completion tooltip describes each
+  argument: the constants it takes, its units, special values.
+- `SetOneOptPause` and `roll_dice` are no longer offered in completion or highlighted: neither does anything in the
+  engine. Scripts using them still compile.
+- Corrected descriptions and signatures: `ActivateRegion` simulates a mouse event on a region; `AddButtonProc` and
+  `AddRegionProc` take enter, exit, press, release procedures; `AddButtonGFX` takes pressed, normal, hover images;
+  `tokenize` is `string tokenize(str, prevToken, delimiter)`; `drop_obj`, `gSay_Option`, `gSay_Reply`,
+  `move_obj_inven_to_obj` and `play_sfx` return nothing, `get_pc_stat` an int, `message_str` a string; argument
+  types of `obj_is_carrying_obj_pid`, `set_exit_grids` and `giQ_Option` are fixed.
 
 ### WeiDU
 
-- The built-in BAF compiler reads an object written with empty parentheses, such as `LastSeenBy()`, as
-  `LastSeenBy(Myself)`, as WeiDU does, so a compiled script matches WeiDU's. It used to store a bare `LastSeenBy`.
-- TP2 no longer reports syntax errors on TP2 code WeiDU accepts: the remaining actions, patches, values, operators,
-  text arguments and keyword-named variables.
-- TP2 reads code the way WeiDU does: `1 + 2 * 3` multiplies first, `FILE_EXISTS ~a~ AND FILE_EXISTS ~b~` is two
-  checks, a `count = 1` after a list such as `REMOVE_STORE_ITEM` is its own assignment, `/* ... */` inside a string
-  is text, and a component keeps all its actions.
-- A TP2 file being edited keeps its structure: a block, function or `%variable%` not closed yet no longer turns the
-  rest of the file into one syntax error, so the outline, folding and completion keep working while you type.
-- TP2 completion inside a function call that has no `END` yet offers that function's own parameters, across lines,
-  and variables after `=`. `END`, `ELSE` and `THEN` are offered, `PHP_EACH` offers its array again, and an `LPF`
-  call gets the patch function's parameters when an action function shares its name.
-- TP2 functions defined inside a component or a block appear in the outline, completion and the call hierarchy.
-- Formatting TP2 no longer drops the name in `INNER_PATCH_SAVE EVAL`, and hover pairs every function parameter
-  with its own default.
+- The BAF compiler reads `LastSeenBy()` as `LastSeenBy(Myself)`, as WeiDU does.
+- TP2 accepts the remaining code WeiDU accepts and reads it the same way: operator precedence, `AND` between
+  predicates, an assignment after a list, a comment inside a string, a component's actions.
+- An unclosed block, function or `%variable%` in a TP2 file no longer breaks the outline, folding and completion
+  for the rest of the file while you type.
+- TP2 completion offers the parameters of a call still being typed, variables after `=`, `END`, `ELSE`, `THEN` and
+  `PHP_EACH` arrays, and resolves `LPF` to the patch function when an action function shares its name.
+- TP2 functions defined inside a component or block appear in the outline, completion and call hierarchy.
+- TP2 formatting keeps the name in `INNER_PATCH_SAVE EVAL`; hover pairs each parameter with its own default.
 
 ### All languages
 
-- A name several headers define identically is offered once in completion; definitions that differ each show
-  with their header.
-- Formatting a file that has a syntax error leaves it unchanged without a warning on every save: the error is
-  already marked in the file.
+- Completion offers a name several headers define identically once.
+- Formatting a file with a syntax error leaves it unchanged, without a warning on every save.
 
 ### Icons
 
-- `weidu.log` shows the WeiDU TP2 icon and Fallout's `scripts.lst` the SSL icon, under any file icon theme. In the
-  bundled bgforge theme they used to show a generic info and CSV icon.
+- `weidu.log` and `scripts.lst` show the TP2 and SSL icons under any file icon theme.
 
 ## 3.17.0
 
