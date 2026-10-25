@@ -1,0 +1,22 @@
+IF
+  OR(2)
+  See(Player1)
+  See(Player2)
+  OR(#2)
+  See(Player3)
+  See(Player4)
+  OR(0x2)
+  See(Player5)
+  // between
+  See(Player6)
+  OR(%n%)
+  See(Player7)
+  See(Player8)
+  OR(2)
+  See(Player9)
+  See(Player10)
+  See(Player11)
+THEN
+  RESPONSE #100
+    NoAction()
+END

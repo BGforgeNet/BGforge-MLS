@@ -7,6 +7,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { bafIntegerValue } from "@bgforge/shared/baf-integer";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-baf";
 import { throwOnParseError, normalizeComment } from "../format-utils";
 import { type FormatResult } from "../format-types";
@@ -123,7 +124,10 @@ function formatIfClause(node: SyntaxNode, result: string[], ctx: FormatContext):
             // Start OR group
             result.push(ctx.indent + formatOrMarker(child));
             const count = child.childForFieldName("count");
-            orCount = parseInt(count?.text ?? "0", 10);
+            // A count read from a `%variable%` is unknown here, so its conditions stay flat: an indent would claim
+            // a grouping the file may not have.
+            const known = count === null ? Number.NaN : bafIntegerValue(count.text);
+            orCount = Number.isFinite(known) ? known : 0;
             inOrGroup = true;
             lastNodeRow = child.endPosition.row;
         } else if (child.type === SyntaxType.Condition) {
