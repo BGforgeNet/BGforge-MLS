@@ -15,13 +15,24 @@ repository:
     patterns:
       - match: (//).*
         name: comment.line.weidu-baf
-      - begin: /\*
-        end: \*/
-        name: comment.block.weidu-baf
+      - include: '#block-comment'
 
+  # Block comments nest, as the reference reads them: an inner opener needs its own closer. A `//` inside one
+  # is plain text, so only the block rule recurses.
+  block-comment:
+    begin: /\*
+    end: \*/
+    name: comment.block.weidu-baf
+    patterns:
+      - include: '#block-comment'
+
+  # A number is decimal, or `0x` and decimal digits (the reference reads `0x19` as 25 and rejects `0xFF`), with
+  # an optional sign; `#5` and `# 5` are numbers too. Neither may start inside a name (`A6#0`).
   numbers:
     patterns:
-      - match: \b(([0-9]+)|(0x[0-9a-fA-F]+))\b
+      - match: (?<![A-Za-z0-9_#!-])#[ \t]*[0-9]+\b
+        name: constant.numeric.weidu-baf
+      - match: (?<![A-Za-z0-9_#!])-?\b(0x[0-9]+|[0-9]+)\b
         name: constant.numeric.weidu-baf
 
   # A bracketed value: an object specifier ([PC], [NOTGOOD.HUMANOID], [ENEMY.0.0.MAGE]) or a point
@@ -41,7 +52,7 @@ repository:
   # LastSeenBy), written bare without brackets. IESDP lists the three categories separately - a specifier is
   # unbound and re-checked at every reference.
   bracketed-values:
-    begin: (\[)(?=(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\.(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*\])
+    begin: (\[)(?=((-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\.(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*)?\])
     beginCaptures:
       "1": { name: keyword.punctuation.bracket.weidu-baf }
     end: (\])
@@ -150,13 +161,32 @@ repository:
     patterns:
       - match: \b(OR)\b|(!)
 
+  # Strings may span lines. Order is load-bearing: the five-quote symbol and the five-tilde text come before
+  # the one-delimiter forms they begin with. A text may be followed by its sound, `~he~ [SND]`.
   strings:
     patterns:
+      - name: constant.other.weidu-baf
+        match: '"""""[^"]*"""""'
       - name: string.quoted.double.weidu-baf
         begin: '"'
         end: '"'
         patterns:
           - include: '#vars'
+      - name: string.quoted.5tildes.weidu-baf
+        begin: '~~~~~'
+        end: '~~~~~'
+        patterns:
+          - include: '#vars'
+      - name: string.quoted.tilde.weidu-baf
+        begin: '~'
+        end: '~'
+        patterns:
+          - include: '#vars'
+      - match: (?<=~)(\s*)(\[)([A-Za-z0-9_#!-]+)(\])
+        captures:
+          '2': { name: keyword.punctuation.bracket.weidu-baf }
+          '3': { name: string.other.sound.weidu-baf }
+          '4': { name: keyword.punctuation.bracket.weidu-baf }
 
   vars:
     name: variable.parameter.weidu-baf
@@ -208,9 +238,10 @@ repository:
   # Ordering is load-bearing: triggers, actions, object-ids, and constants-irregular MUST be included
   # before this rule, or it claims the 13 ALL-CAPS call names (HP, XP, G, LOS, OR, INI, SG, ...) as
   # constants. server/test/weidu-baf/textmate-syntax.test.ts guards that.
+  # A `#` or `!` may sit inside a name (A6#0), as the reference's lexer allows.
   constants-casing:
     patterns:
-      - match: \b[A-Z][A-Z0-9_]*\b
+      - match: \b[A-Z][A-Z0-9_]*(?:[#!][A-Z0-9_#!]*)?\b
         name: constant.other.weidu-baf
   triggers:
     # Auto-generated from weidu-baf-iesdp.yml - do not edit manually.

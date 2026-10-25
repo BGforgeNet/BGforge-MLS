@@ -178,3 +178,98 @@ describe("weidu-baf TextMate syntax - bracketed values", () => {
         expect(getTokenScopes("IF See([PC]) THEN", 0, "(")).not.toContain("keyword.punctuation.bracket.weidu-baf");
     });
 });
+
+describe("weidu-baf TextMate syntax - the forms the reference reads", () => {
+    const COMMENT = "comment.block.weidu-baf";
+    const DOUBLE = "string.quoted.double.weidu-baf";
+    const TILDE = "string.quoted.tilde.weidu-baf";
+    const FIVE_TILDES = "string.quoted.5tildes.weidu-baf";
+    const NUMBER = "constant.numeric.weidu-baf";
+    const CONSTANT = "constant.other.weidu-baf";
+    const VARIABLE = "variable.parameter.weidu-baf";
+    /** A one-response script whose action line is `action`, line 4 (0-based) of the text. */
+    const inAction = (action: string): string => `IF\n  False()\nTHEN\n  RESPONSE #100\n    ${action}\nEND`;
+    const scopesIn = (action: string, target: string): readonly string[] => getTokenScopes(inAction(action), 4, target);
+
+    it("keeps a nested block comment one comment to its outermost end", () => {
+        const text = "IF\n  /* outer /* inner */ still_comment */ True()\nTHEN";
+
+        expect(getTokenScopes(text, 1, "still_comment")).toContain(COMMENT);
+        expect(getTokenScopes(text, 1, "True")).not.toContain(COMMENT);
+    });
+
+    it("keeps a block comment going over lines, nested or not", () => {
+        const text = "IF\n  /* outer /* inner */\n  still_comment */ True()\nTHEN";
+
+        expect(getTokenScopes(text, 2, "still_comment")).toContain(COMMENT);
+        expect(getTokenScopes(text, 2, "True")).not.toContain(COMMENT);
+    });
+
+    it("scopes a string that spans lines to its closing delimiter", () => {
+        const doubled = inAction('DisplayString(Myself,"two\nwords_here")').split("\n");
+
+        expect(getTokenScopes(doubled.join("\n"), 5, "words_here")).toContain(DOUBLE);
+        const tilded = inAction("DisplayString(Myself,~two\nwords_here~)");
+
+        expect(getTokenScopes(tilded, 5, "words_here")).toContain(TILDE);
+    });
+
+    it("scopes a tilde text, and a comment marker inside a string is no comment", () => {
+        expect(scopesIn("DisplayString(Myself,~a // b~)", "a // b")).toContain(TILDE);
+        expect(scopesIn("DisplayString(Myself,~a // b~)", "a // b")).not.toContain("comment.line.weidu-baf");
+        expect(scopesIn('SetGlobal("// x","GLOBAL",1)', "// x")).not.toContain("comment.line.weidu-baf");
+    });
+
+    it("reads a five-tilde text whole, a single tilde inside it included", () => {
+        const scopes = scopesIn("DisplayString(Myself,~~~~~a ~ b_here~~~~~)", "b_here");
+
+        expect(scopes).toContain(FIVE_TILDES);
+        expect(scopesIn("DisplayString(Myself,~~~~~a ~ b~~~~~) Wait(1)", "Wait")).not.toContain(FIVE_TILDES);
+    });
+
+    it("scopes the sound after a text as a string-like value, not a constant", () => {
+        const action = "DisplayString(Myself,~he~ [SNDM] ~she~ [SNDF])";
+
+        expect(scopesIn(action, "SNDM")).toContain("string.other.sound.weidu-baf");
+        expect(scopesIn(action, "SNDM")).not.toContain(CONSTANT);
+        expect(scopesIn(action, "SNDF")).toContain("string.other.sound.weidu-baf");
+        expect(scopesIn(action, "she")).toContain(TILDE);
+    });
+
+    it("reads five double quotes around a name as one symbol, not as strings", () => {
+        const action = 'ApplySpell(Myself,"""""WIZARD_MAGIC_MISSILE""""")';
+
+        expect(scopesIn(action, "WIZARD_MAGIC_MISSILE")).toContain(CONSTANT);
+        expect(scopesIn(action, "WIZARD_MAGIC_MISSILE")).not.toContain(DOUBLE);
+    });
+
+    it("scopes a hash number whole, and a hash inside a name as part of the name", () => {
+        expect(getTokenScopes("IF HPGT(Player1,#5) THEN", 0, "#5")).toContain(NUMBER);
+        expect(getTokenScopes("IF HPGT(Player1,# 5) THEN", 0, "# 5")).toContain(NUMBER);
+        const name = scopesIn("SetPlayerSound(Myself,A6#0,EXISTANCE5)", "A6#0");
+
+        expect(name).toContain(CONSTANT);
+        expect(name).not.toContain(NUMBER);
+    });
+
+    it("scopes a signed number with its sign, and 0x with decimal digits only", () => {
+        expect(getTokenScopes("IF HPGT(Player1,-0x10) THEN", 0, "-0x10")).toContain(NUMBER);
+        expect(getTokenScopes("IF HPGT(Player1,0x19) THEN", 0, "0x19")).toContain(NUMBER);
+        expect(getTokenScopes("IF HPGT(Player1,0xFF) THEN", 0, "0xFF")).not.toContain(NUMBER);
+    });
+
+    it("scopes a variable standing for a value: a call name, an OR count, a bracket component", () => {
+        expect(scopesIn("%RunAway%(Myself)", "%RunAway%")).toContain(VARIABLE);
+        expect(getTokenScopes("IF\n  OR(%n%)\n  False()\nTHEN", 1, "%n%")).toContain(VARIABLE);
+        expect(getTokenScopes("IF See([EA.%r%]) THEN", 0, "%r%")).toContain(VARIABLE);
+    });
+
+    it("scopes an object rectangle's numbers, after a name or a bracket, and an empty bracket pair", () => {
+        const named = "IF See(Player1[1.2.3.4]) THEN";
+        const bracketed = "IF See([ENEMY][5.6.7.8]) THEN";
+
+        expect(getTokenScopes(named, 0, "3")).toContain(NUMBER);
+        expect(getTokenScopes(bracketed, 0, "7")).toContain(NUMBER);
+        expect(getTokenScopes("IF See([]) THEN", 0, "[")).toContain("keyword.punctuation.bracket.weidu-baf");
+    });
+});
