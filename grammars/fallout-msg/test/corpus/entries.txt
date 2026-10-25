@@ -26,51 +26,102 @@ Entry with audio
     (text)))
 
 ================
-Comment between entries
+Audio field with a space
 ================
 
-# This is a comment
+{800}{Weapon Damage}{Light}
+
+---
+
+(source_file
+  (entry
+    (number)
+    (audio)
+    (text)))
+
+================
+Text outside the braces is skipped
+================
+
+# This is a note
 {100}{}{Text.}
 
 ---
 
 (source_file
-  (comment)
+  (loose_comment)
   (entry
     (number)
     (text)))
 
 ================
-Line comment styles
+Markerless free text is skipped too
 ================
 
-# hash comment
-// slash comment
+free text here
+{100}{}{Text.}
+trailing words
+
+---
+
+(source_file
+  (loose_comment)
+  (entry
+    (number)
+    (text))
+  (loose_comment))
+
+================
+A hash line holding an entry is a live entry
+================
+
+# {200}{}{commented out?}
 {100}{}{Text.}
 
 ---
 
 (source_file
-  (comment)
-  (comment)
+  (loose_comment)
+  (entry
+    (number)
+    (text))
   (entry
     (number)
     (text)))
 
 ================
-Block comment
+Slash and block markers are no comments either
 ================
 
-/* block
-   comment */
-{100}{}{Text.}
+// {200}{}{x}
+/* {201}{}{y} */
 
 ---
 
 (source_file
-  (block_comment)
+  (loose_comment)
   (entry
     (number)
+    (text))
+  (loose_comment)
+  (entry
+    (number)
+    (text))
+  (loose_comment))
+
+================
+Junk between the fields of one entry
+================
+
+{100} one {} two {Text.}
+
+---
+
+(source_file
+  (entry
+    (number)
+    (loose_comment)
+    (loose_comment)
     (text)))
 
 ================
@@ -116,3 +167,149 @@ line three}
   (entry
     (number)
     (text)))
+
+================
+Signed numbers
+================
+
+{-5}{}{minus}
+{+5}{}{plus}
+
+---
+
+(source_file
+  (entry
+    (number)
+    (text))
+  (entry
+    (number)
+    (text)))
+
+================
+A newline inside the number field is dropped
+================
+
+{10
+0}{}{text}
+
+---
+
+(source_file
+  (entry
+    (number)
+    (text)))
+
+================
+Open brace inside text
+================
+
+{100}{}{a { b}
+
+---
+
+(source_file
+  (entry
+    (number)
+    (text)))
+
+================
+Spaces around the number
+================
+
+{ 100 }{}{hello}
+
+---
+
+(source_file
+  (ERROR
+    (UNEXPECTED '1')
+    (UNEXPECTED 'h')))
+
+================
+Empty number
+================
+
+{}{}{hello}
+
+---
+
+(source_file
+  (ERROR
+    (UNEXPECTED 'h')))
+
+================
+Non-numeric number
+================
+
+{abc}{}{hello}
+
+---
+
+(source_file
+  (ERROR
+    (UNEXPECTED 'a')
+    (UNEXPECTED 'h')))
+
+================
+A bad entry between good ones leaves them intact
+================
+
+{100}{}{x}
+{ 101 }{}{y}
+{102}{}{z}
+
+---
+
+(source_file
+  (entry
+    (number)
+    (text))
+  (ERROR
+    (UNEXPECTED '1')
+    (UNEXPECTED 'y'))
+  (entry
+    (number)
+    (text)))
+
+================
+Stray closing brace
+================
+
+# stray } here
+{100}{}{hello}
+
+---
+
+(source_file
+  (loose_comment)
+  (ERROR
+    (UNEXPECTED 'h'))
+  (entry
+    (number)
+    (text)))
+
+================
+Unterminated text
+================
+
+{100}{}{hello
+
+---
+
+(source_file
+  (entry
+    (number)
+    (text)
+    (MISSING "}")))
+
+================
+Entry with two fields only
+================
+
+{100}{}
+
+---
+
+(source_file
+  (ERROR
+    (number)))

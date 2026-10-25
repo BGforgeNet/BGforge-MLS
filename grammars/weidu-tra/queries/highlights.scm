@@ -23,6 +23,15 @@
 (tilde_string) @string
 (double_string) @string
 (percent_string) @string
+(word_string) @string
+
+; ----- References to another string -----
+
+(string_ref) @number
+(trans_ref) @number
+
+(at_ref
+  "AT" @keyword)
 
 ; ----- Sound references -----
 
@@ -32,3 +41,4 @@
 
 "@" @punctuation.delimiter
 "=" @punctuation.delimiter
+"^" @operator

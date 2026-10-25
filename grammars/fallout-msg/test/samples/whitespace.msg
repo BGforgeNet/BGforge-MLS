@@ -1,2 +1,4 @@
-{ 100 }{ }{ text }
-{ 200 }{ audio }{ more text }
+{100}{}{ text }
+
+
+   {200}{audio}{ more text }  # note

@@ -6,12 +6,12 @@
 ;   entity.name.function.sound.fallout-msg -> @string.special (audio filename)
 ;   string.quoted.fallout-msg              -> @string (message text)
 ;   keyword.control.fallout-msg            -> @punctuation.bracket (braces)
-;   comment.line/comment.block.fallout-msg -> @comment
+;   comment.line/comment.block.fallout-msg -> @comment (text outside the braces)
 
-; ----- Comments -----
+; ----- Text outside the entries -----
+; The game skips it, and authors write their notes there.
 
-(comment) @comment
-(block_comment) @comment
+(loose_comment) @comment
 
 ; ----- Entry fields -----
 

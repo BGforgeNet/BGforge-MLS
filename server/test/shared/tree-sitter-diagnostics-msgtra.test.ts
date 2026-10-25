@@ -41,21 +41,30 @@ describe("fallout-msg parse errors", () => {
         expect(diagnostics.some((d) => typeof d.message === "string" && d.message.startsWith("missing '"))).toBe(true);
     });
 
-    it("accepts #, //, and /* */ marked comments without diagnostics", () => {
-        for (const src of ["# a header note\n{100}{}{x}", "// a note\n{100}{}{x}", "/* a note */\n{100}{}{x}"]) {
+    it("accepts any text outside the braces, as the game skips it", () => {
+        for (const src of [
+            "# a header note\n{100}{}{x}",
+            "// a note\n{100}{}{x}",
+            "/* a note */\n{100}{}{x}",
+            "{100}{}{ok}\nthis is a markerless loose line",
+        ]) {
             const tree = msg.parseWithCache(src)!;
             expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
         }
     });
 
-    it("flags an unmarked (markerless) loose line as an error", () => {
-        // A non-entry line must be a marked comment (#, //, /* */); markerless
-        // free text is a likely typo, not a comment, so it is flagged.
-        const tree = msg.parseWithCache("{100}{}{ok}\nthis is a markerless loose line")!;
+    it("flags a closing brace in a note, which the game refuses to load", () => {
+        const tree = msg.parseWithCache("# stray } here\n{100}{}{x}")!;
         const diagnostics = collectParseDiagnostics(tree.rootNode);
         expect(diagnostics.length).toBeGreaterThan(0);
-        expect(diagnostics[0]!.severity).toBe(DiagnosticSeverity.Error);
-        expect(diagnostics[0]!.source).toBe(SYNTAX_SOURCE);
+        expect(diagnostics[0]!.range.start).toEqual({ line: 0, character: 8 });
+    });
+
+    it("flags a padded number field at the number", () => {
+        const tree = msg.parseWithCache("{100}{}{ok}\n{ 101 }{}{x}")!;
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
+        expect(diagnostics.length).toBeGreaterThan(0);
+        expect(diagnostics[0]!.range.start.line).toBe(1);
     });
 });
 
@@ -79,5 +88,38 @@ describe("weidu-tra parse errors", () => {
         expect(diagnostics.some((d) => typeof d.message === "string" && d.message.startsWith("Syntax error"))).toBe(
             true,
         );
+    });
+
+    it.each([
+        ["concatenation", "@1 = ~a~ ^ ~b~ ^ bare\n"],
+        ["a bare word", "@1 = bareword\n@2 = ~a~ [SND]ND\n"],
+        ["a TLK reference", "@1 = #5\n"],
+        ["a reference to another entry", "@1 = ~one~\n@2 = @1\n"],
+        ["a nested block comment", "/* a /* b */ c */\n@1 = ~x~\n"],
+        ["a five-tilde string with tildes", "@1 = ~~~~~a ~ b~~~~~\n"],
+    ])("accepts %s, which the installer reads", (_name, text) => {
+        const tree = tra.parseWithCache(text)!;
+        expect(collectParseDiagnostics(tree.rootNode)).toEqual([]);
+    });
+
+    it("flags an unclosed double quote once, and not the entries after it", () => {
+        const tree = tra.parseWithCache('@1 = ~one~\n@2 = "oops\n@3 = ~three~\n@4 = ~four~\n')!;
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
+        expect(diagnostics).toHaveLength(1);
+        expect([diagnostics[0]!.range.start.line, diagnostics[0]!.range.end.line]).toEqual([1, 1]);
+    });
+
+    it("flags an unclosed percent string once, and not the entries after it", () => {
+        const tree = tra.parseWithCache("@1 = %oops\n@2 = ~two~\n")!;
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
+        expect(diagnostics).toHaveLength(1);
+        expect([diagnostics[0]!.range.start.line, diagnostics[0]!.range.end.line]).toEqual([0, 0]);
+    });
+
+    it("flags an unclosed block comment once, and not the entries after it", () => {
+        const tree = tra.parseWithCache("@1 = ~one~\n/* oops\n@2 = ~two~\n@3 = ~three~\n")!;
+        const diagnostics = collectParseDiagnostics(tree.rootNode);
+        expect(diagnostics).toHaveLength(1);
+        expect([diagnostics[0]!.range.start.line, diagnostics[0]!.range.end.line]).toEqual([1, 1]);
     });
 });
