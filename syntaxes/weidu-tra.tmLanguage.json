@@ -10,10 +10,19 @@
       "include": "#line_numbers"
     },
     {
-      "include": "#strings"
+      "include": "#references"
     },
     {
       "include": "#sounds"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#words"
     }
   ],
   "repository": {
@@ -24,8 +33,17 @@
           "name": "comment.line.weidu-tra"
         },
         {
-          "begin": "/\\*",
-          "end": "\\*/",
+          "include": "#block_comment"
+        }
+      ]
+    },
+    "block_comment": {
+      "begin": "/\\*",
+      "end": "\\*/",
+      "name": "comment.block.weidu-tra",
+      "patterns": [
+        {
+          "include": "#block_comment",
           "name": "comment.block.weidu-tra"
         }
       ]
@@ -44,7 +62,27 @@
               "name": "keyword.control.weidu-tra"
             }
           },
-          "match": "(@)-?(\\d+)\\s*(=)"
+          "match": "(@)\\s*(-?\\d+)\\s*(=)(?!=)"
+        }
+      ]
+    },
+    "references": {
+      "patterns": [
+        {
+          "match": "#-?\\d+",
+          "name": "constant.language.weidu-tra"
+        },
+        {
+          "match": "@-?\\d+",
+          "name": "constant.language.weidu-tra"
+        },
+        {
+          "match": "\\(\\s*(AT)\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.weidu-tra"
+            }
+          }
         }
       ]
     },
@@ -59,13 +97,36 @@
               "name": "keyword.control.weidu-tra"
             }
           },
-          "match": "(\\[)(\\w+)(\\])",
+          "match": "(\\[)([^\\]\\n]+)(\\])",
           "name": "entity.name.function.sound.weidu-tra"
         }
       ]
     },
     "strings": {
       "patterns": [
+        {
+          "begin": "(~~~~~)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.weidu-tra"
+            }
+          },
+          "end": "(~~~~~)",
+          "endCaptures": {
+            "1": {
+              "name": "keyword.control.weidu-tra"
+            }
+          },
+          "name": "string.quoted.weidu-tra",
+          "patterns": [
+            {
+              "include": "#tokens"
+            },
+            {
+              "include": "source.weidu-tp2#non-weidu-vars"
+            }
+          ]
+        },
         {
           "begin": "(~)",
           "beginCaptures": {
@@ -111,6 +172,42 @@
               "include": "source.weidu-tp2#non-weidu-vars"
             }
           ]
+        },
+        {
+          "begin": "(%)",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.weidu-tra"
+            }
+          },
+          "end": "(%)",
+          "endCaptures": {
+            "1": {
+              "name": "keyword.control.weidu-tra"
+            }
+          },
+          "name": "string.quoted.weidu-tra",
+          "patterns": [
+            {
+              "include": "#tokens"
+            }
+          ]
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "match": "\\^",
+          "name": "keyword.operator.concatenation.weidu-tra"
+        }
+      ]
+    },
+    "words": {
+      "patterns": [
+        {
+          "match": "[0-9A-Za-z_][0-9A-Za-z#_.-]*",
+          "name": "string.quoted.weidu-tra"
         }
       ]
     },

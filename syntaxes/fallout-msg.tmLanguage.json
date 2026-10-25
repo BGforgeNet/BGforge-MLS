@@ -4,30 +4,36 @@
   "scopeName": "source.fallout-msg",
   "patterns": [
     {
-      "include": "#strings"
+      "include": "#entries"
     },
     {
-      "include": "#comments"
+      "include": "#skipped"
+    },
+    {
+      "include": "#stray-braces"
     }
   ],
   "repository": {
-    "comments": {
+    "skipped": {
       "patterns": [
         {
-          "match": "(#|//).*",
+          "match": "[^{}]+",
           "name": "comment.line.fallout-msg"
-        },
-        {
-          "begin": "/\\*",
-          "end": "\\*/",
-          "name": "comment.block.fallout-msg"
         }
       ]
     },
-    "strings": {
+    "stray-braces": {
       "patterns": [
         {
-          "begin": "({)(\\d+)(}{)([^}]*)(}{)",
+          "match": "[{}]",
+          "name": "invalid.illegal.fallout-msg"
+        }
+      ]
+    },
+    "entries": {
+      "patterns": [
+        {
+          "begin": "({)([+-]?\\d+)(}{)([^}]*)(}{)",
           "beginCaptures": {
             "1": {
               "name": "keyword.control.fallout-msg"

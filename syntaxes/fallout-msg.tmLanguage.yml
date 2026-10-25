@@ -2,19 +2,24 @@ $schema: https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlangua
 name: Fallout Star-Trek Scripting Language message
 scopeName: source.fallout-msg
 patterns:
-  - include: "#strings"
-  - include: "#comments"
+  - include: "#entries"
+  - include: "#skipped"
+  - include: "#stray-braces"
 repository:
-  comments:
+  # The game loads a file by scanning for `{`: a brace group is an entry wherever it sits - after a `#`, a `//`
+  # or inside `/* */` too - and all other text is skipped. There is no comment syntax.
+  skipped:
     patterns:
-      - match: (#|//).*
+      - match: "[^{}]+"
         name: comment.line.fallout-msg
-      - begin: /\*
-        end: \*/
-        name: comment.block.fallout-msg
-  strings:
+  # A `}` outside an entry, or a `{` that opens no entry, makes the game refuse the whole file.
+  stray-braces:
     patterns:
-      - begin: ({)(\d+)(}{)([^}]*)(}{)
+      - match: "[{}]"
+        name: invalid.illegal.fallout-msg
+  entries:
+    patterns:
+      - begin: ({)([+-]?\d+)(}{)([^}]*)(}{)
         beginCaptures:
           "1":
             name: keyword.control.fallout-msg

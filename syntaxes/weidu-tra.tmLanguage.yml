@@ -4,16 +4,24 @@ scopeName: source.weidu-tra
 patterns:
   - include: "#comments"
   - include: "#line_numbers"
-  - include: "#strings"
+  - include: "#references"
   - include: "#sounds"
+  - include: "#strings"
+  - include: "#operators"
+  - include: "#words"
 repository:
   comments:
     patterns:
       - match: (//).*
         name: comment.line.weidu-tra
-      - begin: /\*
-        end: \*/
-        name: comment.block.weidu-tra
+      - include: "#block_comment"
+  # Block comments nest, as WeiDU reads them.
+  block_comment:
+    begin: /\*
+    end: \*/
+    name: comment.block.weidu-tra
+    patterns:
+      - include: "#block_comment"
   line_numbers:
     patterns:
       - captures:
@@ -23,7 +31,18 @@ repository:
             name: constant.language.weidu-tra
           "3":
             name: keyword.control.weidu-tra
-        match: (@)-?(\d+)\s*(=)
+        match: (@)\s*(-?\d+)\s*(=)(?!=)
+  # An entry's value can name another string: #N (a TLK entry), @N (another entry), (AT name).
+  references:
+    patterns:
+      - match: "#-?\\d+"
+        name: constant.language.weidu-tra
+      - match: "@-?\\d+"
+        name: constant.language.weidu-tra
+      - match: \(\s*(AT)\b
+        captures:
+          "1":
+            name: keyword.control.weidu-tra
   sounds:
     patterns:
       - captures:
@@ -31,10 +50,22 @@ repository:
             name: keyword.control.weidu-tra
           "3":
             name: keyword.control.weidu-tra
-        match: (\[)(\w+)(\])
+        match: (\[)([^\]\n]+)(\])
         name: entity.name.function.sound.weidu-tra
   strings:
     patterns:
+      - begin: (~~~~~)
+        beginCaptures:
+          "1":
+            name: keyword.control.weidu-tra
+        end: (~~~~~)
+        endCaptures:
+          "1":
+            name: keyword.control.weidu-tra
+        name: string.quoted.weidu-tra
+        patterns:
+          - include: "#tokens"
+          - include: source.weidu-tp2#non-weidu-vars
       - begin: (~)
         beginCaptures:
           "1":
@@ -59,6 +90,27 @@ repository:
         patterns:
           - include: "#tokens"
           - include: source.weidu-tp2#non-weidu-vars
+      - begin: (%)
+        beginCaptures:
+          "1":
+            name: keyword.control.weidu-tra
+        end: (%)
+        endCaptures:
+          "1":
+            name: keyword.control.weidu-tra
+        name: string.quoted.weidu-tra
+        patterns:
+          - include: "#tokens"
+  # `^` joins strings.
+  operators:
+    patterns:
+      - match: \^
+        name: keyword.operator.concatenation.weidu-tra
+  # A word with no delimiter is a string too: a name, a number, a file name.
+  words:
+    patterns:
+      - match: "[0-9A-Za-z_][0-9A-Za-z#_.-]*"
+        name: string.quoted.weidu-tra
   tokens:
     patterns:
       - captures:
