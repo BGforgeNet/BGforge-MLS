@@ -17,6 +17,7 @@ vi.mock("../../src/server", () => ({
 import { getDocumentSymbols } from "../../src/fallout-ssl/symbol";
 import { initParser, parseWithCache } from "@bgforge/shared/parsers/fallout-ssl";
 import { SyntaxType } from "../../src/fallout-ssl/syntax-type";
+import { collectParseDiagnostics } from "../../src/shared/tree-sitter-diagnostics";
 
 beforeAll(async () => {
     await initParser();
@@ -25,14 +26,14 @@ beforeAll(async () => {
 const BEFORE = "procedure a begin end\n";
 const AFTER = "\nend\nprocedure c begin\n  variable z;\nend\nprocedure d begin end\n";
 
-/**
- * Procedure `b` in a typing state, between a finished `a` and finished `c` and `d`.
- *
- * Not here, because recovery still drops `b` or `c`: an unclosed array or map literal, a parameter list with no
- * close paren, and a header with neither `begin` nor a body. Each needs two or more tokens inserted before the
- * `end` fits, and recovery inserts one.
- */
+/** Procedure `b` in a typing state, between a finished `a` and finished `c` and `d`. */
 const STATES: [string, string][] = [
+    // Each of these needs two tokens inserted before the `end` fits, and recovery inserts one; the scanner's
+    // zero-width implicit_end stands in for the closer.
+    ["a procedure header with neither begin nor a body", "procedure b"],
+    ["a parameter list with no close paren", "procedure b(variable x"],
+    ["an unclosed array literal", "procedure b begin\n  x := [1, 2"],
+    ["an unclosed map literal", "procedure b begin\n  x := {1: 2"],
     ["a call with only its open paren", "procedure b begin\n  foo("],
     ["a call with an argument and no close paren", "procedure b begin\n  foo(1"],
     ["a variable keyword with no name", "procedure b begin\n  variable"],
@@ -90,6 +91,27 @@ describe("a block still missing its end", () => {
             "  end else if (z) then begin\n";
         expect(parseWithCache(text)!.rootNode.type).toBe(SyntaxType.ERROR);
         expect(outlineProcedures(text)).toEqual(["a"]);
+    });
+});
+
+describe("a closer the source lacks before end or procedure", () => {
+    // The zero-width node keeps the tree's shape, so the error is reported through the shared parse-error walk.
+    it.each([
+        ["procedure b", "begin", 2, 0],
+        ["procedure b(variable x", ")", 2, 0],
+        ["procedure b begin\n  x := [1, 2", "]", 3, 0],
+        ["procedure b begin\n  x := {1: 2", "}", 3, 0],
+    ])("reports %j as missing %s", (body, closer, line, character) => {
+        const diagnostics = collectParseDiagnostics(parseWithCache(BEFORE + body + AFTER)!.rootNode);
+        expect(diagnostics[0]).toMatchObject({
+            message: `missing '${closer}'`,
+            range: { start: { line, character } },
+        });
+    });
+
+    it("leaves valid source alone", () => {
+        const text = "procedure b(variable x) begin\n  x := [1, 2];\n  x := {1: 2};\nend\n";
+        expect(collectParseDiagnostics(parseWithCache(text)!.rootNode)).toEqual([]);
     });
 });
 

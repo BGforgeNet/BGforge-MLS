@@ -1,7 +1,7 @@
 /**
  * External scanner for Fallout SSL grammar.
  *
- * Handles five tokens (KEYWORD_PARAM and KEYWORD_PARAM_REF are described beside their code below):
+ * Handles six tokens (KEYWORD_PARAM, KEYWORD_PARAM_REF and IMPLICIT_END are described beside their code below):
  *
  * NEWLINE / LINE_END: In normal code, newlines are whitespace (NEWLINE extra).
  * Inside #define directives, a bare newline terminates the macro body (LINE_END).
@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum TokenType { NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_REF };
+enum TokenType { NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END };
 
 /*
  * KEYWORD_PARAM / KEYWORD_PARAM_REF: a macro parameter spelled like a reserved word, and its uses in the
@@ -154,6 +154,24 @@ bool tree_sitter_ssl_external_scanner_scan(
             if (!is_remembered(scanner, word)) return false;
             lexer->mark_end(lexer);
             lexer->result_symbol = KEYWORD_PARAM_REF;
+            return true;
+        }
+    }
+
+    /* IMPLICIT_END: where a `)`, `]`, `}` or a procedure's `begin` is due and the next word is `end` or
+     * `procedure`, which can never follow there in valid source, a zero-width token stands in for the missing
+     * closer, so the procedure being typed keeps its shape and the next one keeps its place. */
+    /* A newline before the word is left to the code below: it is emitted as whitespace first, and the scanner is
+     * asked again at the word. */
+    if (!recovering && valid_symbols[IMPLICIT_END]) {
+        skip_horizontal_space(lexer);
+        if (is_word_start(lexer->lookahead)) {
+            lexer->mark_end(lexer);
+            char word[MAX_WORD];
+            if (!read_word(lexer, word)) return false;
+            for (char *c = word; *c; c++) *c = (char)(*c | 0x20);
+            if (strcmp(word, "end") != 0 && strcmp(word, "procedure") != 0) return false;
+            lexer->result_symbol = IMPLICIT_END;
             return true;
         }
     }

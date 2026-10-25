@@ -559,7 +559,7 @@ body reads such a parameter as a name wherever an expression may start.
 
 #### External Scanner
 
-`src/scanner.c` handles five tokens:
+`src/scanner.c` handles six tokens:
 
 - **`_newline`** - newlines outside `#define` bodies (treated as whitespace via `extras`)
 - **`_line_end`** - newline inside a `#define` body (terminates the macro)
@@ -567,6 +567,9 @@ body reads such a parameter as a name wherever an expression may start.
   (i.e. inside a `#define` body), making `##` context-sensitive
 - **`_keyword_param`**, **`_keyword_param_ref`** - a macro parameter spelled like a reserved word, and its uses in
   the body; the scanner remembers such parameters until the `#define` ends
+- **`implicit_end`** - zero-width, for a `)`, `]`, `}` or procedure `begin` the source lacks where the next word is
+  `end` or `procedure`, so a procedure being typed keeps its shape; consumers report it as a syntax error through
+  `shared/parse-errors.ts`
 
 The scanner runs in both native and WASM builds. `TREE_SITTER_WASM` is not defined
 by the build system, so there is no WASM-specific code path.

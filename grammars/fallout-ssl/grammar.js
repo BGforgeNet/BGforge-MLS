@@ -81,6 +81,9 @@ export default grammar({
         $._token_paste, // ## operator, only emitted inside #define bodies (see scanner.c)
         $._keyword_param, // A macro parameter spelled like a reserved word (see _macro_param)
         $._keyword_param_ref, // That parameter's use in the macro's body (see scanner.c)
+        // Zero-width: a `)`, `]`, `}` or procedure `begin` the source lacks before `end` or `procedure`, so the
+        // procedure being typed keeps its shape (see scanner.c). Consumers report it through shared/parse-errors.ts.
+        $.implicit_end,
     ],
 
     extras: ($) => [
@@ -329,10 +332,11 @@ export default grammar({
 
         // Its own rule only to share parse states: inline, the body is repeated after every combination of the
         // optional header parts above, which costs about a twelfth of the parse states. The tree is the same.
-        _procedure_body: ($) => seq(kw("begin"), field("body", repeat($._statement)), kw("end")),
+        _procedure_body: ($) =>
+            seq(choice(kw("begin"), $.implicit_end), field("body", repeat($._statement)), kw("end")),
 
         // A trailing comma after the last parameter is accepted, as it is in shipped scripts.
-        param_list: ($) => seq("(", optional(seq(commaSep($.param), optional(","))), ")"),
+        param_list: ($) => seq("(", optional(seq(commaSep($.param), optional(","))), choice(")", $.implicit_end)),
 
         // SSL parameter defaults are simple values only.
         // Function calls and other compound expressions are not valid here.
@@ -685,10 +689,10 @@ export default grammar({
             ),
 
         // sfall array literal: [1, 2, 3]
-        array_expr: ($) => seq("[", optional(commaSep($._expression)), "]"),
+        array_expr: ($) => seq("[", optional(commaSep($._expression)), choice("]", $.implicit_end)),
 
         // sfall map literal: {"key": value, ...}
-        map_expr: ($) => seq("{", optional(commaSep($.map_entry)), "}"),
+        map_expr: ($) => seq("{", optional(commaSep($.map_entry)), choice("}", $.implicit_end)),
 
         // The key is a whole expression, not a literal. Most scripts spell one as a string or a bare
         // name, but a PID constant expands to `(16777313)` - so a map keyed by one arrives here

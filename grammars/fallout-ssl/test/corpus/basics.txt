@@ -1407,3 +1407,33 @@ end
       body: (assignment
         left: (identifier)
         right: (identifier)))))
+
+================================================================================
+Closers still being typed before end: zero-width implicit_end nodes
+================================================================================
+
+procedure b(variable x
+end
+procedure c begin
+  x := [1, 2
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    params: (param_list
+      (param
+        name: (identifier))
+      (implicit_end))
+    (implicit_end))
+  (procedure
+    name: (identifier)
+    body: (assignment
+      left: (identifier)
+      right: (array_expr
+        (number)
+        (number)
+        (implicit_end))
+      (MISSING ";"))))

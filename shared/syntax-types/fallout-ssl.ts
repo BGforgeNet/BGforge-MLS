@@ -65,6 +65,7 @@ export enum SyntaxType {
   Char = "char",
   Comment = "comment",
   Identifier = "identifier",
+  ImplicitEnd = "implicit_end",
   LineComment = "line_comment",
   Number = "number",
   OtherPreprocessor = "other_preprocessor",

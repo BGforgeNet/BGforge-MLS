@@ -55,6 +55,14 @@ describe.skipIf(!wasmPresent)("syntax errors", () => {
         );
     });
 
+    // The grammar closes these with a zero-width node rather than an ERROR, so the next procedure keeps its shape;
+    // the compile must still refuse, naming the closer.
+    it("refuses an array closed only by the end after it, naming the missing bracket", () => {
+        expect(() => buildProgram(parser, "procedure start begin\n variable x;\n x := [1, 2\nend\n")).toThrow(
+            /^4:1: missing \]$/,
+        );
+    });
+
     it("reports an unfinished construct by the token that is missing", () => {
         const diagnostics = diagnosticsOf("procedure start begin\n variable x := 1;\n");
 

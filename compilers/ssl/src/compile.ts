@@ -9,7 +9,7 @@
 
 import * as path from "node:path";
 import type { Parser } from "web-tree-sitter";
-import { collectParseErrors } from "@bgforge/shared/parse-errors";
+import { collectParseErrors, implicitEndToken, isImplicitEnd } from "@bgforge/shared/parse-errors";
 import { CompileError } from "./compile-error";
 import { EmitError, emitInt, type EmitOptions } from "./int/emit";
 import { WIDE_CHARACTER } from "./int/namelist";
@@ -73,7 +73,11 @@ export function buildProgram(parser: Parser, text: string, options: CompileOptio
                 errors.map((error) => ({
                     line: error.startPosition.row + 1,
                     column: error.startPosition.column + 1,
-                    message: error.isMissing ? `missing ${error.type}` : "syntax error",
+                    message: error.isMissing
+                        ? `missing ${error.type}`
+                        : isImplicitEnd(error)
+                          ? `missing ${implicitEndToken(error)}`
+                          : "syntax error",
                 })),
             );
         }
