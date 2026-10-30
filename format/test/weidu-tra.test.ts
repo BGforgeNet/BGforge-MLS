@@ -196,4 +196,16 @@ describe("weidu-tra/format", () => {
     it("is a no-op for empty input", () => {
         expect(formatTra("").text).toBe("");
     });
+
+    it("keeps the blank lines inside a block comment that opens a line", () => {
+        noop("/* a\n\n\n   b\n*/\n@1 = ~x~\n");
+    });
+
+    it("leaves an entry written inside a block comment as it is", () => {
+        noop("/* off\n@1=~a  b~\n*/\n@2 = ~y~\n");
+    });
+
+    it("still formats the entries after a multi-line block comment", () => {
+        expect(fmt("/* off\n@1=~a~\n*/\n@2=~y~\n")).toBe("/* off\n@1=~a~\n*/\n@2 = ~y~\n");
+    });
 });

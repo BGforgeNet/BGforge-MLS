@@ -152,5 +152,6 @@ export function formatWithValidation<TRoot extends SyntaxNode, TOpts>(
     }
 
     if (result.text === opts.text) return { edits: [] };
-    return { edits: createFullDocumentEdit(opts.text, result.text) };
+    const edits = createFullDocumentEdit(opts.text, result.text);
+    return result.notice ? { edits, notice: result.notice } : { edits };
 }

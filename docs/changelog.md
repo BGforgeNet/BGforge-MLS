@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased
+
+### All languages
+
+- Formatting never drops, duplicates or merges a comment, and never changes the text of a string or a comment.
+  Before, comments between call arguments, after `begin`, around `END ELSE`, in TP2 loop and `COPY` headers and in
+  several other places were lost or garbled, and tabs or blanks inside strings and comments could change. The
+  safety check now compares comments too, so a formatter fault leaves the file unformatted instead of losing text.
+  Should a comment ever have to move to keep it, the file is still formatted and a message says where.
+- Formatting keeps the blank lines above comments, and a second format of the result changes nothing.
+- Typing `/*` no longer hides the outline and highlighting of the rest of a TP2, D, BAF or SSL file: an unclosed
+  comment ends before the next top-level item and is reported there. Files with many unclosed comments parse in
+  milliseconds instead of seconds.
+- No single line can stall the language server any more: the text scans behind hover, completion, go to
+  definition, doc comments, compiler output and transpiler output take time in proportion to their input.
+
+### WeiDU
+
+- TP2: `/*` and `//` inside a `%...%` string are text, as WeiDU reads them. TP2 and D: a `/*` after `//` is part of
+  the line comment.
+- TP2: `%MOD_FOLDER%` paths read the tp2's `BACKUP` directive itself, not `BACKUP` text inside a string or comment.
+- TP2 formatting indents an `ELSE INNER_ACTION` block like any other block.
+- TRA: formatting a file with an unclosed comment no longer adds a blank line each time.
+
+### Fallout SSL
+
+- Formatting keeps both dimensions of `variable b[4, 2]`.
+
+### Transpilers
+
+- TSSL, TBAF and TD substitute a name containing `$` correctly, and `$count` is no longer taken for `count`.
+
 ## 3.18.0
 
 ### Fallout SSL

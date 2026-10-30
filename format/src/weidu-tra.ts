@@ -15,7 +15,13 @@
  * whitespace trimmed only.
  */
 
-import { stripBom, scanPercentString, scanTildeDelimiter, type FormatOutput } from "./format-utils";
+import {
+    stripBom,
+    scanNestedBlockComment,
+    scanPercentString,
+    scanTildeDelimiter,
+    type FormatOutput,
+} from "./format-utils";
 
 /** Matches the entry prefix: @<optional_whitespace><number><optional_whitespace>=<optional_whitespace> */
 const ENTRY_PREFIX_RE = /^(@)\s*(-?\d+)\s*=\s*/;
@@ -42,27 +48,6 @@ function scanQuotedString(text: string, pos: number): number {
     return close === -1 ? text.length : close + 1;
 }
 
-/**
- * Scan forward from `pos` (at a `/*`) past a block comment. Block comments nest.
- * Returns the index immediately after the matching closer, or `text.length` if it is never closed.
- */
-function scanBlockComment(text: string, pos: number): number {
-    let depth = 0;
-    while (pos < text.length) {
-        if (text.startsWith("/*", pos)) {
-            depth++;
-            pos += 2;
-        } else if (text.startsWith("*/", pos)) {
-            depth--;
-            pos += 2;
-            if (depth === 0) return pos;
-        } else {
-            pos++;
-        }
-    }
-    return text.length;
-}
-
 interface ProcessedLine {
     /** The formatted line text (without trailing newline). */
     readonly text: string;
@@ -85,7 +70,7 @@ function scanEntryRest(text: string, pos: number): { rest: string; nextPos: numb
             const nlPos = text.indexOf("\n", pos);
             pos = nlPos === -1 ? text.length : nlPos;
         } else if (text[pos] === "/" && text[pos + 1] === "*") {
-            pos = scanBlockComment(text, pos);
+            pos = scanNestedBlockComment(text, pos);
         } else if (text[pos] === "~") {
             // Flush the code segment verbatim (spaces between strings must be kept)
             parts.push(text.slice(lastFlush, pos));
@@ -132,11 +117,20 @@ function processLine(text: string, pos: number): ProcessedLine {
         return { text: "", nextPos };
     }
 
-    // Comment line (// or /*) - trim trailing whitespace only
+    // Comment line (// or /*) - trim trailing whitespace only. A block comment runs over the lines it spans, which
+    // stay as written: a blank line or an `@N =` inside it is comment text, not a blank line or an entry.
     if ((text[pos] === "/" && text[pos + 1] === "/") || (text[pos] === "/" && text[pos + 1] === "*")) {
-        const nlPos = text.indexOf("\n", pos);
+        const commentEnd = text[pos + 1] === "*" ? scanNestedBlockComment(text, pos) : pos;
+        const nlPos = text.indexOf("\n", commentEnd);
         const end = nlPos === -1 ? text.length : nlPos;
-        const line = text.slice(pos, end).trimEnd();
+        let line = text
+            .slice(pos, end)
+            .split("\n")
+            .map((physical) => physical.trimEnd())
+            .join("\n");
+        // A comment that never closes runs to the end of the text, final line break included; the caller ends the
+        // output with one, so keeping it here would add a blank line on every pass.
+        if (nlPos === -1) line = line.trimEnd();
         return { text: line, nextPos: end + (nlPos === -1 ? 0 : 1) };
     }
 

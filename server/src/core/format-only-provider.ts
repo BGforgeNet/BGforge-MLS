@@ -37,7 +37,8 @@ export function createFormatOnlyProvider(
             const out = formatFn(text);
             if (out.warning) return { edits: [], warning: out.warning };
             if (out.text === text) return { edits: [] };
-            return { edits: createFullDocumentEdit(text, out.text) };
+            const edits = createFullDocumentEdit(text, out.text);
+            return out.notice ? { edits, notice: out.notice } : { edits };
         },
         ...(traExt
             ? {

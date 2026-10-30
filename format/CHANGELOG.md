@@ -2,6 +2,28 @@
 
 Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 
+## Unreleased
+
+### Added
+
+- A format result may carry `notice`: the text is formatted, but a comment had to move to keep it, and the notice
+  says where. `warning` keeps meaning the formatter refused. `fgfmt` writes the file and prints the notice.
+
+### Changed
+
+- The safety check compares comments, and Fallout `.msg` audio names, in order, so a result that loses or alters
+  one is refused.
+- Blank lines above comments are kept. A TP2 `ELSE INNER_ACTION` block is formatted as a block.
+
+### Fixed
+
+- No formatter drops, duplicates or merges a comment, or changes the text of a string or a comment: comments
+  between call arguments, after `begin`, around `END ELSE`, in TP2 loop and `COPY` headers and in expressions
+  stay where they were written; tabs inside SSL comments and blanks inside WeiDU strings are kept.
+- Every formatter is idempotent on comment shapes that used to change on a second pass, and TRA with an unclosed
+  comment no longer gains a blank line per pass. SSL keeps both dimensions of `variable b[4, 2]`.
+- Formatting never takes time quadratic in a line's length.
+
 ## 0.9.0
 
 ### Changed

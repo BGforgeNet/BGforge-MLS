@@ -49,7 +49,7 @@ describe("weidu-d/format/core", () => {
             const input = `BEGIN ~dlg~\nIF WEIGHT #-1 ~True()~ THEN BEGIN st SAY ~${say}~ IF ~~ THEN EXIT END\n`;
             const output = format(input);
 
-            expect(output.split("\n")[1]).toBe("    IF WEIGHT #-1 ~True()~ st");
+            expect(output.split("\n")[1]).toBe("    IF WEIGHT #-1 ~True()~ THEN BEGIN st");
         });
     });
 
@@ -115,6 +115,46 @@ describe("weidu-d/format/core", () => {
                 `BEGIN ~dlg~\nIF ~~ THEN BEGIN a\n  SAY ~see http://x.y/z~\n  IF ~~ THEN EXIT\nEND\n`,
             );
             expect(output).toContain("SAY ~see http://x.y/z~\n");
+        });
+    });
+
+    describe("string and comment content", () => {
+        it("reads a backslash in a double-quoted string as an ordinary character", () => {
+            const output = format(`EXTEND_BOTTOM dlg 5\n  IF ~~ THEN REPLY "dir\\" DO ~Foo("a  b")~ EXIT\nEND\n`);
+            expect(output).toContain(`DO ~Foo("a  b")~`);
+        });
+
+        it("keeps the blanks of a nested block comment", () => {
+            const output = format(`EXTEND_BOTTOM dlg 5\n  IF ~~ THEN REPLY ~r~ /* a /* b */   c   d */ EXIT\nEND\n`);
+            expect(output).toContain("/* a /* b */   c   d */");
+        });
+
+        it("keeps a // inside a multi-line block comment of a transition as text", () => {
+            const output = format(
+                `EXTEND_BOTTOM dlg 5\n  IF ~~ THEN REPLY ~r~ /* see\n     //    http://x   y\n  */ GOTO s2\nEND\n`,
+            );
+            expect(output).toContain("//    http://x   y\n");
+        });
+
+        it("keeps a // inside a multi-line block comment of a state as text", () => {
+            const output = format(
+                `BEGIN ~dlg~\nIF ~~ THEN BEGIN a\n  SAY ~x~\n  /* see\n     //    http://x   y\n  */\n  IF ~~ THEN EXIT\nEND\n`,
+            );
+            expect(output).toContain("//    http://x   y\n");
+        });
+
+        it("keeps a string spanning lines inside a trigger as written", () => {
+            const output = format(
+                `BEGIN ~dlg~\nIF ~Foo("p\n      q  //   r")~ THEN BEGIN a\n  SAY ~x~\n  IF ~~ THEN EXIT\nEND\n`,
+            );
+            expect(output).toContain(`Foo("p\n      q  //   r")~`);
+        });
+
+        it("keeps a string spanning lines inside a transition action as written", () => {
+            const output = format(
+                `EXTEND_BOTTOM dlg 5\n  IF ~~ THEN REPLY ~r~ DO ~Foo("p\n      q  //   r")~ EXIT\nEND\n`,
+            );
+            expect(output).toContain(`Foo("p\n      q  //   r")~`);
         });
     });
 
@@ -278,7 +318,7 @@ describe("weidu-d/format/core", () => {
             const output = format(longState);
             expect(output).toBe(
                 "BEGIN d ~1~\n" +
-                    "    IF foo s SAY bar baz\n" +
+                    "    IF foo THEN BEGIN s SAY bar baz\n" +
                     "        IF t THEN REPLY ~a reply long enough to push the state past the line limit~ FLAGS ~4~ DO act EXIT\n" +
                     "        IF ~~ THEN FLAGS 0x4 EXIT\n" +
                     "    END\n",
@@ -292,7 +332,7 @@ describe("weidu-d/format/core", () => {
             const output = format(input);
             expect(output).toBe(
                 "BEGIN d\n" +
-                    "    IF %t% s SAY ~a text long enough to push this state past the line limit of the formatter~\n" +
+                    "    IF %t% THEN BEGIN s SAY ~a text long enough to push this state past the line limit of the formatter~\n" +
                     "        IF %c% THEN DO %a% EXIT\n" +
                     "    END\n",
             );

@@ -21,6 +21,7 @@ import {
     throwFormatError,
     NODE_PATCH_TRY,
     NODE_ACTION_TRY,
+    NODE_INNER_ACTION,
 } from "./types";
 import {
     isComment,
@@ -39,6 +40,7 @@ import {
     pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
+import { weave, type WovenItem } from "../format-utils";
 import { formatForLoopHeader, formatForLoop, formatForEach, formatAssociativeArray } from "./format-loops";
 
 // ============================================
@@ -63,6 +65,12 @@ interface ControlFlowParseState {
     lastHeaderRow: number;
     /** Inline comment on same row as header (preserved through conditionNode path) */
     headerComment: string;
+    /** Whether the condition node was reached (comments before it sit between the keyword and the condition) */
+    conditionSeen: boolean;
+    /** Comments between the IF keyword and its condition */
+    preConditionComments: SyntaxNode[];
+    /** Comments after the condition, on rows below it, ahead of BEGIN */
+    afterConditionComments: string[];
     /** Whether THEN keyword was seen (for IF statements) */
     hasThen: boolean;
     /** Condition node for IF statements (for special formatting) */
@@ -81,6 +89,9 @@ function createControlFlowState(): ControlFlowParseState {
         beginRow: -1,
         lastHeaderRow: -1,
         headerComment: "",
+        conditionSeen: false,
+        preConditionComments: [],
+        afterConditionComments: [],
         hasThen: false,
         conditionNode: null,
         conditionKeyword: "",
@@ -92,9 +103,10 @@ function createControlFlowState(): ControlFlowParseState {
 // ============================================
 
 /** Every comment written inside a condition, with the row it sits on. */
-function collectComments(node: SyntaxNode): { row: number; column: number; text: string }[] {
+function collectComments(node: SyntaxNode, skip: ReadonlySet<number>): { row: number; column: number; text: string }[] {
     const found: { row: number; column: number; text: string }[] = [];
     const walk = (n: SyntaxNode): void => {
+        if (isComment(n) && skip.has(n.id)) return;
         if (isComment(n)) {
             found.push({ row: n.startPosition.row, column: n.startPosition.column, text: normalizeComment(n.text) });
             return;
@@ -103,6 +115,18 @@ function collectComments(node: SyntaxNode): { row: number; column: number; text:
     };
     walk(node);
     return found;
+}
+
+/** The operand `node` of a condition, joined to the previous one by `operator`. */
+function conditionOperand(operator: string | null, node: SyntaxNode): ConditionOperand {
+    return {
+        operator,
+        text: normalizeWhitespace(node.text),
+        startRow: node.startPosition.row,
+        startColumn: node.startPosition.column,
+        endRow: node.endPosition.row,
+        endColumn: node.endPosition.column,
+    };
 }
 
 /**
@@ -130,31 +154,98 @@ function flattenOrAndExpr(node: SyntaxNode): ConditionOperand[] | null {
         if (leftFlat) {
             result.push(...leftFlat);
         } else {
-            result.push({
-                operator: null,
-                text: normalizeWhitespace(left.text),
-                endRow: left.endPosition.row,
-                endColumn: left.endPosition.column,
-            });
+            result.push(conditionOperand(null, left));
         }
     } else {
-        result.push({
-            operator: null,
-            text: normalizeWhitespace(left.text),
-            endRow: left.endPosition.row,
-            endColumn: left.endPosition.column,
-        });
+        result.push(conditionOperand(null, left));
     }
 
     // Add right side with the operator
-    result.push({
-        operator: op.text,
-        text: normalizeWhitespace(right.text),
-        endRow: right.endPosition.row,
-        endColumn: right.endPosition.column,
-    });
+    result.push(conditionOperand(op.text, right));
 
     return result;
+}
+
+/** Node types whose text is content: blanks and parentheses inside them are not the formatter's to touch. */
+const LITERAL_TYPES: ReadonlySet<string> = new Set([
+    SyntaxType.String,
+    SyntaxType.TildeString,
+    SyntaxType.FiveTildeString,
+    SyntaxType.DoubleString,
+    SyntaxType.PercentString,
+    SyntaxType.Comment,
+    SyntaxType.LineComment,
+]);
+
+/** Drop the blanks after each `(` and before each `)` of code text. */
+function tightenCode(code: string): string {
+    // A blank run is taken whole and kept unless a `)` follows: `/\s+\)/` would retry from every blank of a long run.
+    return code
+        .replaceAll(/\(\s+/g, "(")
+        .replaceAll(/(\s+)(\)?)/g, (_run, blanks: string, close: string) => (close === "" ? blanks : close));
+}
+
+/**
+ * The condition's text with the blanks inside its parentheses dropped, strings and comments left as written.
+ * Works from the condition's tree: only the stretches between string and comment nodes are tightened.
+ */
+function tightenParens(node: SyntaxNode, skip: ReadonlySet<number>): string {
+    const literals: SyntaxNode[] = [];
+    const walk = (n: SyntaxNode): void => {
+        if (LITERAL_TYPES.has(n.type)) {
+            literals.push(n);
+            return;
+        }
+        n.children.forEach((child) => walk(child));
+    };
+    walk(node);
+
+    const text = node.text;
+    let result = "";
+    let pos = 0;
+    let afterLineComment = false;
+    const pushCode = (code: string): void => {
+        // The newline ending a line comment stays, or the `)` after it would move into the comment.
+        if (afterLineComment && code.startsWith("\n")) {
+            result += "\n" + tightenCode(code.slice(1));
+        } else {
+            result += tightenCode(code);
+        }
+    };
+    for (const literal of literals) {
+        const start = literal.startIndex - node.startIndex;
+        pushCode(text.slice(pos, start));
+        // A skipped comment is written elsewhere: nothing of it stays here, nor the blank that stood before it.
+        result += skip.has(literal.id) ? "" : literal.text;
+        pos = start + literal.text.length;
+        afterLineComment = literal.type === SyntaxType.LineComment;
+    }
+    pushCode(text.slice(pos));
+    if (skip.size > 0 && result.endsWith(")")) result = result.slice(0, -1).trimEnd() + ")";
+    return result;
+}
+
+/**
+ * The comments written just before the `)` that closes a condition which is one parenthesised expression. They are
+ * written after the `)` instead, where the same comments are read again: the condition stays on one line when it fits,
+ * and a second pass leaves it as it is.
+ */
+function closingComments(condition: SyntaxNode | null): SyntaxNode[] {
+    if (!condition) return [];
+    const paren =
+        condition.type === SyntaxType.ParenExpr
+            ? condition
+            : condition
+                  .descendantsOfType(SyntaxType.ParenExpr)
+                  .find((p) => p.startIndex === condition.startIndex && p.endIndex === condition.endIndex);
+    // Only an OR/AND chain is split by operand, which is where the comment's place differs between two passes; any
+    // other condition keeps the comment and the `)` on the line after it.
+    const inner = paren?.children.find((c) => c.type === SyntaxType.BinaryExpr);
+    if (!paren || !inner || flattenOrAndExpr(inner) === null) return [];
+    const close = paren.children.findLastIndex((c) => c.type === ")");
+    const found: SyntaxNode[] = [];
+    for (let i = close - 1; i >= 0 && isComment(paren.children[i]!); i--) found.unshift(paren.children[i]!);
+    return found;
 }
 
 /**
@@ -166,6 +257,7 @@ function formatCondition(
     indent: string,
     contIndent: string,
     lineLimit: number,
+    skip: ReadonlySet<number> = new Set(),
 ): string[] {
     if (!conditionNode) {
         return [indent + prefix];
@@ -175,15 +267,14 @@ function formatCondition(
     // first `//` inside that comment. Splitting unconditionally also makes the output idempotent - the one-line
     // form's width check cannot see the ` BEGIN` and trailing comment the caller appends afterwards, so a
     // commented condition would otherwise split on one pass and rejoin on the next.
-    const comments = collectComments(conditionNode);
+    const comments = collectComments(conditionNode, skip);
 
     // Normalize whitespace and strip spaces inside parentheses to match what
     // the split output produces (AST node texts don't have those spaces)
-    // A blank run is taken whole and kept unless a `)` follows: `/\s+\)/` would retry from every blank of a long run.
-    const condText = normalizeWhitespace(conditionNode.text)
-        .replaceAll(/\(\s+/g, "(")
-        .replaceAll(/(\s+)(\)?)/g, (_run, blanks: string, close: string) => (close === "" ? blanks : close));
-    const fullLine = indent + prefix + " " + condText;
+    const condText = normalizeWhitespace(tightenParens(conditionNode, skip));
+    // No prefix when a line comment after the keyword has already ended the line it sat on.
+    const head = prefix === "" ? "" : prefix + " ";
+    const fullLine = indent + head + condText;
 
     if (comments.length === 0 && fullLine.length <= lineLimit) {
         return [fullLine];
@@ -234,29 +325,32 @@ function formatCondition(
         const operands = flattenOrAndExpr(exprNode);
         if (operands && operands.length > 1) {
             const lines: string[] = [];
-            const used = new Set<number>();
             const openParen = hasOuterParens ? "(" : "";
             const closeParen = hasOuterParens ? ")" : "";
+            // A comment inside an operand's span is already in its text. Every other comment follows the last operand
+            // that ends before it, or the first one when none does, on that operand's line and in source order.
+            const endsBefore = (operand: ConditionOperand, cm: { row: number; column: number }): boolean =>
+                operand.endRow < cm.row || (operand.endRow === cm.row && operand.endColumn <= cm.column);
+            const startsBefore = (operand: ConditionOperand, cm: { row: number; column: number }): boolean =>
+                operand.startRow < cm.row || (operand.startRow === cm.row && operand.startColumn <= cm.column);
+            const trailing: string[][] = operands.map(() => []);
+            for (const cm of comments) {
+                if (operands.some((operand) => startsBefore(operand, cm) && !endsBefore(operand, cm))) continue;
+                const after = operands.findLastIndex((operand) => endsBefore(operand, cm));
+                trailing[Math.max(after, 0)]?.push(cm.text);
+            }
             for (let i = 0; i < operands.length; i++) {
                 const op = operands[i];
                 if (!op) continue;
                 let line: string;
                 if (i === 0) {
-                    line = indent + prefix + " " + unaryPrefix + openParen + op.text;
+                    line = indent + head + unaryPrefix + openParen + op.text;
                 } else if (i === operands.length - 1) {
                     line = contIndent + op.operator + " " + op.text + closeParen;
                 } else {
                     line = contIndent + op.operator + " " + op.text;
                 }
-                // Only comments written after this operand ends: one inside its span is already in op.text.
-                // Each is consumed once so it cannot also attach to an operand sharing the row.
-                for (let c = 0; c < comments.length; c++) {
-                    const cm = comments[c];
-                    if (!cm || used.has(c)) continue;
-                    if (cm.row !== op.endRow || cm.column < op.endColumn) continue;
-                    line += INLINE_COMMENT_SPACING + cm.text;
-                    used.add(c);
-                }
+                for (const text of trailing[i] ?? []) line += INLINE_COMMENT_SPACING + text;
                 lines.push(line);
             }
             return lines;
@@ -296,18 +390,46 @@ function outputBeginAndEnterBody(
 
     // Handle IF with condition
     if (state.conditionNode && state.conditionKeyword) {
-        const condLines = formatCondition(state.conditionNode, state.conditionKeyword, indent, contIndent, lineLimit);
+        // The comments between the keyword and the condition stay there; a `//` one ends the line, so the condition
+        // starts the next.
+        const prefix = weave(
+            [
+                { text: state.conditionKeyword, sep: "" },
+                ...state.preConditionComments.map((comment): WovenItem => ({
+                    comment: comment.text,
+                    endsLine: comment.type === SyntaxType.LineComment,
+                })),
+            ],
+            contIndent,
+        );
+        const prefixEndsLine = state.preConditionComments.at(-1)?.type === SyntaxType.LineComment;
+        if (prefixEndsLine) state.lines.push(indent + prefix);
+        const closing = closingComments(state.conditionNode);
+        const skip = new Set(closing.map((comment) => comment.id));
+        const condLines = prefixEndsLine
+            ? formatCondition(state.conditionNode, "", contIndent, contIndent, lineLimit, skip)
+            : formatCondition(state.conditionNode, prefix, indent, contIndent, lineLimit, skip);
+        // The comments before the closing `)` follow it, ahead of the ones written after it.
+        if (closing.length > 0) {
+            const text = closing.map((comment) => normalizeComment(comment.text)).join(" ");
+            state.headerComment = state.headerComment === "" ? text : text + " " + state.headerComment;
+        }
         state.lines.push(...condLines);
         const thenKeyword = state.hasThen ? KW_THEN + " " : "";
+        // Comments after the condition, on rows below it, keep their lines ahead of THEN and BEGIN
+        const afterCondition = state.afterConditionComments.map((comment) => contIndent + comment);
+        state.afterConditionComments = [];
         // Inline comment on condition line forces BEGIN to next line
         if (state.headerComment) {
             const lastIdx = state.lines.length - 1;
             if (lastIdx >= 0) {
                 state.lines[lastIdx] += INLINE_COMMENT_SPACING + state.headerComment;
             }
-            state.lines.push(indent + thenKeyword + KW_BEGIN);
+            state.lines.push(...afterCondition, indent + thenKeyword + KW_BEGIN);
             state.headerComment = "";
-        } else if (condLines.length > 1) {
+        } else if (afterCondition.length > 0) {
+            state.lines.push(...afterCondition, indent + thenKeyword + KW_BEGIN);
+        } else if (condLines.length > 1 || prefixEndsLine) {
             state.lines.push(indent + thenKeyword + KW_BEGIN);
         } else {
             const lastIdx = state.lines.length - 1;
@@ -318,6 +440,8 @@ function outputBeginAndEnterBody(
         state.headerParts = [];
         state.conditionNode = null;
         state.conditionKeyword = "";
+        state.conditionSeen = false;
+        state.preConditionComments = [];
         state.hasThen = false;
         state.inBody = true;
         state.beginRow = child.startPosition.row;
@@ -357,18 +481,35 @@ function handleControlFlowComment(
         const rowToCheck = state.beginRow >= 0 ? state.beginRow : state.lastContentRow;
         if (tryAppendInlineComment(state.lines, child, rowToCheck)) {
             state.beginRow = -1;
+            // The next comment on this row joins it, and none below it sees a gap.
+            state.lastContentRow = child.endPosition.row;
             return;
         }
+        // A blank line above a comment stays, as one above any other body item does.
+        pushBlankIfGap(state.lines, child, rowToCheck);
         state.lines.push(bodyIndent + normalizeComment(child.text));
         // Track the comment row so a body item that follows on the next source row
         // doesn't appear to have a gap (the comment occupies a row otherwise unseen).
         state.lastContentRow = child.endPosition.row;
         state.beginRow = -1;
-    } else if (state.afterElse) {
+    } else if (state.afterElse || state.lines.length > 0) {
+        // After an ELSE, or after a body's END (the header is out by the first BEGIN): a line of its own. Joined
+        // into the header parts, comments written between END and ELSE ran together into one.
         state.lines.push(indent + normalizeComment(child.text));
-    } else if (state.lastHeaderRow >= 0 && child.startPosition.row === state.lastHeaderRow) {
-        // Inline comment on same row as IF keyword or condition
-        state.headerComment = normalizeComment(child.text);
+    } else if (state.conditionNode !== null && !state.conditionSeen) {
+        // Between the IF keyword and its condition
+        state.preConditionComments.push(child);
+    } else if (
+        state.conditionNode !== null &&
+        state.lastHeaderRow >= 0 &&
+        child.startPosition.row === state.lastHeaderRow
+    ) {
+        // Inline comment on same row as the condition
+        const text = normalizeComment(child.text);
+        state.headerComment = state.headerComment === "" ? text : state.headerComment + " " + text;
+    } else if (state.conditionNode !== null) {
+        // After the condition, on a row of its own
+        state.afterConditionComments.push(normalizeComment(child.text));
     } else {
         state.headerParts.push(normalizeComment(child.text));
     }
@@ -464,7 +605,7 @@ export function formatControlFlow(
         );
     }
     // Handle FOR loops specially
-    const forHeader = formatForLoopHeader(node);
+    const forHeader = formatForLoopHeader(node, ctx.indent.repeat(depth + 1));
     if (forHeader !== null) {
         return formatForLoop(node, ctx, depth, forHeader, formatNode);
     }
@@ -540,15 +681,23 @@ export function formatControlFlow(
             continue;
         }
 
-        // ELSE IF chaining: join first line of nested IF onto the "END ELSE" line
-        if (state.afterElse && (child.type === SyntaxType.ActionIf || child.type === SyntaxType.PatchIf)) {
+        // ELSE IF chaining: join first line of nested IF (or of an INNER_ACTION block) onto the "END ELSE" line
+        if (
+            state.afterElse &&
+            (child.type === SyntaxType.ActionIf ||
+                child.type === SyntaxType.PatchIf ||
+                child.type === NODE_INNER_ACTION)
+        ) {
             const nestedLines = formatNode(child, ctx, depth).split("\n");
             const firstLine = nestedLines[0]?.trimStart() ?? "";
             const lastLine = lastElement(state.lines);
-            if (lastLine && firstLine) {
+            // Not onto a line that ends in a line comment, which would take the IF into itself, nor when the nested
+            // text opens with a comment of its own: it stays a line of its own, as the IF below it does.
+            const joinable = lastLine && firstLine && !hasWeiduLineComment(lastLine) && !/^\/[/*]/.test(firstLine);
+            if (joinable) {
                 state.lines[state.lines.length - 1] = lastLine + " " + firstLine;
             }
-            for (let i = 1; i < nestedLines.length; i++) {
+            for (let i = joinable ? 1 : 0; i < nestedLines.length; i++) {
                 state.lines.push(nestedLines[i] ?? "");
             }
             state.afterElse = false;
@@ -582,8 +731,10 @@ export function formatControlFlow(
                 state.lastHeaderRow = child.endPosition.row;
                 continue;
             }
-            if (state.conditionNode && child === state.conditionNode) {
+            // By id: two reads of one node are different objects, so `===` never finds the condition.
+            if (state.conditionNode && child.id === state.conditionNode.id) {
                 state.lastHeaderRow = child.endPosition.row;
+                state.conditionSeen = true;
                 continue;
             }
             state.lastHeaderRow = child.endPosition.row;
@@ -618,11 +769,16 @@ export function formatMatchCase(
 
     for (const child of node.children) {
         if (isKeyword(child, KW_BEGIN)) {
-            const header = normalizeWhitespace(headerParts.join(" "));
-            if (hasWeiduLineComment(header)) {
-                lines.push(indent + header, indent + KW_BEGIN);
+            // A line comment ends its line: what follows it, a case value included, would otherwise join it.
+            const header = normalizeWhitespace(
+                headerParts.map((part) => part + (part.startsWith("//") ? "\n" : " ")).join(""),
+            );
+            const headerLines = header.split("\n").map((line) => indent + line);
+            const lastHeaderLine = headerLines.pop() ?? indent;
+            if (hasWeiduLineComment(lastHeaderLine)) {
+                lines.push(...headerLines, lastHeaderLine, indent + KW_BEGIN);
             } else {
-                lines.push(indent + header + " " + KW_BEGIN);
+                lines.push(...headerLines, lastHeaderLine + " " + KW_BEGIN);
             }
             inBody = true;
             lastEndRow = child.startPosition.row;

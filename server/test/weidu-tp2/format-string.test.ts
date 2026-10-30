@@ -70,4 +70,17 @@ describe("weidu-tp2 format string literal preservation", () => {
         const result = formatDocument(root);
         expect(result.text).toBe(input);
     });
+
+    it("reads a backslash in a double-quoted string as an ordinary character", () => {
+        // The first string ends at its backslash-quote pair's quote, so the blanks of the second are content.
+        const input = 'MOVE "dir\\" "a  b"\n';
+        const root = getParser().parse(input)!.rootNode;
+        expect(formatDocument(root).text).toBe(input);
+    });
+
+    it("keeps a // inside a nested block comment out of the line comments", () => {
+        const input = "OUTER_SET x = 1 /* a /* b */ //    c   d */ + 2\n";
+        const root = getParser().parse(input)!.rootNode;
+        expect(formatDocument(root).text).toBe(input);
+    });
 });

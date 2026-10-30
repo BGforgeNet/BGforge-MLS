@@ -25,11 +25,87 @@ import {
     normalizeLineComment,
     weiduLineCommentStart,
     hasWeiduLineComment,
+    itemsOf,
+    weave,
 } from "../format-utils";
 
 // Comment normalizers now live in @bgforge/format (shared across all formatters);
 // re-export so sibling TP2 modules keep importing them from "./utils".
 export { normalizeComment, normalizeLineComment, hasWeiduLineComment } from "../format-utils";
+
+// ============================================
+// Assignments
+// ============================================
+
+/** One side of an assignment: its words, and the line comments that were written among them. */
+export interface AssignmentSide {
+    text: string;
+    lineComments: SyntaxNode[];
+}
+
+/**
+ * The words of one side of a `name = value` assignment, with the block comments among them where they were
+ * written. A `//` comment cannot stay inside a line that is laid out as `name = value`, so it is returned for the
+ * caller to put at the end of the assignment's line: the nearest place to where it stood.
+ */
+function assignmentSide(children: readonly SyntaxNode[], textOf: (child: SyntaxNode) => string): AssignmentSide {
+    const lineComments = children.filter((child) => child.type === SyntaxType.LineComment);
+    const kept = children.filter((child) => child.type !== SyntaxType.LineComment);
+    return {
+        text: weave(
+            itemsOf(kept, (child) => ({ text: textOf(child), sep: " " })),
+            "",
+        ),
+        lineComments,
+    };
+}
+
+/**
+ * The name and the value of an assignment, from the children on each side of its `=`. When a `//` comment stands in
+ * either side, every comment of the assignment goes to `lineComments`, in source order, for the lines above it:
+ * writing the block comments inline and the line comment above would put them in another order than they were
+ * written.
+ */
+export function assignmentParts(
+    nameChildren: readonly SyntaxNode[],
+    nameText: (child: SyntaxNode) => string,
+    valueChildren: readonly SyntaxNode[],
+    valueText: (child: SyntaxNode) => string,
+): { name: string; value: string; lineComments: SyntaxNode[] } {
+    const all = [...nameChildren, ...valueChildren];
+    if (all.some((child) => child.type === SyntaxType.LineComment)) {
+        const words = (children: readonly SyntaxNode[], textOf: (child: SyntaxNode) => string): string =>
+            children
+                .filter((child) => !isCommentNode(child))
+                .map((child) => textOf(child))
+                .join(" ");
+        return {
+            name: words(nameChildren, nameText),
+            value: words(valueChildren, valueText),
+            lineComments: all.filter((child) => isCommentNode(child)),
+        };
+    }
+    const name = assignmentSide(nameChildren, nameText);
+    const value = assignmentSide(valueChildren, valueText);
+    return { name: name.text, value: value.text, lineComments: [] };
+}
+
+function isCommentNode(node: SyntaxNode): boolean {
+    return node.type === SyntaxType.LineComment || node.type === SyntaxType.Comment;
+}
+
+/**
+ * The line comments of an assignment as comment items, for the lines above it. Written on the assignment's line they
+ * would be read again as a comment after the whole declaration, a different slot, so the result would not be stable.
+ */
+export function commentItemsAbove(comments: readonly SyntaxNode[]): CollectedItem[] {
+    return comments.map((comment) => ({
+        type: CollectedItemType.Comment,
+        text: normalizeComment(comment.text),
+        startRow: comment.startPosition.row,
+        endRow: comment.endPosition.row,
+    }));
+}
 
 // ============================================
 // Type lookup sets (O(1) instead of O(n) array includes)
@@ -105,6 +181,8 @@ export function tryAppendInlineComment(lines: string[], child: SyntaxNode, lastE
  */
 export function handleComment(lines: string[], child: SyntaxNode, indent: string, lastEndRow: number): number {
     if (!tryAppendInlineComment(lines, child, lastEndRow)) {
+        // A blank line above a comment stays, as one above any other body item does.
+        pushBlankIfGap(lines, child, lastEndRow);
         lines.push(indent + normalizeComment(child.text));
     }
     return child.endPosition.row;
@@ -372,7 +450,15 @@ export function outputHeaderLines(headerLines: string[][], lines: string[], inde
         const lineParts = headerLines[j];
         if (lineParts && lineParts.length > 0) {
             const lineIndent = j === 0 ? indent : contIndent;
-            lines.push(lineIndent + normalizeWhitespace(lineParts.join(" ")));
+            // A line comment ends its line: what follows it, a name or a condition, starts the next, one level in.
+            const endsLine = (part: string, i: number): boolean => i < lineParts.length - 1 && part.startsWith("//");
+            const text = normalizeWhitespace(
+                lineParts.map((part, i) => (endsLine(part, i) ? part + "\n" : part)).join(" "),
+            );
+            lines.push(
+                lineIndent +
+                    (lineParts.some((part, i) => endsLine(part, i)) ? text.split("\n").join("\n" + contIndent) : text),
+            );
         }
     }
 }

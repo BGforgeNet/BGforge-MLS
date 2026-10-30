@@ -17,14 +17,17 @@
 >>>>>>>>
 
 ACTION_IF GAME_INCLUDES ~bg1~ AND expanded == 1 BEGIN
+
     // Only the one at TWN gets destroyed
     EXTEND_TOP ~%SouthBeregostRoad_BCS%.bcs~ ~.../ua-inlined/SouthBeregostRoad.baf~
+
     // original cre had no death var
     ACTION_IF GAME_IS ~bgt~ BEGIN
         COPY_EXISTING ~hobgzhur.cre~ ~override~
             WRITE_ASCIIT CRE_script_name ~hobgzhur~
         BUT_ONLY
     END
+
     // BGEE replaces boot02 with a special version, we're reverting it back
     ACTION_IF GAME_IS ~bgee eet~ BEGIN
         // item on cre
@@ -35,6 +38,7 @@ ACTION_IF GAME_INCLUDES ~bg1~ AND expanded == 1 BEGIN
                     new_item   = ~boot02~
             END
         BUT_ONLY
+
         // revert Zhurlong's dialog to BG1 behaviour, Zhurlong will accept any Boots of Stealth
         COPY_EXISTING ~zhurlo.dlg~ ~override~
             DECOMPILE_AND_PATCH BEGIN

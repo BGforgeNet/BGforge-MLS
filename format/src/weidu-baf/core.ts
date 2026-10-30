@@ -9,7 +9,15 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { bafIntegerValue } from "@bgforge/shared/baf-integer";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-baf";
-import { throwOnParseError, normalizeComment } from "../format-utils";
+import {
+    itemsOf,
+    normalizeComment,
+    reportRescuedComments,
+    restoreLostComments,
+    terminate,
+    throwOnParseError,
+    weave,
+} from "../format-utils";
 import { type FormatResult } from "../format-types";
 
 // Formatting options. BAF intentionally declares its own narrower options type
@@ -69,45 +77,73 @@ function handleBlockLevelComments(
     }
 }
 
-// Format a single argument
-function formatArgument(node: SyntaxNode): string {
-    if (node.type === SyntaxType.CallExpr) {
-        return formatCallExpr(node);
-    }
-    return node.text;
-}
-
-// Format a call expression: Name(arg1, arg2)
-function formatCallExpr(node: SyntaxNode): string {
+// Format a call expression: Name(arg1, arg2). `lineIndent` is the indent of the line it starts on. A comment among
+// the arguments stays where it was written; a `//` comment ends its line, so what follows it starts a new one.
+function formatCallExpr(node: SyntaxNode, lineIndent: string, ctx: FormatContext): string {
     const func = node.childForFieldName("func");
     const funcName = func?.text ?? "";
 
-    const argNodes = node.childrenForFieldName("args");
-    const args = argNodes.map((arg) => formatArgument(arg));
+    // The arguments (a call among them) and the comments, in source order.
+    const parts = node.namedChildren.filter((child) => child.id !== func?.id);
+    const lastArg = parts.findLastIndex((part) => !isComment(part));
+    const tokens = parts.map((part, i) => {
+        if (isComment(part)) return normalizeComment(part.text);
+        const arg = part.type === SyntaxType.CallExpr ? formatCallExpr(part, lineIndent, ctx) : part.text;
+        return i < lastArg ? arg + "," : arg;
+    });
 
+    let text = funcName + "(";
+    tokens.forEach((token, i) => {
+        const previous = parts[i - 1];
+        if (previous === undefined) text += token;
+        else if (previous.type === SyntaxType.LineComment) text += "\n" + lineIndent + ctx.indent + token;
+        else text += " " + token;
+    });
     // An ActionOverride may stand without its closing parenthesis; the text is kept as written, not completed.
     const closed = node.children.some((child) => child.type === ")");
-    return funcName + "(" + args.join(", ") + (closed ? ")" : "");
+    if (!closed) return text;
+    return parts.at(-1)?.type === SyntaxType.LineComment ? text + "\n" + lineIndent + ")" : text + ")";
 }
 
 // Format a condition: [!]CallExpr()
-function formatCondition(node: SyntaxNode): string {
-    const negated = node.children.some((c) => c.text === "!");
+function formatCondition(node: SyntaxNode, lineIndent: string, ctx: FormatContext): string {
     const call = node.childForFieldName("call");
-    const callText = call ? formatCallExpr(call) : "";
-    return (negated ? "!" : "") + callText;
+    const callText = call ? formatCallExpr(call, lineIndent, ctx) : "";
+    return weave(
+        itemsOf(node.children, (child) => {
+            if (child.text === "!") return { text: "!", sep: "" };
+            return child.id === call?.id ? { text: callText, sep: "" } : null;
+        }),
+        lineIndent + ctx.indent,
+    );
+}
+
+// `line`, the output for a node, with each comment of the node it lacks put back on a line of its own: a comment
+// written where the formatter takes only the call (after a `!`, inside `OR(`) would vanish.
+function keepComments(node: SyntaxNode, line: string, indent: string): string {
+    return restoreLostComments(node, line, true, indent, true);
 }
 
 // Format an action: CallExpr()
-function formatAction(node: SyntaxNode): string {
+function formatAction(node: SyntaxNode, lineIndent: string, ctx: FormatContext): string {
     const call = node.childForFieldName("call");
-    return call ? formatCallExpr(call) : "";
+    return call ? formatCallExpr(call, lineIndent, ctx) : "";
 }
 
 // Format OR marker: OR(N)
-function formatOrMarker(node: SyntaxNode): string {
+function formatOrMarker(node: SyntaxNode, lineIndent: string, ctx: FormatContext): string {
     const count = node.childForFieldName("count");
-    return "OR(" + (count?.text ?? "") + ")";
+    return weave(
+        terminate(
+            itemsOf(node.children, (child) => {
+                if (child.id === count?.id) return { text: child.text, sep: "" };
+                if (child.type === "(" || child.type === ")") return { text: child.type, sep: "" };
+                return child.type === "OR" ? { text: "OR", sep: "" } : null;
+            }),
+            ")",
+        ),
+        lineIndent + ctx.indent,
+    );
 }
 
 // Format IF clause with conditions
@@ -122,7 +158,7 @@ function formatIfClause(node: SyntaxNode, result: string[], ctx: FormatContext):
     for (const child of node.children) {
         if (child.type === SyntaxType.OrMarker) {
             // Start OR group
-            result.push(ctx.indent + formatOrMarker(child));
+            result.push(keepComments(child, ctx.indent + formatOrMarker(child, ctx.indent, ctx), ctx.indent));
             const count = child.childForFieldName("count");
             // A count read from a `%variable%` is unknown here, so its conditions stay flat: an indent would claim
             // a grouping the file may not have.
@@ -133,13 +169,13 @@ function formatIfClause(node: SyntaxNode, result: string[], ctx: FormatContext):
         } else if (child.type === SyntaxType.Condition) {
             if (inOrGroup && orCount > 0) {
                 // Indent OR conditions one extra level
-                result.push(ctx.indent2 + formatCondition(child));
+                result.push(keepComments(child, ctx.indent2 + formatCondition(child, ctx.indent2, ctx), ctx.indent2));
                 orCount--;
                 if (orCount === 0) {
                     inOrGroup = false;
                 }
             } else {
-                result.push(ctx.indent + formatCondition(child));
+                result.push(keepComments(child, ctx.indent + formatCondition(child, ctx.indent, ctx), ctx.indent));
             }
             lastNodeRow = child.endPosition.row;
         } else if (isComment(child)) {
@@ -175,7 +211,7 @@ function formatResponse(node: SyntaxNode, result: string[], ctx: FormatContext):
 
     for (const child of node.children) {
         if (child.type === SyntaxType.Action) {
-            result.push(ctx.indent2 + formatAction(child));
+            result.push(keepComments(child, ctx.indent2 + formatAction(child, ctx.indent2, ctx), ctx.indent2));
             lastNodeRow = child.endPosition.row;
         } else if (isComment(child)) {
             handleComment(result, child, lastNodeRow, ctx.indent2);
@@ -212,6 +248,10 @@ function formatBlock(node: SyntaxNode, result: string[], ctx: FormatContext): vo
 
 // Main formatting function
 export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions>): FormatResult {
+    return reportRescuedComments(() => formatDocumentText(root, options));
+}
+
+function formatDocumentText(root: SyntaxNode, options?: Partial<FormatOptions>): FormatResult {
     throwOnParseError(root);
     const opts = { ...DEFAULT_OPTIONS, ...options };
     const ctx: FormatContext = {

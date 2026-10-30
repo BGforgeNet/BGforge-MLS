@@ -5,10 +5,31 @@
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
-import { getCtx, normalizeComment, formatNode, formatBlock } from "./core";
+import { getCtx, isComment, normalizeComment, formatNode, formatBlock } from "./core";
+import { falloutSslLineCommentStart, itemsOf, weave } from "../format-utils";
 import { formatExpression } from "./expressions";
 import { canonicalKeyword } from "./canonical-keyword";
 import { SyntaxType } from "@bgforge/shared/syntax-types/fallout-ssl";
+
+/**
+ * What goes between a head and its block body. The block opens on the head's line, unless a line comment ends that
+ * line or comments written between the head and the block go above it, each on a line of its own.
+ */
+function blockSeparator(head: string, above: readonly SyntaxNode[], indent: string): string {
+    if (above.length > 0) return linesAbove(above, indent) + "\n" + indent;
+    const lastLine = head.slice(head.lastIndexOf("\n") + 1);
+    return falloutSslLineCommentStart(lastLine) === -1 ? " " : "\n" + indent;
+}
+
+/** What goes between a head and its statement body: the comments between them, then the statement on its own line. */
+function statementSeparator(above: readonly SyntaxNode[], indent: string): string {
+    return linesAbove(above, indent) + "\n" + indent;
+}
+
+/** The comments, each on a line of its own at `indent` and after a line break. */
+function linesAbove(comments: readonly SyntaxNode[], indent: string): string {
+    return comments.map((comment) => "\n" + indent + normalizeComment(comment.text)).join("");
+}
 
 export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean = false): string {
     const ctx = getCtx();
@@ -21,33 +42,41 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
     const thenKeyword = node.children.find((c) => c.type === "then");
     const thenRow = thenKeyword?.startPosition.row ?? -1;
 
-    // Collect comments between then and else early (needed for trailing comment handling)
-    const elseComments: string[] = [];
-    let thenTrailingComment = "";
+    // Find trailing comment on "if ... then" line (same row as then, after then keyword)
+    const thenTrailingNode = node.children.find(
+        (child) =>
+            (child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) &&
+            child.startPosition.row === thenRow &&
+            thenKeyword &&
+            child.startPosition.column > thenKeyword.endPosition.column,
+    );
+    const thenTrailingComment = thenTrailingNode ? ctx.indent + normalizeComment(thenTrailingNode.text) : "";
+
+    // Collect comments between then and else early (needed for trailing comment handling). The one written after
+    // `then` is not among them: a statement on the `then` row would otherwise put its comment out twice.
+    const elseCommentNodes: SyntaxNode[] = [];
     if (elseBranch) {
+        const elseKw = node.children.find((c) => c.type === "else");
         for (const child of node.children) {
             if (child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) {
+                // A comment on the row of the else branch counts when it comes before the `else` keyword.
+                const beforeElse =
+                    child.startPosition.row < elseBranch.startPosition.row ||
+                    (child.startPosition.row === elseBranch.startPosition.row &&
+                        elseKw !== undefined &&
+                        child.endIndex <= elseKw.startIndex);
+                // One after the then branch: on that branch's row it may as well lie in the head, before the `then`.
                 if (
-                    child.startPosition.row >= (thenBranch?.endPosition.row ?? 0) &&
-                    child.startPosition.row < elseBranch.startPosition.row
+                    child.id !== thenTrailingNode?.id &&
+                    child.startIndex >= (thenBranch?.endIndex ?? 0) &&
+                    beforeElse
                 ) {
-                    elseComments.push(normalizeComment(child.text));
+                    elseCommentNodes.push(child);
                 }
             }
         }
     }
-    // Find trailing comment on "if ... then" line (same row as then, after then keyword)
-    for (const child of node.children) {
-        if (
-            (child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) &&
-            child.startPosition.row === thenRow &&
-            thenKeyword &&
-            child.startPosition.column > thenKeyword.endPosition.column
-        ) {
-            thenTrailingComment = ctx.indent + normalizeComment(child.text);
-            break;
-        }
-    }
+    const elseComments = elseCommentNodes.map((comment) => normalizeComment(comment.text));
 
     // Condition starts after "if " or "else if "
     const condColumn = depth * ctx.indent.length + (isElseIf ? 8 : 3);
@@ -56,19 +85,31 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
     const formattedCond = formatExpression(cond, condColumn, extraLength);
     const condIsBroken = formattedCond.includes("\n");
 
-    const kwIf = canonicalKeyword("if");
-    const kwThen = canonicalKeyword("then");
-
     // If condition was broken across lines, put "then" on its own line
-    let result: string;
-    if (condIsBroken) {
-        result = `${kwIf} ${formattedCond}\n${ctx.indent.repeat(depth)}${kwThen}` + thenTrailingComment;
-    } else {
-        result = `${kwIf} ${formattedCond} ${kwThen}` + thenTrailingComment;
-    }
+    const depthIndent = ctx.indent.repeat(depth);
+    const thenIndex = node.children.findIndex((child) => child.id === thenKeyword?.id);
+    const branchIndex = node.children.findIndex((child) => child.id === thenBranch?.id);
+    const head = weave(
+        itemsOf(node.children.slice(0, thenIndex + 1), (child) => {
+            if (child.type === "if") return { text: canonicalKeyword("if"), sep: "" };
+            if (child.id === cond?.id) return { text: formattedCond, sep: " ", indent: " ".repeat(condColumn) };
+            if (child.type !== "then") return null;
+            return {
+                text: canonicalKeyword("then"),
+                sep: condIsBroken ? "\n" + depthIndent : " ",
+                indent: depthIndent,
+            };
+        }),
+        ctx.indent.repeat(depth + 1),
+    );
+    // The comments between `then` and the branch that are not on the `then` row go above the branch.
+    const aboveBranch = node.children
+        .slice(thenIndex + 1, branchIndex)
+        .filter((child) => isComment(child) && child.id !== thenTrailingNode?.id);
+    let result = head + thenTrailingComment;
 
     if (thenIsBlock) {
-        result += " " + formatBlock(thenBranch, depth);
+        result += blockSeparator(result, aboveBranch, depthIndent) + formatBlock(thenBranch, depth);
         // Comments between end and else: first as trailing, rest on own lines
         elseComments.forEach((comment, i) => {
             if (i === 0) {
@@ -78,26 +119,46 @@ export function formatIfStmt(node: SyntaxNode, depth: number, isElseIf: boolean 
             }
         });
     } else if (thenBranch) {
-        result += "\n" + ctx.indent.repeat(depth + 1) + formatNode(thenBranch, depth + 1);
+        result += statementSeparator(aboveBranch, ctx.indent.repeat(depth + 1)) + formatNode(thenBranch, depth + 1);
+        // Comments before the else: one that began on the statement's last row stays on it, the rest take lines.
+        elseComments.forEach((comment, i) => {
+            const trailing = i === 0 && elseCommentNodes[i]?.startPosition.row === thenBranch.endPosition.row;
+            result += trailing ? ctx.indent + comment : "\n" + ctx.indent.repeat(depth) + comment;
+        });
     }
 
     if (elseBranch) {
         const elseSep = thenIsBlock && elseComments.length === 0 ? " " : "\n" + ctx.indent.repeat(depth);
-        result += elseSep + formatElse(elseBranch, depth);
+        // The comments between the `else` and its branch that are not among the ones written above the else.
+        const elseKeyword = node.children.find((child) => child.type === "else");
+        const afterElse = node.children.filter(
+            (child) =>
+                (child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) &&
+                elseKeyword !== undefined &&
+                child.startIndex >= elseKeyword.endIndex &&
+                child.endIndex <= elseBranch.startIndex &&
+                !elseCommentNodes.some((comment) => comment.id === child.id),
+        );
+        result += elseSep + formatElse(elseBranch, depth, afterElse);
     }
 
     return result;
 }
 
-/** `else` and its branch: an if's own, or an else_clause continuing an if a macro opened. */
-function formatElse(elseBranch: SyntaxNode, depth: number): string {
-    const kwElse = canonicalKeyword("else");
+/**
+ * `else` and its branch: an if's own, or an else_clause continuing an if a macro opened. `comments` are the block
+ * comments written between the `else` and the branch on the branch's row, which follow the `else`.
+ */
+function formatElse(elseBranch: SyntaxNode, depth: number, comments: SyntaxNode[] = []): string {
+    const kwElse = [canonicalKeyword("else"), ...comments.map((comment) => normalizeComment(comment.text))].join(" ");
     if (elseBranch.type === SyntaxType.IfStmt) {
         return kwElse + " " + formatIfStmt(elseBranch, depth, true);
     }
     if (elseBranch.type === SyntaxType.Block) {
         return kwElse + " " + formatBlock(elseBranch, depth);
     }
+    // With a comment after the `else`, the statement stays on its line: the comment, read again, is on its row.
+    if (comments.length > 0) return kwElse + " " + formatNode(elseBranch, depth + 1);
     return kwElse + "\n" + getCtx().indent.repeat(depth + 1) + formatNode(elseBranch, depth + 1);
 }
 
@@ -119,23 +180,44 @@ export function formatWhileStmt(node: SyntaxNode, depth: number): string {
     const formattedCond = formatExpression(cond, condColumn, extraLength);
     const condIsBroken = formattedCond.includes("\n");
 
-    const kwWhile = canonicalKeyword("while");
-    const kwDo = canonicalKeyword("do");
-
     // If condition was broken across lines, put "do" on its own line
-    let result: string;
-    if (condIsBroken) {
-        result = `${kwWhile} ${formattedCond}\n${ctx.indent.repeat(depth)}${kwDo}`;
-    } else {
-        result = `${kwWhile} ${formattedCond} ${kwDo}`;
-    }
+    const depthIndent = ctx.indent.repeat(depth);
+    const doIndex = node.children.findIndex((child) => child.type === "do");
+    const head = weave(
+        itemsOf(node.children.slice(0, doIndex + 1), (child) => {
+            if (child.type === "while") return { text: canonicalKeyword("while"), sep: "" };
+            if (child.id === cond?.id) return { text: formattedCond, sep: " ", indent: " ".repeat(condColumn) };
+            if (child.type !== "do") return null;
+            return { text: canonicalKeyword("do"), sep: condIsBroken ? "\n" + depthIndent : " ", indent: depthIndent };
+        }),
+        ctx.indent.repeat(depth + 1),
+    );
 
-    if (bodyIsBlock) {
-        result += " " + formatBlock(body, depth);
-    } else if (body) {
-        result += "\n" + ctx.indent.repeat(depth + 1) + formatNode(body, depth + 1);
-    }
+    return withBody(head, node, doIndex, body, depth);
+}
 
+/**
+ * `head`, the head's comments after its last token, and the body. The comments on the row of that token stay behind
+ * it; the ones further down, up to the body, go above the body, each on a line of its own. `headEnd` is the index
+ * among `node`'s children of the head's last token.
+ */
+function withBody(head: string, node: SyntaxNode, headEnd: number, body: SyntaxNode | null, depth: number): string {
+    const ctx = getCtx();
+    const bodyIndex = node.children.findIndex((child) => child.id === body?.id);
+    const endRow = node.children[headEnd]?.endPosition.row;
+    const between = body ? node.children.slice(headEnd + 1, bodyIndex).filter((child) => isComment(child)) : [];
+    const trailing = between.filter((comment) => comment.startPosition.row === endRow);
+    const above = between.filter((comment) => !trailing.includes(comment));
+    const result =
+        head + trailing.map((comment, i) => (i === 0 ? ctx.indent : " ") + normalizeComment(comment.text)).join("");
+
+    if (body?.type === SyntaxType.Block) {
+        const indent = ctx.indent.repeat(depth);
+        return result + blockSeparator(result, above, indent) + formatBlock(body, depth);
+    }
+    if (body) {
+        return result + statementSeparator(above, ctx.indent.repeat(depth + 1)) + formatNode(body, depth + 1);
+    }
     return result;
 }
 
@@ -146,22 +228,30 @@ export function formatForStmt(node: SyntaxNode, depth: number): string {
     const update = node.childForFieldName("update");
     const body = node.childForFieldName("body");
 
-    const initStr = init ? formatExpression(init) : "";
-    const condStr = cond ? formatExpression(cond) : "";
-    const updateStr = update ? formatExpression(update) : "";
-
-    // Without parentheses the update ends in its own `;`. Kept as the source wrote it, as foreach heads are.
+    // Without parentheses the update ends in its own `;`. Kept as the source wrote it, as foreach heads are. The head
+    // reads `init; cond; update` with a blank after each `;` even where a clause is empty: `for (; ; )`.
     const hasParens = node.children.some((c) => c.text === "(");
-    const header = `${initStr}; ${condStr}; ${updateStr}`;
-    let result = `${canonicalKeyword("for")} ${hasParens ? `(${header})` : `${header};`}`;
+    const bodyIndex = node.children.findIndex((child) => child.id === body?.id);
+    const headChildren = node.children.slice(0, bodyIndex === -1 ? undefined : bodyIndex);
+    const headEnd = headChildren.findLastIndex((child) => !isComment(child));
+    let semicolons = 0;
+    const head = weave(
+        itemsOf(headChildren.slice(0, headEnd + 1), (child) => {
+            if (child.type === "for") return { text: canonicalKeyword("for"), sep: "" };
+            if (child.type === "(") return { text: "(", sep: " " };
+            if (child.id === init?.id) return { text: formatExpression(child), sep: hasParens ? "" : " " };
+            if (child.id === cond?.id || child.id === update?.id) return { text: formatExpression(child), sep: " " };
+            if (child.type === ")") return { text: ")", sep: update ? "" : " " };
+            if (child.type !== ";") return null;
+            // A `;` inside the parentheses after the update is not written.
+            semicolons++;
+            if (hasParens && semicolons > 2) return null;
+            return { text: ";", sep: (semicolons === 2 && !cond) || (semicolons === 3 && !update) ? " " : "" };
+        }),
+        ctx.indent.repeat(depth + 1),
+    );
 
-    if (body?.type === SyntaxType.Block) {
-        result += " " + formatBlock(body, depth);
-    } else if (body) {
-        result += "\n" + ctx.indent.repeat(depth + 1) + formatNode(body, depth + 1);
-    }
-
-    return result;
+    return withBody(head, node, headEnd, body, depth);
 }
 
 export function formatForeachStmt(node: SyntaxNode, depth: number): string {
@@ -179,20 +269,28 @@ export function formatForeachStmt(node: SyntaxNode, depth: number): string {
     // The parentheses, the `variable` keyword, the `key: value` pair and the `while` guard are each
     // independently optional, so one head assembled from parts is the only shape that cannot drop
     // whichever combination a branch per form would have missed.
-    const loopVar = keyNode && valueNode ? `${keyNode.text}: ${valueNode.text}` : (keyNode?.text ?? "");
-    const binding = loopVar ? `${variableKw ? `${canonicalKeyword("variable")} ` : ""}${loopVar} ` : "";
-    const guardText = guard ? ` ${canonicalKeyword("while")} ${formatExpression(guard)}` : "";
-    const head = `${binding}${canonicalKeyword("in")} ${formatExpression(iter)}${guardText}`;
-    const kwForeach = canonicalKeyword("foreach");
-    const header = hasParens ? `${kwForeach} (${head})` : `${kwForeach} ${head}`;
+    const bodyIndex = node.children.findIndex((child) => child.id === body?.id);
+    const headChildren = node.children.slice(0, bodyIndex === -1 ? undefined : bodyIndex);
+    const headEnd = headChildren.findLastIndex((child) => !isComment(child));
+    const firstInHead = variableKw ?? keyNode;
+    const header = weave(
+        itemsOf(headChildren.slice(0, headEnd + 1), (child) => {
+            if (child.type === "foreach") return { text: canonicalKeyword("foreach"), sep: "" };
+            if (child.type === "(") return { text: "(", sep: " " };
+            if (child.type === ")") return { text: ")", sep: "" };
+            if (child.type === ":") return { text: ":", sep: "" };
+            if (child.type === "variable") return { text: canonicalKeyword("variable"), sep: hasParens ? "" : " " };
+            if (child.type === "in") return { text: canonicalKeyword("in"), sep: " " };
+            if (child.type === "while") return { text: canonicalKeyword("while"), sep: " " };
+            if (child.id === keyNode?.id || child.id === valueNode?.id) {
+                return { text: child.text, sep: child.id === firstInHead?.id && hasParens ? "" : " " };
+            }
+            return child.id === iter?.id || child.id === guard?.id ? { text: formatExpression(child), sep: " " } : null;
+        }),
+        ctx.indent.repeat(depth + 1),
+    );
 
-    if (body?.type === SyntaxType.Block) {
-        return header + " " + formatBlock(body, depth);
-    } else if (body) {
-        return header + "\n" + ctx.indent.repeat(depth + 1) + formatNode(body, depth + 1);
-    }
-
-    return header;
+    return withBody(header, node, headEnd, body, depth);
 }
 
 export function formatSwitchStmt(node: SyntaxNode, depth: number): string {
@@ -205,6 +303,8 @@ export function formatSwitchStmt(node: SyntaxNode, depth: number): string {
             parts.push(formatCaseClause(child, depth + 1));
         } else if (child.type === SyntaxType.DefaultClause) {
             parts.push(formatDefaultClause(child, depth + 1));
+        } else if (child.type === SyntaxType.Comment || child.type === SyntaxType.LineComment) {
+            parts.push(ctx.indent.repeat(depth + 1) + normalizeComment(child.text));
         }
     }
 

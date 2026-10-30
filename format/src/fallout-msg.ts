@@ -12,11 +12,7 @@
  * A group may start anywhere on a line, so an indented entry, or one after a note, is handled like any other.
  */
 
-import { stripBom, type FormatOutput } from "./format-utils";
-
-/** Every group is read as the engine reads it; the first of each three is a number, the second an audio name. */
-const GROUPS_PER_ENTRY = 3;
-const AUDIO_GROUP = 1;
+import { stripBom, MSG_AUDIO_GROUP, MSG_GROUPS_PER_ENTRY, type FormatOutput } from "./format-utils";
 
 /**
  * Split the text into lines that end outside a brace group. A newline inside a group is part of that
@@ -32,7 +28,7 @@ function splitLogicalLines(text: string): string[] {
             current += char;
             if (char === "}") {
                 // The text group is kept verbatim; the number and audio groups lose their surrounding whitespace.
-                if (groupIndex % GROUPS_PER_ENTRY <= AUDIO_GROUP) {
+                if (groupIndex % MSG_GROUPS_PER_ENTRY <= MSG_AUDIO_GROUP) {
                     const field = current.slice(groupStart + 1, -1).trim();
                     current = `${current.slice(0, groupStart)}{${field}}`;
                 }

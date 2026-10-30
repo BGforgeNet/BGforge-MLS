@@ -4,6 +4,8 @@
 
 import { describe, expect, it, vi } from "vitest";
 import type { FormatOutput } from "@bgforge/format";
+import { initParser, getParser } from "@bgforge/shared/parsers/fallout-ssl";
+import { reportRescuedComments, restoreLostComments } from "../../../format/src/format-utils";
 import type { ProviderContext } from "../../src/core/capabilities";
 import { defaultSettings } from "../../src/settings";
 import { normalizeUri } from "../../src/core/normalized-uri";
@@ -72,6 +74,24 @@ describe("createFormatOnlyProvider", () => {
         // The warning branch is checked first in the implementation, so a warning
         // must suppress edits even when out.text differs from the input.
         expect(result).toEqual({ edits: [], warning: "invalid delimiter" });
+    });
+
+    it("format() returns the edits and the notice when the net moved a comment", async () => {
+        await initParser();
+        const source = "procedure p begin\n    x := a /* c */ + b;\nend\n";
+        const formatFn = (): FormatOutput => {
+            const root = getParser().parse(source)!.rootNode;
+            return reportRescuedComments(() => ({
+                text: restoreLostComments(root, "procedure p begin\n    x := a + b;\nend\n", false, "", false),
+            }));
+        };
+        const provider = createFormatOnlyProvider("weidu-tra", formatFn);
+
+        const result = provider.format!(source, testUri);
+
+        expect(result.warning).toBeUndefined();
+        expect(result.notice).toContain("a comment was moved because the formatter would have dropped it");
+        expect(result.edits).toHaveLength(1);
     });
 
     it("format() propagates an error thrown by formatFn rather than swallowing it", () => {

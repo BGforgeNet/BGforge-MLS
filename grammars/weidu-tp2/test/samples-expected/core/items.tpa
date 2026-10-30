@@ -110,6 +110,7 @@ END
 OUTER_SPRINT common_regex_no_eol ~~
 ACTION_PHP_EACH item_present AS item => present BEGIN
     ACTION_IF present == 1 BEGIN
+
         // common regex
         ACTION_IF ~%common_regex%~ STR_EQ ~~ BEGIN  // empty, initialize
             OUTER_SPRINT common_regex_no_eol ~%item%~

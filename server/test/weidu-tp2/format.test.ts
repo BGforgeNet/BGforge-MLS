@@ -35,6 +35,7 @@ import {
     isBodyContent,
 } from "@bgforge/format/internal";
 import { initParser, getParser } from "@bgforge/shared/parsers/weidu-tp2";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 
 /** Extract symbols only (convenience wrapper). Accepts an optional workspaceRoot
@@ -275,18 +276,42 @@ END`;
         );
     });
 
-    it("strips blanks before a closing parenthesis wherever it sits, a string included", () => {
+    it("leaves the blanks around a parenthesis inside a string alone", () => {
         expect(format("BEGIN @1\nACTION_IF ~a   )  b~ STRING_EQUAL ~x~ BEGIN\nPRINT ~t~\nEND\n")).toBe(
-            "BEGIN @1\nACTION_IF ~a)  b~ STRING_EQUAL ~x~ BEGIN\n    PRINT ~t~\nEND\n",
+            "BEGIN @1\nACTION_IF ~a   )  b~ STRING_EQUAL ~x~ BEGIN\n    PRINT ~t~\nEND\n",
         );
+    });
+
+    it.each([
+        ["~", "~a  (  b   )  c~"],
+        ['"', '"a  (  b   )  c"'],
+        ["%", "%a(b)c%"],
+        ["~~~~~", "~~~~~a  (  b   )  c~~~~~"],
+    ])("leaves the blanks around parentheses inside a %s string alone", (_delimiter, literal) => {
+        expect(format(`BEGIN @1\nACTION_IF (  ${literal}  ) STRING_EQUAL ~x~ BEGIN\nPRINT ~t~\nEND\n`)).toBe(
+            `BEGIN @1\nACTION_IF (${literal}) STRING_EQUAL ~x~ BEGIN\n    PRINT ~t~\nEND\n`,
+        );
+    });
+
+    it("leaves the blanks around parentheses inside a block comment alone", () => {
+        expect(
+            format("BEGIN @1\nACTION_IF ( /* a  (  b   )  c */ ~y~ STRING_EQUAL ~x~  ) BEGIN\nPRINT ~t~\nEND\n"),
+        ).toBe("BEGIN @1\nACTION_IF (/* a  (  b   )  c */ ~y~ STRING_EQUAL ~x~) BEGIN\n    PRINT ~t~\nEND\n");
+    });
+
+    it("keeps a closing parenthesis out of the line comment before it", () => {
+        const output = format("BEGIN @1\nACTION_IF ( ~y~ STRING_EQUAL ~x~ // note\n  ) BEGIN\nPRINT ~t~\nEND\n");
+        expect(output).toBe("BEGIN @1\nACTION_IF (~y~ STRING_EQUAL ~x~ // note\n) BEGIN\n    PRINT ~t~\nEND\n");
+        expect(format(output)).toBe(output);
     });
 
     it("formats a condition holding a long run of blanks in linear time", () => {
         const blanks = " ".repeat(100_000);
         const condition = `(~a${blanks}b~ STRING_EQUAL ~x~)`;
-        const start = performance.now();
-        const output = format(`BEGIN @1\nACTION_IF ${condition} BEGIN\nPRINT ~t~\nEND\n`);
-        const elapsed = performance.now() - start;
+        let output = "";
+        const elapsed = cpuTimeMs(() => {
+            output = format(`BEGIN @1\nACTION_IF ${condition} BEGIN\nPRINT ~t~\nEND\n`);
+        });
         expect(output).toBe(`BEGIN @1\nACTION_IF ${condition} BEGIN\n    PRINT ~t~\nEND\n`);
         expect(elapsed).toBeLessThan(500);
     });

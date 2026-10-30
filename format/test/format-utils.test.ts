@@ -21,6 +21,7 @@ import {
     normalizeBlockComment,
     weiduLineCommentStart,
 } from "@bgforge/format/internal";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 
 describe("shared/format-utils", () => {
     describe("weiduLineCommentStart()", () => {
@@ -115,9 +116,10 @@ describe("shared/format-utils", () => {
 
         it("finishes in linear time on a long run of blanks inside a multiline block", () => {
             const input = "/*\n" + " ".repeat(100_000) + "x*/";
-            const start = performance.now();
-            const result = normalizeBlockComment(input);
-            const elapsed = performance.now() - start;
+            let result = "";
+            const elapsed = cpuTimeMs(() => {
+                result = normalizeBlockComment(input);
+            });
             expect(result).toBe("/*\n" + " ".repeat(100_000) + "x */");
             expect(elapsed).toBeLessThan(500);
         });
@@ -212,11 +214,19 @@ describe("shared/format-utils", () => {
             expect(result).toBe('"string\\u{20}with\\u{20}//\\u{20}comment"');
         });
 
-        it("should handle escaped characters in strings", () => {
-            const input = '"string with \\" quote"';
+        it("should read a backslash in a double-quoted string as an ordinary character", () => {
+            const input = '"dir\\" more';
             const result = stripCommentsWeidu(input);
 
-            expect(result).toBe('"string\\u{20}with\\u{20}\\"\\u{20}quote"');
+            // The string ends at the quote after the backslash, so the blank after it is outside the string.
+            expect(result).toBe('"dir\\" more');
+        });
+
+        it("should end a nested block comment at its own closer", () => {
+            const input = "code /* a /* b */ c */ more";
+            const result = stripCommentsWeidu(input);
+
+            expect(result).toBe("code  more");
         });
 
         it("should handle five-tilde strings", () => {
@@ -382,13 +392,9 @@ describe("shared/format-utils", () => {
             expect(result).toContain("position");
         });
 
-        it("should ignore comments when validating", () => {
-            const original = "code() // comment";
-            const formatted = "code()";
-
-            const result = validateFormatting(original, formatted, stripCommentsFalloutSsl);
-
-            expect(result).toBeNull();
+        it("should refuse a result that dropped a comment", () => {
+            const result = validateFormatting("code() // comment", "code()", stripCommentsFalloutSsl);
+            expect(result).toContain("comment or note 1 changed");
         });
 
         it("should detect added characters", () => {
@@ -409,13 +415,9 @@ describe("shared/format-utils", () => {
             expect(result).not.toBeNull();
         });
 
-        it("should work with WeiDU comment stripper", () => {
-            const original = "ACTION /* comment */";
-            const formatted = "ACTION";
-
-            const result = validateFormatting(original, formatted, stripCommentsWeidu);
-
-            expect(result).toBeNull();
+        it("should refuse a result that dropped a WeiDU comment", () => {
+            const result = validateFormatting("ACTION /* comment */", "ACTION", stripCommentsWeidu);
+            expect(result).toContain("comment or note 1 changed");
         });
     });
 

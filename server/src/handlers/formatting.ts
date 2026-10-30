@@ -28,6 +28,14 @@ export function register(ctx: HandlerContext): void {
                         message: decodeFileUris(result.warning),
                     });
                 }
+                if (result.notice) {
+                    // Info, not Warning: the file is formatted and nothing is wrong with it; the user is told that a
+                    // comment moved. Fire-and-forget for the same reason as above.
+                    void ctx.connection.sendNotification("window/showMessage", {
+                        type: MessageType.Info,
+                        message: decodeFileUris(result.notice),
+                    });
+                }
                 return result.edits;
             },
             ctx.timingOpts,

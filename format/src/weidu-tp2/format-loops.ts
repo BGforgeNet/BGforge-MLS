@@ -26,56 +26,69 @@ import {
     tryAppendInlineComment,
     outputAlignedAssignments,
     pushBlankIfGap,
+    assignmentParts,
+    commentItemsAbove,
 } from "./utils";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
+import { commentItem, itemsOf, layoutRowParts, weave, type Piece, type RowPart, type WovenItem } from "../format-utils";
+
+/** An item or comment node as a part of a list laid out by layoutRowParts, written as `text`. */
+function rowPart(node: SyntaxNode, text: string): RowPart {
+    return {
+        text,
+        isItem: !isComment(node),
+        isLineComment: node.type === SyntaxType.LineComment,
+        startRow: node.startPosition.row,
+        endRow: node.endPosition.row,
+    };
+}
 
 // ============================================
 // FOR loop formatting
 // ============================================
 
-/** Format FOR loop header: FOR (init; condition; increment) */
-export function formatForLoopHeader(node: SyntaxNode): string | null {
+/**
+ * Format FOR loop header: FOR (init; condition; increment). The items of a section are joined with a blank and the
+ * sections with "; ", as an empty one still takes its place. A comment stays where it was written; a `//` one ends
+ * its line, and what follows starts the next at `indent`.
+ */
+export function formatForLoopHeader(node: SyntaxNode, indent: string): string | null {
     if (node.type !== SyntaxType.PatchFor && node.type !== SyntaxType.OuterFor) {
         return null;
     }
 
-    const parts: string[] = [];
     let inParens = false;
-    // Three sections: init patches, condition, step patches
-    const sections: string[][] = [[], [], []];
+    // The index of the section the next item belongs to: init patches, condition, step patches
     let sectionIdx = 0;
-
-    for (const child of node.children) {
-        if (child.text === KW_FOR || child.text === KW_OUTER_FOR) {
-            parts.push(child.text);
-            continue;
-        }
-        if (child.text === "(") {
+    let sectionHasItem = false;
+    // The header stops at BEGIN; the comments past it belong to the body.
+    const begin = node.children.findIndex((child) => isKeyword(child, KW_BEGIN));
+    const headerChildren = begin === -1 ? node.children : node.children.slice(0, begin);
+    const items = itemsOf(headerChildren, (child): Piece | null => {
+        if (child.text === KW_FOR || child.text === KW_OUTER_FOR) return { text: child.text, sep: "" };
+        if (child.text === "(" && !inParens) {
             inParens = true;
-            continue;
+            return { text: "(", sep: " " };
         }
-        if (child.text === ")") {
+        if (child.text === ")" && inParens) {
             inParens = false;
-            // Join items within each section with space, sections with "; "
-            const formattedSections = sections.map((s) => s.join(" "));
-            parts.push("(" + formattedSections.join("; ") + ")");
-            continue;
+            return { text: ")", sep: "" };
         }
-        if (isKeyword(child, KW_BEGIN)) {
-            break;
+        if (isKeyword(child, KW_BEGIN)) return null;
+        if (!inParens) return null;
+        if (child.text === ";") {
+            // An empty section keeps its place: `a; ; c`
+            const sep = sectionIdx > 0 && !sectionHasItem ? " " : "";
+            sectionIdx++;
+            sectionHasItem = false;
+            return { text: ";", sep };
         }
-        if (inParens) {
-            if (child.text === ";") {
-                sectionIdx++;
-                continue;
-            }
-            if (!isComment(child) && sectionIdx < 3) {
-                sections[sectionIdx]?.push(normalizeWhitespace(child.text));
-            }
-        }
-    }
-
-    return parts.join(" ");
+        if (sectionIdx >= 3) return null;
+        const sep = sectionHasItem || sectionIdx > 0 ? " " : "";
+        sectionHasItem = true;
+        return { text: normalizeWhitespace(child.text), sep };
+    });
+    return weave(items, indent);
 }
 
 /** Format FOR loop with pre-formatted header. */
@@ -88,7 +101,11 @@ export function formatForLoop(
 ): string {
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
-    const lines: string[] = [indent + header + " " + KW_BEGIN];
+    // A `//` comment ending the header would take BEGIN into itself.
+    const lastHeaderLine = header.slice(header.lastIndexOf("\n") + 1);
+    const lines: string[] = hasWeiduLineComment(lastHeaderLine)
+        ? [indent + header, indent + KW_BEGIN]
+        : [indent + header + " " + KW_BEGIN];
     let lastEndRow = -1;
 
     let inBody = false;
@@ -130,9 +147,12 @@ export function formatForEach(
     const indent = ctx.indent.repeat(depth);
     const bodyIndent = ctx.indent.repeat(depth + 1);
 
-    // Collect header parts before BEGIN
-    const headerParts: string[] = [];
+    // Collect header parts before BEGIN: the words up to and including IN, with the comments among them, then the items
+    const headerItems: WovenItem[] = [];
     const itemsAfterIN: string[] = [];
+    // The items after IN with the comments among them, and the row IN is on, for when there are comments.
+    const listParts: RowPart[] = [];
+    let inRow = node.startPosition.row;
     let seenIN = false;
 
     for (const child of node.children) {
@@ -141,27 +161,41 @@ export function formatForEach(
         }
         if (isKeyword(child, KW_IN)) {
             seenIN = true;
-            headerParts.push(KW_IN);
+            inRow = child.endPosition.row;
+            headerItems.push({ text: KW_IN, sep: " " });
             continue;
         }
         if (isComment(child)) {
+            if (seenIN) listParts.push(rowPart(child, normalizeComment(child.text)));
+            else headerItems.push(commentItem(child));
             continue;
         }
         if (seenIN) {
             itemsAfterIN.push(child.text);
+            listParts.push(rowPart(child, child.text));
         } else {
-            headerParts.push(child.text);
+            headerItems.push({ text: child.text, sep: " " });
         }
     }
+    // A `//` comment before IN ends its line, and the rest of the header continues on the next, one level in.
+    const headerText = weave(headerItems, bodyIndent);
 
     // Build header lines
     const headerLines: string[] = [];
     const allItemsLength = itemsAfterIN.join(" ").length;
-    const headerLength = indent.length + headerParts.join(" ").length + 1 + allItemsLength;
+    const headerLength = indent.length + headerText.length + 1 + allItemsLength;
     const oneItemPerLine = itemsAfterIN.length > 1 && headerLength > ctx.lineLimit;
 
-    if (oneItemPerLine) {
-        headerLines.push(indent + headerParts.join(" "));
+    if (listParts.some((part) => !part.isItem)) {
+        // A comment among the items: they go one to a line, each comment where it was written, and BEGIN on a line
+        // of its own, which a `//` comment ending the list would otherwise swallow.
+        const lines = layoutRowParts(indent + headerText, inRow, listParts, {
+            firstItemInline: false,
+            spaceAfterHead: true,
+        });
+        headerLines.push(lines[0] ?? "", ...lines.slice(1).map((line) => bodyIndent + line), indent + KW_BEGIN);
+    } else if (oneItemPerLine) {
+        headerLines.push(indent + headerText);
         for (const item of itemsAfterIN) {
             headerLines.push(bodyIndent + item);
         }
@@ -170,8 +204,10 @@ export function formatForEach(
         // One join over both groups, not two joined with a separator: the loops that have no IN clause
         // (BASH_FOR, PHP_EACH) leave itemsAfterIN empty, and a separator added unconditionally then lands
         // as a stray double space before BEGIN.
-        const fullHeader = [...headerParts, ...itemsAfterIN].join(" ");
-        headerLines.push(indent + fullHeader + " " + KW_BEGIN);
+        const fullHeader = [headerText, ...itemsAfterIN].join(" ");
+        // A `//` comment ending the header would take BEGIN into itself.
+        const beginSep = hasWeiduLineComment(fullHeader.slice(fullHeader.lastIndexOf("\n") + 1)) ? "\n" + indent : " ";
+        headerLines.push(indent + fullHeader + beginSep + KW_BEGIN);
     }
 
     // Format body
@@ -220,7 +256,7 @@ export function formatForEach(
 // ============================================
 
 /** Parse associative array entry for alignment. */
-function parseAssocEntry(node: SyntaxNode): { name: string; value: string } | null {
+function parseAssocEntry(node: SyntaxNode): { name: string; value: string; lineComments: SyntaxNode[] } | null {
     let arrowIdx = -1;
     for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
@@ -234,26 +270,12 @@ function parseAssocEntry(node: SyntaxNode): { name: string; value: string } | nu
         return null;
     }
 
-    const keyParts: string[] = [];
-    for (let i = 0; i < arrowIdx; i++) {
-        const child = node.children[i];
-        if (child) {
-            keyParts.push(child.text);
-        }
-    }
-
-    const valueParts: string[] = [];
-    for (let i = arrowIdx + 1; i < node.children.length; i++) {
-        const child = node.children[i];
-        if (child) {
-            valueParts.push(child.text);
-        }
-    }
-
-    return {
-        name: keyParts.join(" "),
-        value: valueParts.join(" "),
-    };
+    return assignmentParts(
+        node.children.slice(0, arrowIdx),
+        (child) => child.text,
+        node.children.slice(arrowIdx + 1),
+        (child) => child.text,
+    );
 }
 
 /** Format associative array with aligned => operators. */
@@ -262,14 +284,17 @@ export function formatAssociativeArray(node: SyntaxNode, ctx: FormatContext, dep
     const bodyIndent = ctx.indent.repeat(depth + 1);
     const lines: string[] = [];
 
-    const headerParts: string[] = [];
+    const headerItems: WovenItem[] = [];
     const items: CollectedItem[] = [];
     let inBody = false;
     let beginRow = -1;
 
     for (const child of node.children) {
         if (isKeyword(child, KW_BEGIN)) {
-            lines.push(indent + headerParts.join(" ") + " " + KW_BEGIN);
+            // A `//` comment ending the header would take BEGIN into itself.
+            const header = weave(headerItems, bodyIndent);
+            const beginSep = hasWeiduLineComment(header.slice(header.lastIndexOf("\n") + 1)) ? "\n" + indent : " ";
+            lines.push(indent + header + beginSep + KW_BEGIN);
             inBody = true;
             beginRow = child.startPosition.row;
             continue;
@@ -280,7 +305,7 @@ export function formatAssociativeArray(node: SyntaxNode, ctx: FormatContext, dep
         }
 
         if (!inBody) {
-            headerParts.push(child.text);
+            headerItems.push(isComment(child) ? commentItem(child) : { text: child.text, sep: " " });
             continue;
         }
 
@@ -304,7 +329,7 @@ export function formatAssociativeArray(node: SyntaxNode, ctx: FormatContext, dep
         if (child.type === SyntaxType.AssocEntry) {
             const parsed = parseAssocEntry(child);
             if (parsed) {
-                items.push({
+                items.push(...commentItemsAbove(parsed.lineComments), {
                     type: CollectedItemType.Assignment,
                     name: parsed.name,
                     value: parsed.value,

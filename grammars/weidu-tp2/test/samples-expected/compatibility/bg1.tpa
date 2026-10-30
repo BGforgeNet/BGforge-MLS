@@ -12,6 +12,7 @@ END
 
 ACTION_IF GAME_INCLUDES ~bg1~ BEGIN
     PRINT ~BG1 custom UA adjustments~
+
     // small bonus: Boots of Stealth from Nadarin (quest to kill basilisk in Baldur's Gate) replaced with Boots of the West to match his dialog
     ACTION_IF NOT FILE_EXISTS_IN_GAME ~misc8j.itm~ BEGIN
         COPY ~%MOD_FOLDER%/core/items/misc8j.itm~ override
@@ -32,6 +33,7 @@ REPLACE_ACTION_TEXT ~nadari~
   ~GiveItem("misc8j"~
 >>>>>>>>
     COMPILE ~.../ua-inlined/nadari.d~
+
     // Kondar: make unstealable from Aldeth
     COPY_EXISTING ~aldeth.cre~ ~override~
         LPF ADD_CRE_ITEM_FLAGS
@@ -40,6 +42,7 @@ REPLACE_ACTION_TEXT ~nadari~
                 flags          = ~UNSTEALABLE~
         END
     BUT_ONLY
+
     // Ordulinian reward for blood deeds switched from Cloak of Non-Detection to Cloak of Protection +1
     <<<<<<<< .../ua-inlined/orduli.d
 REPLACE_ACTION_TEXT ~orduli~ ~clck06~ ~clck01~

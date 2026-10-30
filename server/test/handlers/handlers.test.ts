@@ -19,7 +19,13 @@
  */
 
 import { describe, expect, it, vi, afterEach, beforeAll } from "vitest";
-import { MarkupKind, type Connection, type InlayHint, type TextDocuments } from "vscode-languageserver/node";
+import {
+    MarkupKind,
+    MessageType,
+    type Connection,
+    type InlayHint,
+    type TextDocuments,
+} from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { registry } from "../../src/provider-registry";
 import { HoverResult as HoverResultFactory } from "../../src/language-provider";
@@ -313,6 +319,21 @@ describe("handler delegation to the provider registry", () => {
 
         expect(spy).toHaveBeenCalledWith("fallout-ssl", "text", KNOWN_URI);
         expect(result).toBe(edits);
+    });
+
+    it("formatting sends a notice as an info message and still returns the edits", async () => {
+        const { ctx, wired } = makeCtx(new Map([[KNOWN_URI, mockDoc("text")]]));
+        const edits = [{ range: { start: POSITION, end: POSITION }, newText: "" }];
+        vi.spyOn(registry, "format").mockReturnValue({ edits, notice: "a comment was moved" });
+
+        formatting.register(ctx);
+        const result = await wiredHandler(wired, "onDocumentFormatting")({ textDocument: { uri: KNOWN_URI } });
+
+        expect(result).toBe(edits);
+        expect(ctx.connection.sendNotification).toHaveBeenCalledWith("window/showMessage", {
+            type: MessageType.Info,
+            message: "a comment was moved",
+        });
     });
 
     it("document symbols delegate to registry.symbols", async () => {

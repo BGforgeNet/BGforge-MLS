@@ -5,6 +5,8 @@
 
 import { describe, expect, it, vi, beforeAll, beforeEach } from "vitest";
 import { initParser, parseWithCache } from "@bgforge/shared/parsers/weidu-d";
+import { stripCommentsWeiduD } from "@bgforge/format";
+import { reportRescuedComments, restoreLostComments } from "../../format/src/format-utils";
 import type { IndexedSymbol } from "../src/core/symbol";
 import type { Symbols } from "../src/core/symbol-index";
 
@@ -249,6 +251,41 @@ describe("formatWithValidation", () => {
             isInitialized: () => true,
             parse: () => dTree(VALID_D),
             formatAst: () => ({ text: "xyz" }),
+            getFormatOptions: () => ({}),
+            normalizeForCompare: (t: string) => t,
+        });
+        expect(result.edits).toEqual([]);
+        expect(result.warning).toContain("TEST formatter validation failed");
+    });
+
+    // The net moves a comment the formatter would have dropped: the file is formatted, and the user is told.
+    it("returns the edits and the notice when the net moved a comment", () => {
+        const text = "BEGIN d\n// c\n";
+        const result = formatWithValidation({
+            text,
+            uri: "file:///a.d",
+            languageName: "TEST",
+            isInitialized: () => true,
+            parse: () => dTree(text),
+            formatAst: (root) =>
+                reportRescuedComments(() => ({ text: restoreLostComments(root, "BEGIN d\n", true, "", false) })),
+            getFormatOptions: () => ({}),
+            normalizeForCompare: stripCommentsWeiduD,
+        });
+        expect(result.warning).toBeUndefined();
+        expect(result.notice).toContain("a comment was moved because the formatter would have dropped it");
+        expect(result.edits).toHaveLength(1);
+        expect(result.edits[0]?.newText).toContain("// c");
+    });
+
+    it("still validates the text of a result that carries a notice", () => {
+        const result = formatWithValidation({
+            text: "abc",
+            uri: "file:///a.ts",
+            languageName: "TEST",
+            isInitialized: () => true,
+            parse: () => dTree(VALID_D),
+            formatAst: () => ({ text: "xyz", notice: "a comment was moved" }),
             getFormatOptions: () => ({}),
             normalizeForCompare: (t: string) => t,
         });

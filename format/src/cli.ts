@@ -109,7 +109,8 @@ function getFormatOptions(filePath: string): { indentSize: number; lineLimit: nu
     };
 }
 
-type FormatResult = { text: string };
+/** What a format call gives the CLI; `notice` is what the user is told about a file that was formatted. */
+type FormatResult = { text: string; notice?: string };
 
 /**
  * Extract the formatted text from a FormatOutput returned by the pure-string formatters.
@@ -167,7 +168,7 @@ function parseAndFormat(
     }
 }
 
-async function processFile(filePath: string, mode: OutputMode): Promise<FileResult> {
+export async function processFile(filePath: string, mode: OutputMode): Promise<FileResult> {
     return safeProcess(filePath, () => {
         const fileType = getFileType(filePath);
         if (!fileType) {
@@ -220,6 +221,10 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
             console.error(`${filePath}: left unchanged - formatter bug: ${validationError}`);
             return "error";
         }
+
+        // Formatted, but the formatter has something to say (a comment had to be moved): the file is still written and
+        // the result, hence the exit code, is the same as without it.
+        if (result.notice) console.error(`${filePath}: ${result.notice}`);
 
         const changed = result.text !== text;
         if (mode === "save" || mode === "save-and-check") {
@@ -297,4 +302,7 @@ async function main() {
     });
 }
 
-main().catch(reportFatal);
+// Importable by tests: the CLI runs only when it is the program being started.
+if (process.argv[1] !== undefined && fs.realpathSync(process.argv[1]) === import.meta.filename) {
+    main().catch(reportFatal);
+}

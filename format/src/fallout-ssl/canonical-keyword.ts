@@ -7,7 +7,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
-import { stripCommentsFalloutSsl } from "../format-utils";
+import { commentsFalloutSsl, stripCommentsFalloutSslWith, withOmitted, type CompareNormalizer } from "../format-utils";
 
 /**
  * Keywords whose canonical spelling is not plain lowercase. Both are short-circuit operators borrowed
@@ -108,29 +108,18 @@ export function canonicalOp(node: SyntaxNode): string {
 }
 
 /**
- * Rewrite every keyword outside a quoted run to its canonical spelling, leaving everything else alone.
+ * Rewrite every keyword in a stretch of code (the text between strings, character constants and comments) to its
+ * canonical spelling, leaving everything else alone.
  *
  * Only words in {@link KEYWORDS} move, so identifiers keep their case and the guard still catches a
  * formatter that re-cased one. A macro named after a keyword is the one blind spot: it folds with the
  * keywords, because nothing in the text alone distinguishes it.
  */
-function canonicaliseKeywordsOutsideStrings(text: string): string {
-    let out = "";
-    let i = 0;
-    while (i < text.length) {
-        const quote = text.indexOf('"', i);
-        const chunk = quote === -1 ? text.slice(i) : text.slice(i, quote);
-        // Same shape as the grammar's `identifier` rule, so a word here is what the parser would tokenise.
-        out += chunk.replaceAll(/[A-Za-z_][A-Za-z0-9_]*/g, (word) =>
-            KEYWORDS.has(word.toLowerCase()) ? canonicalKeyword(word) : word,
-        );
-        if (quote === -1) return out;
-        let end = quote + 1;
-        while (end < text.length && text[end] !== '"') end += text[end] === "\\" ? 2 : 1;
-        out += text.slice(quote, Math.min(end + 1, text.length));
-        i = end + 1;
-    }
-    return out;
+function canonicaliseKeywords(code: string): string {
+    // Same shape as the grammar's `identifier` rule, so a word here is what the parser would tokenise.
+    return code.replaceAll(/[A-Za-z_][A-Za-z0-9_]*/g, (word) =>
+        KEYWORDS.has(word.toLowerCase()) ? canonicalKeyword(word) : word,
+    );
 }
 
 /**
@@ -139,8 +128,9 @@ function canonicaliseKeywordsOutsideStrings(text: string): string {
  * The formatter emits the canonical spelling of every keyword rather than the source's, so an exact
  * comparison would read a re-spelled keyword as lost content and refuse the file. Canonicalising both
  * sides lets that change through while every other content change - identifier casing and string
- * literal casing included - is still caught.
+ * literal casing included - is still caught. The comments are its `omitted` list.
  */
-export function stripCommentsForCompareFalloutSsl(text: string): string {
-    return canonicaliseKeywordsOutsideStrings(stripCommentsFalloutSsl(text));
-}
+export const stripCommentsForCompareFalloutSsl: CompareNormalizer = withOmitted(
+    (text) => stripCommentsFalloutSslWith(text, canonicaliseKeywords),
+    commentsFalloutSsl,
+);

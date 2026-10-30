@@ -21,6 +21,7 @@ BEGIN
             INT_VAR
                 match_opcode = OPCODE_clear_fog_of_war_wizard_eye
         END
+
         // this seems to block shouts for some reason, or maybe even preventing creature scripts from running altogether
         LPF DELETE_EFFECT
             INT_VAR

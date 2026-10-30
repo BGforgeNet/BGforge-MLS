@@ -64,6 +64,7 @@ BEGIN
         PATCH_WARN ~INFER_ARMOR_ENCHANTMENT: %SOURCE_FILE% is not an armor, skipping!~
         skip = 1
     END
+
     // custom, no reliable way to infer
     DEFINE_ASSOCIATIVE_ARRAY custom BEGIN
         ~npchan~ => 3  // Corthala
@@ -77,6 +78,7 @@ BEGIN
         enchantment = $custom(~%item%~)
         skip = 1
     END
+
     // try to get from name
     READ_STRREF NAME2 name
     INNER_PATCH_SAVE plus ~%name%~ BEGIN
@@ -91,6 +93,7 @@ BEGIN
         enchantment = plus
         skip = 1
     END
+
     // and then from type, comparing unidentified desc
     PATCH_IF skip != 1 BEGIN
         LPF GET_ARMOR_BASE_AC

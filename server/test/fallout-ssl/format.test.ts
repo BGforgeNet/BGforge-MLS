@@ -198,6 +198,26 @@ describe("fallout-ssl formatter: string contents", () => {
         const output = format('#define SITE "http://example.com/page" //note\n');
         expect(output).toBe('#define SITE "http://example.com/page"    // note\n');
     });
+
+    it("keeps a tab inside a line comment", () => {
+        const output = format("procedure start begin\n    x := 1; // a\tb\nend\n");
+        expect(output).toContain("// a\tb\n");
+    });
+
+    it("keeps a tab inside a block comment spanning lines", () => {
+        const output = format("procedure start begin\n    /* p\n\tq\tr */\n    x := 1;\nend\n");
+        expect(output).toContain("/* p\n\tq\tr */\n");
+    });
+
+    it("keeps a tab inside a string literal after a double-quote character constant", () => {
+        const output = format('procedure start begin\n    x := \'"\';\n    display_msg("a\tb");\nend\n');
+        expect(output).toContain('display_msg("a\tb");');
+    });
+
+    it("keeps the blanks inside a trailing block comment of a #define that holds a /*", () => {
+        const output = format("#define X 1 /* a /* b */\n");
+        expect(output).toBe("#define X 1    /* a /* b */\n");
+    });
 });
 
 describe("fallout-ssl formatter: empty loop bodies", () => {

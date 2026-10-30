@@ -9,7 +9,6 @@ ACTION_IF pansy = 0 BEGIN  // Ironman
     EXTEND_TOP ~baldur.bcs~ ~%comp_dir%/baf/baldur.baf~  // Have to use EXTEND_TOP because of PartyRested/SmallWait in baldur.bcs
     EXTEND_TOP ~baldur25.bcs~ ~%comp_dir%/baf/baldur.baf~
 END ELSE BEGIN  // Stationary Rhialto: create outside Candlekeep's wall and give scroll with a hint to Gorion's body
-
     OUTER_SET rhia_xp = 2000  // Written later to wm_rhia1.cre
 
     COPY ~%comp_dir%/itm/wm_scrl.itm~ ~override/wm_scrl.itm~
@@ -99,6 +98,7 @@ COPY ~%comp_dir%/cre/wm_rhia1.cre~ ~override/wm_rhia1.cre~  // Rhialto the Marve
     ADD_MEMORIZED_SPELL ~spwi909~ #8 ~wizard~
     ADD_MEMORIZED_SPELL ~spwi913~ #8 ~wizard~
     ADD_MEMORIZED_SPELL ~wm_sphr~ #8 ~wizard~
+
     // Assasination doesn't exist in BG:EE
     PATCH_IF FILE_EXISTS_IN_GAME ~spcl916.spl~ BEGIN
         ADD_MEMORIZED_SPELL ~spcl916~ #0 ~innate~

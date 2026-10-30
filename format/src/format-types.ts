@@ -8,6 +8,10 @@
 /** Result of a tree-based formatter. */
 export interface FormatResult {
     text: string;
+    /** The formatter refused: `text` is the input, unchanged. */
+    warning?: string;
+    /** The text is formatted, and the caller should say this to the user: a comment had to be moved to keep it. */
+    notice?: string;
 }
 
 /**

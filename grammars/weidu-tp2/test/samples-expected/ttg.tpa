@@ -41,18 +41,22 @@ COPY_EXISTING ~weapprof.2da~ override
     END
     FOR (r=0; r<weapprof_read; ++r) BEGIN
         FOR (c=start_column; c<test123; ++c) BEGIN
+
             /** 
        * default max limit for everyone
  */
             pip_limit = 2
+
             // archer, restrictions are the same
             PATCH_IF (c == archer_column) BEGIN
                 pip_limit = 5
             END
+
             // berserker, wizard slayer
             PATCH_IF (c == berserker_column) OR (c == wizard_slayer_column) BEGIN
                 pip_limit = 4
             END
+
             // kensai
             r0 = r + 1  // row_index is 0 indexed
             PATCH_IF (c == kensai_column) BEGIN

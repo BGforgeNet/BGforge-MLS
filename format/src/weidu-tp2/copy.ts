@@ -23,6 +23,7 @@ import {
     isControlFlow,
     isFunctionCall,
     normalizeComment,
+    hasWeiduLineComment,
     normalizeWhitespace,
     handleComment,
     pushBlankIfGap,
@@ -37,8 +38,8 @@ import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 interface CopyActionParts {
     keyword: string;
     filePairs: string[];
-    /** Inline comment on the header line (same row as last file pair). */
-    headerComment: string;
+    /** Comments between the keyword and the first file pair, in order. */
+    headerComments: string[];
     patches: SyntaxNode[];
     suffix: string[];
 }
@@ -149,13 +150,15 @@ function parseCopyAction(node: SyntaxNode): CopyActionParts {
     const parts: CopyActionParts = {
         keyword: "",
         filePairs: [],
-        headerComment: "",
+        headerComments: [],
         patches: [],
         suffix: [],
     };
 
     let inPatchArea = false;
     let lastHeaderRow = -1;
+    // Indexes of the file pairs (or comment lines among them) that already carry a comment.
+    const commentedPairs = new Set<number>();
 
     // A COPY/COPY_LARGE header is a list of file pairs, and mods comment individual pairs out in the middle of
     // it. Such a comment sits on its own row, so without this index it would fall through to the patch branch
@@ -206,12 +209,24 @@ function parseCopyAction(node: SyntaxNode): CopyActionParts {
             (child.startPosition.row === lastHeaderRow || childIdx < lastFilePairIdx)
         ) {
             if (parts.filePairs.length > 0) {
-                // Attach to the specific file pair it's on
+                // Attach to the specific file pair it's on. A pair that has its comment already gives the next one
+                // a line of its own: a line comment takes the rest of its line, so a second would merge into it.
                 const idx = parts.filePairs.length - 1;
-                parts.filePairs[idx] = parts.filePairs[idx] + INLINE_COMMENT_SPACING + normalizeComment(child.text);
+                if (commentedPairs.has(idx) && childIdx > lastFilePairIdx) {
+                    // After the last pair: the first line of the patches, which is where it is read again. As a
+                    // header line of its own it would turn a one-line header into several, and the next pass back.
+                    inPatchArea = true;
+                    parts.patches.push(child);
+                } else if (commentedPairs.has(idx)) {
+                    parts.filePairs.push(normalizeComment(child.text));
+                    commentedPairs.add(parts.filePairs.length - 1);
+                } else {
+                    parts.filePairs[idx] = parts.filePairs[idx] + INLINE_COMMENT_SPACING + normalizeComment(child.text);
+                    commentedPairs.add(idx);
+                }
             } else {
-                // Comment on keyword line
-                parts.headerComment = normalizeComment(child.text);
+                // Comment on keyword line; comments after the first follow it, in order
+                parts.headerComments.push(normalizeComment(child.text));
             }
             continue;
         }
@@ -300,9 +315,16 @@ function formatCopyHeader(parts: CopyActionParts, indent: string, patchIndent: s
         }
     }
 
-    // Append inline header comment to keyword line (first line)
-    if (parts.headerComment && lines.length > 0) {
-        lines[0] = lines[0] + INLINE_COMMENT_SPACING + parts.headerComment;
+    // Append the header comments to the keyword line (first line) as one run. A `//` comment before the last of them, or
+    // already ending that line, would take what follows into itself, so each goes on a line of its own above, in order,
+    // where it still comes before the comments after the pair.
+    if (parts.headerComments.length > 0 && lines.length > 0) {
+        const lineCommentInside = parts.headerComments.slice(0, -1).some((comment) => comment.startsWith("//"));
+        if (lineCommentInside || hasWeiduLineComment(lines[0] ?? "")) {
+            lines.unshift(...parts.headerComments.map((comment) => indent + comment));
+        } else {
+            lines[0] = lines[0] + INLINE_COMMENT_SPACING + parts.headerComments.join(" ");
+        }
     }
 
     return lines;

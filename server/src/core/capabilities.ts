@@ -62,8 +62,10 @@ export const HoverResult = {
  */
 export interface FormatResult {
     edits: TextEdit[];
-    /** Warning message to show to user (e.g., validation failure) */
+    /** Warning message to show to user: the formatter refused (e.g., validation failure), so there are no edits */
     warning?: string;
+    /** Message to show to user: the edits format the text, but a comment had to be moved */
+    notice?: string;
 }
 
 /**

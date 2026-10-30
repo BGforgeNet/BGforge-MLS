@@ -36,11 +36,11 @@ END
 APPEND %dialog%
     IF ~~ g_familiar_combat
         /* g_FamJumpToPack
-        0: never hide
-        1: hide when see enemies
-        2: hide when see enemies and injured
-        3: hide when see enemies and badly injured
-        */
+      0: never hide
+      1: hide when see enemies
+      2: hide when see enemies and injured
+      3: hide when see enemies and badly injured
+    */
         SAY @100
 
         // hide when see enemies
@@ -118,91 +118,91 @@ APPEND %dialog%
         SAY @104
 
         /* For some reason, the whole stack of goodberries gets removed
-        + ~PartyHasItem("gberry")~  // goodberry
-        + @251 DO ~
-        CreateCreature("g_spy1",[-1.-1],0)
-        GiveItemCreate("gberry",Myself,1,0,0)
-        ActionOverride("g_spy1", TakePartyItemNum("gberry",2) )
-        UseItem("gberry",Myself)
-        ~
-        + g_familiar_confirm
+    + ~PartyHasItem("gberry")~ //goodberry
+    + @251 DO ~
+               CreateCreature("g_spy1",[-1.-1],0)
+               GiveItemCreate("gberry",Myself,1,0,0)
+               ActionOverride("g_spy1", TakePartyItemNum("gberry",2) )
+               UseItem("gberry",Myself)
+              ~
+    + g_familiar_confirm
 
-        + ~!PartyHasItem("gberry")
-        PartyHasItem("gberry2")~  // here and below - d0tweak goodberries
-        + @251 DO ~
-        CreateCreature("g_spy1",[-1.-1],0)
-        GiveItemCreate("gberry2",Myself,1,0,0)
-        ActionOverride("g_spy1", TakePartyItemNum("gberry2",2) )
-        UseItem("gberry2",Myself)
-        ~
-        + g_familiar_confirm
+    + ~!PartyHasItem("gberry")
+        PartyHasItem("gberry2")~ //here and below - d0tweak goodberries
+    + @251 DO ~
+               CreateCreature("g_spy1",[-1.-1],0)
+               GiveItemCreate("gberry2",Myself,1,0,0)
+               ActionOverride("g_spy1", TakePartyItemNum("gberry2",2) )
+               UseItem("gberry2",Myself)
+              ~
+    + g_familiar_confirm
 
-        + ~!PartyHasItem("gberry")
-        !PartyHasItem("gberry2")
+    + ~!PartyHasItem("gberry")
+       !PartyHasItem("gberry2")
         PartyHasItem("gberry3")~
-        + @251 DO ~
-        CreateCreature("g_spy1",[-1.-1],0)
-        GiveItemCreate("gberry3",Myself,1,0,0)
-        ActionOverride("g_spy1", TakePartyItemNum("gberry3",2) )
-        UseItem("gberry3",Myself)
-        ~
-        + g_familiar_confirm
+    + @251 DO ~
+               CreateCreature("g_spy1",[-1.-1],0)
+               GiveItemCreate("gberry3",Myself,1,0,0)
+               ActionOverride("g_spy1", TakePartyItemNum("gberry3",2) )
+               UseItem("gberry3",Myself)
+              ~
+    + g_familiar_confirm
 
-        + ~!PartyHasItem("gberry")
-        !PartyHasItem("gberry2")
-        !PartyHasItem("gberry3")
+    + ~!PartyHasItem("gberry")
+       !PartyHasItem("gberry2")
+       !PartyHasItem("gberry3")
         PartyHasItem("gberry4")~
-        + @251 DO ~
-        CreateCreature("g_spy1",[-1.-1],0)
-        GiveItemCreate("gberry4",Myself,1,0,0)
-        ActionOverride("g_spy1", TakePartyItemNum("gberry4",2) )
-        UseItem("gberry4",Myself)
-        ~
-        + g_familiar_confirm
+    + @251 DO ~
+               CreateCreature("g_spy1",[-1.-1],0)
+               GiveItemCreate("gberry4",Myself,1,0,0)
+               ActionOverride("g_spy1", TakePartyItemNum("gberry4",2) )
+               UseItem("gberry4",Myself)
+              ~
+    + g_familiar_confirm
 
-        + ~!PartyHasItem("gberry")
-        !PartyHasItem("gberry2")
-        !PartyHasItem("gberry3")
-        !PartyHasItem("gberry4")
+    + ~!PartyHasItem("gberry")
+       !PartyHasItem("gberry2")
+       !PartyHasItem("gberry3")
+       !PartyHasItem("gberry4")
         PartyHasItem("gberry5")~
-        + @251 DO ~
-        CreateCreature("g_spy1",[-1.-1],0)
-        GiveItemCreate("gberry5",Myself,1,0,0)
-        ActionOverride("g_spy1", TakePartyItemNum("gberry5",2) )
-        UseItem("gberry5",Myself)
-        ~
-        + g_familiar_confirm
+    + @251 DO ~
+               CreateCreature("g_spy1",[-1.-1],0)
+               GiveItemCreate("gberry5",Myself,1,0,0)
+               ActionOverride("g_spy1", TakePartyItemNum("gberry5",2) )
+               UseItem("gberry5",Myself)
+              ~
+    + g_familiar_confirm
 
-        + ~!PartyHasItem("gberry")
-        !PartyHasItem("gberry2")
-        !PartyHasItem("gberry3")
-        !PartyHasItem("gberry4")
-        !PartyHasItem("gberry5")
+    + ~!PartyHasItem("gberry")
+       !PartyHasItem("gberry2")
+       !PartyHasItem("gberry3")
+       !PartyHasItem("gberry4")
+       !PartyHasItem("gberry5")
         PartyHasItem("gberry6")~
-        + @251 DO ~
-        CreateCreature("g_spy1",[-1.-1],0)
-        GiveItemCreate("gberry6",Myself,1,0,0)
-        ActionOverride("g_spy1", TakePartyItemNum("gberry6",2) )
-        UseItem("gberry6",Myself)
-        ~
-        + g_familiar_confirm
+    + @251 DO ~
+               CreateCreature("g_spy1",[-1.-1],0)
+               GiveItemCreate("gberry6",Myself,1,0,0)
+               ActionOverride("g_spy1", TakePartyItemNum("gberry6",2) )
+               UseItem("gberry6",Myself)
+              ~
+    + g_familiar_confirm
 
-        + ~!PartyHasItem("gberry")
-        !PartyHasItem("gberry2")
-        !PartyHasItem("gberry3")
-        !PartyHasItem("gberry4")
-        !PartyHasItem("gberry5")
-        !PartyHasItem("gberry6")
+    + ~!PartyHasItem("gberry")
+       !PartyHasItem("gberry2")
+       !PartyHasItem("gberry3")
+       !PartyHasItem("gberry4")
+       !PartyHasItem("gberry5")
+       !PartyHasItem("gberry6")
         PartyHasItem("gberry7")~
-        + @251 DO ~
-        CreateCreature("g_spy1",[-1.-1],0)
-        GiveItemCreate("gberry7",Myself,1,0,0)
-        ActionOverride("g_spy1", TakePartyItemNum("gberry7",2) )
-        UseItem("gberry7",Myself)
-        ~
-        + g_familiar_confirm
-        // Finally, goodberries are finished
-        */
+    + @251 DO ~
+               CreateCreature("g_spy1",[-1.-1],0)
+               GiveItemCreate("gberry7",Myself,1,0,0)
+               ActionOverride("g_spy1", TakePartyItemNum("gberry7",2) )
+               UseItem("gberry7",Myself)
+              ~
+    + g_familiar_confirm
+    // Finally, goodberries are finished
+*/
         // generated in main.tpa, a state for each potion
         ++ @105 + %state%
     END

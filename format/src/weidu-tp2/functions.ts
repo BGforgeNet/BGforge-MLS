@@ -28,6 +28,8 @@ import {
     handleComment,
     outputAlignedAssignments,
     pushBlankIfGap,
+    assignmentParts,
+    commentItemsAbove,
 } from "./utils";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
 
@@ -42,18 +44,29 @@ const CALL_ITEM_TYPES: ReadonlySet<string> = new Set([
     SyntaxType.RetArrayCallItem,
 ]);
 
+/** The name and value of an assignment, and its line comments, which the caller writes after it. */
+interface ParsedAssignment {
+    name: string;
+    value: string;
+    lineComments: SyntaxNode[];
+}
+
 /** Parse assignment: name = value (handles assignment, binary_expr, ternary_expr, *_call_item nodes) */
-function parseAssignment(node: SyntaxNode): { name: string; value: string } | null {
+function parseAssignment(node: SyntaxNode): ParsedAssignment | null {
     // A call item's name can span several children (`EVAL ~name~`, with EVAL outside the name field), so it is
     // everything before `=`.
     if (CALL_ITEM_TYPES.has(node.type)) {
         const equals = node.children.findIndex((child) => !child.isNamed && child.text === "=");
         const destination = equals === -1 ? node.children : node.children.slice(0, equals);
         const value = node.childForFieldName("value");
-        return {
-            name: destination.map((child) => child.text).join(" "),
-            value: value ? normalizeWhitespace(value.text) : "",
-        };
+        const after = equals === -1 ? [] : node.children.slice(equals + 1);
+        const parts = assignmentParts(
+            destination,
+            (child) => child.text,
+            after.filter((child) => child.id === value?.id || isComment(child)),
+            (child) => normalizeWhitespace(child.text),
+        );
+        return { ...parts, value: value ? parts.value : "" };
     }
 
     // Try standard assignment fields first
@@ -74,16 +87,24 @@ function parseAssignment(node: SyntaxNode): { name: string; value: string } | nu
         if (eqIdx > 0) {
             const name = text.slice(0, eqIdx).trim();
             const value = text.slice(eqIdx + 1).trim();
-            return { name, value: normalizeWhitespace(value) };
+            return { name, value: normalizeWhitespace(value), lineComments: [] };
         }
     }
 
     if (!nameNode) return null;
 
-    return {
-        name: nameNode.text,
-        value: valueNode ? normalizeWhitespace(valueNode.text) : "",
-    };
+    // The comments before the operator stay with the name, the ones after it with the value.
+    const nameAt = node.children.findIndex((child) => child.id === nameNode.id);
+    const valueAt = valueNode ? node.children.findIndex((child) => child.id === valueNode.id) : node.children.length;
+    const operatorAt = node.children.findIndex((child, i) => i > nameAt && i < valueAt && !isComment(child));
+    const boundary = operatorAt === -1 ? valueAt : operatorAt;
+    const parts = assignmentParts(
+        node.children.filter((child, i) => i < boundary && (child.id === nameNode.id || isComment(child))),
+        (child) => child.text,
+        node.children.filter((child, i) => i > boundary && (child.id === valueNode?.id || isComment(child))),
+        (child) => normalizeWhitespace(child.text),
+    );
+    return { ...parts, value: valueNode ? parts.value : "" };
 }
 
 // ============================================
@@ -116,7 +137,7 @@ function formatParamDecl(node: SyntaxNode, indent: string, ctx: FormatContext): 
         } else if (child.type === SyntaxType.PatchAssignment) {
             const parsed = parseAssignment(child);
             if (parsed) {
-                items.push({
+                items.push(...commentItemsAbove(parsed.lineComments), {
                     type: CollectedItemType.Assignment,
                     name: parsed.name,
                     value: parsed.value,
@@ -129,19 +150,29 @@ function formatParamDecl(node: SyntaxNode, indent: string, ctx: FormatContext): 
             child.type === SyntaxType.String ||
             child.type === SyntaxType.VarNameNumeric
         ) {
-            // Check if next child is "=" token indicating an assignment
-            const nextChild = children[i + 1];
+            // The `=` after the name and the value after that, with the comments written between them.
+            let equalsAt = i + 1;
+            while (children[equalsAt] && isComment(children[equalsAt]!)) equalsAt++;
+            const nextChild = children[equalsAt];
             if (nextChild && nextChild.text === "=") {
                 // name = value pattern - get the value after "="
-                const valueChild = children[i + 2];
-                if (valueChild && !isComment(valueChild)) {
-                    items.push({
+                let valueAt = equalsAt + 1;
+                while (children[valueAt] && isComment(children[valueAt]!)) valueAt++;
+                const valueChild = children[valueAt];
+                if (valueChild) {
+                    const parts = assignmentParts(
+                        children.slice(i, equalsAt),
+                        (word) => word.text,
+                        children.slice(equalsAt + 1, valueAt + 1),
+                        (word) => normalizeWhitespace(word.text),
+                    );
+                    items.push(...commentItemsAbove(parts.lineComments), {
                         type: CollectedItemType.Assignment,
-                        name: child.text,
-                        value: normalizeWhitespace(valueChild.text),
+                        name: parts.name,
+                        value: parts.value,
                         endRow: valueChild.endPosition.row,
                     });
-                    i += 2; // Skip "=" and value
+                    i = valueAt; // Skip "=", the comments and the value
                 } else {
                     // "=" without value - handle gracefully
                     items.push({
@@ -150,7 +181,7 @@ function formatParamDecl(node: SyntaxNode, indent: string, ctx: FormatContext): 
                         value: "",
                         endRow: child.endPosition.row,
                     });
-                    i++; // Skip "="
+                    i = equalsAt; // Skip the comments before "=", and "="
                 }
             } else {
                 // No "=" - name without value
@@ -197,7 +228,7 @@ function formatParamCall(node: SyntaxNode, indent: string, ctx: FormatContext): 
         ) {
             const parsed = parseAssignment(child);
             if (parsed) {
-                items.push({
+                items.push(...commentItemsAbove(parsed.lineComments), {
                     type: CollectedItemType.Assignment,
                     name: parsed.name,
                     value: parsed.value,
@@ -326,7 +357,15 @@ export function formatFunctionDef(
                 child.type === SyntaxType.String ||
                 child.type === SyntaxType.VarNameNumeric
             ) {
-                defLine = defLine ? defLine + " " + child.text : child.text;
+                if (defLine && hasWeiduLineComment(defLine)) {
+                    // A `//` comment ended the header line: the name goes on the next, one level in, or it would
+                    // become part of the comment.
+                    lines.push(indent + defLine);
+                    defLine = ctx.indent + child.text;
+                    defLineHasInlineComment = false;
+                } else {
+                    defLine = defLine ? defLine + " " + child.text : child.text;
+                }
                 lastDefRow = child.endPosition.row;
             }
         }

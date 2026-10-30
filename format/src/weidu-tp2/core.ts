@@ -55,7 +55,7 @@ import { formatFunctionDef, formatFunctionCall } from "./functions";
 import { formatInnerAction, formatInnerPatch, formatReplaceBcsBlock } from "./inner";
 import { formatPredicateAction } from "./predicate";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
-import { throwOnParseError } from "../format-utils";
+import { commentItem, reportRescuedComments, restoreLostComments, throwOnParseError, weave } from "../format-utils";
 
 // ============================================
 // Simple node formatters
@@ -139,9 +139,26 @@ function formatComponent(node: SyntaxNode, ctx: FormatContext): string {
                 const predicate = child.childForFieldName("predicate");
                 const message = child.childForFieldName("message");
                 const contIndent = ctx.indent;
-                const condLines = formatCondition(predicate, keyword, "", contIndent, ctx.lineLimit);
+                // The comments between the keyword and the predicate stay there; a `//` one ends the line, and the
+                // predicate starts the next. The ones after the predicate follow the message.
+                const comments = child.children.filter((part) => isComment(part));
+                const before = comments.filter(
+                    (comment) => predicate !== null && comment.startIndex < predicate.startIndex,
+                );
+                const after = comments.filter((comment) => !before.includes(comment));
+                const prefix = weave(
+                    [{ text: keyword, sep: "" }, ...before.map((comment) => commentItem(comment))],
+                    contIndent,
+                );
+                const prefixEndsLine = before.at(-1)?.type === SyntaxType.LineComment;
+                const condLines = prefixEndsLine
+                    ? [prefix, ...formatCondition(predicate, "", contIndent, contIndent, ctx.lineLimit)]
+                    : formatCondition(predicate, prefix, "", contIndent, ctx.lineLimit);
                 if (message) {
                     condLines[condLines.length - 1] += " " + normalizeWhitespace(message.text);
+                }
+                for (const comment of after) {
+                    condLines[condLines.length - 1] += INLINE_COMMENT_SPACING + normalizeComment(comment.text);
                 }
                 beginLine = condLines.join("\n");
             } else {
@@ -431,8 +448,17 @@ function formatSimpleNode(node: SyntaxNode, ctx: FormatContext, depth: number): 
 // Main dispatcher
 // ============================================
 
-/** Format a node based on its type. */
+/**
+ * Format a node. Most node formatters rebuild the node from the children they pick, so a comment they do not pick
+ * would vanish; restoreLostComments writes each one back on a line of its own.
+ */
 function formatNode(node: SyntaxNode, ctx: FormatContext, depth: number): string {
+    const formatted = formatNodeWithoutLostComments(node, ctx, depth);
+    return restoreLostComments(node, formatted, true, ctx.indent.repeat(depth), true);
+}
+
+/** Format a node based on its type. */
+function formatNodeWithoutLostComments(node: SyntaxNode, ctx: FormatContext, depth: number): string {
     const type = node.type;
 
     // Inlined files - MUST be checked first to preserve content exactly
@@ -580,6 +606,10 @@ function isCommentAttachedToComponent(children: SyntaxNode[], idx: number, lastE
 
 /** Format a TP2 document. */
 export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions>): FormatResult {
+    return reportRescuedComments(() => formatDocumentText(root, options));
+}
+
+function formatDocumentText(root: SyntaxNode, options?: Partial<FormatOptions>): FormatResult {
     throwOnParseError(root);
 
     const opts = { ...DEFAULT_OPTIONS, ...options };

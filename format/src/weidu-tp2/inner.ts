@@ -18,6 +18,7 @@ import {
     pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
+import { commentItem, weave, type WovenItem } from "../format-utils";
 
 // ============================================
 // INNER_ACTION formatting
@@ -151,8 +152,10 @@ export function formatReplaceBcsBlock(
     const bodyIndent = ctx.indent.repeat(depth + 1);
     const lines: string[] = [];
 
-    // Collect header parts and detect ON_MISMATCH
-    const headerParts: string[] = [];
+    // Collect header parts and detect ON_MISMATCH. A comment among the header words stays among them; a `//` one ends
+    // its line and the next word starts the next, one level in.
+    const headerParts: WovenItem[] = [];
+    const headerText = (): string => weave(headerParts, bodyIndent);
     let inOnMismatch = false;
     let hasOnMismatch = false;
     let lastEndRow = -1;
@@ -164,7 +167,7 @@ export function formatReplaceBcsBlock(
             hasOnMismatch = true;
             inOnMismatch = true;
             // Output header first, then ON_MISMATCH
-            lines.push(indent + headerParts.join(" "), indent + "ON_MISMATCH");
+            lines.push(indent + headerText(), indent + "ON_MISMATCH");
             lastEndRow = child.startPosition.row;
             continue;
         }
@@ -174,8 +177,12 @@ export function formatReplaceBcsBlock(
 
         // Header before ON_MISMATCH: the keyword spelling, its EVALUATE_BUFFER and case options, the two files.
         // Taken by position rather than by spelling, so no spelling the grammar accepts is dropped.
+        if (!inOnMismatch && isComment(child)) {
+            headerParts.push(commentItem(child));
+            continue;
+        }
         if (!inOnMismatch && (!child.isNamed || child.type === SyntaxType.String)) {
-            headerParts.push(child.text);
+            headerParts.push({ text: child.text, sep: " " });
             continue;
         }
 
@@ -193,7 +200,7 @@ export function formatReplaceBcsBlock(
 
     // If no ON_MISMATCH, output as single line
     if (!hasOnMismatch) {
-        return indent + headerParts.join(" ");
+        return indent + headerText();
     }
 
     lines.push(indent + KW_END);

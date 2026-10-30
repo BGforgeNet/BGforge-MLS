@@ -14,7 +14,12 @@ import {
     tokenizeWeidu,
     WeiduTokenType,
     normalizeComment,
+    restoreLostComments,
+    reportRescuedComments,
+    commentItem,
+    weave,
     weiduLineCommentStart,
+    type WovenItem,
 } from "../format-utils";
 import { withNormalizedComment } from "../weidu-tp2/utils";
 import { type FormatOptions, DEFAULT_OPTIONS, type FormatResult } from "../format-types";
@@ -28,6 +33,11 @@ interface FormatContext {
 
 function isComment(node: SyntaxNode): boolean {
     return node.type === SyntaxType.Comment || node.type === SyntaxType.LineComment;
+}
+
+/** The line a comment node is written as, at `indent`. */
+function commentLines(node: SyntaxNode, indent: string): string[] {
+    return [indent + normalizeComment(node.text)];
 }
 
 function isCopyTrans(node: SyntaxNode): boolean {
@@ -120,6 +130,52 @@ function isCodeString(node: SyntaxNode): boolean {
     );
 }
 
+/** Delimiter length of a WeiDU string token: `~~~~~` is five characters, every other opener one. */
+function stringDelimiterLength(token: string): number {
+    return token.startsWith("~~~~~") ? 5 : 1;
+}
+
+/**
+ * The lines of `text` after its first, by index, that start inside a block comment or inside a string or comment
+ * nested in a string - the BAF code of a trigger or action holds both. Their text is content and stays as written;
+ * only a line starting in code is layout.
+ */
+function literalContinuationLines(text: string): Set<number> {
+    const lineIndexAfter = new Map<number, number>();
+    let lineCount = 0;
+    for (let offset = 0; offset < text.length; offset++) {
+        if (text[offset] === "\n") lineIndexAfter.set(offset + 1, ++lineCount);
+    }
+
+    const lines = new Set<number>();
+    const markNewlines = (from: number, to: number): void => {
+        for (let offset = from; offset < to; offset++) {
+            const line = text[offset] === "\n" ? lineIndexAfter.get(offset + 1) : undefined;
+            if (line !== undefined) lines.add(line);
+        }
+    };
+
+    let tokenStart = 0;
+    for (const token of tokenizeWeidu(text)) {
+        const tokenEnd = tokenStart + token.text.length;
+        if (token.type === WeiduTokenType.Comment) {
+            markNewlines(tokenStart, tokenEnd);
+        } else if (token.type === WeiduTokenType.String) {
+            const delimiter = stringDelimiterLength(token.text);
+            if (token.text.length >= 2 * delimiter) {
+                let nestedStart = tokenStart + delimiter;
+                for (const nested of tokenizeWeidu(token.text.slice(delimiter, -delimiter))) {
+                    if (nested.type !== WeiduTokenType.Code)
+                        markNewlines(nestedStart, nestedStart + nested.text.length);
+                    nestedStart += nested.text.length;
+                }
+            }
+        }
+        tokenStart = tokenEnd;
+    }
+    return lines;
+}
+
 // Get line length excluding comment
 function codeLengthOf(line: string): number {
     const idx = weiduLineCommentStart(line);
@@ -197,21 +253,31 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
     const tokens = tokenizeWeidu(text);
     const result: string[] = [];
     let currentLine: string = "";
+    // The line started inside a literal: its text goes out as written, whatever else joins it on the same line.
+    let currentLineVerbatim = false;
 
     const flushLine = () => {
-        if (currentLine.trim() || result.length === 0) {
+        if (currentLineVerbatim) {
+            result.push(currentLine);
+        } else if (currentLine.trim() || result.length === 0) {
             const prefix = result.length === 0 ? indent : innerIndent;
             result.push(withNormalizedComment(prefix + currentLine.trimEnd()));
         }
         currentLine = "";
+        currentLineVerbatim = false;
     };
 
-    // Helper: process a multi-line token (string or code) and split across output lines
-    const processMultiLineToken = (tokenText: string, isCode: boolean) => {
+    // Helper: process a multi-line token (string or code) and split across output lines. `verbatimLines` are the
+    // indexes of the lines that start inside a literal.
+    const processMultiLineToken = (tokenText: string, isCode: boolean, verbatimLines?: ReadonlySet<number>) => {
         const lines = tokenText.split("\n");
         for (let i = 0; i < lines.length; i++) {
             const linePart = lines[i];
-            if (linePart !== undefined) {
+            if (linePart !== undefined && verbatimLines?.has(i)) {
+                flushLine();
+                currentLine = linePart;
+                currentLineVerbatim = true;
+            } else if (linePart !== undefined) {
                 const processed = isCode
                     ? linePart.trim().replaceAll(/\s+/g, " ")
                     : i === 0
@@ -252,11 +318,12 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
         const start = tokenStart;
         tokenStart += token.text.length;
         if (token.type !== WeiduTokenType.Code) {
-            // A text string stays whole, its newlines and indentation being what the game shows; a code string or
-            // a block comment spanning lines is re-indented line by line.
+            // A text string stays whole, its newlines and indentation being what the game shows; a code string
+            // spanning lines is re-indented line by line, except the lines that start in a string or comment of its
+            // own, and a block comment spanning lines keeps every line after its first as written.
             const isText = token.type === WeiduTokenType.String && textStringStarts.has(start);
             if (token.text.includes("\n") && !isText) {
-                processMultiLineToken(token.text, false);
+                processMultiLineToken(token.text, false, literalContinuationLines(token.text));
             } else {
                 if (currentLine && !currentLine.endsWith(" ")) {
                     currentLine += " ";
@@ -268,6 +335,8 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
 
         // Code token
         if (token.text.includes("\n")) {
+            // A line comment ends its line: the break after it is kept, or the code that follows would join it.
+            if (weiduLineCommentStart(currentLine) !== -1) flushLine();
             processMultiLineToken(token.text, true);
         } else {
             const normalized = token.text.trim().replaceAll(/\s+/g, " ");
@@ -318,12 +387,13 @@ function reindentState(node: SyntaxNode, ctx: FormatContext): string {
         }
     }
     markContinuations(node);
+    const literalLines = literalContinuationLines(node.text);
 
     const result: string[] = [];
     let prevBlank = false;
 
     lines.forEach((line, i) => {
-        if (insideText[i]) {
+        if (insideText[i] || literalLines.has(i)) {
             result.push(line);
             prevBlank = false;
             return;
@@ -383,6 +453,10 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
         ifLine += " WEIGHT " + weight.text;
     }
     ifLine += " " + (trigger ? normalizeDelimitedString(trigger.text) : "~~");
+    // THEN and BEGIN are each optional in the grammar, and both are source text the state keeps.
+    for (const keyword of ["THEN", "BEGIN"]) {
+        if (node.children.some((child) => child.type === keyword)) ifLine += " " + keyword;
+    }
     ifLine += " " + (label?.text ?? "");
 
     // Try to keep SAY on same line as IF if it fits
@@ -406,7 +480,7 @@ function formatStateExpanded(node: SyntaxNode, ctx: FormatContext): string {
         } else if (isCopyTrans(child)) {
             lines.push(indent2 + normalizeWhitespaceWeidu(child.text));
         } else if (isComment(child)) {
-            lines.push(indent2 + normalizeComment(child.text));
+            lines.push(...commentLines(child, indent2));
         }
     }
 
@@ -425,8 +499,20 @@ function formatSayText(node: SyntaxNode): string {
     return parts.join(" = ");
 }
 
+/**
+ * `formatted`, a node's text, with each comment of the node it lacks put back on a line of its own. The D formatters
+ * rebuild a node from the children they pick, so a comment they do not pick would vanish.
+ */
+function keepComments(node: SyntaxNode, formatted: string, indent: string): string {
+    return restoreLostComments(node, formatted, true, indent, true);
+}
+
 // Format a D action (BEGIN, APPEND, EXTEND, etc.)
 function formatAction(node: SyntaxNode, ctx: FormatContext): string {
+    return keepComments(node, formatActionWithoutLostComments(node, ctx), "");
+}
+
+function formatActionWithoutLostComments(node: SyntaxNode, ctx: FormatContext): string {
     switch (node.type) {
         case "begin_action":
             return formatStateAction(node, ctx, false);
@@ -440,19 +526,47 @@ function formatAction(node: SyntaxNode, ctx: FormatContext): string {
     }
 }
 
-// Get the header from a BEGIN/APPEND action - everything before states and END
-function getActionHeader(node: SyntaxNode): string {
-    const headerRow = node.startPosition.row;
-    const parts: string[] = [];
-    for (const child of node.children) {
-        // Stop at states or END keyword
-        if (child.type === SyntaxType.State) break;
-        if (child.text === "END") break;
-        // Stop at comments that are NOT on the header line
-        if (isComment(child) && child.startPosition.row !== headerRow) break;
-        parts.push(isComment(child) ? normalizeComment(child.text) : child.text);
+/** The header of an action, written as one line unless a `//` comment in it ends a line. */
+interface ActionHeader {
+    text: string;
+    /** The comments of the action the header holds. */
+    consumed: ReadonlySet<number>;
+}
+
+/**
+ * The header of an action: its children ahead of the first one `startsBody` accepts. A comment between header words,
+ * or (with `trailing`) after the last one on its row, stays in the header where it was written; the ones further
+ * down are body comments, left to the caller. `normalize` collapses the blanks inside each word.
+ */
+function getActionHeader(
+    node: SyntaxNode,
+    startsBody: (child: SyntaxNode) => boolean,
+    options: { normalize: boolean; trailing: boolean },
+    indent: string,
+): ActionHeader {
+    const { normalize, trailing } = options;
+    const children = node.children;
+    const bodyAt = children.findIndex((child) => startsBody(child));
+    const ahead = bodyAt === -1 ? children : children.slice(0, bodyAt);
+    let last = ahead.findLastIndex((child) => !isComment(child));
+    const lastRow = ahead[last]?.endPosition.row;
+    if (trailing) {
+        while (
+            ahead[last + 1] !== undefined &&
+            isComment(ahead[last + 1]!) &&
+            ahead[last + 1]!.startPosition.row === lastRow
+        ) {
+            last++;
+        }
     }
-    return normalizeWhitespaceWeidu(parts.join(" "));
+
+    const consumed = new Set<number>();
+    const items = ahead.slice(0, last + 1).map((child): WovenItem => {
+        if (!isComment(child)) return { text: normalize ? normalizeWhitespaceWeidu(child.text) : child.text, sep: " " };
+        consumed.add(child.id);
+        return commentItem(child);
+    });
+    return { text: weave(items, indent), consumed };
 }
 
 // Iterate children with blank line preservation, calling handler for each
@@ -472,16 +586,19 @@ function forEachChild(node: SyntaxNode, lines: string[], handler: (_child: Synta
 
 // Format BEGIN/APPEND action (states with optional trailing END)
 function formatStateAction(node: SyntaxNode, ctx: FormatContext, trailingEnd: boolean): string {
-    const headerRow = node.startPosition.row;
-    const lines: string[] = [getActionHeader(node)];
+    const header = getActionHeader(
+        node,
+        (child) => child.type === SyntaxType.State || child.text === "END",
+        { normalize: true, trailing: true },
+        ctx.indent,
+    );
+    const lines: string[] = [header.text];
 
     forEachChild(node, lines, (child) => {
         if (child.type === SyntaxType.State) {
-            return formatState(child, ctx);
-        } else if (isComment(child)) {
-            // Skip comments on the header line - already included via getActionHeader()
-            if (child.startPosition.row === headerRow) return null;
-            return ctx.indent + normalizeComment(child.text);
+            return keepComments(child, formatState(child, ctx), ctx.indent);
+        } else if (isComment(child) && !header.consumed.has(child.id)) {
+            return commentLines(child, ctx.indent).join("\n") || null;
         }
         return null;
     });
@@ -492,26 +609,21 @@ function formatStateAction(node: SyntaxNode, ctx: FormatContext, trailingEnd: bo
     return lines.join("\n");
 }
 
-// Build the header for an EXTEND action from its structural children (keyword, file, states, weight)
-function getExtendHeader(node: SyntaxNode): string {
-    let result = "";
-    for (const child of node.children) {
-        // Stop at transitions, comments, copy_trans, or the trailing END
-        if (child.type === SyntaxType.Transition || isTransitionBody(child) || isComment(child) || isCopyTrans(child))
-            break;
-        if (child.text === "END") break;
-        if (result.length > 0) {
-            result += " ";
-        }
-        result += child.text;
-    }
-    return result;
-}
-
-// Format EXTEND action
+// Format EXTEND action; the header is its structural children (keyword, file, states, weight)
 function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
     const { indent, indent2, lineLimit } = ctx;
-    const lines: string[] = [getExtendHeader(node)];
+    // The header stops at the transitions, copy_trans, or the trailing END
+    const header = getActionHeader(
+        node,
+        (child) =>
+            child.type === SyntaxType.Transition ||
+            isTransitionBody(child) ||
+            isCopyTrans(child) ||
+            child.text === "END",
+        { normalize: false, trailing: false },
+        indent,
+    );
+    const lines: string[] = [header.text];
 
     forEachChild(node, lines, (child) => {
         const trans = getTransitionNode(child);
@@ -519,8 +631,8 @@ function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
             return formatTransitionNode(trans, indent, indent2, lineLimit);
         } else if (isCopyTrans(child)) {
             return indent + normalizeWhitespaceWeidu(child.text);
-        } else if (isComment(child)) {
-            return indent + normalizeComment(child.text);
+        } else if (isComment(child) && !header.consumed.has(child.id)) {
+            return commentLines(child, indent).join("\n");
         }
         return null;
     });
@@ -531,6 +643,10 @@ function formatExtendAction(node: SyntaxNode, ctx: FormatContext): string {
 
 // Main formatting function
 export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions>): FormatResult {
+    return reportRescuedComments(() => formatDocumentText(root, options));
+}
+
+function formatDocumentText(root: SyntaxNode, options?: Partial<FormatOptions>): FormatResult {
     throwOnParseError(root);
     const opts = { ...DEFAULT_OPTIONS, ...options };
     const indent = " ".repeat(opts.indentSize);
@@ -556,7 +672,7 @@ export function formatDocument(root: SyntaxNode, options?: Partial<FormatOptions
                 if (lastEndRow >= 0 && child.startPosition.row > lastEndRow + 1) {
                     result.push("");
                 }
-                result.push(normalizeComment(child.text));
+                result.push(...commentLines(child, ""));
             }
         } else {
             // Non-comment node - preserve blank lines

@@ -42,7 +42,9 @@ export default defineConfig({
         coverage: coverageConfig({
             reportsDirectory: "coverage/format",
             include: ["src/**/*.ts"],
-            exclude: ["src/fallout-ssl/**", "src/weidu-baf/**", "src/weidu-d/**", "src/weidu-tp2/**"],
+            // src/cli.ts is tested through the built bundle (test/format-cli.test.ts, scripts/vitest.cli.config.ts), which
+            // v8 cannot measure; test/cli-notice.test.ts imports it only to call processFile.
+            exclude: ["src/fallout-ssl/**", "src/weidu-baf/**", "src/weidu-d/**", "src/weidu-tp2/**", "src/cli.ts"],
             thresholds: {
                 lines: 82,
                 functions: 86,
