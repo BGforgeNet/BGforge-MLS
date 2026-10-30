@@ -40,6 +40,24 @@ describe("a GOTO whose label is still being typed", () => {
     });
 });
 
+describe("an unclosed block comment", () => {
+    const state = (label: string, body: string) => `IF ~~ THEN BEGIN ${label} SAY ~x~\n${body}\nEND\n`;
+
+    it.each([
+        ["a transition line", "  IF ~~ THEN REPLY ~r~ EXIT /* note"],
+        ["a state's SAY line", "  /* note\n  IF ~~ THEN EXIT"],
+    ])("typed into %s keeps the later states in the outline", (_name, body) => {
+        const text =
+            "BEGIN ~dlg~\n" +
+            state("s1", "  IF ~~ THEN EXIT") +
+            state("s2", body) +
+            state("s3", "  IF ~~ THEN EXIT") +
+            APPEND_AFTER;
+        expect(parseWithCache(text)!.rootNode.hasError).toBe(true);
+        expect(getDocumentSymbols(text).map((s) => s.name)).toEqual(["s1", "s2", "s3", "a1"]);
+    });
+});
+
 describe("a state missing its END", () => {
     const text =
         "BEGIN ~dlg~\n" +

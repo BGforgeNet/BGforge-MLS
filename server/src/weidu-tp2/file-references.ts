@@ -21,6 +21,7 @@ import type { Location } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import * as path from "path";
 import * as fs from "fs";
+import { parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
 import { uriToPath } from "../uri-utils";
 import { SyntaxType } from "./syntax-type";
 import { findAncestorOfType, stripStringDelimiters } from "./tree-utils";
@@ -380,10 +381,16 @@ function readBackupSegment(tp2Path: string): string | null {
     } catch {
         return null;
     }
-    const stripped = raw.replaceAll(/\/\*[\s\S]*?\*\//g, " ").replaceAll(/\/\/[^\n]*/g, " ");
-    const backup = /\bBACKUP\b\s*[~"]([^~"]+)[~"]/i.exec(stripped)?.[1];
-    if (!backup) {
+    // The directive is read off the parse, not the text: a regex cannot tell a comment opener or a BACKUP
+    // inside a string from the real thing, and stripping comments by regex is quadratic on an unclosed one.
+    const tree = parseWithCache(raw);
+    if (!tree) {
         return null;
     }
-    return backup.replaceAll("\\", "/").split("/")[0] || null;
+    const directive = tree.rootNode.namedChildren.find((child) => child?.type === SyntaxType.BackupDirective);
+    const value = directive?.childForFieldName("path");
+    if (!value) {
+        return null;
+    }
+    return stripStringDelimiters(value.text).replaceAll("\\", "/").split("/")[0] || null;
 }

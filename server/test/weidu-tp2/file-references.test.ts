@@ -23,6 +23,7 @@ vi.mock("../../src/server", () => ({
 
 import { getDefinition } from "../../src/weidu-tp2/definition";
 import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { parseFile } from "../../src/weidu-tp2/header-parser";
 import { Symbols } from "../../src/core/symbol-index";
 import { normalizeUri } from "../../src/core/normalized-uri";
@@ -186,6 +187,85 @@ describe("TP2 definition: the basename search stays inside the mod, not the whol
         write("mymod/a/dup.itm");
         write("mymod/b/dup.itm");
         expect(outcome(`COPY ~%custom_dir%/dup.itm~ ~override~`, "dup.itm")).toBe("self@0");
+    });
+});
+
+describe("TP2 definition: %MOD_FOLDER% from the BACKUP directive of a tp2 beside the mod folder", () => {
+    // Two mods ship the same basename, so the click resolves only when BACKUP names the right mod folder:
+    // a misread BACKUP leaves %MOD_FOLDER% unknown, and the ambiguous basename search then declines.
+    let gameDir: string;
+
+    beforeEach(() => {
+        gameDir = fs.mkdtempSync(path.join(os.tmpdir(), "tp2-backup-"));
+        fs.mkdirSync(path.join(gameDir, "mymod", "items"), { recursive: true });
+        fs.mkdirSync(path.join(gameDir, "othermod", "items"), { recursive: true });
+        fs.writeFileSync(path.join(gameDir, "mymod", "items", "sword.itm"), "");
+        fs.writeFileSync(path.join(gameDir, "othermod", "items", "sword.itm"), "");
+    });
+
+    afterEach(() => {
+        fs.rmSync(gameDir, { recursive: true, force: true });
+    });
+
+    const clickText = "COPY ~%MOD_FOLDER%/items/sword.itm~ ~override~";
+    const click = (uri: string): string =>
+        classify(getDefinition(clickText, uri, { line: 0, character: clickText.indexOf("items") }), uri);
+
+    /** Outcome of clicking a `%MOD_FOLDER%` path in a mod file whose governing tp2 holds `tp2Content`. */
+    function outcomeWithTp2(tp2Content: string): string {
+        const tp2Path = path.join(gameDir, "setup-mymod.tp2");
+        fs.writeFileSync(tp2Path, tp2Content, "latin1");
+        return click(pathToFileURL(tp2Path).toString());
+    }
+
+    it.each([
+        ["tilde delimiters", "BACKUP ~mymod/backup~\n"],
+        ["double-quote delimiters", 'BACKUP "mymod/backup"\n'],
+        ["backslashes", "BACKUP ~mymod\\backup~\n"],
+        ["a line comment holding another BACKUP", "// BACKUP ~nomod/x~\nBACKUP ~mymod/x~\n"],
+        ["a block comment holding another BACKUP", "/* BACKUP ~nomod/x~ */\nBACKUP ~mymod/x~\n"],
+        ["a latin1 character elsewhere in the file", "BACKUP ~mymod/x~\nAUTHOR ~Jérôme~\n"],
+    ])("reads the mod folder with %s", (_name, tp2) => {
+        expect(outcomeWithTp2(tp2)).toBe("sword.itm");
+    });
+
+    it("finds no mod folder without a BACKUP directive", () => {
+        expect(outcomeWithTp2("AUTHOR ~someone~\n")).toBe("self@0");
+    });
+
+    it("finds no mod folder when the BACKUP directive sits only in a comment", () => {
+        expect(outcomeWithTp2("/* BACKUP ~mymod/x~ */\n// BACKUP ~mymod/x~\n")).toBe("self@0");
+    });
+
+    it("finds no mod folder when the tp2 cannot be read", () => {
+        // A directory named like a tp2 is found by the governing-tp2 search and then fails to read.
+        fs.mkdirSync(path.join(gameDir, "setup-mymod.tp2"));
+        expect(click(pathToFileURL(path.join(gameDir, "setup-mymod.tp2", "x.tph")).toString())).toBe("self@0");
+    });
+
+    it("is not misled by a block-comment opener inside the directive's string", () => {
+        expect(outcomeWithTp2("BACKUP ~mymod/*x~\nAUTHOR ~a~\n// end */\n")).toBe("sword.itm");
+    });
+
+    it("is not misled by a line-comment opener inside the directive's string", () => {
+        expect(outcomeWithTp2("BACKUP ~mymod//backup~\n")).toBe("sword.itm");
+    });
+
+    it("is not misled by a BACKUP inside a string when the file has no directive", () => {
+        expect(outcomeWithTp2('AUTHOR ~see BACKUP "mymod/x" here~\n')).toBe("self@0");
+    });
+
+    it("reads the directive in linear time past a long run of unclosed comment openers", () => {
+        // Each opener is unclosed, so a reader that rescans the rest of the file per opener is quadratic here.
+        const tp2 = `BACKUP ~mymod/x~\n${"/* ".repeat(80_000)}`;
+
+        let outcome: ReturnType<typeof outcomeWithTp2> | undefined;
+        const elapsed = cpuTimeMs(() => {
+            outcome = outcomeWithTp2(tp2);
+        });
+
+        expect(outcome).toBe("sword.itm");
+        expect(elapsed).toBeLessThan(500);
     });
 });
 

@@ -1,7 +1,8 @@
 /**
  * External scanner for Fallout SSL grammar.
  *
- * Handles six tokens (KEYWORD_PARAM, KEYWORD_PARAM_REF and IMPLICIT_END are described beside their code below):
+ * Handles seven tokens (KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END and UNCLOSED_COMMENT are described beside
+ * their code below):
  *
  * NEWLINE / LINE_END: In normal code, newlines are whitespace (NEWLINE extra).
  * Inside #define directives, a bare newline terminates the macro body (LINE_END).
@@ -29,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum TokenType { NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END };
+enum TokenType { NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END, UNCLOSED_COMMENT };
 
 /*
  * KEYWORD_PARAM / KEYWORD_PARAM_REF: a macro parameter spelled like a reserved word, and its uses in the
@@ -59,21 +60,28 @@ static const char *const RESERVED_WORDS[] = {
 typedef struct {
     unsigned length;
     char names[MAX_PARAM_BYTES];
+    /* No comment closer follows: set by an UNCLOSED_COMMENT scan that read to the end of the input. */
+    bool no_closer_below;
 } Scanner;
 
 void *tree_sitter_ssl_external_scanner_create(void) { return calloc(1, sizeof(Scanner)); }
 void tree_sitter_ssl_external_scanner_destroy(void *payload) { free(payload); }
 
+/* The flag byte, then the names. An empty state is no bytes. */
 unsigned tree_sitter_ssl_external_scanner_serialize(void *payload, char *buffer) {
     Scanner *scanner = (Scanner *)payload;
-    memcpy(buffer, scanner->names, scanner->length);
-    return scanner->length;
+    if (!scanner->no_closer_below && scanner->length == 0) return 0;
+    buffer[0] = (char)scanner->no_closer_below;
+    memcpy(buffer + 1, scanner->names, scanner->length);
+    return scanner->length + 1;
 }
 
 void tree_sitter_ssl_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
     Scanner *scanner = (Scanner *)payload;
-    scanner->length = length <= MAX_PARAM_BYTES ? length : 0;
-    if (scanner->length > 0) memcpy(scanner->names, buffer, scanner->length);
+    scanner->no_closer_below = length > 0 && buffer[0];
+    unsigned names = length > 0 ? length - 1 : 0;
+    scanner->length = names <= MAX_PARAM_BYTES ? names : 0;
+    if (scanner->length > 0) memcpy(scanner->names, buffer + 1, scanner->length);
 }
 
 static bool is_word_start(int32_t c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'; }
@@ -121,6 +129,54 @@ static void skip_horizontal_space(TSLexer *lexer) {
            lexer->lookahead == '\v') {
         lexer->advance(lexer, true);
     }
+}
+
+/* At a line start: whether the line's first word is `end` or `procedure`. What it reads is comment text either way. */
+static bool scan_block_boundary(TSLexer *lexer) {
+    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') lexer->advance(lexer, false);
+    char word[MAX_WORD];
+    if (!read_word(lexer, word)) return false;
+    for (char *c = word; *c; c++) *c = (char)(*c | 0x20);
+    return strcmp(word, "end") == 0 || strcmp(word, "procedure") == 0;
+}
+
+/*
+ * UNCLOSED_COMMENT: a block comment with no closer before the end of the input. The internal comment token cannot
+ * end there, so without this the lexer reads to the end at each opener and gives up, which is quadratic in a run of
+ * unclosed openers. No parse state accepts this token, so the parser reports it wherever it comes. A comment that
+ * closes is left to the internal token: the scan declines at its closer, however far below.
+ *
+ * Running to the end of the file would swallow every procedure after the one being typed, so the text instead ends
+ * at the end of the line before the first line whose first word is `end` or `procedure`, or at the end of the file:
+ * the block being typed keeps its `end` and the next procedure its place. A file the compiler accepts has every
+ * closer, so this never changes what it reads.
+ *
+ * Telling that no closer follows takes reading to the end of the input, which done once per unclosed opener would be
+ * quadratic again in a file with one per block. The first such scan records it in the state the token carries, and
+ * every later opener stops at its own end line. That token read to the end of the input, so an edit anywhere below
+ * it re-reads it and resets what it recorded.
+ */
+static bool scan_unclosed_comment(TSLexer *lexer, Scanner *scanner) {
+    lexer->advance(lexer, false);
+    if (lexer->lookahead != '*') return false;
+    lexer->advance(lexer, false);
+    bool fallback = false;
+    while (!lexer->eof(lexer)) {
+        int32_t c = lexer->lookahead;
+        if (c == '\n' && !fallback) {
+            lexer->mark_end(lexer);
+            lexer->advance(lexer, false);
+            fallback = scan_block_boundary(lexer);
+            if (fallback && scanner->no_closer_below) break;
+            continue;
+        }
+        lexer->advance(lexer, false);
+        if (c == '*' && lexer->lookahead == '/') return false;
+    }
+    if (!fallback) lexer->mark_end(lexer);
+    scanner->no_closer_below = true;
+    lexer->result_symbol = UNCLOSED_COMMENT;
+    return true;
 }
 
 bool tree_sitter_ssl_external_scanner_scan(
@@ -256,6 +312,8 @@ bool tree_sitter_ssl_external_scanner_scan(
             lexer->advance(lexer, false);
         }
     }
+
+    if (lexer->lookahead == '/') return scan_unclosed_comment(lexer, scanner);
 
     /* Only handle newline characters below */
     if (lexer->lookahead != '\n' && lexer->lookahead != '\r') {

@@ -84,6 +84,12 @@ export default grammar({
         // Zero-width: a `)`, `]`, `}` or procedure `begin` the source lacks before `end` or `procedure`, so the
         // procedure being typed keeps its shape (see scanner.c). Consumers report it through shared/parse-errors.ts.
         $.implicit_end,
+        // A block comment with no `*/` before the end of the input, up to the next `end` or procedure (see
+        // scanner.c). No rule accepts it, so the parse reports it, and one token over the text keeps a run of
+        // unclosed openers linear.
+        // Not the closed/open comment pair of the BAF and TP2 grammars: here any non-terminal extra moves error
+        // recovery in source that already fails to parse.
+        $._unclosed_comment,
     ],
 
     extras: ($) => [
@@ -823,6 +829,7 @@ export default grammar({
         // can name the character.
         char: ($) => token(seq("'", choice(/[^'\\]/, /\\[^'\\0]/, /\\0[0-7]{2,3}/), "'")),
 
+        // A comment never closed is _unclosed_comment, from the external scanner.
         comment: ($) => token(seq("/*", /[^*]*\*+([^/*][^*]*\*+)*/, "/")),
 
         line_comment: ($) => token(seq("//", /[^\n]*/)),

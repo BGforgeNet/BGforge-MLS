@@ -13,7 +13,7 @@ export default grammar({
     extras: ($) => [/\s/, $.comment, $.line_comment],
 
     // The block comment nests, which a regex token cannot count: it is scanned in src/scanner.c.
-    externals: ($) => [$.comment],
+    externals: ($) => [$._comment_closed, $._comment_open],
 
     // `[10.10]` is a valid prefix of both a point and an object_ref, and which one it is only becomes clear
     // at the closing bracket - too late for LR(1), which must reduce the first coordinate before it can see
@@ -187,6 +187,11 @@ export default grammar({
         // A name written between five double quotes, which may hold any character (spaces included).
         quoted_symbol: ($) =>
             token(seq('"""""', repeat(choice(/[^"]/, /"[^"]/, /""[^"]/, /"""[^"]/, /""""[^"]/)), '"""""')),
+
+        // A block comment closed by its matching `*/` is one token; one never closed ends before the next IF, THEN,
+        // RESPONSE or END line (see src/scanner.c) and the missing `*/` is reported. Ending the unclosed form in a
+        // token keeps a run of unclosed openers linear: a scanner that declined would re-read the tail at each one.
+        comment: ($) => choice($._comment_closed, seq($._comment_open, "*/")),
 
         line_comment: ($) => token(seq("//", /[^\n]*/)),
     },

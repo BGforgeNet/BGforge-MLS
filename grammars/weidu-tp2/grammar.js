@@ -888,7 +888,15 @@ export default grammar({
     // Block comments nest, which no internal token can express. String contents are scanned there too: the
     // scanner is asked for a comment wherever one may appear, which includes right after a string's opening
     // delimiter, so only it can tell that `~/* b */~` is text. See src/scanner.c.
-    externals: ($) => [$.comment, $.tilde_content, $.double_content, $.five_tilde_content, $.percent_content],
+    externals: ($) => [
+        $._comment_closed,
+        $._comment_open,
+        $.tilde_content,
+        $.double_content,
+        $.five_tilde_content,
+        $.percent_content,
+        $._percent_close,
+    ],
 
     extras: ($) => [/\s/, $.comment, $.line_comment],
 
@@ -994,7 +1002,10 @@ export default grammar({
         tilde_string: ($) => seq("~", optional($.tilde_content), "~"),
         double_string: ($) => seq('"', optional($.double_content), '"'),
         five_tilde_string: ($) => seq("~~~~~", optional($.five_tilde_content), "~~~~~"),
-        percent_string: ($) => seq("%", optional($.percent_content), "%"),
+        // WeiDU lexes `%...%` as one string token, so nothing between its delimiters is a comment: the content runs
+        // to the closer, and the scanner gives the closer only right after the content or the opener (see
+        // src/scanner.c), never after a comment the parser took in between.
+        percent_string: ($) => seq("%", optional($.percent_content), alias($._percent_close, "%")),
 
         // Decimal, hex (0x), octal (0o), binary (0b), # prefix, dotted version
         // No leading `-` on the decimal form: it would swallow the operator in `%size%-12`, which WeiDU
@@ -1012,15 +1023,23 @@ export default grammar({
         // COMMENTS
         // =========================================
 
-        // comment is produced by the external scanner (nesting); only line_comment is internal.
-        line_comment: ($) => seq("//", /[^\n]*/),
+        // A block comment closed by its matching `*/` is one external token (it nests); one never closed ends before
+        // the next top-level item (see src/scanner.c) and the missing `*/` is reported. Ending the unclosed form in a
+        // token keeps a run of unclosed openers linear: a scanner that declined would re-read the tail at each one.
+        comment: ($) => choice($._comment_closed, seq($._comment_open, "*/")),
+
+        // One token: as a seq, the scanner was asked between `//` and the rest and could read a `/*` there as a block
+        // comment. WeiDU skips to the end of the line.
+        line_comment: ($) => token(seq("//", /[^\n]*/)),
 
         // =========================================
         // VARIABLE REFERENCES
         // =========================================
 
-        variable_ref: ($) =>
-            choice($.identifier, $.var_name_numeric, seq("%", choice($.identifier, $.var_name_numeric), "%")),
+        // No `%name%` form: WeiDU lexes `%name%` as one string token, and a percent_string reads it whole. A form of
+        // separate tokens here let a comment stand between the `%` and the name. Keeping it with immediate tokens
+        // instead grows the main lexer function by a seventh, for a form no corpus file reaches.
+        variable_ref: ($) => choice($.identifier, $.var_name_numeric),
 
         // Variable name starting with a number (valid inside %...% and as array keys)
         var_name_numeric: ($) => /[0-9][A-Za-z0-9_#-]*/,

@@ -75,6 +75,33 @@ describe("an unclosed percent string", () => {
     });
 });
 
+describe("an unclosed block comment", () => {
+    const PROLOGUE = "BACKUP ~m/backup~\nAUTHOR ~me~\nBEGIN ~a~\nCOPY ~x~ ~y~\n";
+    const LATER = "\nBEGIN ~c~\nCOPY ~x~ ~y~\nBEGIN ~d~\nPRINT ~d~\n";
+
+    it.each([
+        ["an action line", "BEGIN ~b~\nCOPY ~x~ ~y~ /* note"],
+        ["a line inside a block", "BEGIN ~b~\nACTION_IF x BEGIN\n  PRINT ~x~ /* note\nEND"],
+    ])("typed into %s keeps the later components", (_name, body) => {
+        const root = parse(PROLOGUE + body + LATER);
+        expect(root.hasError).toBe(true);
+        const names = root.namedChildren
+            .filter((node) => node?.type === SyntaxType.Component)
+            .map((node) => node!.childForFieldName("name")?.text);
+        expect(names).toEqual(["~a~", "~b~", "~c~", "~d~"]);
+    });
+
+    it("typed into a function body keeps the later functions", () => {
+        const fn = (name: string, body: string) => `DEFINE_ACTION_FUNCTION ${name} BEGIN\n  ${body}\nEND\n`;
+        const root = parse(fn("a", "PRINT ~a~") + fn("b", "PRINT ~x~ /* note") + fn("c", "PRINT ~c~") + fn("d", ""));
+        expect(root.hasError).toBe(true);
+        const names = root
+            .descendantsOfType(SyntaxType.ActionDefineFunction)
+            .map((node) => node!.childForFieldName("name")?.text);
+        expect(names).toEqual(["a", "b", "c", "d"]);
+    });
+});
+
 describe("components", () => {
     it("own the actions that follow their flags", () => {
         const root = parse(

@@ -145,7 +145,8 @@ export default grammar({
     externals: ($) => [
         $._immediate_identifier,
         $._immediate_variable_ref,
-        $.comment,
+        $._comment_closed,
+        $._comment_open,
         $.tilde_content,
         $.double_content,
         $.five_tilde_content,
@@ -635,7 +636,14 @@ export default grammar({
                 ),
             ),
 
-        // comment is produced by the external scanner (nesting); only line_comment is internal.
-        line_comment: ($) => seq("//", /[^\n]*/),
+        // A block comment closed by its matching `*/` is one external token (it nests); one never closed ends before
+        // the next top-level action, state or END line (see src/scanner.c) and the missing `*/` is reported. Ending
+        // the unclosed form in a token keeps a run of unclosed openers linear: a scanner that declined would re-read
+        // the tail at each one.
+        comment: ($) => choice($._comment_closed, seq($._comment_open, "*/")),
+
+        // One token: as a seq, the scanner was asked between `//` and the rest and could read a `/*` there as a block
+        // comment. WeiDU skips to the end of the line.
+        line_comment: ($) => token(seq("//", /[^\n]*/)),
     },
 });
