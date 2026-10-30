@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { createPvrzPageCache, decodeBamV2, pvrzResourceName } from "../src/bam/v2-parse.ts";
 import { type BamV2Structure, readBamV2Structure } from "../src/bam/v2-structure.ts";
+import { MAX_ANIMATION_PIXELS } from "../src/limits.ts";
 import { encodePvrz } from "../src/pvrz/container.ts";
 import { corpusFiles, IE_CORPUS } from "./fixtures.ts";
 
@@ -178,11 +179,18 @@ describe("decodeBamV2", () => {
 
     // Crafted again: the largest real v2 (BG2:EE's MAPICONS) decodes 58 pages, 15.2M pixels in all.
     it("refuses a crafted structure whose pages decode to more than an animation may hold", () => {
-        const page = solidPage(0, 0, 0, 255, 1024);
+        // Small pages, many of them: the bound counts pixels across pages, so what trips it is the page count
+        // and not the page size, and a 256x256 page keeps building and decoding it cheap.
+        const size = 256;
+        const page = solidPage(0, 0, 0, 255, size);
         const structure = oneBlockStructure();
-        structure.requiredPages = Array.from({ length: 70 }, (_, i) => i);
+        const pageCount = Math.floor(MAX_ANIMATION_PIXELS / (size * size)) + 1;
+        structure.requiredPages = Array.from({ length: pageCount }, (_, i) => i);
 
-        expect(() => decodeBamV2(structure, () => page)).toThrow(/pages decode to more than/);
+        // The cache decodes the one byte array once; every required page still adds its pixels to the total.
+        expect(() => decodeBamV2(structure, () => page, undefined, createPvrzPageCache())).toThrow(
+            /pages decode to more than/,
+        );
     });
 
     it("rejects a block naming a page the structure never listed as required", () => {

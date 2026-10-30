@@ -67,7 +67,9 @@ describe.skipIf(v2Files.length === 0)("serializeBamV2 (verbatim preservation)", 
                 expect(saved.pages.length, `${file} emitted no pages`).toBeGreaterThan(0);
                 for (const page of saved.pages) {
                     const original = new Uint8Array(fs.readFileSync(path.join(dir, pvrzResourceName(page.page))));
-                    expect(page.bytes, `${file} page ${page.page} was re-encoded`).toEqual(original);
+                    // Buffer.compare, not toEqual: a deep equality over megabytes walks them in script, and
+                    // under coverage that walk outweighs everything else in this test.
+                    expect(Buffer.compare(page.bytes, original), `${file} page ${page.page} was re-encoded`).toBe(0);
                 }
             }
         },

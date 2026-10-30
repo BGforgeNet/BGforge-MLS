@@ -13,6 +13,8 @@ const { createWorkerClient } = await import("../../src/worker/worker-client");
 interface Req {
     id: number;
     op: string;
+    /** Shared with the fixture, which sets slot 0 just before it wedges. */
+    flag?: Int32Array;
 }
 interface Res {
     id: number;
@@ -25,12 +27,27 @@ const fileName = path.relative(
     path.resolve(__dirname, "fixtures/wedge-worker.mjs"),
 );
 
+const TIMEOUT_MS = 300;
+
 describe("a worker that stops answering", () => {
-    const client = createWorkerClient<Req, Res>({ fileName, label: "test worker", timeoutMs: 300 });
-    afterEach(() => client.stop());
+    const client = createWorkerClient<Req, Res>({ fileName, label: "test worker", timeoutMs: TIMEOUT_MS });
+    afterEach(async () => {
+        vi.useRealTimers();
+        await client.stop();
+    });
 
     it("is replaced, so the next request is answered", async () => {
-        await expect(client.send({ op: "wedge" })).rejects.toThrow("The test worker did not answer within 0.3s.");
+        // The request timer is the clock under test, so it is driven by hand: a real one also runs while the
+        // replacement is spawned and loads its bundle, which on a loaded machine outlasts any bound short
+        // enough to keep the test quick. Only the timers are faked; messages between threads stay real.
+        vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+        const stuck = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
+        const wedged = client.send({ op: "wedge", flag: stuck });
+        const rejection = expect(wedged).rejects.toThrow("The test worker did not answer within 0.3s.");
+        // The timer fires only once the worker has taken the request and is spinning on it.
+        await Atomics.waitAsync(stuck, 0, 0).value;
+        vi.advanceTimersByTime(TIMEOUT_MS);
+        await rejection;
 
         await expect(client.send({ op: "echo" })).resolves.toMatchObject({ echoed: "echo" });
     });
