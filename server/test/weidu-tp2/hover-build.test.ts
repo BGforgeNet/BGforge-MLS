@@ -23,6 +23,7 @@ vi.mock("../../src/logger", () => ({
 
 import { buildVariableHover, buildFunctionHover } from "../../src/weidu-tp2/hover-content";
 import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import type { VariableInfo, FunctionInfo } from "../../src/weidu-tp2/header-parser";
 
 function makeVarInfo(overrides: Partial<VariableInfo> = {}): VariableInfo {
@@ -198,9 +199,10 @@ describe("weidu-tp2/hover buildFunctionHover() - truncateDesc branches", () => {
     it("truncates a description made of opening brackets in linear time", () => {
         const description = "[".repeat(100_000);
 
-        const start = performance.now();
-        const value = hoverWithParamDescription(description);
-        const elapsed = performance.now() - start;
+        let value: ReturnType<typeof hoverWithParamDescription> | undefined;
+        const elapsed = cpuTimeMs(() => {
+            value = hoverWithParamDescription(description);
+        });
 
         expect(value).toContain(`${"[".repeat(77)}...`);
         expect(elapsed).toBeLessThan(500);

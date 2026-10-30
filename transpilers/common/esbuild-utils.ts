@@ -16,6 +16,7 @@ import {
     type EnumMember,
     type EnumRegistry,
 } from "./enum-transform";
+import { escapeRegex } from "@bgforge/shared/regex-utils";
 import { ensureNodeOnPath } from "./node-runtime";
 import { lineCount, composeLineMaps, type SourcePosition } from "./line-map";
 import { decodeMappings } from "./source-map";
@@ -268,6 +269,53 @@ function resolveOrigins(
     return lineMap.map((outputLine) => originAt(outputLine));
 }
 
+/** An `import { ... } from "..."` declaration: where it starts and its text. */
+interface ImportDeclaration {
+    index: number;
+    text: string;
+}
+
+/**
+ * The tail of a declaration that must end its line, for reading aliases. It is `(?:\s*;)?\s*` rather than
+ * `\s*;?\s*`: the same language, but the blank run has one way to match.
+ */
+const IMPORT_TAIL_ENDING_LINE = /\}\s*from\s*"[^"]*"(?:\s*;)?\s*$/my;
+
+/** The tail of a declaration for removal: it may share its line with code, and takes the blanks and line break after it. */
+const IMPORT_TAIL_FOR_REMOVAL = /\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/y;
+
+/**
+ * The `import { ... } from "..."` declarations that start a line, left to right, each ending at the end of its
+ * `tail` match. `tail` is sticky and starts at the declaration's first "}".
+ *
+ * An opener whose "}" never comes would otherwise be searched to the end of the text from every opener, which is
+ * quadratic in a run of them (esbuild keeps template text verbatim, so such lines can reach its output). The first
+ * "}" after an opener is the same for every opener before it, and so is what the tail makes of it: both are
+ * computed once per "}".
+ */
+function findImportDeclarations(code: string, tail: RegExp): ImportDeclaration[] {
+    const openers = /^import\s*\{/gm;
+    const found: ImportDeclaration[] = [];
+    let brace = -1;
+    let refusedBrace = -1;
+    let opener;
+    while ((opener = openers.exec(code)) !== null) {
+        const from = opener.index + opener[0].length;
+        if (brace < from) brace = code.indexOf("}", from);
+        // No "}" is left, so no later opener can complete either.
+        if (brace === -1) break;
+        if (brace === refusedBrace) continue;
+        tail.lastIndex = brace;
+        if (tail.exec(code) === null) {
+            refusedBrace = brace;
+            continue;
+        }
+        found.push({ index: opener.index, text: code.slice(opener.index, tail.lastIndex) });
+        openers.lastIndex = tail.lastIndex;
+    }
+    return found;
+}
+
 /**
  * Clean up esbuild output by stripping marker prefix and fixing import aliases.
  *
@@ -311,11 +359,7 @@ export function cleanupEsbuildOutput(
     // Step 2: Extract import aliases via regex
     // Matches: import { name as alias, name2 as alias2 } from "...";
     const aliasMap = new Map<string, string>();
-    // The tail is `(?:\s*;)?\s*` rather than `\s*;?\s*`: the same language, but the blank run has one way to match.
-    const importRegex = /^import\s*\{[^}]*\}\s*from\s*"[^"]*"(?:\s*;)?\s*$/gm;
-    let importMatch;
-    while ((importMatch = importRegex.exec(code)) !== null) {
-        const specifiers = importMatch[0];
+    for (const { text: specifiers } of findImportDeclarations(code, IMPORT_TAIL_ENDING_LINE)) {
         // `\b` keeps a match from starting inside a word: every start in a long identifier would rescan it.
         const asRegex = /\b(\w+)\s+as\s+(\w+)/g;
         let asMatch;
@@ -348,17 +392,19 @@ export function cleanupEsbuildOutput(
     }
 
     // Step 4: Remove import declarations (single-line and multi-line)
-    const importDecl = /^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?[^\S\n]*\n?/gm;
+    const declarations = findImportDeclarations(code, IMPORT_TAIL_FOR_REMOVAL);
     // The ranges are read off the same matches the removal uses, before it runs: deriving them from the
     // result instead would have to re-identify lines by content, which step 5's renaming then breaks.
     const removed = new Set<number>();
     if (survivors !== undefined) {
-        for (const match of code.matchAll(importDecl)) {
-            const from = lineCount(code.substring(0, match.index));
+        for (const declaration of declarations) {
+            const from = lineCount(code.substring(0, declaration.index));
             // A match that swallowed its newline vacates exactly the lines it spans. One at end-of-input
             // has no newline to swallow and leaves an empty last line, which collapses into the trailing
             // newline every other line already ends with - so it vacates one line more.
-            const span = match[0].endsWith("\n") ? lineCount(match[0]) : lineCount(match[0]) + 1;
+            const span = declaration.text.endsWith("\n")
+                ? lineCount(declaration.text)
+                : lineCount(declaration.text) + 1;
             for (let line = from; line < from + span; line++) removed.add(line);
         }
         const total = lineCount(code);
@@ -366,7 +412,13 @@ export function cleanupEsbuildOutput(
             if (!removed.has(line)) survivors.push(droppedAhead + line);
         }
     }
-    code = code.replaceAll(importDecl, "");
+    let kept = "";
+    let keptUpTo = 0;
+    for (const { index, text } of declarations) {
+        kept += code.slice(keptUpTo, index);
+        keptUpTo = index + text.length;
+    }
+    code = kept + code.slice(keptUpTo);
 
     // Step 5: Rename identifiers (string-aware, skips string literals and comments)
     if (aliasMap.size > 0) {
@@ -555,10 +607,6 @@ function replaceInTemplateExpressions(template: string, pattern: RegExp, replace
 export function skipBlockComment(code: string, start: number): number {
     const end = code.indexOf("*/", start + 2);
     return end === -1 ? code.length : end + 2;
-}
-
-function escapeRegex(s: string): string {
-    return s.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**

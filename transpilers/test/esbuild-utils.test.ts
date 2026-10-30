@@ -8,6 +8,7 @@
  * covered by api.test.ts/bundle.test.ts).
  */
 import { describe, expect, it } from "vitest";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import {
     cleanupEsbuildOutput,
     expandExponentLiterals,
@@ -80,20 +81,54 @@ describe("cleanupEsbuildOutput", () => {
         expect(cleanupEsbuildOutput(code, MARKER)).toBe(`${expected};\n`);
     });
 
+    it("reads the aliases of an import list spread over several lines", () => {
+        const code = `${MARKER}\nimport {\n  a as b,\n  c as d\n} from "m";\nb(d);\n`;
+        expect(cleanupEsbuildOutput(code, MARKER)).toBe("a(c);\n");
+    });
+
+    it("leaves a brace line that is not an import clause, and reads the import after it", () => {
+        const code = `${MARKER}\nimport { x };\nimport { a as b } from "m";\nb(1);\n`;
+        expect(cleanupEsbuildOutput(code, MARKER)).toBe("import { x };\na(1);\n");
+    });
+
+    it("scans a long run of import openers with no closing brace in linear time", () => {
+        // Template text can put such lines in esbuild's output; each opener's search for a "}" reaches the end.
+        const body = `${"import {\n".repeat(20_000)}x;\n`;
+        let cleaned = "";
+        const elapsed = cpuTimeMs(() => {
+            cleaned = cleanupEsbuildOutput(`${MARKER}\n${body}`, MARKER);
+        });
+        expect(cleaned).toBe(body);
+        expect(elapsed).toBeLessThan(500);
+    });
+
+    it("scans a long run of import openers that share one closing brace in linear time", () => {
+        // The one "}" is followed by a clause that never completes, and every opener before it reaches that brace.
+        const body = `${"import {\n".repeat(10_000)}} from "m${" ".repeat(10_000)}\nx;\n`;
+        let cleaned = "";
+        const elapsed = cpuTimeMs(() => {
+            cleaned = cleanupEsbuildOutput(`${MARKER}\n${body}`, MARKER);
+        });
+        expect(cleaned).toBe(body);
+        expect(elapsed).toBeLessThan(500);
+    });
+
     it("scans an import line that ends in a long run of blanks and more code in linear time", () => {
         const code = `${MARKER}\nimport { a as b } from "m"${" ".repeat(50_000)}x;\n`;
-        const start = performance.now();
-        const cleaned = cleanupEsbuildOutput(code, MARKER);
-        const elapsed = performance.now() - start;
+        let cleaned = "";
+        const elapsed = cpuTimeMs(() => {
+            cleaned = cleanupEsbuildOutput(code, MARKER);
+        });
         expect(cleaned).toBe("x;\n");
         expect(elapsed).toBeLessThan(500);
     });
 
     it("scans an import list holding one very long identifier in linear time", () => {
         const code = `${MARKER}\nimport { ${"a".repeat(100_000)} } from "m";\nx;\n`;
-        const start = performance.now();
-        const cleaned = cleanupEsbuildOutput(code, MARKER);
-        const elapsed = performance.now() - start;
+        let cleaned = "";
+        const elapsed = cpuTimeMs(() => {
+            cleaned = cleanupEsbuildOutput(code, MARKER);
+        });
         expect(cleaned).toBe("x;\n");
         expect(elapsed).toBeLessThan(500);
     });

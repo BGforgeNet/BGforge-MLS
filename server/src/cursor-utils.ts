@@ -7,11 +7,6 @@
 import type { Position } from "vscode-languageserver/node";
 import { REGEX_MSG_INLAY, REGEX_MSG_INLAY_FLOATER_RAND } from "./core/patterns";
 
-/** Escape the characters that carry meaning inside a regex character class. */
-function escapeForCharClass(chars: string): string {
-    return chars.replaceAll(/[\\\]^-]/g, "\\$&");
-}
-
 /** Extract the text from the start of the line up to the cursor position. */
 export function getLinePrefix(text: string, position: Position): string {
     return text.split("\n")[position.line]?.substring(0, position.character) ?? "";
@@ -44,9 +39,16 @@ export function symbolAtPosition(text: string, position: Position, extraChars = 
 
     // Search for the word's beginning and end. The boundary widens by the caller's language-specific
     // characters (see IDENTIFIER_EXTRA_CHARS), so a name is not cut short at a `-` or `#` it contains.
-    const extra = escapeForCharClass(extraChars);
-    let left = str.slice(0, pos + 1).search(new RegExp(`[\\w${extra}]+$`)),
-        right = str.slice(pos).search(new RegExp(`[^\\w${extra}]`));
+    // The start is found by walking back from the cursor: a pattern anchored at the end of the text
+    // (`[\w]+$`) retries a long word run from every offset.
+    const isWordChar = (char: string): boolean => /\w/.test(char) || extraChars.includes(char);
+    const head = Math.min(pos + 1, str.length);
+    let wordStart = head;
+    while (wordStart > 0 && isWordChar(str[wordStart - 1]!)) wordStart--;
+    let left = wordStart === head ? -1 : wordStart;
+    let wordEnd = pos;
+    while (wordEnd < str.length && isWordChar(str[wordEnd]!)) wordEnd++;
+    let right = wordEnd < str.length ? wordEnd - pos : -1;
 
     let result: string;
     // The last word in the string is a special case.

@@ -75,20 +75,26 @@ function resolveMatchFilePath(matchFile: string, fileDir: string): string {
     return path.isAbsolute(fixed) ? fixed : path.join(fileDir, fixed);
 }
 
-/** Safely iterate regex matches, protecting against zero-width infinite loops. */
-function* execAll(regex: RegExp, text: string): Generator<RegExpExecArray> {
-    let match = regex.exec(text);
-    while (match !== null) {
-        if (match.index === regex.lastIndex) {
-            regex.lastIndex++;
+/**
+ * The match of `regex` in each line of `text`, in order. Matching per line keeps a pattern from running on
+ * past a line break, and `regex` must not be global: each line is matched on its own.
+ */
+function* execPerLine(regex: RegExp, text: string): Generator<RegExpExecArray> {
+    for (const line of text.split(/\r\n|[\n\r\p{Zl}\p{Zp}]/u)) {
+        const match = regex.exec(line);
+        if (match !== null) {
+            yield match;
         }
-        yield match;
-        match = regex.exec(text);
     }
 }
 
+// The file name stops at the next angle bracket, so a line of repeated openers is read once, not once per
+// opener. A path holding `<` or `>` is not one the compiler reports.
+const ERROR_LINE = /\[Error\]( <Semantic>)? <([^<>]+)>:(\d*):(\d*):? (.*)/;
+const WARNING_LINE = /\[Warning\] <([^<>]+)>:(\d*):(\d*):? (.*)/;
+
 /**
- * Parse compile.exe output with regex and return found matches.
+ * Parse compile.exe output line by line with regexes and return found matches.
  * `text` looks like this
  * `[Error] <1.ssl.tmp>:2:8: Expecting top-level statement`
  * or
@@ -103,8 +109,6 @@ function parseCompileOutput(text: string, uri: string) {
     if (!textDocument) {
         return { errors: [], warnings: [] };
     }
-    const errorsRegex = /\[Error\]( <Semantic>)? <(.+)>:([\d]*):([\d]*):? (.*)/g;
-    const warningsRegex = /\[Warning\] <(.+)>:([\d]*):([\d]*):? (.*)/g;
     const errors: ParseItemList = [];
     const warnings: ParseItemList = [];
 
@@ -114,7 +118,7 @@ function parseCompileOutput(text: string, uri: string) {
     const fileDir = path.dirname(filePath);
 
     try {
-        for (const match of execAll(errorsRegex, text)) {
+        for (const match of execPerLine(ERROR_LINE, text)) {
             const matchFile = match[2];
             const matchLine = match[3];
             const matchCol = match[4];
@@ -130,7 +134,7 @@ function parseCompileOutput(text: string, uri: string) {
             });
         }
 
-        for (const match of execAll(warningsRegex, text)) {
+        for (const match of execPerLine(WARNING_LINE, text)) {
             const matchFile = match[1];
             const matchLine = match[2];
             const matchCol = match[3];

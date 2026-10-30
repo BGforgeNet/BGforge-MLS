@@ -3,7 +3,11 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import * as jsdoc from "../src/shared/jsdoc";
+
+/** The parsed form of a `{int} count` parameter that carries a description. */
+const withDescription = (description: string) => ({ name: "count", type: "int", description });
 
 describe("jsdoc.parse", () => {
     describe("@param parsing", () => {
@@ -352,11 +356,86 @@ describe("jsdoc.parse", () => {
             // Each space is a possible start of the whitespace before the closing marker, and none reaches it.
             const input = `/** a${" ".repeat(100_000)}b */`;
 
-            const start = performance.now();
-            const result = jsdoc.parse(input);
-            const elapsed = performance.now() - start;
+            let result: ReturnType<typeof jsdoc.parse> | undefined;
+            const elapsed = cpuTimeMs(() => {
+                result = jsdoc.parse(input);
+            });
 
-            expect(result.desc).toBe(`a${" ".repeat(100_000)}b`);
+            expect(result?.desc).toBe(`a${" ".repeat(100_000)}b`);
+            expect(elapsed).toBeLessThan(500);
+        });
+
+        it.each([
+            ["a plain name", "@param {int} count", { name: "count", type: "int" }],
+            ["a required name", "@param {int} count!", { name: "count", type: "int", required: true }],
+            ["a name and a dash description", "@param {int} count - how many", withDescription("how many")],
+            ["a bracketed default", "@param {int} [count=0]", { name: "count", type: "int" }],
+            [
+                "a bracketed default and a dash description",
+                "@param {int} [count=0] - how many",
+                withDescription("how many"),
+            ],
+            ["a bracketed default holding blanks", "@param {int} [count=a b c]  how many", withDescription("how many")],
+            [
+                "a long bracketed default",
+                `@param {int} [count=${"x".repeat(400)}] how many`,
+                withDescription("how many"),
+            ],
+        ])("parses @param with %s", (_name, line, arg) => {
+            expect(jsdoc.parse(`/**\n * ${line}\n */`).args).toEqual([arg]);
+        });
+
+        it.each([
+            ["an empty bracketed default", "@param {int} [count=]"],
+            ["a bracketed default with no closing bracket", "@param {int} [count=0"],
+        ])("reads no @param from %s", (_name, line) => {
+            expect(jsdoc.parse(`/**\n * ${line}\n */`).args).toEqual([]);
+        });
+
+        it.each([
+            ["a braced type", "@type {int}", "int", undefined],
+            ["a braced type and a dash description", "@type {int} - the count", "int", "the count"],
+            ["a braced compound type", "@type {resref offset}", "resref offset", undefined],
+            ["a bare type and a dash description", "@type string - the name", "string", "the name"],
+            ["a long braced type", `@type {${"x".repeat(400)}}`, "x".repeat(400), undefined],
+        ])("parses @type with %s", (_name, line, type, desc) => {
+            const result = jsdoc.parse(`/**\n * ${line}\n */`);
+            expect(result.type).toBe(type);
+            expect(result.desc).toBe(desc);
+        });
+
+        it.each([
+            ["an empty braced type", "@type {}"],
+            ["a braced type with no closing brace", "@type {int"],
+        ])("reads no @type from %s", (_name, line) => {
+            const result = jsdoc.parse(`/**\n * ${line}\n */`);
+            expect(result.type).toBeUndefined();
+            expect(result.desc).toBeUndefined();
+        });
+
+        it("parses a line of bracketed @param defaults that never close in linear time", () => {
+            // Each "@param {x} [a=" is a possible start whose default scans to the end of the line without a "]".
+            const input = `/** ${"@param {x} [a=".repeat(9_400)} */`;
+
+            let result: ReturnType<typeof jsdoc.parse> | undefined;
+            const elapsed = cpuTimeMs(() => {
+                result = jsdoc.parse(input);
+            });
+
+            expect(result?.args).toEqual([]);
+            expect(elapsed).toBeLessThan(500);
+        });
+
+        it("parses a line of braced @type openers that never close in linear time", () => {
+            // Each "@type {" is a possible start whose type scans to the end of the line without a "}".
+            const input = `/** ${"@type {".repeat(15_000)} */`;
+
+            let result: ReturnType<typeof jsdoc.parse> | undefined;
+            const elapsed = cpuTimeMs(() => {
+                result = jsdoc.parse(input);
+            });
+
+            expect(result?.type).toBeUndefined();
             expect(elapsed).toBeLessThan(500);
         });
 

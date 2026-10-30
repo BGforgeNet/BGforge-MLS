@@ -10,7 +10,7 @@
  */
 
 import { applyFalloutFamilyEdits, type FalloutFamilyWriteVariant } from "./dialog-ssl-edit";
-import { lineIndentAt } from "./dialog-edit-common";
+import { declaresNode, lineIndentAt } from "./dialog-edit-common";
 import {
     serializeTSSLBranch,
     serializeTSSLConditionalOption,
@@ -44,7 +44,7 @@ const TSSL_WRITE_VARIANT: FalloutFamilyWriteVariant = {
     serializeBranch: serializeTSSLBranch,
     serializeSupportNode: serializeTSSLSupportProcedure,
     serializeEntryCall: (id) => `${id}();`,
-    declaresNode: (text, id) => new RegExp(String.raw`\bfunction\s+${id}\b`).test(text),
+    declaresNode: (text, id) => declaresNode(text, "function", id),
     bodyAnchor: tsslBodyAnchor,
 };
 

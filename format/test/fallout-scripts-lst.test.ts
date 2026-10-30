@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import { formatScriptsLst } from "@bgforge/format";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 
 /** Apply the formatter and assert it produced a change. */
 function fmt(text: string): string {
@@ -151,10 +152,11 @@ describe("fallout-scripts-lst/format", () => {
         // The comment column takes every blank; the metadata column then fails on the line separator, and the
         // comment column gives the blanks back one at a time.
         const line = "a.int ;" + " ".repeat(100_000) + "#\u2028x";
-        const start = performance.now();
-        const result = formatScriptsLst(line + "\r\n");
-        const elapsed = performance.now() - start;
-        expect(result.text).toBe(line + "\r\n");
+        let result: ReturnType<typeof formatScriptsLst> | undefined;
+        const elapsed = cpuTimeMs(() => {
+            result = formatScriptsLst(line + "\r\n");
+        });
+        expect(result?.text).toBe(line + "\r\n");
         expect(elapsed).toBeLessThan(500);
     });
 

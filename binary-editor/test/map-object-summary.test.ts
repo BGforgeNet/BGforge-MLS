@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { mapParser, buildFileDerivedParseOptions } from "@bgforge/binary";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { buildModel } from "../src/model";
 import { projectRow } from "../src/window";
 import { summaryComposerFor } from "../src/summary";
@@ -47,9 +48,11 @@ describe("map object summary", () => {
 
     it("reads a long run of open parentheses in linear time", () => {
         const name = "(".repeat(100_000);
-        const start = performance.now();
-        const summary = summaryForName(name);
-        expect(performance.now() - start).toBeLessThan(500);
+        let summary: string | undefined;
+        const elapsed = cpuTimeMs(() => {
+            summary = summaryForName(name);
+        });
+        expect(elapsed).toBeLessThan(500);
         expect(summary).toBeUndefined();
     });
 

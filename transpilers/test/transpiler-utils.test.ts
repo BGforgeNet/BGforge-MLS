@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import {
     applyHelperFixups,
     evaluateCondition,
@@ -16,9 +17,18 @@ import {
 describe("getWordBoundaryRegex", () => {
     test("returns a global regex matching the bounded word", () => {
         const re = getWordBoundaryRegex("count");
-        expect(re.source).toBe("\\bcount\\b");
         expect(re.flags).toBe("g");
         expect("for i = 0 to count step countup".match(re)).toEqual(["count"]);
+    });
+
+    test.each([
+        ["a name starting with $", "$x", "a + $x * $x1 + b$x", ["$x"]],
+        ["a name ending with $", "x$", "x$ + x$y + ax$", ["x$"]],
+        ["a name holding $", "a$b", "a$b + a$bc + za$b", ["a$b"]],
+        ["a name that is not glued to $", "x", "x + $x + x$ + x", ["x", "x"]],
+        ["a name holding a dot", "a.b", "a.b + axb", ["a.b"]],
+    ])("matches %s only as a whole identifier", (_what, name, text, expected) => {
+        expect(text.match(getWordBoundaryRegex(name))).toEqual(expected);
     });
 
     test("returns the same instance for the same name (memoized)", () => {
@@ -34,6 +44,11 @@ describe("substituteVars", () => {
     test("replaces a variable token with its value", () => {
         const vars: VarsContext = new Map([["count", "5"]]);
         expect(substituteVars("i < count", vars)).toBe("i < 5");
+    });
+
+    test("replaces a variable whose name starts with $", () => {
+        const vars: VarsContext = new Map([["$i", "3"]]);
+        expect(substituteVars("$i < n && $index", vars)).toBe("3 < n && $index");
     });
 
     test("respects word boundaries (does not replace partial matches)", () => {
@@ -152,9 +167,10 @@ describe("hasImports", () => {
 
     test("scans a long run of blank lines in linear time", () => {
         const text = "\n".repeat(100_000) + "const z = 1;";
-        const start = performance.now();
-        const found = hasImports(text);
-        const elapsed = performance.now() - start;
+        let found: boolean | undefined;
+        const elapsed = cpuTimeMs(() => {
+            found = hasImports(text);
+        });
         expect(found).toBe(false);
         expect(elapsed).toBeLessThan(500);
     });

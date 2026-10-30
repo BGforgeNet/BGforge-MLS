@@ -9,6 +9,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import * as zlib from "zlib";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import {
     parseKey,
     openBif,
@@ -39,13 +40,6 @@ function writeStr(dv: DataView, offset: number, s: string): void {
 
 /** Materialize bytes for order-independent value comparison. */
 const arr = (u: Uint8Array): number[] => [...u];
-
-/** Wall time of a synchronous call, for worst-case input checks (a runner timeout cannot interrupt a regex). */
-function elapsedMs(fn: () => void): number {
-    const start = performance.now();
-    fn();
-    return performance.now() - start;
-}
 
 /** Generous for linear code on a slow machine; quadratic backtracking at the sizes used below takes many times this. */
 const LINEAR_TIME_BOUND_MS = 500;
@@ -1369,12 +1363,12 @@ describe("openGame (real filesystem)", () => {
 
         it("parses a long padded value ending in a stray CR in linear time", () => {
             const ini = `[Alias]\nHD0:=C:\\game\nK=a ${" ".repeat(100_000)}\rx\n`;
-            expect(elapsedMs(() => readsExtra(ini))).toBeLessThan(LINEAR_TIME_BOUND_MS);
+            expect(cpuTimeMs(() => readsExtra(ini))).toBeLessThan(LINEAR_TIME_BOUND_MS);
         });
 
         it("normalizes a long run of trailing slashes in linear time", () => {
             const ini = `[Alias]\nHD0:=C:\\game\nCD1:=${"/".repeat(100_000)}x\n`;
-            expect(elapsedMs(() => readsExtra(ini))).toBeLessThan(LINEAR_TIME_BOUND_MS);
+            expect(cpuTimeMs(() => readsExtra(ini))).toBeLessThan(LINEAR_TIME_BOUND_MS);
         });
     });
 
@@ -1552,7 +1546,7 @@ describe("openGame (real filesystem)", () => {
 
         it("reads a huge blank-line run in linear time", () => {
             const conf = `${"\n".repeat(100_000)}x`;
-            expect(elapsedMs(() => resolvedFor(conf))).toBeLessThan(LINEAR_TIME_BOUND_MS);
+            expect(cpuTimeMs(() => resolvedFor(conf))).toBeLessThan(LINEAR_TIME_BOUND_MS);
         });
 
         // Padding after the value never made the old pattern backtrack, so this pins the value, not a time.

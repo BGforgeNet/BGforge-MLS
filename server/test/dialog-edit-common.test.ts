@@ -3,6 +3,7 @@ import {
     allChoices,
     allStates,
     bareMsgId,
+    declaresNode,
     lineIndentAt,
     nextIdSeed,
     removeLineSplice,
@@ -100,5 +101,25 @@ describe("removeLineSplice", () => {
     it("leaves a trailing non-newline char untouched (statement mid-line, EOF)", () => {
         const text = "X;more";
         expect(removeLineSplice(text, { start: 0, end: 1 })).toEqual({ start: 0, end: 1, replacement: "" });
+    });
+});
+
+describe("declaresNode", () => {
+    it.each([
+        ["procedure", "procedure Node998;", "Node998", true],
+        ["procedure", "procedure Node998 begin end", "Node998", true],
+        ["procedure", "procedure Node9981 begin end", "Node998", false],
+        ["procedure", "xprocedure Node998;", "Node998", false],
+        ["function", "function Node998() {}", "Node998", true],
+        ["function", "function $x() {}", "$x", true],
+        ["function", "function x$() {}", "x$", true],
+        ["function", "function a$b() {}", "a$b", true],
+        ["function", "function $xy() {}", "$x", false],
+        ["function", "function x$y() {}", "x$", false],
+        ["function", "function a.b() {}", "a.b", true],
+        ["function", "function axb() {}", "a.b", false],
+        ["procedure", "procedure $x;", "$x", true],
+    ] as const)("finds a %s declaration in %j for %j: %j", (keyword, text, id, expected) => {
+        expect(declaresNode(text, keyword, id)).toBe(expected);
     });
 });

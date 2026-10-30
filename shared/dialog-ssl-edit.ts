@@ -49,7 +49,7 @@ import {
     serializeSupportProcedure,
     sslOptionMacro,
 } from "./dialog-ssl-serialize";
-import { allStates, bareMsgId, bareMsgKey, isAllocatedNewOption } from "./dialog-edit-common";
+import { allStates, bareMsgId, bareMsgKey, declaresNode, isAllocatedNewOption } from "./dialog-edit-common";
 
 /** Options of a state in source order: the choices that carry a `callRange` (call transitions don't). */
 function optionsOf(state: DialogState): DialogChoice[] {
@@ -981,7 +981,7 @@ const SSL_WRITE_VARIANT: FalloutFamilyWriteVariant = {
     serializeBranch: serializeSSLBranch,
     serializeSupportNode: serializeSupportProcedure,
     serializeEntryCall: (id) => `call ${id};`,
-    declaresNode: (text, id) => new RegExp(String.raw`\bprocedure\s+${id}\b`).test(text),
+    declaresNode: (text, id) => declaresNode(text, "procedure", id),
     bodyAnchor: (_text, orig) => orig.insertAnchor,
     serializeScaffold: serializeSSLDialogScaffold,
 };

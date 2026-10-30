@@ -19,6 +19,7 @@ vi.mock("../src/lsp-connection", () => ({
     }),
 }));
 
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { symbolAtPosition } from "../src/cursor-utils";
 import { addFallbackDiagnostic, errorMessage, sendParseResult, type DiagnosticParseResult } from "../src/diagnostics";
 import { isSubpath, isSubpathFullyResolved, tryRealpathSync } from "../src/path-utils";
@@ -99,12 +100,48 @@ describe("symbolAtPosition", () => {
         // The run is a candidate start at every offset, and the reference after it never completes.
         const text = `${".".repeat(100_000)}((1`;
 
-        const start = performance.now();
-        const result = symbolAtPosition(text, { line: 0, character: text.length - 1 });
-        const elapsed = performance.now() - start;
+        let result: ReturnType<typeof symbolAtPosition> | undefined;
+        const elapsed = cpuTimeMs(() => {
+            result = symbolAtPosition(text, { line: 0, character: text.length - 1 });
+        });
 
         expect(result).toBe("1");
         expect(elapsed).toBeLessThan(500);
+    });
+
+    it("finds the word start in a long word run ended by punctuation in linear time", () => {
+        // The run is a candidate start at every offset, and the character at the cursor ends every attempt.
+        const text = `${"a".repeat(100_000)}!`;
+
+        let result: ReturnType<typeof symbolAtPosition> | undefined;
+        const elapsed = cpuTimeMs(() => {
+            result = symbolAtPosition(text, { line: 0, character: text.length - 1 });
+        });
+
+        expect(result).toBe("");
+        expect(elapsed).toBeLessThan(500);
+    });
+
+    it("finds the word start in a long run of word and extra characters in linear time", () => {
+        const text = `${"a-".repeat(50_000)}!`;
+
+        let result: ReturnType<typeof symbolAtPosition> | undefined;
+        const elapsed = cpuTimeMs(() => {
+            result = symbolAtPosition(text, { line: 0, character: text.length - 1 }, "-#");
+        });
+
+        expect(result).toBe("");
+        expect(elapsed).toBeLessThan(500);
+    });
+
+    it.each([
+        ["foo-bar baz", 5, "-", "foo-bar"],
+        ["foo-bar baz", 5, "", "bar"],
+        ["# x", 0, "#", "#"],
+        ["a!", 1, "", ""],
+        ["x^y]z\\w-q end", 4, "^]\\-", "x^y]z\\w-q"],
+    ])("reads the word in %j at %d with extra characters %j as %j", (text, character, extra, expected) => {
+        expect(symbolAtPosition(text, { line: 0, character }, extra)).toBe(expected);
     });
 
     it("returns msg reference for number inside nested call", () => {

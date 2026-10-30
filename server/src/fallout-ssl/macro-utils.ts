@@ -37,16 +37,39 @@ function stripLineComment(value: string): string {
     return comment === -1 ? value : value.slice(0, comment);
 }
 
+/** The characters `.` does not match: \n, \r and the Unicode line (Zl) and paragraph (Zp) separators. */
+const LINE_BREAK = /[\n\r\p{Zl}\p{Zp}]/gu;
+
+/**
+ * Cut the first block comment that opens and closes on one line, from its first "/*" to the last "* /" of that
+ * line (the greedy match of `/\/\*.*\*\//`, whose attempt per "/*" scans to the end of the line). On a line the
+ * first "/*" decides: when no "* /" follows it, none follows a later one.
+ */
+function stripBlockComment(value: string): string {
+    let lineStart = 0;
+    for (;;) {
+        LINE_BREAK.lastIndex = lineStart;
+        const lineBreak = LINE_BREAK.exec(value);
+        const line = value.slice(lineStart, lineBreak?.index ?? value.length);
+        const open = line.indexOf("/*");
+        const close = line.lastIndexOf("*/");
+        if (open !== -1 && close >= open + 2) {
+            return value.slice(0, lineStart + open) + value.slice(lineStart + close + 2);
+        }
+        if (lineBreak === null) return value;
+        lineStart = lineBreak.index + 1;
+    }
+}
+
 /**
  * Check if a value is a simple numeric constant.
  * Matches: 123, (123), -123, (-123), 0x1F, (0x1F)
- * Strips inline comments before checking.
+ * Strips inline comments before checking. The value is the macro's body as text, not a parsed node: a macro body
+ * is free text that often is not valid SSL, so the tree holds no reliable comment-free form of it.
  */
 function isNumericValue(value: string): boolean {
     // Strip inline comment (// or /* */)
-    const stripped = stripLineComment(value)
-        .replace(/\/\*.*\*\//, "")
-        .trim();
+    const stripped = stripBlockComment(stripLineComment(value)).trim();
     return /^\(?-?(?:0x[0-9a-fA-F]+|\d+)\)?$/.test(stripped);
 }
 

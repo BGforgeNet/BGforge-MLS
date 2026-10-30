@@ -9,7 +9,13 @@
  */
 
 import type { SpliceOp } from "./dialog-splice";
+import { wholeIdentifier } from "./regex-utils";
 import type { DialogChoice, DialogModel, DialogState } from "./dialog-model";
+
+/** Whether `text` declares or defines node `id` with `keyword` (SSL `procedure <id>`, TSSL `function <id>`). */
+export function declaresNode(text: string, keyword: "procedure" | "function", id: string): boolean {
+    return new RegExp(String.raw`\b${keyword}\s+${wholeIdentifier(id)}`).test(text);
+}
 
 /** Every state across the model's roots, flattened - for id-keyed diffing and whole-model scans. */
 export function allStates(model: DialogModel): DialogState[] {

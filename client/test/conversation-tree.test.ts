@@ -11,6 +11,7 @@ import {
 } from "../src/dialog-editor/webview/conversation-tree";
 import { resolveJumpTarget } from "../src/dialog-editor/webview/jump-resolve";
 import type { DialogChoice, DialogState } from "@bgforge/shared/dialog-model";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { ch, noJump, root, st } from "./dialog-fixtures";
 
 describe("resolveJumpTarget", () => {
@@ -63,9 +64,10 @@ describe("resolveJumpTarget", () => {
         // Each tilde is a possible start of a trailing run, and the "y" after the run ends every attempt.
         const label = `x${"~".repeat(130_000)}y:Run`;
 
-        const start = performance.now();
-        const target = resolveJumpTarget(label, stateToRoot, fileToRoot);
-        const elapsed = performance.now() - start;
+        let target: ReturnType<typeof resolveJumpTarget>;
+        const elapsed = cpuTimeMs(() => {
+            target = resolveJumpTarget(label, stateToRoot, fileToRoot);
+        });
 
         expect(target).toBeUndefined();
         expect(elapsed).toBeLessThan(500);

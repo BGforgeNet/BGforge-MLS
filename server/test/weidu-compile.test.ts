@@ -55,6 +55,7 @@ import type { WeiDUsettings } from "../src/settings";
 import { normalizeUri } from "../src/core/normalized-uri";
 import { pathToUri } from "../src/uri-utils";
 import { normalize } from "path";
+import { cpuTimeMsAsync } from "@bgforge/shared/cpu-time";
 
 describe("weidu-compile", () => {
     beforeEach(() => {
@@ -385,9 +386,9 @@ describe("weidu-compile", () => {
             // A run of "[" with no error header after it: each bracket is a possible start of the file name.
             setupExecFile(null, `${"[".repeat(100_000)} x`);
 
-            const start = performance.now();
-            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
-            const elapsed = performance.now() - start;
+            const elapsed = await cpuTimeMsAsync(() =>
+                compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content"),
+            );
 
             expect(mockSendParseResult.mock.calls[0]![0].errors).toHaveLength(0);
             expect(elapsed).toBeLessThan(500);

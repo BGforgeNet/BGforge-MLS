@@ -5,6 +5,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 
 const { execFileMock } = vi.hoisted(() => ({ execFileMock: vi.fn() }));
 vi.mock("child_process", async (importOriginal) => ({
@@ -42,9 +43,10 @@ describe("quoteForBatch", () => {
         // Backslashes that no quote follows: each one is a possible start of a doubled run.
         const run = "\\".repeat(100_000);
 
-        const start = performance.now();
-        const quoted = quoteForBatch(`${run}x`);
-        const elapsed = performance.now() - start;
+        let quoted = "";
+        const elapsed = cpuTimeMs(() => {
+            quoted = quoteForBatch(`${run}x`);
+        });
 
         expect(quoted).toBe(`^^^"${run}x^^^"`);
         expect(elapsed).toBeLessThan(500);

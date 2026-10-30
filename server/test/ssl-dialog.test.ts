@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { cpuTimeMsAsync } from "@bgforge/shared/cpu-time";
 import { parseDialog } from "../src/dialog";
 
 // parseDialog self-initializes the SSL tree-sitter parser on first call.
@@ -553,9 +554,7 @@ describe("parseDialog (SSL) orphan node projection", () => {
         const ssl = `procedure Node${"0".repeat(100_000)}x begin end\nprocedure talk_p_proc begin end\n`;
         await parseDialog("procedure talk_p_proc begin end\n"); // initialise the parser outside the timed call
 
-        const start = performance.now();
-        await parseDialog(ssl);
-        const elapsed = performance.now() - start;
+        const elapsed = await cpuTimeMsAsync(() => parseDialog(ssl));
 
         expect(elapsed).toBeLessThan(500);
     });

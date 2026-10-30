@@ -55,6 +55,7 @@ vi.mock("../../src/lsp-connection", () => ({
 // positions (the warning-column logic depends on them). Tests that assert
 // columns set their own content via setMockDocument.
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { cpuTimeMsAsync } from "@bgforge/shared/cpu-time";
 let mockDocument: TextDocument = TextDocument.create(
     "file:///project/test.ssl",
     "fallout-ssl",
@@ -397,6 +398,131 @@ describe("fallout-ssl compiler", () => {
                 expect.stringContaining(TMP_SSL_NAME),
             );
         });
+    });
+
+    describe("compiler output parsing", () => {
+        const uri = normalizeUri("file:///project/test.ssl");
+
+        /** The diagnostics parsed out of `stdout`, as the compile hands them on. */
+        async function parsed(stdout: string) {
+            mockWasmCompiler.mockResolvedValue({ stdout, returnCode: 1 });
+            await compile(uri, baseSettings, false, "code");
+            return mockSendParseResult.mock.calls[0]![0];
+        }
+
+        it("reads an error with a line and a column", async () => {
+            const result = await parsed("[Error] <test.ssl>:3:8: Expecting top-level statement");
+            expect(result.errors).toEqual([
+                {
+                    uri: "file:///project/test.ssl",
+                    line: 3,
+                    columnStart: 0,
+                    columnEnd: 7,
+                    message: "Expecting top-level statement",
+                },
+            ]);
+            expect(result.warnings).toEqual([]);
+        });
+
+        it("reads a semantic error", async () => {
+            const result = await parsed("[Error] <Semantic> <my_script.ssl>:26:25: Unknown identifier qq.");
+            expect(result.errors).toEqual([
+                {
+                    uri: "file:///project/my_script.ssl",
+                    line: 26,
+                    columnStart: 0,
+                    columnEnd: 24,
+                    message: "Unknown identifier qq.",
+                },
+            ]);
+        });
+
+        it("reads an error with a line and no column (wine path)", async () => {
+            const result = await parsed('[Error] <lib/a.h>:1: Illegal parameter "1"');
+            expect(result.errors).toEqual([
+                {
+                    uri: "file:///project/lib/a.h",
+                    line: 1,
+                    columnStart: 0,
+                    columnEnd: 0,
+                    message: 'Illegal parameter "1"',
+                },
+            ]);
+        });
+
+        it("reads a warning with a line and a column", async () => {
+            setMockDocument("first line\nabcdefghij\n");
+            const result = await parsed("[Warning] <test.ssl>:2:3: Unused variable");
+            expect(result.warnings).toEqual([
+                {
+                    uri: "file:///project/test.ssl",
+                    line: 2,
+                    columnStart: 3,
+                    columnEnd: 10,
+                    message: "Unused variable",
+                },
+            ]);
+            expect(result.errors).toEqual([]);
+        });
+
+        it("reads a warning with a line and no column", async () => {
+            setMockDocument("first line\nabcdefghij\n");
+            const result = await parsed("[Warning] <inc/b.h>:2: Unused variable");
+            expect(result.warnings).toEqual([
+                {
+                    uri: "file:///project/inc/b.h",
+                    line: 2,
+                    columnStart: 0,
+                    columnEnd: 10,
+                    message: "Unused variable",
+                },
+            ]);
+        });
+
+        it("reads each line of mixed output with CRLF endings, leaving the carriage return out of the message", async () => {
+            setMockDocument("first line\nabcdefghij\n");
+            const result = await parsed(
+                "Compiling\r\n[Warning] <test.ssl>:2:3: Unused variable\r\n[Error] <test.ssl>:1:2: Bad\r\n[Error] <Semantic> <test.ssl>:2:4: Worse\r\n",
+            );
+            expect(result.errors).toEqual([
+                { uri: "file:///project/test.ssl", line: 1, columnStart: 0, columnEnd: 1, message: "Bad" },
+                { uri: "file:///project/test.ssl", line: 2, columnStart: 0, columnEnd: 3, message: "Worse" },
+            ]);
+            expect(result.warnings).toEqual([
+                { uri: "file:///project/test.ssl", line: 2, columnStart: 3, columnEnd: 10, message: "Unused variable" },
+            ]);
+        });
+
+        it("keeps a colon and angle brackets in the message", async () => {
+            const result = await parsed("[Error] <test.ssl>:4:2: Expected <name>: got 'x'");
+            expect(result.errors[0]).toMatchObject({ line: 4, message: "Expected <name>: got 'x'" });
+        });
+
+        it("skips a line without a line number", async () => {
+            const result = await parsed("[Error] <test.ssl>:: no line here");
+            expect(result.errors).toEqual([]);
+        });
+
+        // Each of these lines used to be rescanned from every opener to the end of the line, so the cost
+        // grew with the square of the opener count.
+        it.each([
+            ["[Error] <", 10_000],
+            ["[Error] <Semantic> <", 4_000],
+            ["[Warning] <", 10_000],
+        ] as const)(
+            "reads a long line of %s openers in linear time",
+            async (opener, count) => {
+                let result: Awaited<ReturnType<typeof parsed>> | undefined;
+                const elapsed = await cpuTimeMsAsync(async () => {
+                    result = await parsed(opener.repeat(count) + "\n[Error] <test.ssl>:3:8: Real");
+                });
+                expect(result?.errors).toEqual([
+                    { uri: "file:///project/test.ssl", line: 3, columnStart: 0, columnEnd: 7, message: "Real" },
+                ]);
+                expect(elapsed).toBeLessThan(500);
+            },
+            60_000,
+        );
     });
 
     describe("the extension's own compiler", () => {

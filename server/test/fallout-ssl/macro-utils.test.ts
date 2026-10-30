@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { buildMacroTooltip, type MacroData } from "../../src/fallout-ssl/macro-utils";
 
 /** The tooltip of a parameterless constant-named macro; the name is upper case so no body block is appended. */
@@ -26,6 +27,9 @@ describe("buildMacroTooltip numeric constants", () => {
         "7 /* seven */",
         "8 // note // more",
         "0x10 //",
+        "6 /* a */ /* b */",
+        "/* lead */ 4",
+        "2 /* a */ b */",
     ])("shows %j as the value", (firstline) => {
         const tooltip = tooltipFor(firstline);
 
@@ -33,20 +37,43 @@ describe("buildMacroTooltip numeric constants", () => {
         expect(tooltip).not.toContain("macro FOO");
     });
 
-    it.each(["1 + 2", "SOME_CONST", "12abc", "1))", "// 5", "5 // five\rmore", "x // 5"])(
-        "shows %j as a macro signature",
-        (firstline) => {
-            expect(tooltipFor(firstline)).toContain("macro FOO");
-        },
-    );
+    it.each([
+        "1 + 2",
+        "SOME_CONST",
+        "12abc",
+        "1))",
+        "// 5",
+        "5 // five\rmore",
+        "x // 5",
+        "3 /* a */ 4",
+        "1 /* a",
+        "1 /*/",
+        "2 /* a\r*/",
+    ])("shows %j as a macro signature", (firstline) => {
+        expect(tooltipFor(firstline)).toContain("macro FOO");
+    });
+
+    it("reads a long run of block comment openers with no closer in linear time", () => {
+        // Each opener is a possible start of a comment whose `.*` runs to the end of the text and finds no closer.
+        const firstline = "/* ".repeat(30_000);
+
+        let tooltip = "";
+        const elapsed = cpuTimeMs(() => {
+            tooltip = tooltipFor(firstline);
+        });
+
+        expect(tooltip).toContain("macro FOO");
+        expect(elapsed).toBeLessThan(500);
+    });
 
     it("reads a long run of slashes followed by a line break in linear time", () => {
         // A lone line break inside the text: every "//" is a possible comment start whose `.*` stops short of the end.
         const firstline = `${"/".repeat(100_000)}\rx`;
 
-        const start = performance.now();
-        const tooltip = tooltipFor(firstline);
-        const elapsed = performance.now() - start;
+        let tooltip = "";
+        const elapsed = cpuTimeMs(() => {
+            tooltip = tooltipFor(firstline);
+        });
 
         expect(tooltip).toContain("macro FOO");
         expect(elapsed).toBeLessThan(500);

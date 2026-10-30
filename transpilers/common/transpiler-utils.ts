@@ -15,6 +15,7 @@ import {
     SyntaxKind,
 } from "ts-morph";
 import QuickLRU from "quick-lru";
+import { wholeIdentifier } from "@bgforge/shared/regex-utils";
 import { safeEvaluate } from "./safe-eval";
 // Generic string-aware text machinery that happens to live in the bundler module; imported rather than
 // re-implemented so quoted arguments are protected by the same walker everywhere.
@@ -24,9 +25,9 @@ import { replaceOutsideStrings } from "./esbuild-utils";
 export type VarsContext = Map<string, string>;
 
 // Cache of word-boundary regexes keyed by identifier name. Variable names are
-// TypeScript identifiers (sourced from ts-morph AST node names), which cannot
-// contain regex metacharacters, so direct interpolation is safe and the cache
-// key is the identifier text itself. The cache is global across calls because
+// TypeScript identifiers (sourced from ts-morph AST node names), which may hold
+// `$`, so the name is escaped when the regex is built and the cache key is the
+// identifier text itself. The cache is global across calls because
 // the regex source depends only on the name; reusing the compiled instance
 // avoids recompiling per call (substituteVars is hot in loop-unroll paths).
 //
@@ -46,7 +47,7 @@ const wordBoundaryRegexCache = new QuickLRU<string, RegExp>({ maxSize: 256 });
 export function getWordBoundaryRegex(name: string): RegExp {
     let cached = wordBoundaryRegexCache.get(name);
     if (!cached) {
-        cached = new RegExp(`\\b${name}\\b`, "g");
+        cached = new RegExp(wholeIdentifier(name), "g");
         wordBoundaryRegexCache.set(name, cached);
     }
     return cached;

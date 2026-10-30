@@ -40,6 +40,7 @@ import { defaultSettings } from "../../src/settings";
 import { CompletionItemKind } from "vscode-languageserver/node";
 import { normalizeUri } from "../../src/core/normalized-uri";
 import * as path from "path";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 
 beforeAll(async () => {
     await initParser();
@@ -176,9 +177,9 @@ ${"a".repeat(100_000)} `;
         const position = { line: 1, character: 100_001 };
         const base = weiduTp2Provider.getCompletions!(uri);
 
-        const start = performance.now();
-        weiduTp2Provider.filterCompletions!(base, text, position, uri);
-        const elapsed = performance.now() - start;
+        const elapsed = cpuTimeMs(() => {
+            weiduTp2Provider.filterCompletions!(base, text, position, uri);
+        });
 
         expect(elapsed).toBeLessThan(500);
     });

@@ -17,6 +17,7 @@ vi.mock("vscode", () => ({
 }));
 
 // Imported after vi.mock so the mocked vscode is in place.
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { pickStrref, strrefPickItems, type StrrefPickItem } from "../src/ie-resources/strref-picker";
 import type { StrrefMatch } from "../src/ie-resources/game-lookups";
 
@@ -105,9 +106,10 @@ describe("strrefPickItems", () => {
         // Each space is a possible start of whitespace around a newline, and the run is followed by none.
         const text = `${" ".repeat(130_000)}x`;
 
-        const start = performance.now();
-        const items = strrefPickItems("ring", [{ strref: 12, text }], lookup);
-        const elapsed = performance.now() - start;
+        let items: StrrefPickItem[] = [];
+        const elapsed = cpuTimeMs(() => {
+            items = strrefPickItems("ring", [{ strref: 12, text }], lookup);
+        });
 
         expect(items[0]?.label).toBe(text);
         expect(elapsed).toBeLessThan(500);

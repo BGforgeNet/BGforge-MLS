@@ -18,6 +18,7 @@ import {
 } from "../../src/weidu-tp2/completion/context/function-call";
 import { CompletionContext, ParamSection } from "../../src/weidu-tp2/completion/types";
 import { CallableContext } from "../../src/core/symbol";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 
 beforeAll(async () => {
     await initParser();
@@ -465,9 +466,9 @@ describe("setFuncParamsContextFromText", () => {
         const prefix = `LAF foo INT_VAR ${"a".repeat(150_000)}`;
         resetFuncParamsContext();
 
-        const start = performance.now();
-        setFuncParamsContextFromText(prefix);
-        const elapsed = performance.now() - start;
+        const elapsed = cpuTimeMs(() => {
+            setFuncParamsContextFromText(prefix);
+        });
 
         expect(getFuncParamsContext()).toMatchObject({ paramSection: ParamSection.IntVar, usedParams: [] });
         expect(elapsed).toBeLessThan(500);

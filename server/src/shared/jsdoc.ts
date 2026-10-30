@@ -80,8 +80,11 @@ import { JSDOC_TYPE_PATTERN } from "./jsdoc-types";
  *      or: @param {type} [name=default] - description
  *
  * Groups: 1=type, 2=simpleName, 3=requiredMarker(!), 4=bracketName, 5=default, 6=description
+ *
+ * The default is capped at 500 characters: an unbounded `[^\]]+` scans to the end of the line from every
+ * "@param {x} [a=" on it when no "]" follows, which is quadratic in the line's length.
  */
-const PARAM_PATTERN = /@(?:arg|param)\s+\{(\w+)\}\s+(?:(\w+)(!)?|\[(\w+)=([^\]]+)\])(?:\s+-\s+|\s+)?(.+)?/;
+const PARAM_PATTERN = /@(?:arg|param)\s+\{(\w+)\}\s+(?:(\w+)(!)?|\[(\w+)=([^\]]{1,500})\])(?:\s+-\s+|\s+)?(.+)?/;
 
 /**
  * Pattern for @param/@arg tags without braces (type must be a known JSDoc type).
@@ -127,8 +130,11 @@ const NAMED_RETURN_TYPE_FIRST_BRACELESS_PATTERN = new RegExp(
 /** Pattern for @deprecated tag. Groups: 1=message (optional) */
 const DEPRECATED_PATTERN = /@deprecated(?:\s+(.*))?/;
 
-/** Pattern for @type tag. Groups: 1=type with braces, 2=type without braces, 3=trailing description. */
-const TYPE_PATTERN = /@type\s+(?:\{([^}]+)\}|(\w+))(?:\s+-\s+|\s+)?(.+)?/;
+/**
+ * Pattern for @type tag. Groups: 1=type with braces, 2=type without braces, 3=trailing description.
+ * The braced type is capped at 500 characters for the reason given at PARAM_PATTERN.
+ */
+const TYPE_PATTERN = /@type\s+(?:\{([^}]{1,500})\}|(\w+))(?:\s+-\s+|\s+)?(.+)?/;
 
 /** Valid compound type suffixes after the base type word (e.g., "resref offset", "byte array offset"). */
 const COMPOUND_TYPE_SUFFIXES: ReadonlySet<string> = new Set(["offset", "array offset"]);

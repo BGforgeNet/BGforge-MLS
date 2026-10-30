@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { cpuTimeMs } from "@bgforge/shared/cpu-time";
 import { humanize, type FieldPresentation, type StructPresentation } from "../src/spec/presentation";
 
 describe("humanize", () => {
@@ -23,9 +24,11 @@ describe("humanize", () => {
 
     it("humanizes a long uppercase run followed by a rejecting tail in linear time", () => {
         const input = `${"A".repeat(100_000)}1`;
-        const start = performance.now();
-        const label = humanize(input);
-        expect(performance.now() - start).toBeLessThan(500);
+        let label = "";
+        const elapsed = cpuTimeMs(() => {
+            label = humanize(input);
+        });
+        expect(elapsed).toBeLessThan(500);
         expect(label).toBe(input);
     });
 });
