@@ -522,7 +522,8 @@ function evalCondition(
 // Directive processing
 // ---------------------------------------------------------------------------
 
-const DIRECTIVE = /^[ \t]*#[ \t]*([A-Za-z_]\w*)?[ \t]*([\s\S]*)$/;
+/** A directive's `#` and name; what follows them in the line is the rest, read off by position. */
+const DIRECTIVE = /^[ \t]*#[ \t]*([A-Za-z_]\w*)?[ \t]*/;
 /** Cheap first test, so the capture above runs only on the few lines that are directives at all. */
 const DIRECTIVE_START = /^[ \t]*#/;
 const INCLUDE_OPERAND = /^\s*"([^"]+)"|^\s*<([^>]+)>/;
@@ -590,11 +591,11 @@ function attempt<T>(state: State, step: () => T): T | null {
 type ParsedDefine = Macro | { error: string };
 
 function parseDefineText(rest: string): ParsedDefine {
-    const m = /^([A-Za-z_]\w*)(\(([^)]*)\))?([\s\S]*)$/.exec(rest);
+    const m = /^([A-Za-z_]\w*)(\(([^)]*)\))?/.exec(rest);
     if (m === null) return { error: "malformed #define" };
-    const [, name, parenGroup, paramList, rawBody] = m;
+    const [, name, parenGroup, paramList] = m;
     if (name === undefined) return { error: "malformed #define" };
-    const body = (rawBody ?? "").trim();
+    const body = rest.slice(m[0].length).trim();
     if (parenGroup === undefined) return { name, params: null, body, variadic: false };
 
     const declared = (paramList ?? "")
@@ -732,7 +733,7 @@ function classify(text: string): PreparedLine {
     const m = DIRECTIVE.exec(text);
     if (m === null) return { text };
     const directive = m[1] ?? "";
-    const rest = m[2] ?? "";
+    const rest = text.slice(m[0].length);
     if (directive !== "define") return { text, directive, rest };
     return { text, directive, rest, define: parseDefineText(rest) };
 }

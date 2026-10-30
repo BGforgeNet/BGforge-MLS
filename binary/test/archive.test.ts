@@ -40,6 +40,16 @@ function writeStr(dv: DataView, offset: number, s: string): void {
 /** Materialize bytes for order-independent value comparison. */
 const arr = (u: Uint8Array): number[] => [...u];
 
+/** Wall time of a synchronous call, for worst-case input checks (a runner timeout cannot interrupt a regex). */
+function elapsedMs(fn: () => void): number {
+    const start = performance.now();
+    fn();
+    return performance.now() - start;
+}
+
+/** Generous for linear code on a slow machine; quadratic backtracking at the sizes used below takes many times this. */
+const LINEAR_TIME_BOUND_MS = 500;
+
 interface BifFile {
     fileIndex: number;
     type: number;
@@ -1308,6 +1318,66 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    describe("baldur.ini [Alias] parsing", () => {
+        /** A game dir whose only data location is `<dir>/mycd/cddata/extra.bif`, reachable via the given ini text. */
+        const openWithIni = (ini: string) => {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bgforge-ini-"));
+            tmpDirs.push(dir);
+            const key = buildKey(
+                [{ name: "cddata\\extra.bif", fileLength: 0 }],
+                [{ resref: "extra", type: RESTYPE_ITM, bifIndex: 0, tilesetIndex: 0, fileIndex: 0 }],
+            );
+            fs.writeFileSync(path.join(dir, "chitin.key"), key);
+            fs.writeFileSync(path.join(dir, "baldur.ini"), ini);
+            fs.mkdirSync(path.join(dir, "mycd", "cddata"), { recursive: true });
+            fs.writeFileSync(
+                path.join(dir, "mycd", "cddata", "extra.bif"),
+                buildBif([{ fileIndex: 0, type: RESTYPE_ITM, data: ITEM_DATA }]),
+            );
+            return openGame(dir);
+        };
+        const readsExtra = (ini: string): boolean => {
+            const game = openWithIni(ini);
+            try {
+                return game.locate("extra", "itm") !== undefined;
+            } finally {
+                game.close();
+            }
+        };
+
+        it.each([
+            [
+                "CRLF, padding, `=` and a doubled trailing slash",
+                "[Alias]  \r\n  HD0 = C:\\game  \r\n  CD1 =C:\\game\\mycd\\\\  \r\n",
+            ],
+            ["`:=` and no trailing newline", "[Alias]\nHD0:=C:\\game\nCD1:=C:\\game\\mycd"],
+            [
+                "a same-named key in another section first",
+                "[Other]\nCD1:=C:\\elsewhere\n[Alias]\nHD0:=C:\\game\nCD1:=C:\\game\\mycd\n",
+            ],
+        ])("resolves a CD root from %s", (_name, ini) => {
+            expect(readsExtra(ini)).toBe(true);
+        });
+
+        it.each([
+            ["a key outside [Alias]", "[Other]\nHD0:=C:\\game\nCD1:=C:\\game\\mycd\n"],
+            ["an empty value", "[Alias]\nHD0:=C:\\game\nCD1:=\n"],
+            ["a root outside HD0", "[Alias]\nHD0:=C:\\game\nCD1:=D:\\mycd\n"],
+        ])("ignores %s", (_name, ini) => {
+            expect(readsExtra(ini)).toBe(false);
+        });
+
+        it("parses a long padded value ending in a stray CR in linear time", () => {
+            const ini = `[Alias]\nHD0:=C:\\game\nK=a ${" ".repeat(100_000)}\rx\n`;
+            expect(elapsedMs(() => readsExtra(ini))).toBeLessThan(LINEAR_TIME_BOUND_MS);
+        });
+
+        it("normalizes a long run of trailing slashes in linear time", () => {
+            const ini = `[Alias]\nHD0:=C:\\game\nCD1:=${"/".repeat(100_000)}x\n`;
+            expect(elapsedMs(() => readsExtra(ini))).toBeLessThan(LINEAR_TIME_BOUND_MS);
+        });
+    });
+
     it("refines the flavour for EET / SoD / BGT via override and loose-file markers", () => {
         const byte = Uint8Array.from([0]);
         const areMarker = (resref: string): KeyRes => ({
@@ -1432,6 +1502,64 @@ describe("openGame (real filesystem)", () => {
         } finally {
             game.close();
         }
+    });
+
+    describe("weidu.conf lang_dir parsing", () => {
+        // de_DE sorts first, so only a weidu.conf that names en_US yields "English".
+        const resolvedFor = (conf: string): string | undefined => {
+            const game = openGame(
+                makeGameDir(
+                    {
+                        "lang/de_DE/dialog.tlk": buildTlk(["Deutsch"]),
+                        "lang/en_US/dialog.tlk": buildTlk(["English"]),
+                        "weidu.conf": new TextEncoder().encode(conf),
+                    },
+                    eeMarker,
+                ),
+            );
+            try {
+                return game.tlk()?.get(0);
+            } finally {
+                game.close();
+            }
+        };
+
+        it.each([
+            ["indented, mixed-case key, tabs and CRLF", "  LANG_DIR\t=  en_US  \r\n"],
+            ["after other keys, without a trailing newline", "other = x\r\nlang_dir=en_US"],
+            ["after blank lines", "\n\n\nlang_dir=en_US"],
+            ["after whitespace-only lines", "  \n\t\n lang_dir = en_US\n"],
+            ["on a lone-CR separated line", "x = y\rlang_dir = en_US\r"],
+            ["with a space before the equals sign", "lang_dir  = en_US"],
+        ])("reads the value: %s", (_name, conf) => {
+            expect(resolvedFor(conf)).toBe("English");
+        });
+
+        it.each([
+            ["commented out", "# lang_dir = en_US\n"],
+            ["a longer key", "xlang_dir = en_US\n"],
+            ["a longer key suffix", "lang_dirs = en_US\n"],
+            ["an empty value", "lang_dir =\n"],
+            ["a value-less line", "lang_dir\n"],
+            ["a missing equals sign", "lang_dir en_US\n"],
+        ])("falls back to the sorted-first folder: %s", (_name, conf) => {
+            expect(resolvedFor(conf)).toBe("Deutsch");
+        });
+
+        it("takes the first lang_dir line", () => {
+            expect(resolvedFor("lang_dir = en_US\nlang_dir = de_DE\n")).toBe("English");
+        });
+
+        it("reads a huge blank-line run in linear time", () => {
+            const conf = `${"\n".repeat(100_000)}x`;
+            expect(elapsedMs(() => resolvedFor(conf))).toBeLessThan(LINEAR_TIME_BOUND_MS);
+        });
+
+        // Padding after the value never made the old pattern backtrack, so this pins the value, not a time.
+        it("reads a value followed by a long run of padding", () => {
+            const conf = `lang_dir = en_US${" ".repeat(100_000)}\n`;
+            expect(resolvedFor(conf)).toBe("English");
+        });
     });
 
     it("classic: does not auto-scan lang folders (dialog.tlk is read only from the game root)", () => {

@@ -26,14 +26,25 @@ function isConstantMacro(name: string): boolean {
 }
 
 /**
+ * Cut the text from the leftmost "//" that has no line break after it. A pattern for this (`/\/\/.*$/`) retries
+ * every "//" in a run of slashes, and each attempt scans to the next line break before failing.
+ */
+function stripLineComment(value: string): string {
+    let lastBreak = value.length - 1;
+    // `.` fails on exactly the line break characters, so this walks back to the last one.
+    while (lastBreak >= 0 && /./.test(value[lastBreak]!)) lastBreak--;
+    const comment = value.indexOf("//", lastBreak + 1);
+    return comment === -1 ? value : value.slice(0, comment);
+}
+
+/**
  * Check if a value is a simple numeric constant.
  * Matches: 123, (123), -123, (-123), 0x1F, (0x1F)
  * Strips inline comments before checking.
  */
 function isNumericValue(value: string): boolean {
     // Strip inline comment (// or /* */)
-    const stripped = value
-        .replace(/\/\/.*$/, "")
+    const stripped = stripLineComment(value)
         .replace(/\/\*.*\*\//, "")
         .trim();
     return /^\(?-?(?:0x[0-9a-fA-F]+|\d+)\)?$/.test(stripped);

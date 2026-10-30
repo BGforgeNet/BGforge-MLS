@@ -8,8 +8,25 @@ describe("humanize", () => {
         ["ac", "Ac"],
         ["acID", "Ac ID"],
         ["lightRadius", "Light Radius"],
-    ])("%s -> %s", (input, expected) => {
+        ["XMLHttpRequest", "XML Http Request"],
+        ["ABCdEFg", "AB Cd E Fg"],
+        ["IDs", "I Ds"],
+        ["ABC", "ABC"],
+        ["ABcd", "A Bcd"],
+        ["aBCd", "A B Cd"],
+        ["HTMLParser2", "HTML Parser2"],
+        ["A1Bc", "A1Bc"],
+        ["", ""],
+    ])("%j -> %j", (input, expected) => {
         expect(humanize(input)).toBe(expected);
+    });
+
+    it("humanizes a long uppercase run followed by a rejecting tail in linear time", () => {
+        const input = `${"A".repeat(100_000)}1`;
+        const start = performance.now();
+        const label = humanize(input);
+        expect(performance.now() - start).toBeLessThan(500);
+        expect(label).toBe(input);
     });
 });
 

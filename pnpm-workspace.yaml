@@ -136,6 +136,20 @@ overrides:
   "@azure/identity>@azure/msal-node": ">=7.1.0"
   qs: ">=6.16.0"
 
+# eslint-plugin-regexp runs under oxlint's jsPlugins, not ESLint. It and eslint-utils declare `eslint` as a
+# peer only for its types (neither imports it at run time), so marking the peer optional keeps
+# autoInstallPeers from installing ESLint and its ~60 packages. A plugin release that does import it fails
+# `pnpm lint` loudly at load.
+packageExtensions:
+  eslint-plugin-regexp:
+    peerDependenciesMeta:
+      eslint:
+        optional: true
+  "@eslint-community/eslint-utils":
+    peerDependenciesMeta:
+      eslint:
+        optional: true
+
 # A version must have been published for 7 days (in minutes) before it resolves into the lockfile, and
 # `pnpm install` re-checks every lockfile entry against it. Raised from pnpm's 24h default.
 minimumReleaseAge: 10080

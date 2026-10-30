@@ -183,6 +183,18 @@ function inventoryEntrySummary(node: FlatNode, model: Model, rel: RelationshipMo
 }
 
 /**
+ * The text of the last `(...)` group when it ends the name (trailing whitespace aside), else undefined. The group
+ * holds no `)` and is non-empty. Index scans rather than `/\(([^)]+)\)\s*$/`, which rescans a long run of `(`.
+ */
+function trailingParenthesized(name: string): string | undefined {
+    const trimmed = name.trimEnd();
+    if (!trimmed.endsWith(")")) return undefined;
+    const close = trimmed.length - 1;
+    const open = trimmed.indexOf("(", trimmed.lastIndexOf(")", close - 1) + 1);
+    return open !== -1 && open < close - 1 ? trimmed.slice(open + 1, close) : undefined;
+}
+
+/**
  * MAP elevation-object summary: the object's PID (its proto identity, no external proto-name resolver needed)
  * plus its type and, for item/scenery objects, the decoded subtype - e.g. "0x0200014d Scenery / Door",
  * "0x0500000c Misc". The type is the bracketed label in the object group's own name (objectTypeName); the
@@ -199,7 +211,7 @@ function objectEntrySummary(node: FlatNode, model: Model, rel: RelationshipModel
     const pidNode = children.find((c) => c?.kind === "field" && c.name === "PID");
     const pid = pidNode ? projectRow(model, pidNode, rel).displayValue : undefined;
 
-    const type = node.name.match(/\(([^)]+)\)\s*$/)?.[1];
+    const type = trailingParenthesized(node.name);
 
     const subtypeGroup = children.find((c) => c?.kind === "group" && c.name === "Subtype Data");
     const subTypeNode = subtypeGroup

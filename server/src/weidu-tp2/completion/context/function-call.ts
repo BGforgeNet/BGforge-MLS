@@ -30,7 +30,8 @@ export function resetFuncParamsContext(): void {
     lastFuncParamsContext = null;
 }
 
-const CALL_HEAD = /^\s*(LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION)\s+(\S+)([\s\S]*)$/i;
+/** The call word and the function name; the text after them is read off the end of the match. */
+const CALL_HEAD = /^\s*(LAF|LPF|LAUNCH_ACTION_FUNCTION|LAUNCH_PATCH_FUNCTION)\s+(\S+)/i;
 const SECTION_KEYWORD = /\b(INT_VAR|STR_VAR|RET_ARRAY|RET)\b/g;
 const SECTIONS: Readonly<Record<string, ParamSection>> = {
     INT_VAR: ParamSection.IntVar,
@@ -47,7 +48,7 @@ const SECTIONS: Readonly<Record<string, ParamSection>> = {
 export function setFuncParamsContextFromText(prefix: string): void {
     const head = CALL_HEAD.exec(prefix);
     if (!head) return;
-    const rest = head[3] ?? "";
+    const rest = prefix.slice(head[0].length);
     const sections = [...rest.matchAll(SECTION_KEYWORD)];
     const last = sections.at(-1);
     const paramSection = last ? SECTIONS[last[1]!.toUpperCase()] : undefined;
@@ -57,8 +58,41 @@ export function setFuncParamsContextFromText(prefix: string): void {
         functionName: stripStringDelimiters(head[2]!),
         callContext: /^(LAF|LAUNCH_ACTION_FUNCTION)$/i.test(head[1]!) ? CallableContext.Action : CallableContext.Patch,
         paramSection,
-        usedParams: [...afterSection.matchAll(/(\S+?)\s*=/g)].map((match) => match[1]!),
+        usedParams: namesGivenValues(afterSection),
     };
+}
+
+/**
+ * The names written as `name =` in `text`: each is a whitespace-free run ending at its first "=", or at the end of
+ * its token when only whitespace separates it from an "=". Read token by token, so a token without an "=" is
+ * skipped whole - a lazy `(\S+?)\s*=` pattern retries it from every offset.
+ */
+function namesGivenValues(text: string): string[] {
+    const names: string[] = [];
+    let start = 0;
+    while (start < text.length) {
+        if (/\s/.test(text[start]!)) {
+            start++;
+            continue;
+        }
+        // The first character belongs to the name even when it is an "=".
+        let end = start + 1;
+        while (end < text.length && text[end] !== "=" && !/\s/.test(text[end]!)) end++;
+        if (text[end] === "=") {
+            names.push(text.slice(start, end));
+            start = end + 1;
+            continue;
+        }
+        let next = end;
+        while (next < text.length && /\s/.test(text[next]!)) next++;
+        if (text[next] === "=") {
+            names.push(text.slice(start, end));
+            start = next + 1;
+        } else {
+            start = end;
+        }
+    }
+    return names;
 }
 
 /**

@@ -75,7 +75,10 @@ export function normalizeBlockComment(text: string): string {
             result = result.replace(/^[ \t]*/, " ");
         }
         if (result.length > 0 && !result.endsWith("\n")) {
-            result = result.replace(/[ \t]*$/, " ");
+            // Scanned from the end: a `[ \t]*$` regex retries from every blank of a long run.
+            let end = result.length;
+            while (end > 0 && (result[end - 1] === " " || result[end - 1] === "\t")) end--;
+            result = result.slice(0, end) + " ";
         }
         return `/*${result}*/`;
     }

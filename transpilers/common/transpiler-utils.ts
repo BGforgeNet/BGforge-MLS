@@ -224,7 +224,9 @@ export function resolveStringLiteral(expr: Expression): string {
  * because esbuild tree-shakes block-scoped functions, which breaks transpiler output.
  */
 export function hasImports(text: string): boolean {
-    return /^\s*(import|export\s+\*\s+from)\s+/m.test(text);
+    // Leading blanks stop at the line's own start: `^\s*` would also run across the line breaks that follow, and
+    // every line start inside a long run of blank lines would rescan the rest of it.
+    return /^[^\S\n\r\u2028\u2029]*(import|export\s+\*\s+from)\s+/m.test(text);
 }
 
 /**
@@ -312,7 +314,7 @@ export const SCOPE_CONSTANTS: ReadonlySet<string> = new Set([
  * Point notation is deliberately not matched: `[-1.-1]` and `[869.340]` separate their coordinates with
  * a dot, which is not in the operator set, so neither half can start a match that reaches the other.
  */
-const CONSTANT_ARITHMETIC = /-?\d+(?:\s*[+\-*/%]\s*-?\d+)+/g;
+const CONSTANT_ARITHMETIC = /(?<!\d)-?\d+(?:\s*[+\-*/%]\s*-?\d+)+/g;
 
 /**
  * Evaluate constant arithmetic so it reaches the mod file as one operand.

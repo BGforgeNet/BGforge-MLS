@@ -55,6 +55,49 @@ describe("cleanupEsbuildOutput", () => {
         expect(cleanupEsbuildOutput(code, MARKER)).toContain("original; /* alias */");
     });
 
+    it("reads the aliases of an import whatever blanks and semicolon end it", () => {
+        for (const tail of ['"m"', '"m";', '"m" ;', '"m";  ', '"m"\t;\t']) {
+            const code = `${MARKER}\nimport { a as b } from ${tail}\nb(1);\n`;
+            expect(cleanupEsbuildOutput(code, MARKER)).toBe("a(1);\n");
+        }
+    });
+
+    it("reads the aliases of an import whose braces and keywords are spaced out", () => {
+        const code = `${MARKER}\nimport{a as b,\n c   as   d}from"m";\nb(d);\n`;
+        expect(cleanupEsbuildOutput(code, MARKER)).toBe("a(c);\n");
+    });
+
+    it("leaves the alias of an import that shares its line with other code unread", () => {
+        const code = `${MARKER}\nimport { a as b } from "m"; b(1);\nb(2);\n`;
+        expect(cleanupEsbuildOutput(code, MARKER)).toBe("b(1);\nb(2);\n");
+    });
+
+    it("pairs each alias with its own original in a long import list", () => {
+        const names = Array.from({ length: 50 }, (_, i) => `n${i} as m${i}`).join(", ");
+        const uses = Array.from({ length: 50 }, (_, i) => `m${i}`).join("+");
+        const expected = Array.from({ length: 50 }, (_, i) => `n${i}`).join("+");
+        const code = `${MARKER}\nimport { ${names} } from "m";\n${uses};\n`;
+        expect(cleanupEsbuildOutput(code, MARKER)).toBe(`${expected};\n`);
+    });
+
+    it("scans an import line that ends in a long run of blanks and more code in linear time", () => {
+        const code = `${MARKER}\nimport { a as b } from "m"${" ".repeat(50_000)}x;\n`;
+        const start = performance.now();
+        const cleaned = cleanupEsbuildOutput(code, MARKER);
+        const elapsed = performance.now() - start;
+        expect(cleaned).toBe("x;\n");
+        expect(elapsed).toBeLessThan(500);
+    });
+
+    it("scans an import list holding one very long identifier in linear time", () => {
+        const code = `${MARKER}\nimport { ${"a".repeat(100_000)} } from "m";\nx;\n`;
+        const start = performance.now();
+        const cleaned = cleanupEsbuildOutput(code, MARKER);
+        const elapsed = performance.now() - start;
+        expect(cleaned).toBe("x;\n");
+        expect(elapsed).toBeLessThan(500);
+    });
+
     it("handles esbuild's collision pattern (alias2 -> alias22)", () => {
         // When esbuild imports `See as See2`, and the code already uses `See22`
         // (the original `See2` renamed by esbuild to avoid collision), the cleanup

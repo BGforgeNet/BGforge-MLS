@@ -121,6 +121,43 @@ describe("fallout-scripts-lst/format", () => {
         noop(input);
     });
 
+    describe("single-line shapes", () => {
+        it.each([
+            ["a.int", "a.int"],
+            ["A.INT ;  c", "A.INT    ; c"],
+            ["a.int ; c #  m", "a.int    ; c    # m"],
+            ["a.int ;  c   #  m  ", "a.int    ; c    # m"],
+            ["a.int\t;\tc\t#\tm", "a.int    ; c    # m"],
+            ["a.int ;", "a.int    ;"],
+            ["a.int # m", "a.int        # m"],
+            ["a.int ; c # m # n", "a.int    ; c    # m # n"],
+            ["a.int ; c   ", "a.int    ; c"],
+            ["a.b.int ; c", "a.b.int    ; c"],
+            // Not data lines: passed through, trailing blanks trimmed.
+            ["a.int;c", "a.int;c"],
+            ["a.int x", "a.int x"],
+            [" a.int ; c", " a.int ; c"],
+            ["x.int y.int ; c", "x.int y.int ; c"],
+            // `.` stops at a line separator the formatter does not split on, so the metadata column fails.
+            ["a.int ; c # m\u2028n", "a.int ; c # m\u2028n"],
+            ["a.int # m\u2028n", "a.int # m\u2028n"],
+            ["a.int ; c\u2028# m", "a.int ; c\u2028# m"],
+        ])("formats %j as %j", (line, expected) => {
+            expect(formatScriptsLst(line + "\r\n").text).toBe(expected + "\r\n");
+        });
+    });
+
+    it("finishes in linear time on a long run of blanks before a # whose metadata column cannot match", () => {
+        // The comment column takes every blank; the metadata column then fails on the line separator, and the
+        // comment column gives the blanks back one at a time.
+        const line = "a.int ;" + " ".repeat(100_000) + "#\u2028x";
+        const start = performance.now();
+        const result = formatScriptsLst(line + "\r\n");
+        const elapsed = performance.now() - start;
+        expect(result.text).toBe(line + "\r\n");
+        expect(elapsed).toBeLessThan(500);
+    });
+
     // The token-mismatch safety branch is a defensive invariant: the formatter only
     // rearranges whitespace and cannot alter filename/comment/metadata tokens. Valid
     // inputs cannot trigger the warning branch, so we verify it is absent for

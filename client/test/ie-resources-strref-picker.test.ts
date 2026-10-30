@@ -87,6 +87,32 @@ describe("strrefPickItems", () => {
         expect(items[1]).toMatchObject({ label: "Sword of Chaos", description: "#6348", strref: 6348 });
     });
 
+    it.each([
+        ["a newline", "a\nb", "a b"],
+        ["a CRLF", "a\r\nb", "a b"],
+        ["whitespace around a newline", "a \t\n  b", "a b"],
+        ["several newlines in one run", "a\n\n \nb", "a b"],
+        ["a newline at the start", "\nab", " ab"],
+        ["a newline at the end", "ab\n", "ab "],
+        ["spaces without a newline", "a  b\tc", "a  b\tc"],
+        ["two runs, only one with a newline", "a  b\nc", "a  b c"],
+    ])("flattens %s in a row's label", (_name, text, label) => {
+        const items = strrefPickItems("ring", [{ strref: 12, text }], lookup);
+        expect(items[0]?.label).toBe(label);
+    });
+
+    it("flattens a string with a very long run of spaces in linear time", () => {
+        // Each space is a possible start of whitespace around a newline, and the run is followed by none.
+        const text = `${" ".repeat(130_000)}x`;
+
+        const start = performance.now();
+        const items = strrefPickItems("ring", [{ strref: 12, text }], lookup);
+        const elapsed = performance.now() - start;
+
+        expect(items[0]?.label).toBe(text);
+        expect(elapsed).toBeLessThan(500);
+    });
+
     it("always shows its items, since the search already decided what matches", () => {
         // Without this the client re-filters the list against the typed text and hides hits that matched on
         // case or on a part of the string the typed text does not prefix.

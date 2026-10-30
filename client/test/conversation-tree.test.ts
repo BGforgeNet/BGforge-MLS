@@ -39,6 +39,37 @@ describe("resolveJumpTarget", () => {
     it("returns undefined when the file part is unknown", () => {
         expect(resolveJumpTarget("%OTHER%:Run", stateToRoot, fileToRoot)).toBeUndefined();
     });
+    it.each(["~~%CORAN_JOINED%~~:Run", "~%CORAN_JOINED%:Run", "%CORAN_JOINED%~:Run", "%CORAN_JOINED%:Run"])(
+        "strips every tilde around the file part of %s",
+        (label) => {
+            expect(resolveJumpTarget(label, stateToRoot, fileToRoot)).toEqual({
+                file: "dialog:CORAN",
+                stateId: "Run",
+            });
+        },
+    );
+    it("keeps a tilde inside the file part", () => {
+        const withInnerTilde = new Map([["A~B", "dialog:AB"]]);
+        const owned = new Map([["Run", "dialog:AB"]]);
+        expect(resolveJumpTarget("~A~B~:Run", owned, withInnerTilde)).toEqual({ file: "dialog:AB", stateId: "Run" });
+    });
+    it("reads a file part made only of tildes as the empty file name", () => {
+        expect(resolveJumpTarget("~~~:Run", stateToRoot, new Map([["", "dialog:CORAN"]]))).toEqual({
+            file: "dialog:CORAN",
+            stateId: "Run",
+        });
+    });
+    it("resolves a label with a very long run of tildes inside in linear time", () => {
+        // Each tilde is a possible start of a trailing run, and the "y" after the run ends every attempt.
+        const label = `x${"~".repeat(130_000)}y:Run`;
+
+        const start = performance.now();
+        const target = resolveJumpTarget(label, stateToRoot, fileToRoot);
+        const elapsed = performance.now() - start;
+
+        expect(target).toBeUndefined();
+        expect(elapsed).toBeLessThan(500);
+    });
 });
 
 describe("buildConversationTree", () => {

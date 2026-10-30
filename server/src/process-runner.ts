@@ -41,7 +41,8 @@ const CMD_META = /([()\][%!^"`<>&|;, *?])/g;
  * for cmd.exe reading the line, once more for the batch file re-reading it.
  */
 export function quoteForBatch(arg: string): string {
-    const quoted = `"${arg.replaceAll(/(\\*)"/g, '$1$1\\"').replace(/(\\*)$/, "$1$1")}"`;
+    // `(?<!\\)` starts each backslash run at its first character, so a run is scanned once, not from every offset.
+    const quoted = `"${arg.replaceAll(/(?<!\\)(\\*)"/g, '$1$1\\"').replace(/(?<!\\)(\\*)$/, "$1$1")}"`;
     return quoted.replaceAll(CMD_META, "^$1").replaceAll(CMD_META, "^$1");
 }
 

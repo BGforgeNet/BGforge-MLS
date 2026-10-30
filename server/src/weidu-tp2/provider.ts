@@ -30,7 +30,7 @@ import {
     incomingCalls as computeIncomingCalls,
     outgoingCalls as computeOutgoingCalls,
 } from "./call-hierarchy";
-import { getLinePrefix } from "../cursor-utils";
+import { getLinePrefix, trailingNonWhitespace } from "../cursor-utils";
 import { conlog } from "../logger";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { EXT_WEIDU_TP2, LANG_WEIDU_TP2 } from "../core/languages";
@@ -390,12 +390,12 @@ class WeiduTp2Provider
         // Applied in all paths as defense-in-depth: tree-sitter error recovery can create
         // local variables from partially typed text (e.g. phantom patch_assignment nodes).
         //
-        // The (\S+)$ regex matches the last non-whitespace run before the cursor.
+        // The word is the last non-whitespace run before the cursor.
         // This may include WeiDU delimiters (e.g. `%my_var%` -> "%my_var%"), but that's
         // safe: completion labels are bare names ("my_var"), so a delimited match like
         // "%my_var%" won't falsely exclude the bare label. Over-matching is harmless;
         // under-matching (empty string) disables exclusion, which is also safe.
-        const currentWord = getLinePrefix(text, position).match(/(\S+)$/)?.[1] ?? "";
+        const currentWord = trailingNonWhitespace(getLinePrefix(text, position));
 
         const version = this.storedContext?.getDocumentVersion?.(uri);
         // One parse for the whole request: without a version every accessor re-parses, so resolving per

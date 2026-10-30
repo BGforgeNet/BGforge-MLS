@@ -12,6 +12,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "@bgforge/shared/parsers/weidu-tp2";
 import { getContextAtPosition, getFuncParamsContext } from "../../src/weidu-tp2/completion/context";
+import {
+    resetFuncParamsContext,
+    setFuncParamsContextFromText,
+} from "../../src/weidu-tp2/completion/context/function-call";
 import { CompletionContext, ParamSection } from "../../src/weidu-tp2/completion/types";
 import { CallableContext } from "../../src/core/symbol";
 
@@ -420,5 +424,52 @@ describe("non-call cursor positions return no LAF/LPF/LAM/LPM context", () => {
         const contexts = ctx(`DEFINE_PATCH_MACRO my_macro BEGIN\n  |\nEND`);
         expect(contexts).not.toContain(CompletionContext.LamName);
         expect(contexts).not.toContain(CompletionContext.LpmName);
+    });
+});
+
+describe("setFuncParamsContextFromText", () => {
+    it.each([
+        ["a section then valued names", "LAF foo INT_VAR a = 1 b=2 STR_VAR c =x d", ParamSection.StrVar, ["c"]],
+        ["a name split from its value by spaces", "LPF ~foo~ INT_VAR a b = 3 c", ParamSection.IntVar, ["b"]],
+        ["a doubled equals sign", "LAF foo INT_VAR x== y=1", ParamSection.IntVar, ["x", "y"]],
+        ["an equals sign after a space after a name", "LAF foo INT_VAR a =b c", ParamSection.IntVar, ["a"]],
+        ["names across lines", "LAF foo\nINT_VAR\r\n  a = 1\n  b =\n 2", ParamSection.IntVar, ["a", "b"]],
+        ["RET_ARRAY, which contains RET", "LAF foo RET a RET_ARRAY b = 1", ParamSection.RetArray, ["b"]],
+        ["a lower case call word and leading space", "  laf foo INT_VAR a=1", ParamSection.IntVar, ["a"]],
+        ["a section with no names yet", "LAF foo STR_VAR ", ParamSection.StrVar, []],
+    ])("reads %s", (_name, prefix, section, used) => {
+        resetFuncParamsContext();
+
+        setFuncParamsContextFromText(prefix);
+
+        expect(getFuncParamsContext()).toMatchObject({ functionName: "foo", paramSection: section, usedParams: used });
+    });
+
+    it("reads LPF as a patch call and LAF as an action call", () => {
+        setFuncParamsContextFromText("LPF foo INT_VAR a=1");
+        expect(getFuncParamsContext()?.callContext).toBe(CallableContext.Patch);
+        setFuncParamsContextFromText("LAUNCH_ACTION_FUNCTION foo INT_VAR a=1");
+        expect(getFuncParamsContext()?.callContext).toBe(CallableContext.Action);
+    });
+
+    it.each(["LAF foo ", "LAF", "FOO bar INT_VAR a=1", "LAFfoo INT_VAR a=1"])("sets nothing for %j", (prefix) => {
+        resetFuncParamsContext();
+
+        setFuncParamsContextFromText(prefix);
+
+        expect(getFuncParamsContext()).toBeNull();
+    });
+
+    it("reads a very long parameter name without an equals sign in linear time", () => {
+        // Each character is a possible start of a name, and none of them is followed by "=".
+        const prefix = `LAF foo INT_VAR ${"a".repeat(150_000)}`;
+        resetFuncParamsContext();
+
+        const start = performance.now();
+        setFuncParamsContextFromText(prefix);
+        const elapsed = performance.now() - start;
+
+        expect(getFuncParamsContext()).toMatchObject({ paramSection: ParamSection.IntVar, usedParams: [] });
+        expect(elapsed).toBeLessThan(500);
     });
 });

@@ -105,6 +105,22 @@ describe("shared/format-utils", () => {
         it("treats empty /**/ as an empty block, not a doc comment", () => {
             expect(normalizeBlockComment("/**/")).toBe("/* */");
         });
+
+        it("replaces trailing blanks of a multiline block with one space, at any run length", () => {
+            expect(normalizeBlockComment("/* a\n b \t*/")).toBe("/* a\n b */");
+            expect(normalizeBlockComment("/* a\n b*/")).toBe("/* a\n b */");
+            expect(normalizeBlockComment("/*\n a  */")).toBe("/*\n a */");
+            expect(normalizeBlockComment("/*  a\n b\t\t*/")).toBe("/* a\n b */");
+        });
+
+        it("finishes in linear time on a long run of blanks inside a multiline block", () => {
+            const input = "/*\n" + " ".repeat(100_000) + "x*/";
+            const start = performance.now();
+            const result = normalizeBlockComment(input);
+            const elapsed = performance.now() - start;
+            expect(result).toBe("/*\n" + " ".repeat(100_000) + "x */");
+            expect(elapsed).toBeLessThan(500);
+        });
     });
 
     describe("normalizeComment()", () => {

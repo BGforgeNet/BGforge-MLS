@@ -53,6 +53,8 @@ vi.mock("../src/user-messages", () => ({
 import { compile } from "../src/weidu-compile";
 import type { WeiDUsettings } from "../src/settings";
 import { normalizeUri } from "../src/core/normalized-uri";
+import { pathToUri } from "../src/uri-utils";
+import { normalize } from "path";
 
 describe("weidu-compile", () => {
     beforeEach(() => {
@@ -352,6 +354,43 @@ describe("weidu-compile", () => {
             const parseResult = mockSendParseResult.mock.calls[0]![0];
             expect(parseResult.errors).toHaveLength(1);
             expect(parseResult.errors[0]!.line).toBe(30);
+        });
+
+        it.each([
+            ["a file name with a bracket inside", "[[a].tp2]  ERROR at line 3 column 1-2", "[a].tp2"],
+            ["a bracket after the closing one", "[x]y]  ERROR at line 3 column 1-2", "x]y"],
+            ["text glued before the bracket", "see[a.tp2] LEXER ERROR at line 3 column 1-2", "a.tp2"],
+            ["an earlier bracketed word", "[note] [b.tp2]  ERROR at line 3 column 1-2", "b.tp2"],
+            ["CRLF line endings", "[c.tp2]  ERROR at line 3 column 1-2\r\ndetail\r\n", "c.tp2"],
+        ])("takes the file name from the bracketed token: %s", async (_name, output, fileName) => {
+            setupExecFile({ code: 1 }, output);
+
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
+
+            const parseResult = mockSendParseResult.mock.calls[0]![0];
+            expect(parseResult.errors).toHaveLength(1);
+            expect(parseResult.errors[0]!.uri).toBe(pathToUri(normalize(fileName)));
+            expect(parseResult.errors[0]!.line).toBe(3);
+        });
+
+        it("ignores bracketed text without an error header", async () => {
+            setupExecFile(null, "[a.tp2] ERROR at line x column 1-2\n[b.tp2]\n[c.tp2] ERROR at line 1 column 1-");
+
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
+
+            expect(mockSendParseResult.mock.calls[0]![0].errors).toHaveLength(0);
+        });
+
+        it("reads output made of opening brackets in linear time", async () => {
+            // A run of "[" with no error header after it: each bracket is a possible start of the file name.
+            setupExecFile(null, `${"[".repeat(100_000)} x`);
+
+            const start = performance.now();
+            await compile(normalizeUri("file:///test.tp2"), baseSettings, true, "content");
+            const elapsed = performance.now() - start;
+
+            expect(mockSendParseResult.mock.calls[0]![0].errors).toHaveLength(0);
+            expect(elapsed).toBeLessThan(500);
         });
 
         it("parses PARSE ERROR variant from stdout", async () => {

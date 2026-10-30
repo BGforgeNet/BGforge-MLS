@@ -50,7 +50,10 @@ const valid_extensions = new Map([
  *
  * `[ua.tp2]  ERROR at line 30 column 1-63` */
 function parseWeiduOutput(text: string) {
-    const errorsRegex = /\[(\S+)\]\s+(?:(?:PARSE|LEXER)\s+)?ERROR at line (\d+) column (\d+)-(\d+)/g;
+    // The file name is the first "[" of a whitespace-delimited token through the token's closing "]" (the "]"
+    // must be followed by whitespace). Starting only at a token boundary and skipping to that first "[" keeps a
+    // run of "[" from being retried at every offset, which would be quadratic.
+    const errorsRegex = /(?<!\S)[^\s[]*\[(\S+)\]\s+(?:(?:PARSE|LEXER)\s+)?ERROR at line (\d+) column (\d+)-(\d+)/g;
     const errors: ParseItemList = [];
     const warnings: ParseItemList = [];
     const seen = new Set<string>();

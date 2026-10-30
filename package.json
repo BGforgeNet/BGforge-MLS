@@ -118,6 +118,7 @@
         "@vscode/vsce": "^3.9.2",
         "esbuild": "catalog:",
         "esbuild-svelte": "catalog:",
+        "eslint-plugin-regexp": "3.3.1",
         "jsonc-parser": "^3.3.1",
         "knip": "~6.25.0",
         "oxfmt": "0.65.0",

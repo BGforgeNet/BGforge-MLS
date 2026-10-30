@@ -143,29 +143,45 @@ function truncateOptionalDesc(desc: string | undefined): { description: string }
 }
 
 /**
+ * Start of the markdown link `[text](target)` that has `cut` strictly inside it, or undefined. Links are read left
+ * to right and do not overlap; the text runs from a "[" to the first "]" after it, and text and target are
+ * non-empty. Every "[" before one "]" shares its verdict, so each "]" is examined once - a pattern retrying every
+ * "[" rescans the rest of the text per bracket.
+ */
+function linkStartAcross(text: string, cut: number): number | undefined {
+    let from = 0;
+    for (;;) {
+        const open = text.indexOf("[", from);
+        if (open === -1 || open >= cut) return undefined;
+        const close = text.indexOf("]", open + 1);
+        if (close === -1) return undefined;
+
+        let end = -1;
+        if (close > open + 1 && text[close + 1] === "(") {
+            const paren = text.indexOf(")", close + 2);
+            // No ")" after this point means no later link can close either.
+            if (paren === -1) return undefined;
+            if (paren > close + 2) end = paren + 1;
+        }
+        if (end === -1) {
+            from = close + 1;
+            continue;
+        }
+        if (cut < end) return open;
+        from = end;
+    }
+}
+
+/**
  * Truncate description to max length with ellipsis.
  * Preserves markdown links by not cutting through them.
  */
 function truncateDesc(desc: string): string {
     if (desc.length <= DESC_MAX_LENGTH) return desc;
 
-    // Find all markdown links and their positions
-    const linkRegex = /\[([^\]]+)\]\([^)]+\)/g;
-    let match;
-    const links: { start: number; end: number }[] = [];
-    while ((match = linkRegex.exec(desc)) !== null) {
-        links.push({ start: match.index, end: match.index + match[0].length });
-    }
-
-    // Find a safe truncation point that doesn't cut through a link
-    let cutPoint = DESC_MAX_LENGTH - 3;
-    for (const link of links) {
-        // If cut point is inside a link, move it before the link
-        if (cutPoint > link.start && cutPoint < link.end) {
-            cutPoint = link.start;
-            break;
-        }
-    }
+    // Find a safe truncation point that doesn't cut through a link: if it is inside one, move it before the link
+    const defaultCut = DESC_MAX_LENGTH - 3;
+    const cutPoint = linkStartAcross(desc, defaultCut) ?? defaultCut;
 
     if (cutPoint <= 0) {
         // Edge case: first link is too long, just show it without truncation

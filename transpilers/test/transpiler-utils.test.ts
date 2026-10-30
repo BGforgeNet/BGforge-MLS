@@ -133,6 +133,31 @@ describe("hasImports", () => {
     test("returns false for source with no import/re-export statements", () => {
         expect(hasImports("const z = 1;\nfunction f() {}\n")).toBe(false);
     });
+
+    test("detects an import after blank lines or indentation, on any line", () => {
+        expect(hasImports('\n\n  \t import X from "y";')).toBe(true);
+        expect(hasImports('const a = 1;\n\n\n   import X from "y";\n')).toBe(true);
+        expect(hasImports('const a = 1;\r\nimport X from "y";\r\n')).toBe(true);
+        expect(hasImports("export   *   from 'y'")).toBe(true);
+    });
+
+    test("needs the keyword to open its line and be followed by a blank", () => {
+        expect(hasImports('const a = 1; import X from "y";')).toBe(false);
+        expect(hasImports('import("y")')).toBe(false);
+        expect(hasImports("important();")).toBe(false);
+        expect(hasImports("export const a = 1;")).toBe(false);
+        expect(hasImports("export * as ns from 'y'")).toBe(false);
+        expect(hasImports("")).toBe(false);
+    });
+
+    test("scans a long run of blank lines in linear time", () => {
+        const text = "\n".repeat(100_000) + "const z = 1;";
+        const start = performance.now();
+        const found = hasImports(text);
+        const elapsed = performance.now() - start;
+        expect(found).toBe(false);
+        expect(elapsed).toBeLessThan(500);
+    });
 });
 
 describe("extractTraTag", () => {
@@ -175,6 +200,30 @@ describe("applyHelperFixups", () => {
     test("converts [x, y] comma notation to BAF's dot-separated point notation, including negatives", () => {
         expect(applyHelperFixups("[2791, 831]")).toBe("[2791.831]");
         expect(applyHelperFixups("[-1, -1]")).toBe("[-1.-1]");
+    });
+
+    test.each([
+        ["1 + 333", "334"],
+        ["10 + 1 + 2", "13"],
+        ["2 * 3 - 4", "2"],
+        ["12-3", "9"],
+        ["5 -3", "2"],
+        ["-1 + 5", "4"],
+        ["10 % 4", "2"],
+        ["a1+2", "a3"],
+        ["7 / 2", "7 / 2"],
+        ["[869.340]", "[869.340]"],
+        ["[-1.-1]", "[-1.-1]"],
+        ["12345", "12345"],
+        ["1 +", "1 +"],
+    ])("folds constant arithmetic in %j to %j", (text, expected) => {
+        expect(applyHelperFixups(text)).toBe(expected);
+    });
+
+    // No timing test: the 4096-character input cap keeps the old pattern's quadratic cost to milliseconds.
+    test("leaves a digit run at the input cap unfolded", () => {
+        const digits = "1".repeat(4000) + "x";
+        expect(applyHelperFixups(digits)).toBe(digits);
     });
 
     test("is idempotent on already-resolved values", () => {

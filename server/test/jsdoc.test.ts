@@ -332,6 +332,34 @@ describe("jsdoc.parse", () => {
             expect(result.desc).toBe("Some variable description");
         });
 
+        it.each([
+            ["padding around the text", "/**   padded text   */", "padded text"],
+            ["no space at either end", "/**tight*/", "tight"],
+            ["tabs around the text", "/**\ttabbed\t*/", "tabbed"],
+            ["text after the closing marker", "/** a */ b", "a */ b"],
+            ["a closing marker inside the text", "/** a */ b */", "a */ b"],
+            ["an inner run of spaces", "/** a    b */", "a    b"],
+        ])("parses single-line JSDoc with %s", (_name, input, desc) => {
+            expect(jsdoc.parse(input).desc).toBe(desc);
+        });
+
+        it("parses an empty single-line JSDoc", () => {
+            expect(jsdoc.parse("/** */").desc).toBeUndefined();
+            expect(jsdoc.parse("/***/").desc).toBeUndefined();
+        });
+
+        it("parses single-line JSDoc with a long run of spaces inside in linear time", () => {
+            // Each space is a possible start of the whitespace before the closing marker, and none reaches it.
+            const input = `/** a${" ".repeat(100_000)}b */`;
+
+            const start = performance.now();
+            const result = jsdoc.parse(input);
+            const elapsed = performance.now() - start;
+
+            expect(result.desc).toBe(`a${" ".repeat(100_000)}b`);
+            expect(elapsed).toBeLessThan(500);
+        });
+
         it("parses single-line JSDoc with @type only", () => {
             const result = jsdoc.parse(`/** @type string */`);
             expect(result.type).toBe("string");

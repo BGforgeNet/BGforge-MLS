@@ -152,7 +152,7 @@ export function parse(text: string, options?: ParseOptions): JSdoc {
         // Single-line JSDoc: /** content */
         const content = text
             .replace(/^\/\*\*\s*/, "")
-            .replace(/\s*\*\/$/, "")
+            .replace(/\*\/$/, "") // the whitespace before it goes with the trim below, not with a `\s*` here
             .trim();
         lines.length = 0;
         if (content) {

@@ -80,6 +80,33 @@ describe("symbolAtPosition", () => {
         expect(result).toBe("tra(100)");
     });
 
+    it("returns the whole token for a number glued to a prefix", () => {
+        const result = symbolAtPosition("foo.12", { line: 0, character: 4 });
+        expect(result).toBe("foo.12");
+    });
+
+    it("starts the reference after an earlier open paren", () => {
+        const result = symbolAtPosition("a b(c(12", { line: 0, character: 6 });
+        expect(result).toBe("c(12");
+    });
+
+    it("returns a lone digit after whitespace as the whole number", () => {
+        const result = symbolAtPosition("x 12", { line: 0, character: 3 });
+        expect(result).toBe("12");
+    });
+
+    it("finds the reference start in a long run of punctuation in linear time", () => {
+        // The run is a candidate start at every offset, and the reference after it never completes.
+        const text = `${".".repeat(100_000)}((1`;
+
+        const start = performance.now();
+        const result = symbolAtPosition(text, { line: 0, character: text.length - 1 });
+        const elapsed = performance.now() - start;
+
+        expect(result).toBe("1");
+        expect(elapsed).toBeLessThan(500);
+    });
+
     it("returns msg reference for number inside nested call", () => {
         const text = "display_msg(mstr(101));";
         // Position 17-19 is on the digits of 101

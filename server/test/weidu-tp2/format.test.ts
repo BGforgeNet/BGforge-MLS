@@ -269,6 +269,28 @@ END`;
         expect(output).toContain("END");
     });
 
+    it("strips the blanks inside the parentheses of a condition", () => {
+        expect(format("BEGIN @1\nACTION_IF (  a STRING_EQUAL ~x~  ) BEGIN\nPRINT ~t~\nEND\n")).toBe(
+            "BEGIN @1\nACTION_IF (a STRING_EQUAL ~x~) BEGIN\n    PRINT ~t~\nEND\n",
+        );
+    });
+
+    it("strips blanks before a closing parenthesis wherever it sits, a string included", () => {
+        expect(format("BEGIN @1\nACTION_IF ~a   )  b~ STRING_EQUAL ~x~ BEGIN\nPRINT ~t~\nEND\n")).toBe(
+            "BEGIN @1\nACTION_IF ~a)  b~ STRING_EQUAL ~x~ BEGIN\n    PRINT ~t~\nEND\n",
+        );
+    });
+
+    it("formats a condition holding a long run of blanks in linear time", () => {
+        const blanks = " ".repeat(100_000);
+        const condition = `(~a${blanks}b~ STRING_EQUAL ~x~)`;
+        const start = performance.now();
+        const output = format(`BEGIN @1\nACTION_IF ${condition} BEGIN\nPRINT ~t~\nEND\n`);
+        const elapsed = performance.now() - start;
+        expect(output).toBe(`BEGIN @1\nACTION_IF ${condition} BEGIN\n    PRINT ~t~\nEND\n`);
+        expect(elapsed).toBeLessThan(500);
+    });
+
     it("formats function definition", () => {
         const input = `DEFINE_ACTION_FUNCTION test
 BEGIN

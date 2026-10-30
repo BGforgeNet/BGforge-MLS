@@ -14,12 +14,33 @@ import { stripBom, type FormatOutput } from "./format-utils";
 
 const MIN_GAP = 4;
 
+/** The filename (including .int) that opens a scripts.lst data line: the whole first run of non-blanks. */
+const FILENAME_RE = /^(\S+\.int)(?!\S)/i;
+
 /**
- * Matches a scripts.lst data line.
- * Groups: 1=filename (including .int), 2=comment (starting with ; ), 3=metadata (starting with #)
- * Comment and metadata are optional.
+ * Splits what follows the filename into the comment column (starting with `;`) and the metadata column (starting
+ * with `#`), each optional; null when the text is neither. The comment runs up to the first `#`, so the blanks
+ * before that `#` belong to both columns; one regex for the pair retries them quadratically, hence the split here.
  */
-const LINE_RE = /^(\S+\.int)([ \t]+;[^#]*)?([ \t]+#.*)?$/i;
+function splitColumns(rest: string): { comment: string; metadata: string } | null {
+    if (rest === "") return { comment: "", metadata: "" };
+
+    const hash = rest.indexOf("#");
+    const before = hash === -1 ? rest : rest.slice(0, hash);
+    const metadata = hash === -1 ? "" : rest.slice(hash);
+
+    const hasComment = /^[ \t]+;/.test(before);
+    if (hasComment) {
+        if (hash === -1) return { comment: rest, metadata: "" };
+        if (!before.endsWith(" ") && !before.endsWith("\t")) return null;
+    } else if (hash === -1 || !/^[ \t]+$/.test(before)) {
+        return null;
+    }
+    // The metadata column ends the line, and `.` of the original pattern stops at a line terminator.
+    if (/[\n\r\u2028\u2029]/.test(metadata)) return null;
+
+    return { comment: hasComment ? before : "", metadata };
+}
 
 interface ParsedLine {
     readonly filename: string;
@@ -30,14 +51,14 @@ interface ParsedLine {
 }
 
 function parseLine(line: string): ParsedLine | null {
-    const match = LINE_RE.exec(line);
-    if (!match) return null;
+    const filename = FILENAME_RE.exec(line)?.[1];
+    if (filename === undefined) return null;
+    const columns = splitColumns(line.slice(filename.length));
+    if (columns === null) return null;
 
-    const filename = match[1] ?? "";
-
-    // Trim the captured groups to remove leading/trailing whitespace from the column content
-    const rawComment = match[2]?.trim() ?? "";
-    const rawMetadata = match[3]?.trim() ?? "";
+    // Trim the columns to remove leading/trailing whitespace from the column content
+    const rawComment = columns.comment.trim();
+    const rawMetadata = columns.metadata.trim();
 
     // Normalize internal whitespace: "; text" should have a single space after ;
     const comment = rawComment.length > 0 ? "; " + rawComment.slice(1).trimStart() : "";

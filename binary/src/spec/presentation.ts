@@ -41,7 +41,8 @@ export function humanize(fieldName: string): string {
 
     const label = fieldName
         .replaceAll(/([a-z])([A-Z])/g, "$1 $2")
-        .replaceAll(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+        // Lookaround instead of `([A-Z]+)([A-Z][a-z])`: that rescans a long capital run from every start.
+        .replaceAll(/(?<=[A-Z])(?=[A-Z][a-z])/g, " ")
         .replace(/^(.)/, (c) => c.toUpperCase());
     humanizeCache.set(fieldName, label);
     return label;

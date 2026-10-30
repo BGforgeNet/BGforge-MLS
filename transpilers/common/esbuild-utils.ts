@@ -311,11 +311,13 @@ export function cleanupEsbuildOutput(
     // Step 2: Extract import aliases via regex
     // Matches: import { name as alias, name2 as alias2 } from "...";
     const aliasMap = new Map<string, string>();
-    const importRegex = /^import\s*\{[^}]*\}\s*from\s*"[^"]*"\s*;?\s*$/gm;
+    // The tail is `(?:\s*;)?\s*` rather than `\s*;?\s*`: the same language, but the blank run has one way to match.
+    const importRegex = /^import\s*\{[^}]*\}\s*from\s*"[^"]*"(?:\s*;)?\s*$/gm;
     let importMatch;
     while ((importMatch = importRegex.exec(code)) !== null) {
         const specifiers = importMatch[0];
-        const asRegex = /(\w+)\s+as\s+(\w+)/g;
+        // `\b` keeps a match from starting inside a word: every start in a long identifier would rescan it.
+        const asRegex = /\b(\w+)\s+as\s+(\w+)/g;
         let asMatch;
         while ((asMatch = asRegex.exec(specifiers)) !== null) {
             // Groups 1 and 2 are guaranteed by the regex pattern

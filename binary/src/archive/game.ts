@@ -239,13 +239,31 @@ function resolveCaseInsensitive(dir: string, name: string): string | undefined {
     return hit ? path.join(dir, hit) : undefined;
 }
 
+/** Any single line terminator, as a regex `.` and `$` see them. */
+const LINE_BREAK = /[\n\r\u2028\u2029]/;
+
+/**
+ * The value of a `lang_dir = <value>` line, else undefined. Plain string code rather than one regex: leading
+ * `\s*` plus a lazy value and trailing `\s*` backtrack quadratically on long whitespace runs.
+ */
+function confLangDir(line: string): string | undefined {
+    const head = line.trimStart();
+    if (head.slice(0, 8).toLowerCase() !== "lang_dir") return undefined;
+    const rest = head.slice(8).trimStart();
+    if (!rest.startsWith("=")) return undefined;
+    return rest.slice(1).trim() || undefined;
+}
+
 /** Read `weidu.conf`'s `lang_dir` (the user's selected EE language folder), if present. */
 function readWeiduConfLang(gameDir: string): string | undefined {
     const conf = resolveCaseInsensitive(gameDir, "weidu.conf");
     if (!conf) return undefined;
     try {
-        const match = /^\s*lang_dir\s*=\s*(.+?)\s*$/im.exec(fs.readFileSync(conf, "utf8"));
-        return match?.[1];
+        for (const line of fs.readFileSync(conf, "utf8").split(LINE_BREAK)) {
+            const value = confLangDir(line);
+            if (value) return value;
+        }
+        return undefined;
     } catch {
         return undefined;
     }
@@ -333,11 +351,20 @@ function bifSearchRelRoots(gameDir: string): string[] {
                 if (section) {
                     inAlias = section[1]!.toLowerCase() === "alias";
                 } else if (inAlias) {
-                    const kv = /^\s*([A-Za-z0-9]+)\s*:?=\s*(.+?)\s*$/.exec(line);
-                    if (kv) alias[kv[1]!.toUpperCase()] = kv[2]!;
+                    // Key and `=` by regex, the value by trim: a lazy `(.+?)\s*$` tail backtracks quadratically.
+                    const body = line.trimStart();
+                    const kv = /^([A-Za-z0-9]+)\s*:?=/.exec(body);
+                    const value = kv ? body.slice(kv[0].length).trim() : "";
+                    if (kv && value !== "" && !LINE_BREAK.test(value)) alias[kv[1]!.toUpperCase()] = value;
                 }
             }
-            const norm = (p: string): string => p.replaceAll("\\", "/").replace(/\/+$/, "").toLowerCase();
+            const norm = (p: string): string => {
+                const slashed = p.replaceAll("\\", "/");
+                // A loop, not /\/+$/: that regex rescans a long slash run from every start when the tail rejects.
+                let end = slashed.length;
+                while (end > 0 && slashed[end - 1] === "/") end--;
+                return slashed.slice(0, end).toLowerCase();
+            };
             const hd0 = alias["HD0"] ? norm(alias["HD0"]) : undefined;
             for (const [name, value] of Object.entries(alias)) {
                 if (name === "HD0") continue;

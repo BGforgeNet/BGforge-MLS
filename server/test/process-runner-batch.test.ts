@@ -27,6 +27,28 @@ describe("quoteForBatch", () => {
     it("doubles backslashes that end an argument, so they do not escape its closing quote", () => {
         expect(quoteForBatch("C:\\out\\")).toBe('^^^"C:\\out\\\\^^^"');
     });
+
+    it("doubles the backslashes before an embedded quote, and only those", () => {
+        expect(quoteForBatch('a\\"b')).toBe('^^^"a\\\\\\^^^"b^^^"');
+        expect(quoteForBatch("a\\\\b")).toBe('^^^"a\\\\b^^^"');
+        expect(quoteForBatch("x\\\\")).toBe('^^^"x\\\\\\\\^^^"');
+    });
+
+    it("quotes an empty argument", () => {
+        expect(quoteForBatch("")).toBe('^^^"^^^"');
+    });
+
+    it("quotes a long run of backslashes in linear time", () => {
+        // Backslashes that no quote follows: each one is a possible start of a doubled run.
+        const run = "\\".repeat(100_000);
+
+        const start = performance.now();
+        const quoted = quoteForBatch(`${run}x`);
+        const elapsed = performance.now() - start;
+
+        expect(quoted).toBe(`^^^"${run}x^^^"`);
+        expect(elapsed).toBeLessThan(500);
+    });
 });
 
 describe("runProcess with a batch-file compiler", () => {

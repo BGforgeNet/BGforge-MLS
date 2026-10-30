@@ -1,5 +1,9 @@
 {
-    "jsPlugins": ["./.oxlint/oxlint-plugin-no-showmessage.mjs", "./.oxlint/oxlint-plugin-node-type-literal.mjs"],
+    "jsPlugins": [
+        "./.oxlint/oxlint-plugin-no-showmessage.mjs",
+        "./.oxlint/oxlint-plugin-node-type-literal.mjs",
+        "eslint-plugin-regexp"
+    ],
 
     // All five categories at `error`. That is what makes the disabled list below long, and the trade has
     // been measured rather than assumed: 331 rules are enforced, 236 of them come from `pedantic` and
@@ -290,7 +294,12 @@
         // keep the inner `*/` from closing the comment early, so the character is
         // load-bearing there. In code - the place where an invisible space is
         // actually a bug - the rule stays on.
-        "no-irregular-whitespace": ["error", { "skipComments": true }]
+        "no-irregular-whitespace": ["error", { "skipComments": true }],
+
+        // oxlint has no ReDoS rule. The parsers and tokenizers here run regexes over untrusted mod
+        // files, where a super-linear pattern hangs the language server on one bad input.
+        "regexp/no-super-linear-backtracking": "error",
+        "regexp/no-super-linear-move": "error"
     },
     "overrides": [
         {
@@ -324,6 +333,23 @@
             "files": ["server/src/**/*.ts"],
             "rules": {
                 "bgforge-mls/no-showmessage": "error"
+            }
+        },
+        {
+            // The ReDoS rules guard regexes that run on untrusted mod files. Tests, scripts and lint plugins run
+            // only on this repository's own files, and a grammar.js regex is compiled by tree-sitter into its
+            // parse tables, never run by a JS regex engine.
+            "files": [
+                "**/test/**",
+                "**/*.test.ts",
+                "scripts/**",
+                "binary-editor/test/**",
+                ".oxlint/**",
+                "grammars/*/grammar.js"
+            ],
+            "rules": {
+                "regexp/no-super-linear-backtracking": "off",
+                "regexp/no-super-linear-move": "off"
             }
         },
         {

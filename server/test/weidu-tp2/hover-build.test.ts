@@ -147,4 +147,62 @@ describe("weidu-tp2/hover buildFunctionHover() - truncateDesc branches", () => {
         // When cutPoint <= 0, desc returned as-is - the link text should appear in full
         expect(value).toContain("x".repeat(76));
     });
+
+    /** The hover markdown for a function whose one parameter carries `description`. */
+    function hoverWithParamDescription(description: string): string {
+        const hover = buildFunctionHover(
+            makeFuncInfo({
+                params: { intVar: [{ name: "param_a", defaultValue: "0" }], strVar: [], ret: [], retArray: [] },
+                jsdoc: { desc: undefined, args: [{ name: "param_a", type: "int", description }], rets: [] },
+            }),
+            null,
+        );
+        return (hover.contents as { kind: string; value: string }).value;
+    }
+
+    it("cuts a description without links at 77 characters", () => {
+        const value = hoverWithParamDescription("a".repeat(100));
+
+        expect(value).toContain(`${"a".repeat(77)}...`);
+        expect(value).not.toContain("a".repeat(78));
+    });
+
+    it("keeps a link that ends before the cut and cuts the text after it", () => {
+        const value = hoverWithParamDescription(`[a](u)${"b".repeat(100)}`);
+
+        expect(value).toContain(`[a](u)${"b".repeat(71)}...`);
+        expect(value).not.toContain("b".repeat(72));
+    });
+
+    it("does not move the cut for a link that ends exactly at it", () => {
+        const value = hoverWithParamDescription(`${"a".repeat(71)}[b](c)${"d".repeat(30)}`);
+
+        expect(value).toContain(`${"a".repeat(71)}[b](c)...`);
+    });
+
+    it("treats an empty link text or an empty target as plain text", () => {
+        const emptyText = hoverWithParamDescription(`${"a".repeat(74)}[](http://example.com/long)${"z".repeat(20)}`);
+        const emptyTarget = hoverWithParamDescription(`${"a".repeat(74)}[text]()${"z".repeat(40)}`);
+
+        expect(emptyText).toContain(`${"a".repeat(74)}[](...`);
+        expect(emptyTarget).toContain(`${"a".repeat(74)}[te...`);
+    });
+
+    it("starts a link at the first bracket of an unclosed run before the real one", () => {
+        // "[x" has no "]" of its own, so the link text runs from it to the first "]": the cut inside moves to 0.
+        const desc = `[x${"a".repeat(80)}[l](http://example.com/u)${"t".repeat(30)}`;
+
+        expect(hoverWithParamDescription(desc)).toContain(desc);
+    });
+
+    it("truncates a description made of opening brackets in linear time", () => {
+        const description = "[".repeat(100_000);
+
+        const start = performance.now();
+        const value = hoverWithParamDescription(description);
+        const elapsed = performance.now() - start;
+
+        expect(value).toContain(`${"[".repeat(77)}...`);
+        expect(elapsed).toBeLessThan(500);
+    });
 });

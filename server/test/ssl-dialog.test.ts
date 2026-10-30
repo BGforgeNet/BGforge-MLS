@@ -535,3 +535,28 @@ procedure talk_p_proc begin call NodeSingle; end
         expect(SINGLE_IF.slice(ifB!.thenBlockEnd).trimStart().startsWith("end")).toBe(true);
     });
 });
+
+describe("parseDialog (SSL) orphan node projection", () => {
+    it("keeps an empty NodeNNN procedure visible unless it is the 998/999 sink, whatever its zero padding", async () => {
+        const names = ["Node0", "Node000", "Node1000", "Node9980", "Node998", "Node0998", "NOde999", "node00999"];
+        const ssl = [...names.map((name) => `procedure ${name} begin end`), "procedure talk_p_proc begin end"].join(
+            "\n",
+        );
+
+        const result = await parseDialog(ssl);
+
+        expect(result.nodes.map((n) => n.name)).toEqual(["Node0", "Node000", "Node1000", "Node9980"]);
+    });
+
+    it("reads a procedure name with a very long zero run in linear time", async () => {
+        // "0*" and "\d+" both take zeros, so a name that fails the sink test late retried the split at every offset.
+        const ssl = `procedure Node${"0".repeat(100_000)}x begin end\nprocedure talk_p_proc begin end\n`;
+        await parseDialog("procedure talk_p_proc begin end\n"); // initialise the parser outside the timed call
+
+        const start = performance.now();
+        await parseDialog(ssl);
+        const elapsed = performance.now() - start;
+
+        expect(elapsed).toBeLessThan(500);
+    });
+});

@@ -3,7 +3,8 @@ name: "CodeQL"
 # CodeQL static analysis for JavaScript/TypeScript. Catches classes that
 # the linter does not (prototype pollution, code injection, ReDOS,
 # path-traversal sinks). Findings publish to GitHub code scanning, where
-# the Scorecard SAST check expects to see a SAST workflow present.
+# the Scorecard SAST check expects to see a SAST workflow present, and
+# the run fails while the analysed ref has open CodeQL alerts.
 
 on:
   push:
@@ -56,3 +57,12 @@ jobs:
         uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           category: "/language:javascript-typescript"
+
+      # github.ref is refs/heads/<branch> on push and schedule, refs/pull/<n>/merge on a pull request:
+      # both are the ref forms the alerts API filters on.
+      - name: Fail on open CodeQL alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+        run: ./.github/scripts/codeql-open-alerts.sh

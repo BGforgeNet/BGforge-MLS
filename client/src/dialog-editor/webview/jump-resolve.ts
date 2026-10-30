@@ -18,6 +18,15 @@ export interface JumpTarget {
     stateId: string;
 }
 
+/** `value` without the tildes at either end. A pattern for it (`/^~+|~+$/g`) retries a tilde run from every offset. */
+function trimTildes(value: string): string {
+    let start = 0;
+    let end = value.length;
+    while (start < end && value[start] === "~") start++;
+    while (end > start && value[end - 1] === "~") end--;
+    return value.slice(start, end);
+}
+
 export function resolveJumpTarget(
     label: string,
     stateToRoot: Map<string, string>,
@@ -33,7 +42,7 @@ export function resolveJumpTarget(
     // strip the tildes before matching.
     const ci = label.indexOf(":");
     if (ci > 0) {
-        const file = label.slice(0, ci).replaceAll(/^~+|~+$/g, "");
+        const file = trimTildes(label.slice(0, ci));
         const state = label.slice(ci + 1);
         const rootId = fileToRoot.get(file);
         if (rootId && stateToRoot.get(state) === rootId) return { file: rootId, stateId: state };

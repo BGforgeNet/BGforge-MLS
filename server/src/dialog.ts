@@ -188,8 +188,11 @@ export async function parseDialog(
     // dialog node instead of an Exit chip.
     const isDialogNodeName = (name: string): boolean => /^node\d+$/.test(sslNameKey(name));
     const isReservedSink = (name: string): boolean => {
-        const num = /^node0*(\d+)$/.exec(sslNameKey(name));
-        return num !== null && (num[1] === "998" || num[1] === "999");
+        // Number() drops the zero padding; stripping it in the pattern (`0*(\d+)`) backtracks quadratically.
+        const num = /^node(\d+)$/.exec(sslNameKey(name));
+        if (num === null) return false;
+        const id = Number(num[1]);
+        return id === 998 || id === 999;
     };
     for (const [procName, node] of parsed) {
         const hasDialogContent = node.replies.length > 0 || node.options.length > 0;

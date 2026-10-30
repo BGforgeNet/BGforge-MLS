@@ -67,7 +67,7 @@ export function symbolAtPosition(text: string, position: Position, extraChars = 
     // through nested calls like display_msg(mstr(101)) where \S+ would grab
     // the entire "display_msg(mstr(101" and fail to match REGEX_MSG_HOVER.
     if (onlyDigits(result)) {
-        left = str.slice(0, pos + 1).search(/[^\s(]+\(?\d+$/);
+        left = traReferenceStart(str.slice(0, pos + 1));
         right = str.slice(pos).search(/\W/);
         if (right < 0) {
             result = str.slice(left);
@@ -135,6 +135,39 @@ function findMsgArgumentAtPosition(line: string, pos: number): string | null {
     }
 
     return null;
+}
+
+/**
+ * Where the reference ending `head` begins, or -1: the leftmost suffix made of non-space, non-"(" characters, an
+ * optional "(" and digits (what `/[^\s(]+\(?\d+$/` finds). Scanned from the right so each character is read once;
+ * the pattern retries its run of punctuation from every offset.
+ */
+function traReferenceStart(head: string): number {
+    const isBoundary = (char: string): boolean => char === "(" || /\s/.test(char);
+    const boundaryBefore = (end: number): number => {
+        let i = end - 1;
+        while (i >= 0 && !isBoundary(head[i]!)) i--;
+        return i;
+    };
+
+    let digits = head.length;
+    while (digits > 0 && /\d/.test(head[digits - 1]!)) digits--;
+    if (digits === head.length) return -1;
+
+    if (head[digits - 1] === "(") {
+        const start = boundaryBefore(digits - 1) + 1;
+        if (start < digits - 1) return start;
+    }
+    // No "(" before the digits: one run of at least a character and a digit.
+    const start = boundaryBefore(head.length) + 1;
+    return head.length - start >= 2 ? start : -1;
+}
+
+/** The run of non-whitespace characters at the end of `text` ("" when it ends in whitespace or is empty). */
+export function trailingNonWhitespace(text: string): string {
+    let start = text.length;
+    while (start > 0 && !/\s/.test(text[start - 1]!)) start--;
+    return text.slice(start);
 }
 
 function onlyDigits(value: string) {

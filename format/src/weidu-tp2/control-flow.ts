@@ -179,7 +179,10 @@ function formatCondition(
 
     // Normalize whitespace and strip spaces inside parentheses to match what
     // the split output produces (AST node texts don't have those spaces)
-    const condText = normalizeWhitespace(conditionNode.text).replaceAll(/\(\s+/g, "(").replaceAll(/\s+\)/g, ")");
+    // A blank run is taken whole and kept unless a `)` follows: `/\s+\)/` would retry from every blank of a long run.
+    const condText = normalizeWhitespace(conditionNode.text)
+        .replaceAll(/\(\s+/g, "(")
+        .replaceAll(/(\s+)(\)?)/g, (_run, blanks: string, close: string) => (close === "" ? blanks : close));
     const fullLine = indent + prefix + " " + condText;
 
     if (comments.length === 0 && fullLine.length <= lineLimit) {

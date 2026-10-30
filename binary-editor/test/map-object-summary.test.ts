@@ -16,6 +16,43 @@ function objectEntries(model: ReturnType<typeof buildModel>) {
 }
 
 describe("map object summary", () => {
+    /** Summary of a synthetic object group named `name` under an elevation group, via the real composer. */
+    function summaryForName(name: string): string | undefined {
+        // Only the fields the composer reads are populated; a parsed MAP cannot carry an arbitrary group name.
+        const model = {
+            byId: new Map([
+                ["elev", 0],
+                ["obj", 1],
+            ]),
+            nodes: [
+                { id: "elev", kind: "group", name: "Elevation 0 Objects" },
+                { id: "obj", kind: "group", name, parentId: "elev" },
+            ],
+            childrenByParent: new Map(),
+        } as unknown as ReturnType<typeof buildModel>;
+        return summaryComposerFor("map")!(model.nodes[1]!, model, undefined);
+    }
+
+    it.each([
+        ["Object 0.1 (Misc)", undefined],
+        ["Object 0.1 (Misc)  \t", undefined],
+        ["Object 0.1 (Item) (Weapon)", undefined],
+        ["Object (a (b) (c)", undefined],
+        ["Object ()", undefined],
+        ["Object (x)y", undefined],
+    ])("composes from the trailing parenthesized type of %j", (name) => {
+        const expected = name.match(/\(([^)]+)\)\s*$/)?.[1];
+        expect(summaryForName(name)).toBe(expected);
+    });
+
+    it("reads a long run of open parentheses in linear time", () => {
+        const name = "(".repeat(100_000);
+        const start = performance.now();
+        const summary = summaryForName(name);
+        expect(performance.now() - start).toBeLessThan(500);
+        expect(summary).toBeUndefined();
+    });
+
     it("summarizes a lifted object entry by its PID and type", () => {
         const model = buildModel(
             mapParser.parse(new Uint8Array(fs.readFileSync(MAP_FIXTURE)), { gracefulMapBoundaries: true }),

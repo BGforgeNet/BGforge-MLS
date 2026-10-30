@@ -600,3 +600,34 @@ describe("line origins", () => {
         expect(result.origins[2]).toEqual({ file: at("main.ssl"), line: 4 });
     });
 });
+
+describe("directive and #define line shapes", () => {
+    function expand(text: string): string {
+        const out = preprocessText(text, path.join(dir, "main.ssl"));
+        return (out.match(/"(?:[^"\\]|\\.)*"|[A-Za-z_]\w*|\d+|:=|[^\s]/g) ?? []).join(" ");
+    }
+
+    it.each([
+        ["  # \tdefine\tN\t3  \nx := N;", "x := 3 ;"],
+        ["#define N\nx := N;", "x := ;"],
+        ["#define N   \nx := N;", "x := ;"],
+        ["#define F( a , b ) a+b\nx := F(1,2);", "x := 1 + 2 ;"],
+        ["#define F()  body\nx := F();", "x := body ;"],
+        ["#define F (a) a\nx := F;", "x := ( a ) a ;"],
+        ["#define F(a\nx := F;", "x := ( a ;"],
+        ["#define F(a) ) tail\nx := F(1);", "x := ) tail ;"],
+        ["#  \nx;", "x ;"],
+        ["#\nx;", "x ;"],
+        ["#define a_1 1\n#undef   a_1\nx := a_1;", "x := a_1 ;"],
+        ["#ifdef  A \nx := 1;\n#else \nx := 2;\n#endif   ", "x := 2 ;"],
+    ])("expands %j to %j", (text, expected) => {
+        expect(expand(text)).toBe(expected);
+    });
+
+    it.each(["#define", "#define   ", "#define 1x y", "#define (a) b"])("rejects the malformed %j", (text) => {
+        expect(() => expand(text)).toThrow(/malformed #define/);
+    });
+
+    // No timing test here: the old patterns' trailing `[\s\S]*$` always matched, so no line could make them
+    // backtrack (500k-character attack lines ran in milliseconds), and a bound they always met guards nothing.
+});

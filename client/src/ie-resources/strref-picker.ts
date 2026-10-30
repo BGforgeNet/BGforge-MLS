@@ -23,10 +23,18 @@ function queriedStrref(query: string): number | undefined {
     return /^\d+$/.test(query.trim()) ? Number(query.trim()) : undefined;
 }
 
+/**
+ * Each whitespace run that holds a newline becomes one space; runs without one are kept. Whitespace is matched as
+ * whole runs: a pattern for "whitespace, newline, whitespace" retries a long run from every offset.
+ */
+function flattenNewlines(text: string): string {
+    return text.replaceAll(/\s+/g, (run) => (run.includes("\n") ? " " : run));
+}
+
 /** One row per string: newlines flattened, since a quick pick row is a single line. */
 function itemFor(strref: number, text: string): StrrefPickItem {
     return {
-        label: text === "" ? EMPTY_LABEL : text.replaceAll(/\s*\n\s*/g, " "),
+        label: text === "" ? EMPTY_LABEL : flattenNewlines(text),
         description: `#${strref}`,
         // The search decided what matches; without this the client re-filters and hides hits that matched on
         // case or on a part of the string the typed text does not prefix.

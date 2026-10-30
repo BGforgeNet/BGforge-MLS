@@ -155,6 +155,33 @@ alpha`;
         expect(alpha).toBeUndefined();
         expect(beta).toBeDefined();
     });
+
+    it("excludes nothing once the cursor is past the word and a space", () => {
+        const text = `OUTER_SET my_var = 5
+my_var `;
+        const uri = normalizeUri("file:///test-self3.tp2");
+        const position = { line: 1, character: 7 };
+
+        const base = weiduTp2Provider.getCompletions!(uri);
+        const filtered = weiduTp2Provider.filterCompletions!(base, text, position, uri);
+
+        expect(filtered.find((c) => c.label === "my_var" && c.kind === CompletionItemKind.Variable)).toBeDefined();
+    });
+
+    it("finds the word before the cursor on a long line in linear time", () => {
+        // A long word followed by a space: the word is a candidate start at every offset, and none reaches the cursor.
+        const text = `OUTER_SET my_var = 5
+${"a".repeat(100_000)} `;
+        const uri = normalizeUri("file:///test-self4.tp2");
+        const position = { line: 1, character: 100_001 };
+        const base = weiduTp2Provider.getCompletions!(uri);
+
+        const start = performance.now();
+        weiduTp2Provider.filterCompletions!(base, text, position, uri);
+        const elapsed = performance.now() - start;
+
+        expect(elapsed).toBeLessThan(500);
+    });
 });
 
 describe("weidu-tp2: isPhantomAssignment direct unit tests", () => {
