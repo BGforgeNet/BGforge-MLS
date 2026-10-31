@@ -42,7 +42,7 @@ describe("scripts meant for stock macOS", () => {
     });
 
     it.each(SCRIPTS)("%s computes a sha256 only where shasum stands in for sha256sum", (script) => {
-        const code = fs.readFileSync(path.join(REPO_ROOT, script), "utf8").replace(/^\s*#.*$/gm, "");
+        const code = fs.readFileSync(path.join(REPO_ROOT, script), "utf8").replaceAll(/^\s*#.*$/gm, "");
 
         expect(/\bsha256sum\b/.test(code) && !/\bshasum -a 256\b/.test(code)).toBe(false);
     });
