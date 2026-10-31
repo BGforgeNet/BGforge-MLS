@@ -55,7 +55,14 @@ import { formatFunctionDef, formatFunctionCall } from "./functions";
 import { formatInnerAction, formatInnerPatch, formatReplaceBcsBlock } from "./inner";
 import { formatPredicateAction } from "./predicate";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
-import { commentItem, reportRescuedComments, restoreLostComments, throwOnParseError, weave } from "../format-utils";
+import {
+    commentItem,
+    EDGE_BLANKS,
+    reportRescuedComments,
+    restoreLostComments,
+    throwOnParseError,
+    weave,
+} from "../format-utils";
 
 // ============================================
 // Simple node formatters
@@ -237,7 +244,7 @@ function formatQuickMenuEntry(node: SyntaxNode, ctx: FormatContext): string {
 
     for (const child of node.children) {
         if (isKeyword(child, KW_BEGIN)) {
-            lines.push(indent + (label + " " + KW_BEGIN).trim());
+            lines.push(indent + (label + " " + KW_BEGIN).replace(EDGE_BLANKS, ""));
             seenBegin = true;
             lastEndRow = child.endPosition.row;
             continue;
@@ -328,7 +335,7 @@ function formatPatchFile(node: SyntaxNode, ctx: FormatContext): string {
 function formatInlinedFile(node: SyntaxNode, ctx: FormatContext, depth: number): string {
     const indent = ctx.indent.repeat(depth);
     // Preserve inlined file content exactly
-    return indent + node.text.trim();
+    return indent + node.text.replace(EDGE_BLANKS, "");
 }
 
 /**
@@ -344,7 +351,7 @@ function splitBeforeSayKeyword(text: string): string[] {
     while ((match = sayPattern.exec(text)) !== null) {
         let splitAt = match.index;
         let whitespaceLen = 0;
-        while (splitAt > lastIdx && /\s/.test(text[splitAt - 1] ?? "")) {
+        while (splitAt > lastIdx && /[ \t\r\n]/.test(text[splitAt - 1] ?? "")) {
             splitAt--;
             whitespaceLen++;
         }
@@ -434,8 +441,8 @@ function formatSimpleNode(node: SyntaxNode, ctx: FormatContext, depth: number): 
             // worst-case linear: anchored `/SAY\b/gi` is unambiguous, and the
             // per-character whitespace walk-back is bounded by the run length.
             for (const part of splitBeforeSayKeyword(remaining)) {
-                if (part.trim()) {
-                    lines.push(argIndent + part.trim());
+                if (part.replace(EDGE_BLANKS, "")) {
+                    lines.push(argIndent + part.replace(EDGE_BLANKS, ""));
                 }
             }
         }

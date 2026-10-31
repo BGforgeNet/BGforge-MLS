@@ -27,6 +27,11 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
   GemRB's last column is kept as written, a row starting with a space keeps an empty name, blank lines up to
   GemRB's column-names line keep their place, cells split on spaces and tabs only, and a lone `\r` ends a line.
   It refuses an encrypted file (first two bytes 0xFF).
+- `fgfmt --save` no longer replaces the bytes of a file that is not UTF-8 with U+FFFD: such a file is formatted
+  byte for byte, whatever its codepage, and keeps every byte but spaces, tabs and line breaks. A file with NUL bytes
+  (UTF-16) is refused.
+- The formatters and the safety check treat only spaces, tabs and line breaks as blanks: a no-break space,
+  ideographic space or other Unicode space at the edge of a comment, note or audio name is kept, not trimmed.
 
 ## 0.9.0
 

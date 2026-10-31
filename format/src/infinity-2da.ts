@@ -17,7 +17,7 @@
  * their positions, and a row's text past GemRB's last column is kept as written.
  */
 
-import { stripBom, type FormatOutput } from "./format-utils";
+import { stripBom, TRAILING_BLANKS, type FormatOutput } from "./format-utils";
 
 const MIN_GAP = 4;
 // GemRB and WeiDU split cells on spaces and tabs only, and end a line at `\r\n`, `\r` or `\n`.
@@ -36,9 +36,7 @@ function cellsOf(line: string): Cell[] {
 }
 
 function trimBlankEnd(line: string): string {
-    let end = line.length;
-    while (end > 0 && (line[end - 1] === " " || line[end - 1] === "\t")) end--;
-    return line.slice(0, end);
+    return line.replace(TRAILING_BLANKS, "");
 }
 
 function isIndented(line: string): boolean {

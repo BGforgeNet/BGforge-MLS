@@ -6,7 +6,7 @@
 import type { Node as SyntaxNode } from "web-tree-sitter";
 
 import { getCtx, isComment, normalizeComment, formatNode, formatBlock } from "./core";
-import { falloutSslLineCommentStart, itemsOf, weave } from "../format-utils";
+import { EDGE_BLANKS, falloutSslLineCommentStart, itemsOf, weave } from "../format-utils";
 import { formatExpression } from "./expressions";
 import { canonicalKeyword } from "./canonical-keyword";
 import { SyntaxType } from "@bgforge/shared/syntax-types/fallout-ssl";
@@ -323,7 +323,7 @@ function formatClauseBody(node: SyntaxNode, depth: number, skipTypes: Set<string
             continue;
 
         const formatted = formatNode(child, depth + 1);
-        if (formatted.trim()) {
+        if (formatted.replace(EDGE_BLANKS, "")) {
             stmts.push(ctx.indent.repeat(depth + 1) + formatted);
         }
     }

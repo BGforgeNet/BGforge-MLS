@@ -4,6 +4,7 @@
  */
 
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { EDGE_BLANKS } from "../format-utils";
 import {
     type FormatContext,
     type CollectedItem,
@@ -85,8 +86,8 @@ function parseAssignment(node: SyntaxNode): ParsedAssignment | null {
         const text = node.text;
         const eqIdx = text.indexOf("=");
         if (eqIdx > 0) {
-            const name = text.slice(0, eqIdx).trim();
-            const value = text.slice(eqIdx + 1).trim();
+            const name = text.slice(0, eqIdx).replace(EDGE_BLANKS, "");
+            const value = text.slice(eqIdx + 1).replace(EDGE_BLANKS, "");
             return { name, value: normalizeWhitespace(value), lineComments: [] };
         }
     }

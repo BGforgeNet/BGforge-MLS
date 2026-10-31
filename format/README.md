@@ -28,6 +28,11 @@ if (result.warning) console.warn(result.warning);
 
 The same pattern applies to `formatMsg`, `format2da`, and `formatScriptsLst`.
 
+A file that is not valid UTF-8 (a legacy codepage such as cp1251 or cp949) must not be read as UTF-8, which turns
+its bytes into replacement characters. Read it with `"latin1"` and write the result back with `"latin1"`: the
+formatters change only spaces, tabs and line breaks, so every other byte comes back as it was. `fgfmt` does this
+for you.
+
 Tree-based formatters (`formatFalloutSsl`, `formatWeiduBaf`, `formatWeiduD`,
 `formatWeiduTp2`) take a parsed tree-sitter root node plus formatting options;
 see the source for the exact signatures.
@@ -59,6 +64,10 @@ fgfmt <file|dir> [--save] [--check] [--save-and-check] [--check-idempotency] [-r
 - `--exclude-from <path>` - skip the files listed in `<path>` (`#` comments and blank lines ignored)
 - `--exclude-base <dir>` - resolve `--exclude-from` entries against `<dir>` rather than the target, for a
   list shared by targets at different depths
+
+A file that is not valid UTF-8 is formatted byte for byte, whatever its codepage, and written back with every byte
+other than spaces, tabs and line breaks unchanged. A file with NUL bytes (UTF-16, UTF-32) is left unchanged and
+reported as an error.
 
 ## Supported file types
 

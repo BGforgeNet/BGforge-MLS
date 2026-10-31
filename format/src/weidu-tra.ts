@@ -20,11 +20,12 @@ import {
     scanNestedBlockComment,
     scanPercentString,
     scanTildeDelimiter,
+    TRAILING_BLANKS,
     type FormatOutput,
 } from "./format-utils";
 
 /** Matches the entry prefix: @<optional_whitespace><number><optional_whitespace>=<optional_whitespace> */
-const ENTRY_PREFIX_RE = /^(@)\s*(-?\d+)\s*=\s*/;
+const ENTRY_PREFIX_RE = /^(@)[ \t\r\n]*(-?\d+)[ \t\r\n]*=[ \t\r\n]*/;
 
 /**
  * Scan forward from `pos` past a tilde-delimited string.
@@ -99,7 +100,7 @@ function scanEntryRest(text: string, pos: number): { rest: string; nextPos: numb
     }
 
     // Flush trailing code segment, trimming trailing whitespace
-    parts.push(text.slice(lastFlush, pos).trimEnd());
+    parts.push(text.slice(lastFlush, pos).replace(TRAILING_BLANKS, ""));
 
     const nextPos = pos < text.length && text[pos] === "\n" ? pos + 1 : pos;
     return { rest: parts.join(""), nextPos };
@@ -126,11 +127,11 @@ function processLine(text: string, pos: number): ProcessedLine {
         let line = text
             .slice(pos, end)
             .split("\n")
-            .map((physical) => physical.trimEnd())
+            .map((physical) => physical.replace(TRAILING_BLANKS, ""))
             .join("\n");
         // A comment that never closes runs to the end of the text, final line break included; the caller ends the
         // output with one, so keeping it here would add a blank line on every pass.
-        if (nlPos === -1) line = line.trimEnd();
+        if (nlPos === -1) line = line.replace(TRAILING_BLANKS, "");
         return { text: line, nextPos: end + (nlPos === -1 ? 0 : 1) };
     }
 
@@ -146,14 +147,14 @@ function processLine(text: string, pos: number): ProcessedLine {
             const normalizedPrefix = `@${num} = `;
             const afterPrefix = pos + prefixMatch[0].length;
             const { rest, nextPos } = scanEntryRest(text, afterPrefix);
-            return { text: (normalizedPrefix + rest).trimEnd(), nextPos };
+            return { text: (normalizedPrefix + rest).replace(TRAILING_BLANKS, ""), nextPos };
         }
     }
 
     // Unknown / unrecognized line - pass through trimming trailing whitespace
     const nlPos = text.indexOf("\n", pos);
     const end = nlPos === -1 ? text.length : nlPos;
-    const line = text.slice(pos, end).trimEnd();
+    const line = text.slice(pos, end).replace(TRAILING_BLANKS, "");
     return { text: line, nextPos: end + (nlPos === -1 ? 0 : 1) };
 }
 
@@ -190,7 +191,7 @@ export function formatTra(rawText: string): FormatOutput {
     // Safety check: entry numbers must be identical and in the same order.
     const extractNumbers = (t: string): string[] => {
         const nums: string[] = [];
-        const re = /^@\s*(-?\d+)\s*=/gm;
+        const re = /^@[ \t\r\n]*(-?\d+)[ \t\r\n]*=/gm;
         let m: RegExpExecArray | null;
         while ((m = re.exec(t)) !== null) {
             nums.push(m[1] ?? "");

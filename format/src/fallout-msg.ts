@@ -12,7 +12,14 @@
  * A group may start anywhere on a line, so an indented entry, or one after a note, is handled like any other.
  */
 
-import { stripBom, MSG_AUDIO_GROUP, MSG_GROUPS_PER_ENTRY, type FormatOutput } from "./format-utils";
+import {
+    stripBom,
+    EDGE_BLANKS,
+    MSG_AUDIO_GROUP,
+    MSG_GROUPS_PER_ENTRY,
+    TRAILING_BLANKS,
+    type FormatOutput,
+} from "./format-utils";
 
 /**
  * Split the text into lines that end outside a brace group. A newline inside a group is part of that
@@ -29,7 +36,7 @@ function splitLogicalLines(text: string): string[] {
             if (char === "}") {
                 // The text group is kept verbatim; the number and audio groups lose their surrounding whitespace.
                 if (groupIndex % MSG_GROUPS_PER_ENTRY <= MSG_AUDIO_GROUP) {
-                    const field = current.slice(groupStart + 1, -1).trim();
+                    const field = current.slice(groupStart + 1, -1).replace(EDGE_BLANKS, "");
                     current = `${current.slice(0, groupStart)}{${field}}`;
                 }
                 groupIndex++;
@@ -39,7 +46,7 @@ function splitLogicalLines(text: string): string[] {
             groupStart = current.length;
             current += char;
         } else if (char === "\n") {
-            lines.push(current.trimEnd());
+            lines.push(current.replace(TRAILING_BLANKS, ""));
             current = "";
         } else {
             current += char;
@@ -49,7 +56,7 @@ function splitLogicalLines(text: string): string[] {
     if (groupStart !== -1) {
         lines.push(current);
     } else if (current !== "") {
-        lines.push(current.trimEnd());
+        lines.push(current.replace(TRAILING_BLANKS, ""));
     }
     return lines;
 }
@@ -84,10 +91,10 @@ export function formatMsg(rawText: string): FormatOutput {
     const extractNumbers = (t: string): string[] => {
         const nums: string[] = [];
         // Match {digits} at the start of an entry (not inside another group)
-        const re = /^\{(\s*\d+\s*)\}/gm;
+        const re = /^\{([ \t\r\n]*\d+[ \t\r\n]*)\}/gm;
         let m: RegExpExecArray | null;
         while ((m = re.exec(t)) !== null) {
-            nums.push((m[1] ?? "").trim());
+            nums.push((m[1] ?? "").replace(EDGE_BLANKS, ""));
         }
         return nums;
     };

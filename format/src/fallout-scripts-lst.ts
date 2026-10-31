@@ -10,12 +10,12 @@
  * Output always uses CRLF line endings, matching the Fallout engine's convention.
  */
 
-import { stripBom, type FormatOutput } from "./format-utils";
+import { stripBom, EDGE_BLANKS, LEADING_BLANKS, TRAILING_BLANKS, type FormatOutput } from "./format-utils";
 
 const MIN_GAP = 4;
 
 /** The filename (including .int) that opens a scripts.lst data line: the whole first run of non-blanks. */
-const FILENAME_RE = /^(\S+\.int)(?!\S)/i;
+const FILENAME_RE = /^([^ \t\r\n]+\.int)(?![^ \t\r\n])/i;
 
 /**
  * Splits what follows the filename into the comment column (starting with `;`) and the metadata column (starting
@@ -57,13 +57,13 @@ function parseLine(line: string): ParsedLine | null {
     if (columns === null) return null;
 
     // Trim the columns to remove leading/trailing whitespace from the column content
-    const rawComment = columns.comment.trim();
-    const rawMetadata = columns.metadata.trim();
+    const rawComment = columns.comment.replace(EDGE_BLANKS, "");
+    const rawMetadata = columns.metadata.replace(EDGE_BLANKS, "");
 
     // Normalize internal whitespace: "; text" should have a single space after ;
-    const comment = rawComment.length > 0 ? "; " + rawComment.slice(1).trimStart() : "";
+    const comment = rawComment.length > 0 ? "; " + rawComment.slice(1).replace(LEADING_BLANKS, "") : "";
 
-    const metadata = rawMetadata.length > 0 ? "# " + rawMetadata.slice(1).trimStart() : "";
+    const metadata = rawMetadata.length > 0 ? "# " + rawMetadata.slice(1).replace(LEADING_BLANKS, "") : "";
 
     return { filename, comment, metadata };
 }
@@ -105,7 +105,7 @@ export function formatScriptsLst(rawText: string): FormatOutput {
 
         if (entry === null) {
             // Non-data line: trim trailing whitespace only
-            outputLines.push(raw.trimEnd());
+            outputLines.push(raw.replace(TRAILING_BLANKS, ""));
             continue;
         }
 
@@ -126,7 +126,7 @@ export function formatScriptsLst(rawText: string): FormatOutput {
             out += entry.comment;
         }
 
-        outputLines.push(out.trimEnd());
+        outputLines.push(out.replace(TRAILING_BLANKS, ""));
     }
 
     // Always output CRLF - Fallout engine convention for scripts.lst.
@@ -137,7 +137,7 @@ export function formatScriptsLst(rawText: string): FormatOutput {
     }
 
     // Safety check: all non-whitespace tokens must be identical and in the same order.
-    const tokenize = (t: string): string[] => t.split(/\s+/).filter((s) => s.length > 0);
+    const tokenize = (t: string): string[] => t.split(/[ \t\r\n]+/).filter((s) => s.length > 0);
     const origTokens = tokenize(text);
     const fmtTokens = tokenize(formatted);
     if (origTokens.join("\0") !== fmtTokens.join("\0")) {

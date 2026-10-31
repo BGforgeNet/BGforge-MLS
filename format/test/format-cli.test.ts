@@ -307,6 +307,46 @@ describe("format CLI integration", () => {
         });
     });
 
+    describe("files that are not UTF-8", () => {
+        // Two cp866 letters, 0xE1 and 0xA0: bytes no UTF-8 decoder accepts, and 0xA0 is what a Latin-1 reading takes
+        // for a no-break space. Fields are kept verbatim, so the formatted file holds exactly these bytes.
+        const letters = Buffer.from([0xe1, 0xa0]);
+        const unformatted = Buffer.concat([Buffer.from("{ 100 }{ }{ "), letters, Buffer.from(" }\n")]);
+        const formatted = Buffer.concat([Buffer.from("{100}{}{ "), letters, Buffer.from(" }\n")]);
+
+        it("save mode writes back the file's own bytes", () => {
+            const file = path.join(tmpDir, "legacy.msg");
+            fs.writeFileSync(file, unformatted);
+            const { code } = run(file, "--save");
+            expect(code).toBe(0);
+            expect(fs.readFileSync(file)).toEqual(formatted);
+        });
+
+        it("stdout mode prints the file's own bytes", () => {
+            const file = path.join(tmpDir, "legacy.msg");
+            fs.writeFileSync(file, unformatted);
+            const stdout = execFileSync(NODE, ["--no-warnings", CLI, file], { timeout: SPAWN_TIMEOUT_MS });
+            expect(stdout).toEqual(formatted);
+        });
+
+        it("check mode exits 0 for an already-formatted file", () => {
+            const file = path.join(tmpDir, "legacy.msg");
+            fs.writeFileSync(file, formatted);
+            const { code } = run(file, "--check");
+            expect(code).toBe(0);
+        });
+
+        it("refuses a file with NUL bytes, such as UTF-16, and leaves it unchanged", () => {
+            const file = path.join(tmpDir, "wide.msg");
+            const wide = Buffer.from("{ 100 }{ }{ text }\n", "utf16le");
+            fs.writeFileSync(file, wide);
+            const { code, stderr } = run(file, "--save");
+            expect(code).toBe(1);
+            expect(stderr).toContain(`${file}: left unchanged - holds NUL bytes (UTF-16?); only ASCII-compatible`);
+            expect(fs.readFileSync(file)).toEqual(wide);
+        });
+    });
+
     describe(".2da format support", () => {
         // Unformatted: columns not aligned with MIN_GAP=4 between each
         const unformatted = "2DA V1.0\n0\n  COL1 COL2\nROW1 a b\n";

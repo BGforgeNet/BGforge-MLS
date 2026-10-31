@@ -168,6 +168,37 @@ function parseAndFormat(
     }
 }
 
+/**
+ * A file is read as UTF-8 when its bytes are valid UTF-8, and otherwise as one character per byte, whatever its
+ * codepage: the formatters change only spaces, tabs and line breaks, which no ASCII-compatible encoding uses inside a
+ * multi-byte character, so writing the characters back as bytes keeps every other byte. NUL bytes mean UTF-16 or
+ * UTF-32, which is not ASCII-compatible.
+ */
+type SourceEncoding = "utf-8" | "bytes";
+
+const UTF8_STRICT = new TextDecoder("utf-8", { fatal: true });
+
+function readSource(filePath: string): { text: string; encoding: SourceEncoding } | { refusal: string } {
+    const raw = fs.readFileSync(filePath);
+    if (raw.includes(0)) return { refusal: "holds NUL bytes (UTF-16?); only ASCII-compatible encodings are formatted" };
+    try {
+        UTF8_STRICT.decode(raw);
+    } catch {
+        return { text: raw.toString("latin1"), encoding: "bytes" };
+    }
+    // Not the decoder's output: it drops a byte order mark, which the formatters see and strip themselves.
+    return { text: raw.toString("utf8"), encoding: "utf-8" };
+}
+
+function encodeSource(text: string, encoding: SourceEncoding): Buffer {
+    if (encoding === "utf-8") return Buffer.from(text, "utf8");
+    const wide = [...text].find((ch) => (ch.codePointAt(0) ?? 0) > 0xff);
+    if (wide !== undefined) {
+        throw new Error(`formatter bug: wrote ${JSON.stringify(wide)}, which is no byte of the file's encoding`);
+    }
+    return Buffer.from(text, "latin1");
+}
+
 export async function processFile(filePath: string, mode: OutputMode): Promise<FileResult> {
     return safeProcess(filePath, () => {
         const fileType = getFileType(filePath);
@@ -178,7 +209,12 @@ export async function processFile(filePath: string, mode: OutputMode): Promise<F
 
         if (!checkFileSize(filePath, MAX_FILE_SIZES)) return "error";
 
-        const text = fs.readFileSync(filePath, "utf-8");
+        const source = readSource(filePath);
+        if ("refusal" in source) {
+            console.error(`${filePath}: left unchanged - ${source.refusal}`);
+            return "error";
+        }
+        const { text, encoding } = source;
         const opts = getFormatOptions(path.resolve(filePath));
 
         let result: FormatResult;
@@ -229,7 +265,7 @@ export async function processFile(filePath: string, mode: OutputMode): Promise<F
         const changed = result.text !== text;
         if (mode === "save" || mode === "save-and-check") {
             if (changed) {
-                fs.writeFileSync(filePath, result.text);
+                fs.writeFileSync(filePath, encodeSource(result.text, encoding));
                 console.log(`Formatted: ${filePath}`);
             }
         }
@@ -252,7 +288,7 @@ export async function processFile(filePath: string, mode: OutputMode): Promise<F
                 return "error";
             }
         } else if (mode === "stdout") {
-            process.stdout.write(result.text);
+            process.stdout.write(encodeSource(result.text, encoding));
         } else if (mode === "check" && changed) {
             reportDiff(filePath, text, result.text);
             return "changed";

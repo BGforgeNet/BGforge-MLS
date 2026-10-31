@@ -38,6 +38,8 @@ import {
     falloutSslLineCommentStart,
     tokenizeFalloutSsl,
     WeiduTokenType,
+    EDGE_BLANKS,
+    TRAILING_BLANKS,
 } from "../format-utils";
 import { canonicalKeyword } from "./canonical-keyword";
 // Comment normalization is shared across all formatters; re-export the imported
@@ -127,7 +129,7 @@ function normalizePreprocessor(text: string): string {
     // string literal (`"http://..."`), so the `//` is found by token rather than by substring.
     const slashIdx = falloutSslLineCommentStart(body);
     if (slashIdx > 0) {
-        const code = body.slice(0, slashIdx).trimEnd();
+        const code = body.slice(0, slashIdx).replace(TRAILING_BLANKS, "");
         const comment = body.slice(slashIdx);
         if (code && !comment.includes("\n")) {
             return code + ctx.indent + normalizeComment(comment);
@@ -144,7 +146,7 @@ function normalizePreprocessor(text: string): string {
         last.text.endsWith("*/") &&
         !last.text.includes("\n")
     ) {
-        const code = body.slice(0, body.length - last.text.length).trimEnd();
+        const code = body.slice(0, body.length - last.text.length).replace(TRAILING_BLANKS, "");
         if (code) {
             return code + ctx.indent + normalizeComment(last.text);
         }
@@ -316,7 +318,8 @@ function formatChildren(node: SyntaxNode, depth: number): string {
                 nextChild.startPosition.row === contentEndRow(child)
             ) {
                 // Add the comment on the same line
-                preprocessorText = preprocessorText.trimEnd() + "    " + normalizeComment(nextChild.text);
+                preprocessorText =
+                    preprocessorText.replace(TRAILING_BLANKS, "") + "    " + normalizeComment(nextChild.text);
                 appended.add(nextChild.id);
             }
             parts.push(preprocessorText);
@@ -498,7 +501,7 @@ function formatProcedure(node: SyntaxNode, depth: number): string {
                 formatted = withTrailingComment(formatted, nextChild, ctx.indent.repeat(depth + 1));
                 appended.add(nextChild.id);
             }
-            if (formatted.trim()) {
+            if (formatted.replace(EDGE_BLANKS, "")) {
                 bodyParts.push(ctx.indent + formatted);
             }
         }
@@ -709,7 +712,7 @@ export function formatBlock(node: SyntaxNode, depth: number): string {
                 formatted = withTrailingComment(formatted, nextChild, ctx.indent.repeat(depth + 1));
                 appended.add(nextChild.id);
             }
-            if (formatted.trim()) {
+            if (formatted.replace(EDGE_BLANKS, "")) {
                 stmts.push(ctx.indent.repeat(depth + 1) + formatted);
             }
         }

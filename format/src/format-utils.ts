@@ -14,6 +14,16 @@ export interface FormatOutput {
     notice?: string;
 }
 
+/*
+ * Blanks are space, tab, CR and LF: the only whitespace the formatters write, remove or compare. JavaScript's `\s`
+ * and `trim` also take U+00A0, U+3000 and other spaces, which WeiDU and the Fallout tools read as text, and a file
+ * that is not UTF-8 is formatted one character per byte, where 0xA0 reads as U+00A0 (it is cp866's `\u0430`).
+ * The trailing form starts only at the first blank of a run, so a long run is scanned once.
+ */
+export const LEADING_BLANKS = /^[ \t\r\n]+/;
+export const TRAILING_BLANKS = /(?<![ \t\r\n])[ \t\r\n]+$/;
+export const EDGE_BLANKS = /^[ \t\r\n]+|(?<![ \t\r\n])[ \t\r\n]+$/g;
+
 /** Strips a leading UTF-8 BOM (\uFEFF) from text if present. */
 export function stripBom(text: string): string {
     return text.startsWith("\uFEFF") ? text.slice(1) : text;
@@ -66,18 +76,18 @@ export function throwOnParseError(root: SyntaxNode): void {
 
 /** Normalize a line comment. Input must be a comment token (may have outer whitespace). */
 export function normalizeLineComment(text: string): string {
-    const trimmed = text.trim();
+    const trimmed = text.replace(EDGE_BLANKS, "");
     if (!trimmed.startsWith("//")) return trimmed;
     const content = trimmed.slice(2);
     // Decorative separator (all slashes, e.g. //////): preserve verbatim.
     if (/^\/+$/.test(content)) return trimmed;
-    const body = content.trimStart();
+    const body = content.replace(LEADING_BLANKS, "");
     return body.length === 0 ? "//" : `// ${body}`;
 }
 
 /** Normalize a block comment. Input must be a comment token (may have outer whitespace). */
 export function normalizeBlockComment(text: string): string {
-    const trimmed = text.trim();
+    const trimmed = text.replace(EDGE_BLANKS, "");
     if (!trimmed.startsWith("/*")) return trimmed;
     const inner = trimmed.slice(2, -2);
     // A `/**` doc-comment opener leaves `*` as the first inner char. Preserve it
@@ -98,11 +108,11 @@ export function normalizeBlockComment(text: string): string {
         }
         return `/*${result}*/`;
     }
-    const innerTrimmed = inner.trim();
+    const innerTrimmed = inner.replace(EDGE_BLANKS, "");
     if (innerTrimmed.length === 0) return "/* */";
     if (isDoc) {
         // Single-line doc comment: keep the `/**` opener, one space, then the body.
-        const docBody = innerTrimmed.slice(1).trim();
+        const docBody = innerTrimmed.slice(1).replace(EDGE_BLANKS, "");
         return docBody.length === 0 ? "/** */" : `/** ${docBody} */`;
     }
     return `/* ${innerTrimmed} */`;
@@ -110,7 +120,7 @@ export function normalizeBlockComment(text: string): string {
 
 /** Normalize a comment node's text, dispatching by delimiter. */
 export function normalizeComment(text: string): string {
-    const trimmed = text.trim();
+    const trimmed = text.replace(EDGE_BLANKS, "");
     if (trimmed.startsWith("//")) return normalizeLineComment(trimmed);
     if (trimmed.startsWith("/*")) return normalizeBlockComment(trimmed);
     return trimmed;
@@ -212,7 +222,7 @@ function scanCharConstant(text: string, pos: number): number {
  * dropped, since line endings are the formatter's to normalize.
  */
 function protectStringWhitespace(s: string): string {
-    return s.replaceAll("\r", "").replaceAll(/\s/g, (c) => `\\u{${c.codePointAt(0)!.toString(16)}}`);
+    return s.replaceAll("\r", "").replaceAll(/[ \t\r\n]/g, (c) => `\\u{${c.codePointAt(0)!.toString(16)}}`);
 }
 
 /**
@@ -686,7 +696,7 @@ export function restoreLostComments(
         let lineIndent = /^[ \t]*/.exec(formatted.slice(lineStart))?.[0] ?? "";
         // A survivor behind code on its line (`end // c`) says little about where a comment above it sits: the line
         // before it, deeper when a block closes here, does.
-        if (formatted.slice(lineStart, above).trim() !== "" && lineStart > 0) {
+        if (formatted.slice(lineStart, above).replace(EDGE_BLANKS, "") !== "" && lineStart > 0) {
             const previousStart = formatted.lastIndexOf("\n", lineStart - 2) + 1;
             const previousIndent = /^[ \t]*/.exec(formatted.slice(previousStart, lineStart))?.[0] ?? "";
             if (previousIndent.length > lineIndent.length) lineIndent = previousIndent;
@@ -745,7 +755,7 @@ export function normalizeWhitespaceWeidu(text: string): string {
     for (const token of tokens) {
         if (token.type === WeiduTokenType.Code) {
             // Collapse whitespace in code parts
-            const normalized = token.text.replaceAll(/\s+/g, " ");
+            const normalized = token.text.replaceAll(/[ \t\r\n]+/g, " ");
             parts.push(normalized);
         } else {
             // Preserve strings and comments exactly
@@ -754,7 +764,7 @@ export function normalizeWhitespaceWeidu(text: string): string {
     }
 
     // Join parts directly (no separator) - whitespace is already in Code tokens
-    return parts.join("").trim();
+    return parts.join("").replace(EDGE_BLANKS, "");
 }
 
 /**
@@ -865,7 +875,7 @@ function scanMsg(text: string): { code: string; omitted: string[] } {
             // Between groups: a note. Tagged with the number of groups before it, so moving it past an entry shows.
             const next = text.indexOf("{", i);
             const end = next === -1 ? text.length : next;
-            const note = text.slice(i, end).trim();
+            const note = text.slice(i, end).replace(EDGE_BLANKS, "");
             if (note !== "") omitted.push(`note ${groups}: ${note}`);
             i = end;
             continue;
@@ -876,9 +886,9 @@ function scanMsg(text: string): { code: string; omitted: string[] } {
         const field = text.slice(i + 1, end);
         const kind = groups % MSG_GROUPS_PER_ENTRY;
         if (kind === MSG_NUMBER_GROUP) {
-            code += field.trim();
+            code += field.replace(EDGE_BLANKS, "");
         } else if (kind === MSG_AUDIO_GROUP) {
-            omitted.push(`audio ${groups}: ${field.trim()}`);
+            omitted.push(`audio ${groups}: ${field.replace(EDGE_BLANKS, "")}`);
         } else {
             code += ` ${protectStringWhitespace(field)}`;
         }
@@ -949,7 +959,7 @@ export function validateFormatting(
     return `content changed at position ${diffPos}: "${origSnippet}" vs "${fmtSnippet}"`;
 }
 
-const unblank = (text: string): string => text.replaceAll(/\s+/g, "");
+const unblank = (text: string): string => text.replaceAll(/[ \t\r\n]+/g, "");
 
 /** How much of a changed comment the message quotes. */
 const OMITTED_SNIPPET = 60;

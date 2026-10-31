@@ -168,3 +168,24 @@ describe("comments in a rebuilt position stay where they were written", () => {
         formatKeepingComments(lang, source);
     });
 });
+
+// A file that is not UTF-8 is formatted one character per byte, so a comment may end in a byte JavaScript calls
+// whitespace: cp866's `а` is 0xA0 (U+00A0 there), and 0x85 reads as U+0085. They are text, and stay.
+const TEXT_BYTES = [0xa0, 0x85].map((code) => String.fromCodePoint(code));
+
+const WITH_TEXT_BYTE: [keyof typeof LANGUAGES, string, string][] = CASES.flatMap(([language, label, source]) =>
+    TEXT_BYTES.map((byte): [keyof typeof LANGUAGES, string, string] => [
+        language,
+        `${label}, U+${byte.codePointAt(0)?.toString(16).padStart(4, "0")}`,
+        source.replaceAll(/\/\* (\w) \*\//g, `/* $1${byte} */`).replaceAll(/\/\/ (\w)\n/g, `// $1${byte}\n`),
+    ]),
+);
+
+describe("a comment ending in a text byte JavaScript calls whitespace keeps it", () => {
+    it.each(WITH_TEXT_BYTE)("%s: %s", (language, _label, source) => {
+        const lang = LANGUAGES[language];
+        const result = lang.format(lang.parse(source));
+        expect(result.warning).toBeUndefined();
+        formatKeepingComments(lang, source);
+    });
+});

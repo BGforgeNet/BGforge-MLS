@@ -40,7 +40,7 @@ import {
     pushBlankIfGap,
 } from "./utils";
 import { SyntaxType } from "@bgforge/shared/syntax-types/weidu-tp2";
-import { weave, type WovenItem } from "../format-utils";
+import { weave, LEADING_BLANKS, TRAILING_BLANKS, type WovenItem } from "../format-utils";
 import { formatForLoopHeader, formatForLoop, formatForEach, formatAssociativeArray } from "./format-loops";
 
 // ============================================
@@ -181,8 +181,8 @@ const LITERAL_TYPES: ReadonlySet<string> = new Set([
 function tightenCode(code: string): string {
     // A blank run is taken whole and kept unless a `)` follows: `/\s+\)/` would retry from every blank of a long run.
     return code
-        .replaceAll(/\(\s+/g, "(")
-        .replaceAll(/(\s+)(\)?)/g, (_run, blanks: string, close: string) => (close === "" ? blanks : close));
+        .replaceAll(/\([ \t\r\n]+/g, "(")
+        .replaceAll(/([ \t\r\n]+)(\)?)/g, (_run, blanks: string, close: string) => (close === "" ? blanks : close));
 }
 
 /**
@@ -221,7 +221,7 @@ function tightenParens(node: SyntaxNode, skip: ReadonlySet<number>): string {
         afterLineComment = literal.type === SyntaxType.LineComment;
     }
     pushCode(text.slice(pos));
-    if (skip.size > 0 && result.endsWith(")")) result = result.slice(0, -1).trimEnd() + ")";
+    if (skip.size > 0 && result.endsWith(")")) result = result.slice(0, -1).replace(TRAILING_BLANKS, "") + ")";
     return result;
 }
 
@@ -375,7 +375,7 @@ function outputBeginAndEnterBody(
     // Handle ELSE BEGIN case
     if (state.afterElse && state.lines.length > 0) {
         const lastLine = lastElement(state.lines);
-        if (lastLine && lastLine.trimEnd().endsWith(KW_ELSE)) {
+        if (lastLine && lastLine.replace(TRAILING_BLANKS, "").endsWith(KW_ELSE)) {
             state.lines[state.lines.length - 1] = lastLine + " " + KW_BEGIN;
             state.headerParts = [];
             state.conditionNode = null;
@@ -555,7 +555,7 @@ function formatTryBlock(
         if (isKeyword(child, KW_DEFAULT)) {
             // Append DEFAULT to WITH line if it's the last line
             const lastLine = lastElement(lines);
-            if (lastLine && lastLine.trimEnd().endsWith(KW_WITH)) {
+            if (lastLine && lastLine.replace(TRAILING_BLANKS, "").endsWith(KW_WITH)) {
                 lines[lines.length - 1] = lastLine + " " + KW_DEFAULT;
             } else {
                 lines.push(indent + KW_DEFAULT);
@@ -648,7 +648,7 @@ export function formatControlFlow(
         // ELSE keyword
         if (isKeyword(child, KW_ELSE)) {
             const lastLine = lastElement(state.lines);
-            if (lastLine && lastLine.trimEnd().endsWith(KW_END)) {
+            if (lastLine && lastLine.replace(TRAILING_BLANKS, "").endsWith(KW_END)) {
                 state.lines[state.lines.length - 1] = lastLine + " " + KW_ELSE;
             } else {
                 state.lines.push(indent + KW_ELSE);
@@ -689,7 +689,7 @@ export function formatControlFlow(
                 child.type === NODE_INNER_ACTION)
         ) {
             const nestedLines = formatNode(child, ctx, depth).split("\n");
-            const firstLine = nestedLines[0]?.trimStart() ?? "";
+            const firstLine = nestedLines[0]?.replace(LEADING_BLANKS, "") ?? "";
             const lastLine = lastElement(state.lines);
             // Not onto a line that ends in a line comment, which would take the IF into itself, nor when the nested
             // text opens with a comment of its own: it stays a line of its own, as the IF below it does.

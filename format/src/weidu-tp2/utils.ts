@@ -27,6 +27,9 @@ import {
     hasWeiduLineComment,
     itemsOf,
     weave,
+    EDGE_BLANKS,
+    LEADING_BLANKS,
+    TRAILING_BLANKS,
 } from "../format-utils";
 
 // Comment normalizers now live in @bgforge/format (shared across all formatters);
@@ -144,13 +147,13 @@ export function withNormalizedComment(line: string): string {
     const idx = weiduLineCommentStart(line);
     if (idx === -1) return line;
     const before = line.slice(0, idx);
-    if (!before.trim()) {
+    if (!before.replace(EDGE_BLANKS, "")) {
         // Standalone comment - preserve indent, normalize comment
         return before + normalizeLineComment(line.slice(idx));
     }
     // Inline comment
-    const code = before.trimEnd();
-    const comment = line.slice(idx + 2).trimStart();
+    const code = before.replace(TRAILING_BLANKS, "");
+    const comment = line.slice(idx + 2).replace(LEADING_BLANKS, "");
     return comment ? code + INLINE_COMMENT_SPACING + "// " + comment : code + INLINE_COMMENT_SPACING + "//";
 }
 
@@ -207,7 +210,7 @@ export function pushBlankIfGap(lines: string[], child: SyntaxNode, lastEndRow: n
 export function normalizeWhitespace(text: string): string {
     // Block comments must be preserved as-is with their newline structure
     if (text.includes("/*")) {
-        return text.trim();
+        return text.replace(EDGE_BLANKS, "");
     }
 
     const tokens = tokenizeWeidu(text);
@@ -229,9 +232,9 @@ export function normalizeWhitespace(text: string): string {
             const t = currentLineTokens[i];
             if (!t) continue;
             if (t.type === WeiduTokenType.Code) {
-                let normalized = t.text.replaceAll(/\s+/g, " ");
-                if (i === 0) normalized = normalized.trimStart();
-                if (i === currentLineTokens.length - 1) normalized = normalized.trimEnd();
+                let normalized = t.text.replaceAll(/[ \t\r\n]+/g, " ");
+                if (i === 0) normalized = normalized.replace(LEADING_BLANKS, "");
+                if (i === currentLineTokens.length - 1) normalized = normalized.replace(TRAILING_BLANKS, "");
                 lineText += normalized;
             } else {
                 lineText += t.text;
@@ -240,8 +243,8 @@ export function normalizeWhitespace(text: string): string {
 
         const lastToken = currentLineTokens[currentLineTokens.length - 1];
         const shouldTrimEnd = lastToken && lastToken.type === WeiduTokenType.Code;
-        if (lineText.trim() || currentLineTokens.some((t) => t.type !== WeiduTokenType.Code)) {
-            normalizedLines.push(shouldTrimEnd ? lineText.trimEnd() : lineText);
+        if (lineText.replace(EDGE_BLANKS, "") || currentLineTokens.some((t) => t.type !== WeiduTokenType.Code)) {
+            normalizedLines.push(shouldTrimEnd ? lineText.replace(TRAILING_BLANKS, "") : lineText);
         }
         currentLineTokens = [];
     };
@@ -275,7 +278,7 @@ export function normalizeWhitespace(text: string): string {
     }
     flushLine();
 
-    return normalizedLines.join("\n").trim();
+    return normalizedLines.join("\n").replace(EDGE_BLANKS, "");
 }
 
 // ============================================

@@ -19,6 +19,9 @@ import {
     commentItem,
     weave,
     weiduLineCommentStart,
+    EDGE_BLANKS,
+    LEADING_BLANKS,
+    TRAILING_BLANKS,
     type WovenItem,
 } from "../format-utils";
 import { withNormalizedComment } from "../weidu-tp2/utils";
@@ -109,14 +112,14 @@ function normalizeTransitionText(text: string): string {
     let result = "";
 
     for (const token of tokens) {
-        const part = token.type === WeiduTokenType.Code ? token.text.replaceAll(/\s+/g, " ") : token.text;
+        const part = token.type === WeiduTokenType.Code ? token.text.replaceAll(/[ \t\r\n]+/g, " ") : token.text;
         if (part.length > 0 && result.length > 0 && needsBoundarySpace(result[result.length - 1]!, part[0]!)) {
             result += " ";
         }
         result += part;
     }
 
-    return result.trim();
+    return result.replace(EDGE_BLANKS, "");
 }
 
 /** The fields whose string holds BAF code (layout is formatting); any other string is text the game shows. */
@@ -179,7 +182,7 @@ function literalContinuationLines(text: string): Set<number> {
 // Get line length excluding comment
 function codeLengthOf(line: string): number {
     const idx = weiduLineCommentStart(line);
-    return idx !== -1 ? line.slice(0, idx).trimEnd().length : line.length;
+    return idx !== -1 ? line.slice(0, idx).replace(TRAILING_BLANKS, "").length : line.length;
 }
 
 // Get text offset from node start to a child node
@@ -259,9 +262,9 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
     const flushLine = () => {
         if (currentLineVerbatim) {
             result.push(currentLine);
-        } else if (currentLine.trim() || result.length === 0) {
+        } else if (currentLine.replace(EDGE_BLANKS, "") || result.length === 0) {
             const prefix = result.length === 0 ? indent : innerIndent;
-            result.push(withNormalizedComment(prefix + currentLine.trimEnd()));
+            result.push(withNormalizedComment(prefix + currentLine.replace(TRAILING_BLANKS, "")));
         }
         currentLine = "";
         currentLineVerbatim = false;
@@ -279,10 +282,10 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
                 currentLineVerbatim = true;
             } else if (linePart !== undefined) {
                 const processed = isCode
-                    ? linePart.trim().replaceAll(/\s+/g, " ")
+                    ? linePart.replace(EDGE_BLANKS, "").replaceAll(/[ \t\r\n]+/g, " ")
                     : i === 0
                       ? linePart
-                      : linePart.trimStart();
+                      : linePart.replace(LEADING_BLANKS, "");
                 if (processed || (isCode && i < lines.length - 1)) {
                     if (i === 0) {
                         if (currentLine && !currentLine.endsWith(" ")) {
@@ -339,7 +342,7 @@ function formatTransitionNode(node: SyntaxNode, indent: string, innerIndent: str
             if (weiduLineCommentStart(currentLine) !== -1) flushLine();
             processMultiLineToken(token.text, true);
         } else {
-            const normalized = token.text.trim().replaceAll(/\s+/g, " ");
+            const normalized = token.text.replace(EDGE_BLANKS, "").replaceAll(/[ \t\r\n]+/g, " ");
             if (normalized) {
                 if (currentLine && !currentLine.endsWith(" ")) {
                     currentLine += " ";
@@ -365,7 +368,7 @@ function reindentState(node: SyntaxNode, ctx: FormatContext): string {
     const insideText: boolean[] = Array.from<boolean>({ length: lines.length }).fill(false);
     // END is the last non-blank line of a state
     let endKeywordLine = lines.length - 1;
-    while (endKeywordLine > 0 && !lines[endKeywordLine]?.trim()) {
+    while (endKeywordLine > 0 && /^[ \t\r\n]*$/.test(lines[endKeywordLine] ?? "")) {
         endKeywordLine--;
     }
 
@@ -398,7 +401,7 @@ function reindentState(node: SyntaxNode, ctx: FormatContext): string {
             prevBlank = false;
             return;
         }
-        const trimmed = line.trim();
+        const trimmed = line.replace(EDGE_BLANKS, "");
         if (!trimmed) {
             if (!prevBlank && result.length > 0) {
                 result.push("");

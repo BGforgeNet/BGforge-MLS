@@ -373,6 +373,14 @@ describe("shared/format-utils", () => {
             expect(result).toBeNull();
         });
 
+        it("treats only spaces, tabs and line breaks as blanks", () => {
+            // In a file read byte for byte, U+00A0 and U+0085 are bytes of text: cp866's `а` is 0xA0.
+            for (const code of [0xa0, 0x85, 0x0b, 0x0c]) {
+                const original = `func(a${String.fromCodePoint(code)})`;
+                expect(validateFormatting(original, "func(a)", stripCommentsFalloutSsl)).not.toBeNull();
+            }
+        });
+
         it("should return error when content changed", () => {
             const original = "func(a)";
             const formatted = "func(b)";
