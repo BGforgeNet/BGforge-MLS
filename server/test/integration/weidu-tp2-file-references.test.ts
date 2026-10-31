@@ -79,6 +79,7 @@ function navigableValueNodes(root: SyntaxNode): SyntaxNode[] {
  * silently collected nothing cannot read as a pass.
  */
 const SAMPLE_FILES = 200;
+const SWEEP_TIMEOUT_MS = 180_000;
 
 const allScripts = corpusScripts();
 const scripts = (() => {
@@ -88,57 +89,63 @@ const scripts = (() => {
 })();
 
 describe.skipIf(allScripts.length === 0)("weidu-tp2 file-reference navigation (real corpus)", () => {
-    it("never resolves a navigable path to a nonexistent location, and resolves a real fraction", () => {
-        let positions = 0;
-        let resolvedToFile = 0;
-        let resolvedToHeredoc = 0;
+    it(
+        "never resolves a navigable path to a nonexistent location, and resolves a real fraction",
+        () => {
+            let positions = 0;
+            let resolvedToFile = 0;
+            let resolvedToHeredoc = 0;
 
-        for (const scriptPath of scripts) {
-            const { text } = loadFixture(IE_FIXTURES, scriptPath.slice(IE_FIXTURES.length + 1));
-            const uri = pathToFileURL(scriptPath).toString();
-            const tree = parseWithCache(text);
-            if (!tree) continue;
+            for (const scriptPath of scripts) {
+                const { text } = loadFixture(IE_FIXTURES, scriptPath.slice(IE_FIXTURES.length + 1));
+                const uri = pathToFileURL(scriptPath).toString();
+                const tree = parseWithCache(text);
+                if (!tree) continue;
 
-            for (const node of navigableValueNodes(tree.rootNode)) {
-                // Cursor at the midpoint of the value node.
-                const start = node.startPosition;
-                const end = node.endPosition;
-                const position =
-                    start.row === end.row
-                        ? { line: start.row, character: Math.floor((start.column + end.column) / 2) }
-                        : { line: start.row, character: start.column + 1 };
-                positions++;
+                for (const node of navigableValueNodes(tree.rootNode)) {
+                    // Cursor at the midpoint of the value node.
+                    const start = node.startPosition;
+                    const end = node.endPosition;
+                    const position =
+                        start.row === end.row
+                            ? { line: start.row, character: Math.floor((start.column + end.column) / 2) }
+                            : { line: start.row, character: start.column + 1 };
+                    positions++;
 
-                const result = getDefinition(text, uri, position);
-                if (result === null) continue;
+                    const result = getDefinition(text, uri, position);
+                    if (result === null) continue;
 
-                // Same-file target: a heredoc block or the authoritative no-op self-location; either way
-                // it must land within this document. Cross-file target: the file it points at MUST
-                // exist, since a nonexistent target is a wrong jump. One assertion either way, so a
-                // failure names the offending site rather than a branch that quietly checked nothing.
-                const sameFile = result.uri === uri;
-                if (sameFile) resolvedToHeredoc++;
-                else resolvedToFile++;
-                expect({
-                    site: `${uri} -> ${result.uri}`,
-                    ok: sameFile
-                        ? result.range.start.line < text.split("\n").length
-                        : existsSync(fileURLToPath(result.uri)),
-                }).toEqual({ site: `${uri} -> ${result.uri}`, ok: true });
+                    // Same-file target: a heredoc block or the authoritative no-op self-location; either way
+                    // it must land within this document. Cross-file target: the file it points at MUST
+                    // exist, since a nonexistent target is a wrong jump. One assertion either way, so a
+                    // failure names the offending site rather than a branch that quietly checked nothing.
+                    const sameFile = result.uri === uri;
+                    if (sameFile) resolvedToHeredoc++;
+                    else resolvedToFile++;
+                    expect({
+                        site: `${uri} -> ${result.uri}`,
+                        ok: sameFile
+                            ? result.range.start.line < text.split("\n").length
+                            : existsSync(fileURLToPath(result.uri)),
+                    }).toEqual({ site: `${uri} -> ${result.uri}`, ok: true });
+                }
             }
-        }
 
-        // Not vacuous, and filename-first genuinely resolves cross-file targets on the real corpus. The
-        // denominator is stated so a green run cannot read as a swept corpus.
-        console.log(
-            `file-reference sweep: ${scripts.length} of ${allScripts.length} scripts, ${positions} navigable positions ` +
-                `(${resolvedToFile} cross-file, ${resolvedToHeredoc} same-file)`,
-        );
-        // A stride that collided would silently probe the same file N times and still report 200.
-        expect(new Set(scripts).size).toBe(scripts.length);
-        expect(positions).toBeGreaterThan(0);
-        expect(resolvedToFile).toBeGreaterThan(0);
-    });
+            // Not vacuous, and filename-first genuinely resolves cross-file targets on the real corpus. The
+            // denominator is stated so a green run cannot read as a swept corpus.
+            console.log(
+                `file-reference sweep: ${scripts.length} of ${allScripts.length} scripts, ${positions} navigable positions ` +
+                    `(${resolvedToFile} cross-file, ${resolvedToHeredoc} same-file)`,
+            );
+            // A stride that collided would silently probe the same file N times and still report 200.
+            expect(new Set(scripts).size).toBe(scripts.length);
+            expect(positions).toBeGreaterThan(0);
+            expect(resolvedToFile).toBeGreaterThan(0);
+            // One synchronous loop, so the timeout can only judge its duration once it ends: about half the suite's
+            // timeout alone, and past it beside the suite's other workers on a loaded host.
+        },
+        SWEEP_TIMEOUT_MS,
+    );
 
     it("resolves a variable-prefixed INCLUDE by unique basename (the reported balthazar case)", () => {
         const rel = "Ascension/ascension/balthazar/tougher_balthazar.tpa";
