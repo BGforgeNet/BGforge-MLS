@@ -191,6 +191,11 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
         return { start: readNum(owner, fields.abilityStart), count: readNum(owner, fields.abilityCount) };
     }
 
+    /** Whether `index` falls past the first slice of a populated range and before its end. */
+    function strictlyInside(index: number, range: { start: number; count: number }): boolean {
+        return range.count > 0 && range.start < index && index < range.start + range.count;
+    }
+
     function setOwnerStart(owner: Owner, start: number): Owner {
         // Computed-key spread widens the type; the runtime shape is unchanged (abilityStart
         // is one of the owner's own numeric range fields), so the cast is isolated here.
@@ -394,9 +399,13 @@ export function createSliceStructureOps<Doc, Owner extends Record<string, unknow
         // Non-null safe: ownerIndex is in range. Append at the owner's end boundary so the new slice lands
         // inside its (post-edit) range; shiftEffectRefs validates `at` against the owner range and bumps it.
         const { start, count } = ownerRange(owners[ownerIndex]!);
-        const at = start + count;
+        // An empty owner's start is inert, and an earlier edit can leave it inside another owner's range, where an
+        // insert would split that range. Such an owner's slice goes to the end instead: owners need not be in order.
+        const splits = count === 0 && owners.some((o) => strictlyInside(start, ownerRange(o)));
+        const at = splits ? slices.length : start + count;
+        const placed = splits ? owners.map((o, i) => (i === ownerIndex ? setOwnerStart(o, at) : o)) : owners;
         const nextSlices = [...slices.slice(0, at), defaultSlice(), ...slices.slice(at)];
-        const nextOwners = applySliceShift(owners, slices, at, 1, { kind: "ability", index: ownerIndex });
+        const nextOwners = applySliceShift(placed, slices, at, 1, { kind: "ability", index: ownerIndex });
         return serializeWithValidation(nextOwners, nextSlices, doc);
     }
 

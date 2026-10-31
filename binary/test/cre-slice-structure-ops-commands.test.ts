@@ -294,6 +294,19 @@ describe.skipIf(!hasFixture)("CRE memorization slice ops under sequences of edit
         expect(project(baseDoc!).some((o) => o.length > 1)).toBe(true);
     });
 
+    // A sequence the property below once found: the last memorize relinked the owner ranges so that two
+    // overlapped and one slice had no owner.
+    it("memorizes after a duplicate and a remove of memorized spells", () => {
+        const pr = creParser.parse(bytes);
+        const real: Real = { pr, doc: docOf(pr) };
+        const model: Abstract = { owners: [] };
+        sync(model, real);
+        for (const cmd of [memorize(0), duplicateSlice(0, 0), removeSlice(5, 0), memorize(1)]) {
+            expect(cmd.check(model)).toBe(true);
+            cmd.run(model, real);
+        }
+    });
+
     it("keeps every edit sequence partition-consistent and round-trippable", () => {
         const index = fc.nat({ max: 8 });
         const direction = fc.constantFrom<"up" | "down">("up", "down");

@@ -46,6 +46,11 @@
 
 - TSSL, TBAF and TD substitute a name containing `$` correctly, and `$count` is no longer taken for `count`.
 
+### Binary editor
+
+- CRE: memorizing a spell into a level with none memorized works after spells at other levels were duplicated
+  and removed. Before, it could fail with an inconsistent-partition error.
+
 ## 3.18.0
 
 ### Fallout SSL
