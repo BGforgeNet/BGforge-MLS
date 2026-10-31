@@ -117,9 +117,7 @@ export default grammar({
     // - var_init vs ternary_expr: at `variable a := 1 if c else 2` the `if` could continue the
     //   initialiser as a ternary or start a new statement, and telling them apart needs lookahead past
     //   the condition to `else` versus `then`. Both readings are explored and the wrong one dies.
-    // - _foreach_head vs ternary_expr: same shape as var_init's - at `foreach v in a if c else b` the
-    //   `if` could continue the iterable as a ternary or (with a `while` guard absent) end the head.
-    conflicts: ($) => [[$.var_init], [$.var_init, $.ternary_expr], [$._foreach_head, $.ternary_expr]],
+    conflicts: ($) => [[$.var_init], [$.var_init, $.ternary_expr]],
 
     rules: {
         source_file: ($) => repeat($._top_level),
@@ -520,7 +518,8 @@ export default grammar({
         // A lone loop variable lands in `key`; with `k: v` the second one is the value. The `while`
         // guard is ANDed into the loop's own bounds test rather than being a separate loop.
         // Right-associative so a `while` after the iterable is taken as the guard rather than as the
-        // start of a while-loop body, which is the greedy reading the language's own parser takes.
+        // start of a while-loop body, which is the greedy reading the language's own parser takes. The same
+        // reading makes an `if` after the iterable a ternary, so an unbraced `if` body is refused there too.
         _foreach_head: ($) =>
             prec.right(
                 seq(

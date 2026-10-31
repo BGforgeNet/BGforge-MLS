@@ -1221,6 +1221,38 @@ end
             right: (number)))))))
 
 ================================================================================
+Foreach over a ternary iterable, with and without a while guard
+================================================================================
+
+procedure foo begin
+    foreach v in a if c else b begin end
+    foreach (v in a if c else b while d) x := 1;
+end
+
+--------------------------------------------------------------------------------
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (foreach_stmt
+      key: (identifier)
+      iter: (ternary_expr
+        true_value: (identifier)
+        cond: (identifier)
+        false_value: (identifier))
+      body: (block))
+    body: (foreach_stmt
+      key: (identifier)
+      iter: (ternary_expr
+        true_value: (identifier)
+        cond: (identifier)
+        false_value: (identifier))
+      while_cond: (identifier)
+      body: (assignment
+        left: (identifier)
+        right: (number)))))
+
+================================================================================
 Else after a macro that expands to an if, and inside an if-branch
 ================================================================================
 
