@@ -47,7 +47,7 @@ export function coverageConfig({
         ...(reportsDirectory !== undefined ? { reportsDirectory } : {}),
         // Maintainer-recommended workaround for the .tmp/coverage-N.json
         // ENOENT race under parallel coverage runs (vitest-dev/vitest
-        // #4943, #5903). scripts/test.sh also serialises coverage jobs.
+        // #4943, #5903). scripts/test.sh runs the coverage jobs in parallel, each with its own reportsDirectory.
         clean: false,
         ...(include !== undefined ? { include } : {}),
         ...(exclude !== undefined ? { exclude } : {}),

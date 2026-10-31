@@ -6,7 +6,7 @@
 #
 # Usage: parallel "label1" "cmd1" "label2" "cmd2" ...
 #
-# Requires LOG_DIR to be set before calling.
+# Requires LOG_DIR to be set before calling, and timing-lib.sh sourced first (it defines now_ms).
 #
 # At most PARALLEL_JOBS run at once, defaulting to the core count. The blocks below hand this up to
 # fourteen jobs, and each is a whole test runner or bundler with its own worker pool - so unbounded
@@ -23,10 +23,6 @@
 # Not `readonly`: this file is sourced, and re-sourcing would then abort the caller under `set -e`.
 WARNING_MARKERS='^\(!\)|\[PLUGIN_TIMINGS\]|^ *(npm |pnpm )?(WARN|warn) |^\(node:[0-9]+\) |Deprecation[Ww]arning|Experimental[Ww]arning|^ *[Ww]arning:|^ *Hint: consider'
 
-# Print the advisory lines in a job's log, numbered; no output means the log is clean. Escapes are
-# stripped first because rolldown colours its [PLUGIN_TIMINGS] tag, and a coloured line slips past
-# every ^ anchor. The `|| true` is the no-match case, which is the normal one - grep exits 1 there and
-# the caller wants the lines, not a status.
 # How many jobs may run at once: PARALLEL_JOBS, else the core count, else a conservative four. A value
 # that is not a positive integer is refused rather than defaulted, since silently ignoring it would run
 # the whole gate at a concurrency the caller did not ask for - which is what they set it to avoid.
@@ -48,6 +44,10 @@ parallel_slots() {
     echo "$slots"
 }
 
+# Print the advisory lines in a job's log, numbered; no output means the log is clean. Escapes are
+# stripped first because rolldown colours its [PLUGIN_TIMINGS] tag, and a coloured line slips past
+# every ^ anchor. The `|| true` is the no-match case, which is the normal one - grep exits 1 there and
+# the caller wants the lines, not a status.
 scan_warnings() {
     local logfile="$1" esc
     esc=$(printf '\033')
@@ -71,7 +71,7 @@ parallel() {
         while [ "$running" -lt "$slots" ] && [ "$next" -lt "${#queued_labels[@]}" ]; do
             local logfile="$LOG_DIR/${queued_labels[$next]// /-}.log"
             local start
-            start=$(date +%s%3N)
+            start=$(now_ms)
             (eval "${queued_cmds[$next]}" >"$logfile" 2>&1) &
             pids+=($!)
             labels+=("${queued_labels[$next]}")
@@ -87,7 +87,7 @@ parallel() {
             if ! kill -0 "${pids[$i]}" 2>/dev/null; then
                 running=$((running - 1))
                 if wait "${pids[$i]}"; then
-                    local elapsed=$(($(date +%s%3N) - ${starts[$i]}))
+                    local elapsed=$(($(now_ms) - ${starts[$i]}))
                     local warns count
                     warns=$(scan_warnings "${logs[$i]}")
                     if [ -n "$warns" ]; then
@@ -100,7 +100,7 @@ parallel() {
                     fi
                     pids[i]="done"
                 else
-                    local elapsed=$(($(date +%s%3N) - ${starts[$i]}))
+                    local elapsed=$(($(now_ms) - ${starts[$i]}))
                     echo ""
                     echo "  FAIL  ${labels[$i]} (${elapsed}ms)"
                     echo ""

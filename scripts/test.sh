@@ -102,45 +102,49 @@ if [[ "${TEST_COVERAGE:-}" == "1" ]]; then
     # dir, and vanished once every config set a distinct one. With distinct
     # dirs plus `coverage.clean: false` these runs parallelize cleanly
     # (verified over repeated runs); worker caps mirror the no-coverage block.
+    # Caps are percentages of the cores (vitest rounds, and clamps to at least one worker): on the
+    # 8-core box they were sized on, 38% / 25% / 13% are the 3 / 2 / 1 workers each suite measured
+    # best at, and a plain count would oversubscribe a smaller runner instead of capping it.
     step "Phase 1.5: Unit tests + coverage (parallel)"
     parallel \
-        "Coverage server" "(cd server && vitest run --coverage --maxWorkers=3)" \
-        "Coverage client" "vitest run --config client/vitest.config.mts --coverage --maxWorkers=2" \
-        "Coverage tssl-plugin" "vitest run --config plugins/tssl-plugin/vitest.config.mts --coverage --maxWorkers=1" \
-        "Coverage td-plugin" "vitest run --config plugins/td-plugin/vitest.config.mts --coverage --maxWorkers=1" \
-        "Coverage transpilers" "vitest run --config transpilers/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage format" "vitest run --config format/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage binary" "vitest run --config binary/vitest.config.ts --coverage --maxWorkers=3" \
-        "Coverage binary-editor" "vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage image" "vitest run --config image/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage animation" "vitest run --config animation/vitest.config.ts --coverage --maxWorkers=2" \
-        "Coverage bcs" "vitest run --config compilers/bcs/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage ssl" "vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage tssl" "vitest run --config compilers/tssl/vitest.config.ts --coverage --maxWorkers=1" \
-        "Coverage shared" "vitest run --config shared/vitest.config.ts --coverage --maxWorkers=1"
+        "Coverage server" "(cd server && vitest run --coverage --maxWorkers=38%)" \
+        "Coverage client" "vitest run --config client/vitest.config.mts --coverage --maxWorkers=25%" \
+        "Coverage tssl-plugin" "vitest run --config plugins/tssl-plugin/vitest.config.mts --coverage --maxWorkers=13%" \
+        "Coverage td-plugin" "vitest run --config plugins/td-plugin/vitest.config.mts --coverage --maxWorkers=13%" \
+        "Coverage transpilers" "vitest run --config transpilers/vitest.config.ts --coverage --maxWorkers=25%" \
+        "Coverage format" "vitest run --config format/vitest.config.ts --coverage --maxWorkers=13%" \
+        "Coverage binary" "vitest run --config binary/vitest.config.ts --coverage --maxWorkers=38%" \
+        "Coverage binary-editor" "vitest run --config binary-editor/vitest.config.ts --coverage --maxWorkers=25%" \
+        "Coverage image" "vitest run --config image/vitest.config.ts --coverage --maxWorkers=25%" \
+        "Coverage animation" "vitest run --config animation/vitest.config.ts --coverage --maxWorkers=25%" \
+        "Coverage bcs" "vitest run --config compilers/bcs/vitest.config.ts --coverage --maxWorkers=13%" \
+        "Coverage ssl" "vitest run --config compilers/ssl/vitest.config.ts --coverage --maxWorkers=13%" \
+        "Coverage tssl" "vitest run --config compilers/tssl/vitest.config.ts --coverage --maxWorkers=13%" \
+        "Coverage shared" "vitest run --config shared/vitest.config.ts --coverage --maxWorkers=13%"
 else
     # Without coverage the .tmp shard race above does not apply, so the runs
     # parallelize; each is capped with --maxWorkers because ten uncapped
     # vitest worker pools oversubscribe the CPU badly enough to time out the
     # client worker-integration tests (spawned child workers starve). Caps are
     # sized to each suite's measured weight (binary and server are the heavy
-    # ones); the small suites finish early and free their slots.
+    # ones); the small suites finish early and free their slots. Percentages
+    # for the reason given in the coverage block above.
     step "Phase 1.5: Unit tests (parallel, no coverage)"
     parallel \
-        "Unit server" "(cd server && vitest run --maxWorkers=3)" \
-        "Unit client" "vitest run --config client/vitest.config.mts --maxWorkers=2" \
-        "Unit tssl-plugin" "vitest run --config plugins/tssl-plugin/vitest.config.mts --maxWorkers=1" \
-        "Unit td-plugin" "vitest run --config plugins/td-plugin/vitest.config.mts --maxWorkers=1" \
-        "Unit transpilers" "vitest run --config transpilers/vitest.config.ts --maxWorkers=2" \
-        "Unit format" "vitest run --config format/vitest.config.ts --maxWorkers=1" \
-        "Unit binary" "vitest run --config binary/vitest.config.ts --maxWorkers=3" \
-        "Unit binary-editor" "vitest run --config binary-editor/vitest.config.ts --maxWorkers=2" \
-        "Unit image" "vitest run --config image/vitest.config.ts --maxWorkers=2" \
-        "Unit animation" "vitest run --config animation/vitest.config.ts --maxWorkers=2" \
-        "Unit bcs" "vitest run --config compilers/bcs/vitest.config.ts --maxWorkers=1" \
-        "Unit ssl" "vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=1" \
-        "Unit tssl" "vitest run --config compilers/tssl/vitest.config.ts --maxWorkers=1" \
-        "Unit shared" "vitest run --config shared/vitest.config.ts --maxWorkers=1"
+        "Unit server" "(cd server && vitest run --maxWorkers=38%)" \
+        "Unit client" "vitest run --config client/vitest.config.mts --maxWorkers=25%" \
+        "Unit tssl-plugin" "vitest run --config plugins/tssl-plugin/vitest.config.mts --maxWorkers=13%" \
+        "Unit td-plugin" "vitest run --config plugins/td-plugin/vitest.config.mts --maxWorkers=13%" \
+        "Unit transpilers" "vitest run --config transpilers/vitest.config.ts --maxWorkers=25%" \
+        "Unit format" "vitest run --config format/vitest.config.ts --maxWorkers=13%" \
+        "Unit binary" "vitest run --config binary/vitest.config.ts --maxWorkers=38%" \
+        "Unit binary-editor" "vitest run --config binary-editor/vitest.config.ts --maxWorkers=25%" \
+        "Unit image" "vitest run --config image/vitest.config.ts --maxWorkers=25%" \
+        "Unit animation" "vitest run --config animation/vitest.config.ts --maxWorkers=25%" \
+        "Unit bcs" "vitest run --config compilers/bcs/vitest.config.ts --maxWorkers=13%" \
+        "Unit ssl" "vitest run --config compilers/ssl/vitest.config.ts --maxWorkers=13%" \
+        "Unit tssl" "vitest run --config compilers/tssl/vitest.config.ts --maxWorkers=13%" \
+        "Unit shared" "vitest run --config shared/vitest.config.ts --maxWorkers=13%"
 fi
 
 # --- Phase 2: Builds (server and CLIs in parallel, independent of each other) ---

@@ -34,10 +34,6 @@ echo "lint-shell.sh: using ${shellcheck_cmd[0]}"
 SHFMT_VERSION="3.14.1"
 SHFMT_CACHE_DIR=".dev/shfmt-${SHFMT_VERSION}"
 SHFMT_BIN="$SHFMT_CACHE_DIR/shfmt"
-declare -A SHFMT_SHA256=(
-    [linux_amd64]="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"
-    [linux_arm64]="5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489"
-)
 
 shfmt_cmd=(shfmt)
 if ! command -v shfmt >/dev/null 2>&1; then
@@ -46,8 +42,14 @@ if ! command -v shfmt >/dev/null 2>&1; then
         exit 1
     fi
     case "$arch" in
-        x86_64) shfmt_arch="linux_amd64" ;;
-        aarch64 | arm64) shfmt_arch="linux_arm64" ;;
+        x86_64)
+            shfmt_arch="linux_amd64"
+            shfmt_sha256="76e77641faa025814b77f153b29796b8e6fa2fca03e0c76a691608b86c7ea7bf"
+            ;;
+        aarch64 | arm64)
+            shfmt_arch="linux_arm64"
+            shfmt_sha256="5f2db09dae91fca848f7adbdd014632e921a383863a2ad7e0450ad3aba0c6489"
+            ;;
         *)
             echo "lint-shell.sh: no bundled shfmt download for arch '$arch'; install shfmt and put it on PATH" >&2
             exit 1
@@ -55,7 +57,7 @@ if ! command -v shfmt >/dev/null 2>&1; then
     esac
     ensure_verified_tool "shfmt v${SHFMT_VERSION}" \
         "https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_${shfmt_arch}" \
-        "${SHFMT_SHA256[$shfmt_arch]}" "$SHFMT_BIN"
+        "$shfmt_sha256" "$SHFMT_BIN"
     shfmt_cmd=("$SHFMT_BIN")
 fi
 

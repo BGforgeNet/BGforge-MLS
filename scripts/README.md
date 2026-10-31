@@ -45,8 +45,10 @@ reviving one -- the figures behind these were taken on one machine and only the 
   per-project runs `test.sh` starts -- no better than the per-suite `--maxWorkers` caps, so the extra coupling buys
   nothing.
 - **`pool: "threads"`** instead of the default `forks` -- slightly worse. Cheaper imports, dearer tests.
-- **Pinning `--maxWorkers`** above or below the default -- worse in both directions. The default is already at
-  the optimum; pinning it only makes the config wrong on a differently-sized machine.
+- **Pinning `--maxWorkers`** above or below the default for a single suite -- worse in both directions. The default
+  is already at the optimum; pinning a plain count only makes the config wrong on a differently-sized machine. The
+  per-job caps in `test.sh` are percentages of the cores for that reason (vitest clamps a percentage to the cores it
+  finds).
 - **`deps.optimizer.ssr`** on the server suite -- slightly worse.
 
 What DID pay, for contrast: cutting the work itself (memoizing the spec-derived name/table lookups in
@@ -143,10 +145,10 @@ pnpm test:cli                              # Exit codes and diff output
 | `esbuild-lib.sh`                      | Shared esbuild helpers (import.meta.url shim, WASM copy). Sourced by build scripts, not executed directly.                                                                                                                                                                                                                                                                                                                                              |
 | `preview-highlight.sh`                | Preview tree-sitter highlight output for a grammar's files. Usage: `preview-highlight.sh <grammar-name> [file]`.                                                                                                                                                                                                                                                                                                                                        |
 | `syntaxes-to-json.sh`                 | Convert TextMate grammars from YAML to JSON.                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `lint-scripts.sh`                     | Lint script utility source files.                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| `lint-shell.sh`                       | Lint shell scripts (shellcheck).                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `lint-scripts.sh`                     | Typecheck (`tsc`) the script utility sources.                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `lint-shell.sh`                       | Lint shell scripts (shellcheck, and shfmt for format).                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `fallout-update.sh`                   | Update Fallout SSL data from a pinned sfall checkout in `external/sfall-data`. Writes `server/data/fallout-ssl-sfall.yml`, then calls `generate-data.sh` and `syntaxes-to-json.sh` unless `MLS_SKIP_REGEN=1` is set.                                                                                                                                                                                                                                    |
-| `ie-update.sh`                        | Update Infinity Engine data (BAF actions/triggers). Writes completion data to `server/data/weidu-baf-iesdp.yml`, then calls `generate-data.sh` to regenerate highlight stanzas.                                                                                                                                                                                                                                                                         |
+| `ie-update.sh`                        | Update Infinity Engine data (BAF actions/triggers and IDS tables). Writes `server/data/weidu-baf-iesdp.yml` and `server/data/weidu-baf-ids.yml`, then calls `generate-data.sh` and `syntaxes-to-json.sh` unless `MLS_SKIP_REGEN=1` is set.                                                                                                                                                                                                              |
 | `ie-binary-update.sh`                 | Regenerate IE binary wire specs from IESDP `_data/file_formats/`. Writes generated `.ts` to `binary/src/{itm,spl,eff,ie-common}/specs/`. Clones IESDP on `ielib` branch into `external/infinity-engine/iesdp/` if missing.                                                                                                                                                                                                                              |
 | `test-all.sh`                         | Full test suite run by `pnpm test:all`: main suite phases 1-2 with coverage, then grammar tests and the remaining suites (smoke, samples, external, integration, the full SSL corpus sweeps) in one parallel block, then transpile-external alone, since it writes to `external/`. What it adds over `test.sh` is depth, not categories.                                                                                                                |
 | `test-harness.sh`                     | Playwright render/drive harnesses for the binary-editor and dialog-editor webviews, run as regression checks (the CI `Harness` job).                                                                                                                                                                                                                                                                                                                    |
@@ -158,7 +160,7 @@ pnpm test:cli                              # Exit codes and diff output
 | `verify-vsix-runtime-deps.mjs`        | Check that every runtime dependency the packaged server declares resolves from inside the VSIX, that dependency's own dependencies included.                                                                                                                                                                                                                                                                                                            |
 | `verify-supply-chain.sh`              | Verify the supply-chain hardening artifacts (Scorecard/CodeQL workflows, SBOM and SLSA provenance steps) are present. First CI step.                                                                                                                                                                                                                                                                                                                    |
 | `build-webviews.mjs`                  | esbuild bundler for the Svelte webviews. Invoked by `build-base-webviews.sh`.                                                                                                                                                                                                                                                                                                                                                                           |
-| `esbuild-web-tree-sitter.mjs`         | Shared esbuild asset loaders and Node-import stub for the webview IIFE builds; only the `.wasm`-as-bytes loader is live, embedding the dialog highlighter's oniguruma engine. Used by `build-webviews.mjs` and the dialog render harness build.                                                                                                                                                                                                         |
+| `esbuild-web-tree-sitter.mjs`         | Shared esbuild asset loader for the webview IIFE builds: `.wasm` as bytes, embedding the dialog highlighter's oniguruma engine. Used by `build-webviews.mjs` and the dialog render harness build.                                                                                                                                                                                                                                                       |
 | `esbuild-elk-worker.mjs`              | Shared esbuild plugin embedding elkjs's layout worker. Used by `build-webviews.mjs` and the dialog render harness build, so both deliver the worker the same way.                                                                                                                                                                                                                                                                                       |
 | `esbuild-svelte-warnings.mjs`         | Shared esbuild-svelte warning filter, dropping Svelte compiler warnings raised inside `node_modules` sources so warnings from this repo's own components stay visible.                                                                                                                                                                                                                                                                                  |
 | `split-syntax-type.mjs`               | Split dts-tree-sitter output into the runtime `syntax-type.ts` enum and `tree-sitter.d.ts` declarations (grammar `generate:types` pipeline).                                                                                                                                                                                                                                                                                                            |
@@ -166,8 +168,8 @@ pnpm test:cli                              # Exit codes and diff output
 | `external-repos-lib.sh`               | Shared lib for cloning/pinning the external fixture repos. Sourced, not executed.                                                                                                                                                                                                                                                                                                                                                                       |
 | `parallel-lib.sh`                     | Parallel job runner for test scripts. Sourced, not executed.                                                                                                                                                                                                                                                                                                                                                                                            |
 | `publish-lib.sh`                      | Shared publish tail for the `@bgforge` library packages. Sourced by `publish-*.sh`.                                                                                                                                                                                                                                                                                                                                                                     |
-| `timing-lib.sh`                       | `step()` timing helpers for test scripts. Sourced, not executed.                                                                                                                                                                                                                                                                                                                                                                                        |
-| `tool-download-lib.sh`                | Checksum-verified download of the pinned lint tools. Sourced by `lint-workflows.sh` / `lint-shell.sh`.                                                                                                                                                                                                                                                                                                                                                  |
+| `timing-lib.sh`                       | `step()` timing helpers and the portable `now_ms` clock for test scripts. Sourced first, before `parallel-lib.sh`; not executed.                                                                                                                                                                                                                                                                                                                        |
+| `tool-download-lib.sh`                | Checksum-verified download of the pinned lint tools. Sourced by `lint-workflows.sh`, `lint-shell.sh` and `ensure-weidu.sh`.                                                                                                                                                                                                                                                                                                                             |
 
 ## Data flow
 
@@ -182,43 +184,10 @@ See [docs/data-pipeline.md](../docs/data-pipeline.md) for the full diagram of ho
   It preserves comments and formatting by moving raw source slices instead of fully parsing and re-stringifying the file.
   Use this for manual data-file cleanup when you want deterministic ordering without YAML emitter churn.
 
-- `scripts/utils/src/update-fallout-base-functions-highlight.ts`
-  Generates TextMate highlight patterns for the `fallout-base-functions` stanza in `syntaxes/fallout-ssl.tmLanguage.yml`
-  from active function stanzas in `server/data/fallout-ssl-base.yml`. Called by `generate-data.sh`.
-
-- `scripts/utils/src/update-sfall-highlight.ts`
-  Generates TextMate highlight patterns for the `sfall_functions` and `hooks` stanzas in `syntaxes/fallout-ssl.tmLanguage.yml`
-  from `server/data/fallout-ssl-sfall.yml`. Called by `generate-data.sh`.
-
-- `scripts/utils/src/update-tp2-highlight.ts`
-  Generates TextMate highlight patterns for 19 TP2 stanzas (actions, patches, flags, options, values, constants, callables, vars, etc.) from `server/data/weidu-tp2-base.yml`.
-  Supports `skipCatchall` to omit items already matched by the `upper-case-constants` catch-all rule.
-  Also exports shared helpers (`buildHighlightPatterns`, `updateHighlightStanza`) used by the BAF, D, and Fallout highlight scripts.
-  Called by `generate-data.sh`. Analogous to `update-fallout-base-functions-highlight.ts` for Fallout.
-
-- `scripts/utils/src/update-baf-highlight.ts`
-  Generates TextMate highlight patterns for the `actions` and `triggers` stanzas in `syntaxes/weidu-baf.tmLanguage.yml`
-  from `server/data/weidu-baf-iesdp.yml`. Called by `generate-data.sh`.
-
-- `scripts/utils/src/update-d-highlight.ts`
-  Generates TextMate highlight patterns for 8 D stanzas (actions, chain epilogue, keywords/sugar, state, trans features, trans next, transition, when) from `server/data/weidu-d-base.yml`.
-  Called by `generate-data.sh`.
-
-- `scripts/utils/src/generate-data.ts`
-  Generates the LSP completion/hover/signature JSON files under `server/out/` from `server/data/*.yml`.
-  Called by `generate-data.sh`.
-
-- `scripts/utils/src/extract-engine-proc-docs.ts`
-  Extracts Fallout engine procedure names and docs JSON for the TSSL transpiler and TypeScript plugin.
-  Called by `generate-data.sh`.
-
-- `scripts/utils/src/yaml2json.ts`
-  Converts tmLanguage YAML to JSON, expanding shorthand `name` inheritance. Called by `syntaxes-to-json.sh`.
-
-- `scripts/utils/src/generate-ksh.ts`, `scripts/utils/src/generate-udl.ts`, `scripts/utils/src/generate-geany.ts`,
-  `scripts/utils/src/generate-tmbundle-syntaxes.ts`
-  Generate the Kate KSyntaxHighlighting, Notepad++ UDL, and Geany filetype bundles, and the TextMate bundle's
-  grammars with their file types. Called by `build-editors.sh`.
+- The other modules in `scripts/utils/src/` are the generators and helpers behind `generate-data.sh`,
+  `syntaxes-to-json.sh` and `build-editors.sh`, each named for what it produces (`update-*-highlight.ts`,
+  `generate-*.ts`, `yaml2json.ts`); `ls` the directory for the current set and read a file's header for its use. The
+  data pipeline they form is in [docs/data-pipeline.md](../docs/data-pipeline.md).
 
 - **`editor-captures.ts`**, **`generate-editor-queries.ts`**, **`check-editor-captures.ts`**
   Per-editor highlight queries. The canonical `grammars/<g>/queries/highlights.scm` uses Neovim capture
@@ -228,23 +197,10 @@ See [docs/data-pipeline.md](../docs/data-pipeline.md) for the full diagram of ho
   needs the network). Guarded by `scripts/utils/test/editor-captures.test.ts`, which asserts every emitted
   capture is one the target styles.
 
-- `scripts/utils/src/generate-td-lib-blocklist.ts`
-  Regenerates the ES-lib completion blocklist in `plugins/td-plugin/src/filter-completions.ts` from the installed
-  TypeScript's lib reference chain. Invoked via `pnpm regen:td-blocklist`.
-
-- `scripts/utils/src/language-defs.ts`
-  Shared language metadata and keyword collection for the editor-bundle generators (library module, no CLI).
-
-- `scripts/utils/src/yaml-helpers.ts`
-  Shared YAML/text helpers (strict duplicate-rejecting parsing, block scalars, deterministic sort and directory walk)
-  for the data-update tools (library module).
-
-- `scripts/utils/src/validate-helpers.ts`
-  Shared runtime validation helpers asserting types at `YAML.parse()` boundaries for the ie-update/fallout-update
-  tools (library module).
-
-- `scripts/utils/src/vitest-coverage-config.ts`
-  Shared vitest `coverage` block factored out of the per-package unit-test configs (library module).
+- `scripts/utils/src/generate-td-lib-blocklist.ts`, `scripts/utils/src/update-ssl-engine-arity.ts`
+  Rewrite a tracked source file from its upstream rather than feeding a build: the ES-lib completion blocklist in
+  `plugins/td-plugin/src/filter-completions.ts` (`pnpm regen:td-blocklist`) and the engine-function argument counts in
+  `compilers/ssl/src/int/engine-functions.ts` (from the `server/data/fallout-ssl-*.yml` signatures). Run by hand.
 
 - `scripts/utils/src/weidu-binary.ts`
   Resolves the WeiDU binary the differential suites drive - WEIDU_BIN, then PATH, then `ensure-weidu.sh` -

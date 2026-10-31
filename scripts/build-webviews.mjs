@@ -2,7 +2,7 @@ import { copyFile, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { build } from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
-import { stubNodeOnlyImports, webTreeSitterLoaders } from "./esbuild-web-tree-sitter.mjs";
+import { webTreeSitterLoaders } from "./esbuild-web-tree-sitter.mjs";
 import { elkWorkerAsText } from "./esbuild-elk-worker.mjs";
 import { dropThirdPartyWarnings } from "./esbuild-svelte-warnings.mjs";
 
@@ -23,20 +23,19 @@ await build({
     minify,
     logLevel: "info",
     // Inert for every current entry: the dialog webview's oniguruma wasm is copied beside the bundle below,
-    // not embedded, and the .scm loader and the Node-import stub served the retired tree-sitter tokenizer. They
-    // stay because the helper is shared with the dialog render harness's build, which still embeds the wasm.
+    // not embedded. It stays because the helper is shared with the dialog render harness's build, which
+    // embeds the wasm.
     loader: webTreeSitterLoaders,
     // Keep esbuild-svelte in its default css: "external" mode. Component <style> blocks (e.g. bits-ui's
     // Select.Viewport in the binary editor) are then emitted to a separate .css file the webview never loads,
     // never injected at runtime. Switching to css: "injected" would inject those <style> tags without a
     // nonce, which the strict webview CSP (style-src 'nonce-...') refuses. The render-primitives.mts harness
-    // gates this but is e2e-tier (not in CI), so this is the in-build warning.
+    // gates this (scripts/test-harness.sh runs it in the Harness workflow), so this is the in-build warning.
     plugins: [
         esbuildSvelte({
             compilerOptions: { dev },
             filterWarnings: dropThirdPartyWarnings,
         }),
-        stubNodeOnlyImports,
         // Redirects layout.ts's elkjs import to the API-only entry (the layout engine runs in the worker below).
         elkWorkerAsText,
     ],

@@ -13,7 +13,21 @@ import { describe, expect, it } from "vitest";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 
-const SCRIPTS = ["scripts/tool-download-lib.sh", "scripts/lint-workflows.sh", "scripts/ensure-weidu.sh"];
+const SCRIPTS_DIR = path.join(REPO_ROOT, "scripts");
+
+/** Every script that sources tool-download-lib.sh, which promises its sourcers stay within bash 3.2. */
+const TOOL_DOWNLOAD_USERS = fs
+    .readdirSync(SCRIPTS_DIR)
+    .filter((name) => name.endsWith(".sh"))
+    .filter((name) =>
+        /^\s*(source|\.)\s+\S*tool-download-lib\.sh/m.test(fs.readFileSync(path.join(SCRIPTS_DIR, name), "utf8")),
+    )
+    .map((name) => `scripts/${name}`);
+
+/** The timing and job-runner libraries, which the provisioning scripts' callers share with these. */
+const SHARED_LIBS = ["scripts/timing-lib.sh", "scripts/parallel-lib.sh"];
+
+const SCRIPTS = ["scripts/tool-download-lib.sh", ...TOOL_DOWNLOAD_USERS, ...SHARED_LIBS];
 
 /** Constructs bash 3.2 lacks. */
 const UNPORTABLE: Record<string, RegExp> = {
@@ -23,9 +37,17 @@ const UNPORTABLE: Record<string, RegExp> = {
     "wait -n": /\bwait\s+-n\b/,
     "case conversion expansion": /\$\{[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?(,,?|\^\^?)\}/,
     "&>> redirection": /&>>/,
+    // BSD date has no %N: `+%s%3N` prints the digits then a literal "3N", which breaks the arithmetic downstream.
+    "GNU-only date width (%3N)": /%[0-9]+N/,
 };
 
 describe("scripts meant for stock macOS", () => {
+    it("covers every sourcer of tool-download-lib.sh", () => {
+        expect(TOOL_DOWNLOAD_USERS).toEqual(
+            expect.arrayContaining(["scripts/lint-shell.sh", "scripts/lint-workflows.sh", "scripts/ensure-weidu.sh"]),
+        );
+    });
+
     it.each(SCRIPTS)("%s uses nothing bash 3.2 or macOS lacks", (script) => {
         const code = fs
             .readFileSync(path.join(REPO_ROOT, script), "utf8")

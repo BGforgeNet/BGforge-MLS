@@ -11,7 +11,8 @@
 # .dev/ directory and reused on subsequent runs.
 #
 # Configuration (all optional, via environment):
-#   CODE_SERVER_HOST     bind address (default 0.0.0.0)
+#   CODE_SERVER_HOST     bind address (default 127.0.0.1). The default auth is none and the workbench has a
+#                        terminal, so a non-loopback address with auth none exposes a shell; the script warns.
 #   CODE_SERVER_PORT     bind port (default 8080)
 #   CODE_SERVER_AUTH     code-server auth mode: none | password (default none)
 #   CODE_SERVER_VERSION  pinned code-server version to download (default below)
@@ -34,7 +35,7 @@ set -eu -o pipefail
 
 CS_VERSION_DEFAULT="4.135.0"
 CS_VERSION="${CODE_SERVER_VERSION:-$CS_VERSION_DEFAULT}"
-HOST="${CODE_SERVER_HOST:-0.0.0.0}"
+HOST="${CODE_SERVER_HOST:-127.0.0.1}"
 PORT="${CODE_SERVER_PORT:-8080}"
 AUTH="${CODE_SERVER_AUTH:-none}"
 TLS="${CODE_SERVER_TLS:-0}"
@@ -136,8 +137,9 @@ if [[ "$TLS" == "1" ]]; then
         args+=(--cert "$CODE_SERVER_CERT")
         [[ -n "${CODE_SERVER_CERT_KEY:-}" ]] && args+=(--cert-key "$CODE_SERVER_CERT_KEY")
     else
-        # Bare --cert tells code-server to generate a self-signed certificate (browser shows a one-time
-        # warning to click through). Needed so the binary-editor webview gets a secure context.
+        # Bare --cert tells code-server to generate a self-signed certificate. That gives an HTTPS origin
+        # but not a working webview: the browser rejects the webview's service worker on an untrusted cert,
+        # so the binary editor stays blank unless the browser trusts this certificate.
         args+=(--cert)
     fi
 fi
@@ -150,6 +152,15 @@ args+=(
     "$REPO"
 )
 [[ -n "$OPEN_PATH" ]] && args+=("$OPEN_PATH")
+
+case "$HOST" in
+    127.* | localhost | ::1 | "[::1]") ;;
+    *)
+        if [[ "$AUTH" == "none" ]]; then
+            echo "warning: ${HOST}:${PORT} is not loopback and auth is none - anyone who can reach it gets an editor with a terminal; set CODE_SERVER_AUTH=password or bind 127.0.0.1" >&2
+        fi
+        ;;
+esac
 
 echo "starting code-server on ${scheme}://${HOST}:${PORT} (auth=${AUTH}, tls=${TLS})"
 exec "$CS_BIN" "${args[@]}"

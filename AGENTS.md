@@ -47,7 +47,7 @@ Pick the cheapest tool that answers the actual question.
   Harness: `binary-editor/test/harness/README.md`. UI conventions and the screenshot review brief:
   `binary-editor/AGENTS.md`.
 - **The whole extension in a real VS Code** -> `pnpm dev:web` (code-server; the harness above only draws the webview
-  in isolation). Long-lived foreground server, default `0.0.0.0:8080` (`CODE_SERVER_PORT`/`CODE_SERVER_HOST`);
+  in isolation). Long-lived foreground server, default `127.0.0.1:8080` (`CODE_SERVER_PORT`/`CODE_SERVER_HOST`);
   confirm it is up before reporting a URL. The binary editor is a webview and needs a secure context
   (`http://localhost` or a trusted cert) or it renders blank. Details: `scripts/dev-web.md`.
 

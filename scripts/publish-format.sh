@@ -29,12 +29,16 @@ if [ "${SKIP_BUILD:-}" != "1" ]; then
     if [ "${SKIP_GRAMMAR_BUILD:-}" != "1" ]; then
         echo "=== Building tree-sitter grammars (format bundles their WASM) ==="
         pnpm build:grammar
-        # build:grammar also regenerates tracked grammar sources/types (tree-sitter
-        # generate + generate:types). With pinned tree-sitter these match what is
-        # committed, but restore tracked files anyway so any regen drift cannot leave
-        # the tree dirty and trip do_publish's clean-tree guard. The gitignored WASM
-        # artifacts it produced are untracked and survive the restore.
-        git checkout -- .
+        # The only tracked files build:grammar regenerates are the SyntaxType enums in
+        # shared/syntax-types (the rest of its output is gitignored). A difference means
+        # the committed enums are stale; publishing must not hide that by restoring them.
+        drifted="$(git diff --name-only -- shared/syntax-types)"
+        if [ -n "$drifted" ]; then
+            echo "Error: build:grammar regenerated these tracked files differently from the committed ones:" >&2
+            echo "$drifted" >&2
+            echo "Commit the regenerated files (or fix the grammar) before publishing." >&2
+            exit 1
+        fi
     fi
     echo "=== Building @bgforge/format ==="
     pnpm build:format

@@ -13,8 +13,9 @@
 # `run:` blocks. One home keeps them on the same version.
 
 # The sourcing scripts carry darwin pins, so this file and they stay within bash 3.2, which is
-# macOS's /bin/bash: no associative arrays (a `case` maps a platform to its values instead).
-# Guard: scripts/utils/test/macos-bash.test.ts.
+# macOS's /bin/bash: no associative arrays (a `case` maps a platform to its values instead), and no
+# GNU-only date formats. The timing and parallel libraries share that bar.
+# Guard: scripts/utils/test/macos-bash.test.ts, which scans every sourcer of this file.
 
 # sha256_of FILE - its hex sha256. macOS ships shasum but not coreutils' sha256sum.
 sha256_of() {

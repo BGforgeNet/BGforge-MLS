@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DARK_THEME_VARS } from "./theme-vars";
-import { stubNodeOnlyImports, webTreeSitterLoaders } from "../../../../../scripts/esbuild-web-tree-sitter.mjs";
+import { webTreeSitterLoaders } from "../../../../../scripts/esbuild-web-tree-sitter.mjs";
 import { elkWorkerAsText } from "../../../../../scripts/esbuild-elk-worker.mjs";
 import { dropThirdPartyWarnings } from "../../../../../scripts/esbuild-svelte-warnings.mjs";
 
@@ -24,12 +24,10 @@ await build({
     logLevel: "info",
     // The shared loaders (scripts/esbuild-web-tree-sitter.mjs). The .wasm loader embeds onig.wasm as bytes,
     // which harness-main.ts posts to the page in place of the host the production panel gets it from; the
-    // grammar JSONs load through esbuild's default json loader, as in production. The .scm loader and the
-    // web-tree-sitter node stub are retained from the shared helper but no longer exercised here.
+    // grammar JSONs load through esbuild's default json loader, as in production.
     loader: webTreeSitterLoaders,
     plugins: [
         esbuildSvelte({ compilerOptions: { dev: true, css: "injected" }, filterWarnings: dropThirdPartyWarnings }),
-        stubNodeOnlyImports,
         elkWorkerAsText,
     ],
 });

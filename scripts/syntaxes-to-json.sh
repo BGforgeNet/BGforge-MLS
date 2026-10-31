@@ -9,7 +9,13 @@ syntaxes_dir="syntaxes"
 # Defaults to writing beside the sources; a guard test passes a temp dir and diffs the
 # result against the tracked JSON.
 out_dir="${1:-$syntaxes_dir}"
-error_file="tmp/$(basename "$0").err"
+# The failure flag sits with the output, so concurrent runs into different directories do not share it; the
+# default run writes into the tracked syntaxes/, so its flag goes to the gitignored tmp/ instead.
+if [[ $# -gt 0 ]]; then
+    error_file="$out_dir/.$(basename "$0").err"
+else
+    error_file="tmp/$(basename "$0").err"
+fi
 
 function convert() {
     yaml_file="$1"

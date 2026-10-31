@@ -25,12 +25,15 @@ pnpm dev:web              # build + (bootstrap on first run) + serve
 pnpm dev:web --no-build   # relaunch without rebuilding
 ```
 
-By default it serves plain HTTP on `0.0.0.0:8080`. Set `CODE_SERVER_PORT` / `CODE_SERVER_HOST` to bind elsewhere. The
-command runs in the **foreground** - it is a long-lived server - so background it (or run it in a separate task) if you
+By default it serves plain HTTP on `127.0.0.1:8080`, with no authentication. Set `CODE_SERVER_PORT` /
+`CODE_SERVER_HOST` to bind elsewhere; the editor includes a terminal, so binding a non-loopback address (for example
+`0.0.0.0`) with `CODE_SERVER_AUTH=none` exposes a shell to the network, and the script prints a warning. Set
+`CODE_SERVER_AUTH=password` (with `PASSWORD` in the environment) when you bind beyond loopback. The command runs in the **foreground** - it is a long-lived server - so background it (or run it in a separate task) if you
 need the shell back.
 
 > **For automated agents:** this is the way to launch the extension for visual/manual review. Bind to the port your
-> environment exposes (`CODE_SERVER_PORT=<port>`), run it in the background, and confirm it is up before reporting a
+> environment exposes (`CODE_SERVER_PORT=<port>`, plus `CODE_SERVER_HOST=0.0.0.0` where the exposure is a forward to
+> another interface), run it in the background, and confirm it is up before reporting a
 > URL. The binary editor is a webview, so the reviewer's browser must reach it over a **secure context** (see below) or
 > the editor body renders blank.
 
@@ -45,7 +48,8 @@ cases the file appears to open but the editor body is blank.
 
 `http://localhost` counts as a secure context, so the default workflow is:
 
-1. Start the server (it binds `0.0.0.0` over plain HTTP by default).
+1. Start the server (it binds `127.0.0.1` over plain HTTP by default; a remote or sandboxed host whose forward
+   targets another interface needs `CODE_SERVER_HOST` set to that address).
 2. Forward the server's port to your machine's localhost (an SSH local forward, `ssh -L`, or your platform's
    port-forward).
 3. Open the forwarded `http://localhost:<port>`. Webviews and the service worker work, no certificate involved.
@@ -62,7 +66,7 @@ All optional, via environment:
 
 | Variable               | Default                    | Purpose                                             |
 | ---------------------- | -------------------------- | --------------------------------------------------- |
-| `CODE_SERVER_HOST`     | `0.0.0.0`                  | Bind address                                        |
+| `CODE_SERVER_HOST`     | `127.0.0.1`                | Bind address (non-loopback with auth `none` warns)  |
 | `CODE_SERVER_PORT`     | `8080`                     | Bind port                                           |
 | `CODE_SERVER_AUTH`     | `none`                     | `none` or `password`                                |
 | `CODE_SERVER_TLS`      | `0`                        | `0` plain HTTP (use a localhost forward); `1` HTTPS |

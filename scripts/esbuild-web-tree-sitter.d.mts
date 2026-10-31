@@ -1,7 +1,4 @@
-import type { Loader, Plugin } from "esbuild";
+import type { Loader } from "esbuild";
 
-/** Extension-to-loader map that embeds the BAF tokenizer's `.wasm` (bytes) and `.scm` (text) in the bundle. */
+/** Extension-to-loader map that embeds the dialog highlighter's oniguruma `.wasm` (bytes) in the bundle. */
 export declare const webTreeSitterLoaders: Record<string, Loader>;
-
-/** esbuild plugin stubbing web-tree-sitter's Node-only `fs/promises` / `module` imports for a browser build. */
-export declare const stubNodeOnlyImports: Plugin;
