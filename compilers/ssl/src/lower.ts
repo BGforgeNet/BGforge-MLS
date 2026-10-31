@@ -1450,7 +1450,7 @@ class Lowering {
                     if (engine) {
                         const args = this.argumentsOf(node, scope, engine.procArgs);
                         this.checkEngineArity(func.text, engine, args, node);
-                        return libCall(engine.opcode, args);
+                        return this.refuseNoValue(func.text, engine, node) ?? libCall(engine.opcode, args);
                     }
                 }
                 const { callee, args, checkArgCount } = this.callParts(node, scope);
@@ -1505,6 +1505,15 @@ class Lowering {
         this.report(`'${name}' takes ${expected}, not ${args.length}`, node);
     }
 
+    /**
+     * An engine function documented to return nothing pushes no result, so a value taken from it is whatever the
+     * stack held. One with no established signature is not refused, as with its argument count.
+     */
+    private refuseNoValue(name: string, engine: EngineFunction, node: SyntaxNode): Expr | null {
+        if (engine.args === undefined || engine.returns) return null;
+        return this.report(`'${name}' returns no value`, node);
+    }
+
     private engineCall(node: SyntaxNode | Origin, name: string, args: Expr[]): Expr {
         const fn = engineFunction(name, this.game);
         if (!fn) throw new LowerError(`engine function '${name}' is unavailable`, node);
@@ -1552,7 +1561,7 @@ class Lowering {
         // An engine function with no arguments is written without parentheses. These are lexer
         // keywords, so they take precedence over a user name that happens to match.
         const engine = engineFunction(key, this.game);
-        if (engine) return libCall(engine.opcode, []);
+        if (engine) return this.refuseNoValue(node.text, engine, node) ?? libCall(engine.opcode, []);
         // A bare procedure name in expression position CALLS it with no arguments rather than yielding
         // its index - `@name` is the spelling that yields the index.
         const procedure = this.procedures.get(key);

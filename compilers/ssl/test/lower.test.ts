@@ -460,6 +460,19 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         expect(refuse("inline procedure foo begin end\nprocedure start begin\n call foo;\nend\n")).not.toThrow();
     });
 
+    it("rejects an engine function that returns nothing used as a value, but not called", () => {
+        // The engine pushes no result for it, so the assignment would take whatever the stack held.
+        expect(refuse('procedure start begin\n variable x;\n x := play_sfx("a");\nend\n')).toThrow(
+            /^3:7: 'play_sfx' returns no value$/,
+        );
+        expect(refuse('procedure start begin\n play_sfx("a");\nend\n')).not.toThrow();
+        // A function of no arguments is written bare, as a value and as a statement alike.
+        expect(refuse("procedure start begin\n variable x;\n x := game_ui_disable;\nend\n")).toThrow(
+            /^3:7: 'game_ui_disable' returns no value$/,
+        );
+        expect(refuse("procedure start begin\n game_ui_disable;\nend\n")).not.toThrow();
+    });
+
     it.each(["/", "%", "div"])("rejects division by a literal zero with %s", (op) => {
         expect(refuse(`procedure start begin\n variable x;\n x := 7 ${op} 0;\nend\n`)).toThrow(/division by zero/);
     });

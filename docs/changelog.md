@@ -36,6 +36,11 @@
 ### Fallout SSL
 
 - Formatting keeps both dimensions of `variable b[4, 2]`.
+- The compiler refuses an engine function that returns nothing where a value is expected, such as
+  `x := play_sfx("a")`: the engine pushes no result, so the script read whatever the stack held.
+- Hovers and signature help show `critter_injure`, `critter_mod_skill`, `critter_set_flee_state`,
+  `critter_stop_attacking`, `destroy_object`, `explosion`, `gdialog_mod_barter`, `jam_lock` and `use_obj_on_obj`
+  as returning nothing, as the engine does.
 
 ### Transpilers
 

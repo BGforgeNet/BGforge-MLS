@@ -356,7 +356,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_injure(ObjectPtr who, int how)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to injure|\n|`how`|&nbsp;&nbsp;`DAM_CRIP_*` and `DAM_BLIND` flags from `define.h`|\n\nInjures a given critter (who) by crippling given limbs/body parts (defined by DAM_CRIP_ARM_LEFT, DAM_BLIND, etc. in define.h)"
+            "value": "```fallout-ssl-tooltip\nvoid critter_injure(ObjectPtr who, int how)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter to injure|\n|`how`|&nbsp;&nbsp;`DAM_CRIP_*` and `DAM_BLIND` flags from `define.h`|\n\nInjures a given critter (who) by crippling given limbs/body parts (defined by DAM_CRIP_ARM_LEFT, DAM_BLIND, etc. in define.h)"
         }
     },
     {
@@ -389,7 +389,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_mod_skill(ObjectPtr who, int skill, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Must be `dude_obj`. Will not work on other critters.|\n|`skill`|&nbsp;&nbsp;`SKILL_*` from `define.h`|\n|`amount`|&nbsp;&nbsp;Can be negative.|\n\nModifies a given skill in a given critter object by a given amount.\n\nNote that for tagged skills, the amount will be rounded down to the closest even number."
+            "value": "```fallout-ssl-tooltip\nvoid critter_mod_skill(ObjectPtr who, int skill, int amount)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Must be `dude_obj`. Will not work on other critters.|\n|`skill`|&nbsp;&nbsp;`SKILL_*` from `define.h`|\n|`amount`|&nbsp;&nbsp;Can be negative.|\n\nModifies a given skill in a given critter object by a given amount.\n\nNote that for tagged skills, the amount will be rounded down to the closest even number."
         }
     },
     {
@@ -409,7 +409,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_set_flee_state(ObjectPtr who, bool flee_on)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose FLEE flag is set|\n|`flee_on`|&nbsp;&nbsp;1 sets the FLEE flag, 0 clears it|\n\nSets the FLEE flag on or off. This controls whether the critter flees during combat."
+            "value": "```fallout-ssl-tooltip\nvoid critter_set_flee_state(ObjectPtr who, bool flee_on)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter whose FLEE flag is set|\n|`flee_on`|&nbsp;&nbsp;1 sets the FLEE flag, 0 clears it|\n\nSets the FLEE flag on or off. This controls whether the critter flees during combat."
         }
     },
     {
@@ -439,7 +439,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint critter_stop_attacking(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter taken out of active combat|\n\nFlags the critter object (who) as no longer wishing to be active in combat."
+            "value": "```fallout-ssl-tooltip\nvoid critter_stop_attacking(ObjectPtr who)\n```\n|||\n|:-|:-|\n|`who`|&nbsp;&nbsp;Critter taken out of active combat|\n\nFlags the critter object (who) as no longer wishing to be active in combat."
         }
     },
     {
@@ -499,7 +499,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint destroy_object(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object to destroy; its `destroy_proc` runs unless it is the calling object|\n\nDestroys an object (obj), which will call its script in the destroy_proc section if the object is *NOT* the calling object."
+            "value": "```fallout-ssl-tooltip\nvoid destroy_object(ObjectPtr obj)\n```\n|||\n|:-|:-|\n|`obj`|&nbsp;&nbsp;Object to destroy; its `destroy_proc` runs unless it is the calling object|\n\nDestroys an object (obj), which will call its script in the destroy_proc section if the object is *NOT* the calling object."
         }
     },
     {
@@ -629,7 +629,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint explosion\n```\nSets up an explosion at a given tile number (where) on a given elevation, that will cause damage in a radius."
+            "value": "```fallout-ssl-tooltip\nvoid explosion\n```\nSets up an explosion at a given tile number (where) on a given elevation, that will cause damage in a radius."
         }
     },
     {
@@ -812,7 +812,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint gdialog_mod_barter(int modifier)\n```\n|||\n|:-|:-|\n|`modifier`|&nbsp;&nbsp;Barter price modifier in percent (+/-)|\n\nTells the dialog system to switch to the barter screen, using a given modifier (+/- percent)."
+            "value": "```fallout-ssl-tooltip\nvoid gdialog_mod_barter(int modifier)\n```\n|||\n|:-|:-|\n|`modifier`|&nbsp;&nbsp;Barter price modifier in percent (+/-)|\n\nTells the dialog system to switch to the barter screen, using a given modifier (+/- percent)."
         }
     },
     {
@@ -1072,7 +1072,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nint jam_lock(ObjectPtr lockableObj)\n```\n|||\n|:-|:-|\n|`lockableObj`|&nbsp;&nbsp;Door or container whose lock is jammed|\n\nJams a lock, which prevents the player from picking the lock for approximately 24 hours. Meant to be used when a player critically fails to pick a lock."
+            "value": "```fallout-ssl-tooltip\nvoid jam_lock(ObjectPtr lockableObj)\n```\n|||\n|:-|:-|\n|`lockableObj`|&nbsp;&nbsp;Door or container whose lock is jammed|\n\nJams a lock, which prevents the player from picking the lock for approximately 24 hours. Meant to be used when a player critically fails to pick a lock."
         }
     },
     {
@@ -2142,7 +2142,7 @@
         "category": "base_functions",
         "documentation": {
             "kind": "markdown",
-            "value": "```fallout-ssl-tooltip\nObjectPtr use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)\n```\n|||\n|:-|:-|\n|`item`|&nbsp;&nbsp;Item object to use|\n|`targetObj`|&nbsp;&nbsp;Object the item is used on|\n\nAttempt to use an item object on a target object (targetObj). This could be used to have a critter use a Stimpack on the player, for instance, or to use a key on a door."
+            "value": "```fallout-ssl-tooltip\nvoid use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)\n```\n|||\n|:-|:-|\n|`item`|&nbsp;&nbsp;Item object to use|\n|`targetObj`|&nbsp;&nbsp;Object the item is used on|\n\nAttempt to use an item object on a target object (targetObj). This could be used to have a critter use a Stimpack on the player, for instance, or to use a key on a door."
         }
     },
     {

@@ -853,7 +853,7 @@
         ]
     },
     "critter_injure": {
-        "label": "int critter_injure(ObjectPtr who, int how)",
+        "label": "void critter_injure(ObjectPtr who, int how)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nInjures a given critter (who) by crippling given limbs/body parts (defined by DAM_CRIP_ARM_LEFT, DAM_BLIND, etc. in define.h)"
@@ -861,8 +861,8 @@
         "parameters": [
             {
                 "label": [
-                    19,
-                    32
+                    20,
+                    33
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -871,8 +871,8 @@
             },
             {
                 "label": [
-                    34,
-                    41
+                    35,
+                    42
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -930,7 +930,7 @@
         ]
     },
     "critter_mod_skill": {
-        "label": "int critter_mod_skill(ObjectPtr who, int skill, int amount)",
+        "label": "void critter_mod_skill(ObjectPtr who, int skill, int amount)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nModifies a given skill in a given critter object by a given amount.\n\nNote that for tagged skills, the amount will be rounded down to the closest even number."
@@ -938,8 +938,8 @@
         "parameters": [
             {
                 "label": [
-                    22,
-                    35
+                    23,
+                    36
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -948,8 +948,8 @@
             },
             {
                 "label": [
-                    37,
-                    46
+                    38,
+                    47
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -958,8 +958,8 @@
             },
             {
                 "label": [
-                    48,
-                    58
+                    49,
+                    59
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -1018,7 +1018,7 @@
         ]
     },
     "critter_set_flee_state": {
-        "label": "int critter_set_flee_state(ObjectPtr who, bool flee_on)",
+        "label": "void critter_set_flee_state(ObjectPtr who, bool flee_on)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nSets the FLEE flag on or off. This controls whether the critter flees during combat."
@@ -1026,8 +1026,8 @@
         "parameters": [
             {
                 "label": [
-                    27,
-                    40
+                    28,
+                    41
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -1036,8 +1036,8 @@
             },
             {
                 "label": [
-                    42,
-                    54
+                    43,
+                    55
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -1095,7 +1095,7 @@
         ]
     },
     "critter_stop_attacking": {
-        "label": "int critter_stop_attacking(ObjectPtr who)",
+        "label": "void critter_stop_attacking(ObjectPtr who)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nFlags the critter object (who) as no longer wishing to be active in combat."
@@ -1103,8 +1103,8 @@
         "parameters": [
             {
                 "label": [
-                    27,
-                    40
+                    28,
+                    41
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -1162,7 +1162,7 @@
         ]
     },
     "destroy_object": {
-        "label": "int destroy_object(ObjectPtr obj)",
+        "label": "void destroy_object(ObjectPtr obj)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nDestroys an object (obj), which will call its script in the destroy_proc section if the object is *NOT* the calling object."
@@ -1170,8 +1170,8 @@
         "parameters": [
             {
                 "label": [
-                    19,
-                    32
+                    20,
+                    33
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -1519,7 +1519,7 @@
         ]
     },
     "gdialog_mod_barter": {
-        "label": "int gdialog_mod_barter(int modifier)",
+        "label": "void gdialog_mod_barter(int modifier)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nTells the dialog system to switch to the barter screen, using a given modifier (+/- percent)."
@@ -1527,8 +1527,8 @@
         "parameters": [
             {
                 "label": [
-                    23,
-                    35
+                    24,
+                    36
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -2053,7 +2053,7 @@
         ]
     },
     "jam_lock": {
-        "label": "int jam_lock(ObjectPtr lockableObj)",
+        "label": "void jam_lock(ObjectPtr lockableObj)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nJams a lock, which prevents the player from picking the lock for approximately 24 hours. Meant to be used when a player critically fails to pick a lock."
@@ -2061,8 +2061,8 @@
         "parameters": [
             {
                 "label": [
-                    13,
-                    34
+                    14,
+                    35
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -4749,7 +4749,7 @@
         ]
     },
     "use_obj_on_obj": {
-        "label": "ObjectPtr use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)",
+        "label": "void use_obj_on_obj(ObjectPtr item, ObjectPtr targetObj)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nAttempt to use an item object on a target object (targetObj). This could be used to have a critter use a Stimpack on the player, for instance, or to use a key on a door."
@@ -4757,8 +4757,8 @@
         "parameters": [
             {
                 "label": [
-                    25,
-                    39
+                    20,
+                    34
                 ],
                 "documentation": {
                     "kind": "markdown",
@@ -4767,8 +4767,8 @@
             },
             {
                 "label": [
-                    41,
-                    60
+                    36,
+                    55
                 ],
                 "documentation": {
                     "kind": "markdown",

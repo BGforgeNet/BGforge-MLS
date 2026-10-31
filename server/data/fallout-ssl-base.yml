@@ -399,7 +399,7 @@ base_functions:
         Heals a critter for a given amount (if given a value above their MaxHP will go up to their maximum HP). [Note: can also input negative amounts, causing the critter to be hurt for that amount. This is useful because it bypasses all resistances and thresholds
 
     - name: critter_injure
-      type: int
+      type: void
       args:
         - name: who
           type: ObjectPtr
@@ -434,7 +434,7 @@ base_functions:
         Returns True if the critter object (who) has its FLEE flag set.
 
     - name: critter_mod_skill
-      type: int
+      type: void
       args:
         - name: who
           type: ObjectPtr
@@ -468,7 +468,7 @@ base_functions:
         Removes a particular trait (trait) of a given type (trait_type) from a particular critter (who).
 
     - name: critter_set_flee_state
-      type: int
+      type: void
       args:
         - name: who
           type: ObjectPtr
@@ -501,7 +501,7 @@ base_functions:
         Returns the state of a given critter object (from combat data), used to determine if a critter is dead, unconscious, etc.
 
     - name: critter_stop_attacking
-      type: int
+      type: void
       args:
         - name: who
           type: ObjectPtr
@@ -546,7 +546,7 @@ base_functions:
         Destroys count number of instances of an item object. This function will figure out which inventory this item is in (if it isn't on the ground). If it is on the ground, of course, there is only one instance of this object, so only one will be destroyed.
 
     - name: destroy_object
-      type: int
+      type: void
       args:
         - name: obj
           type: ObjectPtr
@@ -640,7 +640,7 @@ base_functions:
         Plays the endgame slideshow. The slideshow will fade in to its palette, so it is proper to call gfade_out(1) and then expect this command to fix the palette for you.
 
     - name: explosion
-      detail: int explosion
+      detail: void explosion
       doc: |-
         Sets up an explosion at a given tile number (where) on a given elevation, that will cause damage in a radius.
 
@@ -766,7 +766,7 @@ base_functions:
         Tells the dialog system to switch to the barter screen. (Sets the barter modifier to 0).
 
     - name: gdialog_mod_barter
-      type: int
+      type: void
       args:
         - name: modifier
           type: int
@@ -1017,7 +1017,7 @@ base_functions:
         Returns the current caps total in a given object's (obj) inventory.
 
     - name: jam_lock
-      type: int
+      type: void
       args:
         - name: lockableObj
           type: ObjectPtr
@@ -2199,7 +2199,7 @@ base_functions:
         Use a usable object
 
     - name: use_obj_on_obj
-      type: ObjectPtr
+      type: void
       args:
         - name: item
           type: ObjectPtr
