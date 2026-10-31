@@ -62,13 +62,13 @@ export function isHeaderFile(path: string): boolean {
 }
 
 /**
- * Extract the filename from a path or URI.
+ * Extract the decoded filename from a URI.
  *
- * @param path - File path or URI
- * @returns Filename with extension (e.g., "utils.h" from "/path/to/utils.h")
+ * @param uri - Document URI
+ * @returns Filename with extension (e.g., "a b.h" from "file:///path/to/a%20b.h")
  */
-export function extractFilename(path: string): string {
-    return basename(path);
+export function extractFilename(uri: string): string {
+    return decodeURIComponent(basename(uri.split(/[?#]/, 1)[0]!));
 }
 
 /**

@@ -33,6 +33,7 @@ import {
 } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/fallout-ssl";
+import { extractFilename } from "../core/location-utils";
 import { SyntaxType } from "./syntax-type";
 import { extractProcedures, findIdentifierNodeAtPosition, findMacroDefinition, makeRange } from "./utils";
 import { sslMapGet } from "@bgforge/shared/fallout-ssl-names";
@@ -219,13 +220,6 @@ export function outgoingCalls(
 
 const ZERO_RANGE: Range = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 
-/** Last path segment of a file uri, for attributing a reference that sits outside any callable. */
-function fileName(uri: string): string {
-    const path = uri.split(/[?#]/, 1)[0]!;
-    const seg = path.split("/").pop();
-    return seg ? decodeURIComponent(seg) : uri;
-}
-
 /** The nearest enclosing callable (procedure or code macro) of `node`, or null. */
 function findContainingCallable(node: SyntaxNode): SyntaxNode | null {
     for (let cur = node.parent; cur; cur = cur.parent) {
@@ -242,7 +236,7 @@ function callerItem(refNode: SyntaxNode, uri: string): CallHierarchyItem {
         if (item) return item;
     }
     // A reference outside any callable (defensive - SSL executable code lives in procedures/macros).
-    return { name: fileName(uri), kind: SymbolKind.File, uri, range: ZERO_RANGE, selectionRange: ZERO_RANGE };
+    return { name: extractFilename(uri), kind: SymbolKind.File, uri, range: ZERO_RANGE, selectionRange: ZERO_RANGE };
 }
 
 /**

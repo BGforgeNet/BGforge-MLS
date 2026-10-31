@@ -28,6 +28,8 @@
 - 2DA formatting no longer changes what GemRB or WeiDU read, apart from trimming trailing spaces: text past a
   row's last column stays as written, a row that starts with a space keeps its empty name, blank lines above the
   column names stay, and only spaces and tabs separate cells. An encrypted 2DA is left alone.
+- TP2 hovers and completions show a file name with spaces or other special characters as written, not
+  percent-encoded (`a b.tpa`, not `a%20b.tpa`).
 
 ### Fallout SSL
 

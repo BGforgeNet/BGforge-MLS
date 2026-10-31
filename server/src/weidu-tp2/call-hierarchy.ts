@@ -23,6 +23,7 @@ import {
 } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
+import { extractFilename } from "../core/location-utils";
 import { makeRange } from "../core/position-utils";
 import { SyntaxType } from "./syntax-type";
 import { FUNCTION_DEF_TYPES } from "./variable-symbols";
@@ -168,13 +169,6 @@ export function outgoingCalls(
 
 const ZERO_RANGE: Range = { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
 
-/** Last path segment of a file uri, for attributing a top-level launch to its file. */
-function fileName(uri: string): string {
-    const path = uri.split(/[?#]/, 1)[0]!;
-    const seg = path.split("/").pop();
-    return seg ? decodeURIComponent(seg) : uri;
-}
-
 /** The caller a launch node belongs to: enclosing function def, else enclosing component, else the file. */
 function callerItem(callNode: SyntaxNode, uri: string): CallHierarchyItem {
     const defNode = findAncestorOfType(callNode, FUNCTION_DEF_TYPES);
@@ -194,7 +188,7 @@ function callerItem(callNode: SyntaxNode, uri: string): CallHierarchyItem {
         };
     }
     // A launch sitting at top level, outside any function or component - attribute it to the file.
-    return { name: fileName(uri), kind: SymbolKind.File, uri, range: ZERO_RANGE, selectionRange: ZERO_RANGE };
+    return { name: extractFilename(uri), kind: SymbolKind.File, uri, range: ZERO_RANGE, selectionRange: ZERO_RANGE };
 }
 
 /**

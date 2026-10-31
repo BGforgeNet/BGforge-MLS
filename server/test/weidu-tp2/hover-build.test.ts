@@ -79,6 +79,19 @@ describe("weidu-tp2/hover buildVariableHover()", () => {
         expect(value).toContain("nopath.tp2");
     });
 
+    it("decodes the file name taken from the URI", () => {
+        const varInfo = makeVarInfo({
+            location: {
+                uri: "file:///some/path/a%20b.tpa",
+                range: { start: { line: 0, character: 0 }, end: { line: 0, character: 6 } },
+            },
+        });
+        const hover = buildVariableHover(varInfo);
+        const value = (hover.contents as { kind: string; value: string }).value;
+        expect(value).toContain("a b.tpa");
+        expect(value).not.toContain("%20");
+    });
+
     it("skips path block when displayPath is null", () => {
         const hover = buildVariableHover(makeVarInfo(), null);
         const value = (hover.contents as { kind: string; value: string }).value;
