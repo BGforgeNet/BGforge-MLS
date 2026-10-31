@@ -14,12 +14,15 @@
         "paths": {
             "@bgforge/animation": ["../animation/src/index.ts"],
             "@bgforge/animation/group-labels": ["../animation/src/group-labels.ts"],
+            "@bgforge/bcs": ["../compilers/bcs/src/index.ts"],
             "@bgforge/binary": ["../binary/src/index.ts"],
+            "@bgforge/binary/archive": ["../binary/src/archive/index.ts"],
             "@bgforge/image": ["../image/src/index.ts"],
             "@bgforge/image/frame-anchor": ["../image/src/model/frame-anchor.ts"],
             "@bgforge/image/ie-direction": ["../image/src/model/ie-direction.ts"],
             "@bgforge/image/compose-parts": ["../image/src/model/compose-parts.ts"],
-            "@bgforge/ssl": ["../compilers/ssl/src/index.ts"]
+            "@bgforge/ssl": ["../compilers/ssl/src/index.ts"],
+            "@bgforge/transpile/internal": ["../transpilers/src/internal.ts"]
         }
     },
     "include": ["src", "test", "../shared", "../binary/src"],

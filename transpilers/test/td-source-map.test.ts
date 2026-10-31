@@ -9,8 +9,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { compile } from "../td/src/index";
-import { pathToFileURL } from "url";
+import { td } from "../src/index";
 
 let tmpDir: string;
 
@@ -25,12 +24,8 @@ afterAll(() => {
 async function compileTd(name: string, source: string) {
     const filePath = path.join(tmpDir, name);
     fs.writeFileSync(filePath, source, "utf-8");
-    const result = await compile(pathToFileURL(filePath).href, source);
-    return {
-        filePath,
-        generated: fs.readFileSync(result.dPath, "utf-8"),
-        sourceMap: result.sourceMap,
-    };
+    const result = await td(filePath, source);
+    return { filePath, generated: result.output, sourceMap: result.sourceMap };
 }
 
 /** The 0-based line of `text` holding `needle`. */

@@ -8,7 +8,7 @@
 import { Project } from "ts-morph";
 import { EXT_TBAF } from "../../common/extensions";
 import { applyHelperFixups } from "../../common/transpiler-utils";
-import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
+import { createTranspiler } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
 import { TranspileError } from "../../common/transpile-error";
 import type { SourcePosition } from "../../common/line-map";
@@ -60,7 +60,8 @@ function transformBundled(bundled: string, filePath: string, traTag: string | un
     // parses along the way live in this project too.
     // Fresh-Project construction at this granularity (one per compile) is
     // a small fraction of total compile time.
-    const project = new Project({ useInMemoryFileSystem: true });
+    // No lib files: the transformer reads the AST alone and never consults the type checker.
+    const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
     const sourceFile = project.createSourceFile("bundled.ts", bundled);
 
     // 3. Transform AST to IR
@@ -72,23 +73,6 @@ function transformBundled(bundled: string, filePath: string, traTag: string | un
 
     // 5. Emit BAF text
     return emitBAF(ir);
-}
-
-export interface TBAFCompileResult {
-    bafPath: string;
-    events: readonly TranspilerEvent[];
-    /** For each line of the generated BAF, the file and 0-based line the author wrote it on. */
-    sourceMap: ReadonlyArray<SourcePosition | undefined>;
-}
-
-/**
- * Compile a TBAF file to BAF, writing the output to disk.
- * @deprecated `transpile` plus a write to `outputPathFor(path)` does the same. Removed in the next major
- * version.
- */
-export async function compile(uri: string, text: string): Promise<TBAFCompileResult> {
-    const { outPath, events, result } = await tbaf.compile(uri, text);
-    return { bafPath: outPath, events, sourceMap: result.sourceMap };
 }
 
 /**

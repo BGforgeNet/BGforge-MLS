@@ -9,7 +9,7 @@
  */
 
 import { openGame, type Game, type IeScriptStyle } from "@bgforge/binary/archive";
-import type { BcsTableSource } from "../../../compilers/bcs/src/index";
+import type { BcsTableSource } from "@bgforge/bcs";
 import { errorMessage } from "../diagnostics";
 import { conlog } from "../logger";
 import type { WeiDUsettings } from "../settings";

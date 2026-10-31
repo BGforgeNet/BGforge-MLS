@@ -14,10 +14,15 @@ export default defineConfig({
         // Map the workspace package to its source so vitest can import it
         // without requiring a build step (mirrors vitest.config.mts).
         alias: {
+            "@bgforge/bcs": path.resolve(import.meta.dirname, "../compilers/bcs/src/index.ts"),
             "@bgforge/binary/archive": path.resolve(import.meta.dirname, "../binary/src/archive/index.ts"),
             "@bgforge/format/internal": path.resolve(import.meta.dirname, "../format/src/internal.ts"),
             "@bgforge/format": path.resolve(import.meta.dirname, "../format/src/index.ts"),
             "@bgforge/ssl": path.resolve(import.meta.dirname, "../compilers/ssl/src/index.ts"),
+            "@bgforge/transpile/internal": path.resolve(import.meta.dirname, "../transpilers/src/internal.ts"),
+            "@bgforge/transpile": path.resolve(import.meta.dirname, "../transpilers/src/index.ts"),
+            "@bgforge/tssl/internal": path.resolve(import.meta.dirname, "../compilers/tssl/src/internal.ts"),
+            "@bgforge/tssl": path.resolve(import.meta.dirname, "../compilers/tssl/src/index.ts"),
         },
     },
     test: {

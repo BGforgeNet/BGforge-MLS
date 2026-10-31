@@ -16,10 +16,9 @@
 
 import * as fs from "fs";
 import { emitProgram, optimize } from "@bgforge/ssl";
-import { createBatchState } from "../../../compilers/tssl/src/batch";
-import { transpile } from "../../../compilers/tssl/src/index";
-import { lowerTsslProgram } from "../../../compilers/tssl/src/int/lower";
-import { TranspileError } from "../../../transpilers/common/transpile-error";
+import { createBatchState, transpile } from "@bgforge/tssl";
+import { lowerTsslProgram } from "@bgforge/tssl/internal";
+import { TranspileError } from "@bgforge/transpile/internal";
 import type { CompileFailure, CompileRequest, CompileResponse } from "./compile-worker-protocol";
 
 const batch = createBatchState();

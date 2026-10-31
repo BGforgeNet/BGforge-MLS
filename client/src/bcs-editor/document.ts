@@ -14,13 +14,7 @@
  */
 
 import * as vscode from "vscode";
-import {
-    decompileBcs,
-    readBcs,
-    type BcsCompileSymbols,
-    type BcsEngine,
-    type BcsSymbols,
-} from "../../../compilers/bcs/src/index";
+import { decompileBcs, readBcs, type BcsCompileSymbols, type BcsEngine, type BcsSymbols } from "@bgforge/bcs";
 
 /**
  * Everything the install decides about how a script reads and writes: the tables that give its numbers names,

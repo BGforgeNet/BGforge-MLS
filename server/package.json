@@ -40,10 +40,13 @@
         "esbuild-wasm": "catalog:"
     },
     "devDependencies": {
+        "@bgforge/bcs": "workspace:*",
         "@bgforge/binary": "workspace:*",
         "@bgforge/format": "workspace:*",
         "@bgforge/shared": "workspace:*",
         "@bgforge/ssl": "workspace:*",
+        "@bgforge/transpile": "workspace:*",
+        "@bgforge/tssl": "workspace:*",
         "@types/node": "catalog:",
         "fast-check": "catalog:",
         "fast-glob": "catalog:",

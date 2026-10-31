@@ -34,10 +34,14 @@ export default defineConfig({
             // Subpath before the barrel, for the reason spelled out for @bgforge/image below.
             "@bgforge/animation/group-labels": path.resolve(import.meta.dirname, "../animation/src/group-labels.ts"),
             "@bgforge/animation": path.resolve(import.meta.dirname, "../animation/src/index.ts"),
+            "@bgforge/bcs": path.resolve(import.meta.dirname, "../compilers/bcs/src/index.ts"),
             "@bgforge/binary": path.resolve(import.meta.dirname, "../binary/src/index.ts"),
-            // Source-subpath imports (the webview reaches one module past the barrel) before the barrel, for the
-            // reason spelled out for @bgforge/image below.
-            "@bgforge/binary-editor/src": path.resolve(import.meta.dirname, "../binary-editor/src"),
+            // The webview's browser-safe subpath before the barrel, for the reason spelled out for @bgforge/image
+            // below.
+            "@bgforge/binary-editor/detail-layout": path.resolve(
+                import.meta.dirname,
+                "../binary-editor/src/detail-layout.ts",
+            ),
             "@bgforge/binary-editor": path.resolve(import.meta.dirname, "../binary-editor/src/index.ts"),
             // The pure subpaths must precede the barrel alias: vite matches an alias when the id starts
             // with `key + "/"`, so "@bgforge/image" would otherwise capture them and rewrite to a bad

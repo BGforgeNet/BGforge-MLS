@@ -8,11 +8,6 @@ Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
 - Requires Node 22 or newer, up from 20.
 
-### Deprecated
-
-- `tbaf.compile()` and `td.compile()`, which write the output file themselves: `transpile()` plus a write to
-  `outputPathFor(path)` does the same. They will be removed in the next major version.
-
 ### Fixed
 
 - TBAF and TD leave string literals alone when substituting a loop variable or an inlined parameter: `"step i"`

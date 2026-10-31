@@ -6,7 +6,7 @@
  * do is anything whose value a tp2 assigns during installation - see `refusals` below.
  */
 
-import { BcsCompileError, compileBaf, type BcsCompileSymbols, type BcsEngine } from "../../../compilers/bcs/src/index";
+import { BcsCompileError, compileBaf, type BcsCompileSymbols, type BcsEngine } from "@bgforge/bcs";
 import type { Parser, Point } from "web-tree-sitter";
 import type { DiagnosticParseResult, ParseItemList } from "../diagnostics";
 import { SyntaxType } from "./syntax-type";

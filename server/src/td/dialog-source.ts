@@ -9,7 +9,7 @@
  */
 
 import { Node, SyntaxKind, type CallExpression, type FunctionDeclaration, type SourceFile } from "ts-morph";
-import { getSharedProject } from "../../../transpilers/common/shared-project";
+import { getSharedProject } from "@bgforge/transpile/internal";
 import { conlog } from "../logger";
 import type {
     DDialogBlock,

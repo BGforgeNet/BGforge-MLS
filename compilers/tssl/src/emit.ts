@@ -13,14 +13,14 @@ import { SyntaxKind, conlog, type TsslContext } from "./types";
 import { convertOperatorsAST, convertVarOrConstToVariable } from "./convert-operators";
 import { generateInlineMacros } from "./inline-functions";
 import { refuseAt, type ModuleItems, type TsslProgram } from "./program-model";
-import { makeGeneratedHeader } from "../../../transpilers/common/transpiler-utils";
-import type { SourcePosition } from "../../../transpilers/common/line-map";
 import {
+    makeGeneratedHeader,
     TrackedText,
     joinTracked,
+    type SourcePosition,
     type TrackedChunk,
     type EmittedText,
-} from "../../../transpilers/common/tracked-text";
+} from "@bgforge/transpile/internal";
 
 type Chunk = TrackedChunk<SourcePosition>;
 

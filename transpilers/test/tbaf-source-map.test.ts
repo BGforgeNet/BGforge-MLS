@@ -9,8 +9,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { compile } from "../tbaf/src/index";
-import { pathToFileURL } from "url";
+import { tbafWithSourceMap } from "../src/index";
 
 let tmpDir: string;
 
@@ -22,16 +21,12 @@ afterAll(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-/** Write a .tbaf, compile it, and hand back the generated text with its per-line origins. */
+/** Write a .tbaf, transpile it, and hand back the generated text with its per-line origins. */
 async function compileTbaf(name: string, source: string) {
     const filePath = path.join(tmpDir, name);
     fs.writeFileSync(filePath, source, "utf-8");
-    const result = await compile(pathToFileURL(filePath).href, source);
-    return {
-        filePath,
-        generated: fs.readFileSync(result.bafPath, "utf-8"),
-        sourceMap: result.sourceMap,
-    };
+    const result = await tbafWithSourceMap(filePath, source);
+    return { filePath, generated: result.output, sourceMap: result.sourceMap };
 }
 
 /** The 0-based line of `text` holding `needle`. */

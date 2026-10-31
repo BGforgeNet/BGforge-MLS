@@ -38,6 +38,9 @@
         ".": {
             "types": "./out/index.d.ts",
             "import": "./out/index.js"
+        },
+        "./internal": {
+            "import": "./out/internal.js"
         }
     },
     "publishConfig": {
@@ -56,6 +59,7 @@
     "devDependencies": {
         "@bgforge/shared": "workspace:*",
         "@bgforge/ssl": "workspace:*",
+        "@bgforge/transpile": "workspace:*",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },

@@ -4,7 +4,7 @@
  * The grammar's loading and caching is `script-view/parser.ts`, shared with the `.int` view.
  */
 
-import { compileBaf, writeBcs } from "../../../compilers/bcs/src/index";
+import { compileBaf, writeBcs } from "@bgforge/bcs";
 import { loadParser } from "../script-view/parser";
 import type { BcsNaming } from "./document";
 

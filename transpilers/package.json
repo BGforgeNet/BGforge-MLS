@@ -30,12 +30,16 @@
         "LICENSE.txt"
     ],
     "type": "module",
+    "sideEffects": false,
     "main": "out/index.js",
     "types": "out/index.d.ts",
     "exports": {
         ".": {
             "types": "./out/index.d.ts",
             "import": "./out/index.js"
+        },
+        "./internal": {
+            "import": "./out/internal.js"
         }
     },
     "publishConfig": {
@@ -52,6 +56,8 @@
     "devDependencies": {
         "@bgforge/shared": "workspace:*",
         "fast-check": "catalog:",
+        "quick-lru": "catalog:",
+        "ts-morph": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"
     },

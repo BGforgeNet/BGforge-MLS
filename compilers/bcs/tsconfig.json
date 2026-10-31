@@ -6,7 +6,8 @@
         "noEmit": true,
         "tsBuildInfoFile": "../../tmp/bcs-lib.tsbuildinfo",
         "paths": {
-            "@bgforge/bcs": ["./src/index.ts"]
+            "@bgforge/bcs": ["./src/index.ts"],
+            "@bgforge/binary/archive": ["../../binary/src/archive/index.ts"]
         }
     },
     "include": ["src", "test"]

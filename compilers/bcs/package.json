@@ -27,11 +27,12 @@
         "test": "vitest run --config vitest.config.ts"
     },
     "dependencies": {
-        "web-tree-sitter": "catalog:"
+        "@bgforge/shared": "workspace:*"
     },
     "devDependencies": {
-        "@bgforge/shared": "workspace:*",
-        "vitest": "catalog:"
+        "@bgforge/binary": "workspace:*",
+        "vitest": "catalog:",
+        "web-tree-sitter": "catalog:"
     },
     "engines": {
         "node": ">=22"

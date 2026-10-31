@@ -16,6 +16,7 @@
     },
     "dependencies": {
         "@bgforge/animation": "workspace:*",
+        "@bgforge/bcs": "workspace:*",
         "@bgforge/binary": "workspace:*",
         "@bgforge/binary-editor": "workspace:*",
         "@bgforge/image": "workspace:*",

@@ -25,7 +25,7 @@ import {
     type SourceFile,
     type VariableDeclaration,
 } from "ts-morph";
-import { TranspileError } from "../../../transpilers/common/transpile-error";
+import { TranspileError } from "@bgforge/transpile/internal";
 import type { InlineFunc } from "./types";
 
 /** What one module contributes, in its own statement order. */

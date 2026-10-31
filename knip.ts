@@ -105,13 +105,13 @@ const config: KnipConfig = {
                 // is irrelevant to production analysis.
                 ...(isProductionKnip ? ["src/**", "vitest.integration.config.mts", "test/**"] : []),
             ],
-            // esbuild-wasm is required at runtime: the server bundle imports
-            // transpilers/common/bundle.ts via filesystem path and externalises
-            // esbuild-wasm in scripts/build-base-server.sh, so the dep must be
-            // declared directly in server's package.json for strict-pnpm consumers
-            // to resolve `require("esbuild-wasm")` from server's node_modules at
-            // runtime. Knip's per-workspace static analysis can't see the import
-            // chain through the bundled-in non-workspace source.
+            // esbuild-wasm is required at runtime: the server bundle inlines
+            // @bgforge/transpile's source and externalises esbuild-wasm in
+            // scripts/build-base-server.sh, so the dep must be declared directly
+            // in server's package.json for strict-pnpm consumers to resolve
+            // `require("esbuild-wasm")` from server's node_modules at runtime.
+            // Knip's per-workspace static analysis can't see the import chain
+            // through another workspace's bundled-in source.
             // sslc-emscripten-noderawfs is imported by path, never by name: build-base-server.sh copies it into
             // out/ and ssl_compiler.ts hands the forked wrapper its entry.
             ignoreDependencies: ["esbuild-wasm", "sslc-emscripten-noderawfs"],
@@ -127,15 +127,6 @@ const config: KnipConfig = {
             // entry - knip reads it from the package's `bin`.
             entry: ["test/*.test.ts"],
             ignoreDependencies: sharedCliDependencies,
-        },
-        "transpilers/tbaf": {
-            entry: ["src/index.ts"],
-        },
-        "transpilers/td": {
-            entry: ["src/index.ts"],
-        },
-        "transpilers/common": {
-            entry: [],
         },
         transpilers: {
             entry: ["test/**/*.test.ts"],

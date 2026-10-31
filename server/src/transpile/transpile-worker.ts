@@ -13,7 +13,7 @@
  * `transpile-worker-smoke.test.ts` is what proves the built bundle loads and answers.
  */
 
-import { td, tbafWithSourceMap, TranspileError } from "../../../transpilers/src/index";
+import { td, tbafWithSourceMap, TranspileError } from "@bgforge/transpile";
 import { parseTDSource } from "../td/dialog-source";
 import { parseTSSLSource } from "../tssl/dialog-source";
 import type { TranspileFailure, TranspileRequest, TranspileResponse } from "./transpile-worker-protocol";

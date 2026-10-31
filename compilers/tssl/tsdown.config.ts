@@ -1,9 +1,10 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-    entry: ["src/index.ts", "src/cli.ts"],
+    entry: ["src/index.ts", "src/internal.ts", "src/cli.ts"],
     format: ["esm"],
-    // Only the library entry has an importable contract; the CLI is a bin, not a module.
+    // Only the library entry has an importable contract; the CLI is a bin, not a module. internal.ts ships no
+    // .d.ts: it returns the SSL compiler's IR, and inlining those declarations from its source fails the build.
     dts: { entry: "src/index.ts" },
     clean: true,
     sourcemap: false,

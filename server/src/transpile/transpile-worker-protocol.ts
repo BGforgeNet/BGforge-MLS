@@ -10,8 +10,7 @@
  */
 
 import type { DDialogData, SSLDialogData } from "@bgforge/shared/dialog-types";
-import type { SourcePosition } from "../../../transpilers/common/line-map";
-import type { TDWarning } from "../../../transpilers/td/src/types";
+import type { SourcePosition, TDWarning } from "@bgforge/transpile/internal";
 
 /**
  * What the worker is being asked for. Every one is pure `(path, text) -> plain data`, which is what

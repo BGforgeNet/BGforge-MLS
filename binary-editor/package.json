@@ -4,15 +4,19 @@
     "private": true,
     "type": "module",
     "main": "src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./detail-layout": "./src/detail-layout.ts"
+    },
     "scripts": {
         "test:unit": "vitest run --config vitest.config.ts",
         "test": "tsc --noEmit && vitest run --config vitest.config.ts"
     },
     "dependencies": {
-        "@bgforge/binary": "workspace:*"
+        "@bgforge/binary": "workspace:*",
+        "@bgforge/shared": "workspace:*"
     },
     "devDependencies": {
-        "@bgforge/shared": "workspace:*",
         "esbuild": "catalog:",
         "esbuild-svelte": "catalog:",
         "playwright": "catalog:",

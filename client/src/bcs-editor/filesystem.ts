@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode";
-import { BcsCompileError } from "../../../compilers/bcs/src/index";
+import { BcsCompileError } from "@bgforge/bcs";
 import type { ScriptView, ScriptViewProblem } from "../script-view/filesystem";
 import { compileForSave } from "./compiler";
 import { render, type BcsNaming } from "./document";

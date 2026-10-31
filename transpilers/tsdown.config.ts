@@ -1,10 +1,11 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-    entry: ["src/index.ts", "src/cli.ts"],
+    entry: ["src/index.ts", "src/internal.ts", "src/cli.ts"],
     format: ["esm"],
-    // Only the library entry's .d.ts is part of the published contract; the CLI
-    // is a bin, not an imported module.
+    // Only the library entry's .d.ts is part of the published contract; the CLI is a bin, not an imported module.
+    // internal.ts ships no .d.ts: getSharedProject returns a ts-morph Project, so its declarations would inline
+    // ts-morph's whole type surface.
     dts: { entry: "src/index.ts" },
     clean: true,
     sourcemap: false,

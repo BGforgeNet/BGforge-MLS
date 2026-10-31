@@ -14,7 +14,6 @@ import {
     expandEnumPropertyAccess,
     enumTransformPlugin,
     type EnumMember,
-    type EnumRegistry,
 } from "./enum-transform";
 import { escapeRegex } from "@bgforge/shared/regex-utils";
 import { ensureNodeOnPath } from "./node-runtime";
@@ -48,14 +47,6 @@ interface BundleConfig {
     readonly sourceText: string;
     /** Marker string prepended to source for stripping esbuild runtime helpers */
     readonly marker: string;
-    /** esbuild target (e.g., "esnext", "es2022") */
-    readonly target: string;
-    /** Extra code appended after the source (e.g., preserve-function stubs) */
-    readonly appendCode?: string;
-    /** Value for esbuild stdin.sourcefile. Defaults to realPath. */
-    readonly sourcefile?: string;
-    /** Whether to request metafile from esbuild (for input file list) */
-    readonly metafile?: boolean;
     /**
      * Additional esbuild plugins inserted before the shared enum/tree-shaking plugins.
      * If these plugins accumulate enums, pass the same collections via
@@ -79,12 +70,6 @@ interface BundleConfig {
 interface BundleResult {
     /** Cleaned and post-processed bundled code */
     readonly code: string;
-    /** Every enum accumulated during bundling (main file + imports), with members and values */
-    readonly allEnums: EnumRegistry;
-    /** Enum names from externalized .d.ts files (for prefix stripping) */
-    readonly externalEnumNames: ReadonlySet<string>;
-    /** Input files from metafile (only when metafile: true was requested) */
-    readonly inputFiles: readonly string[];
     /** For each line of `code`, the file and 0-based line it came from; absent where the map has none. */
     readonly origins: ReadonlyArray<SourcePosition | undefined>;
 }
@@ -100,12 +85,12 @@ interface BundleResult {
  * 5. Clean up output (strip marker prefix, fix import aliases)
  * 6. Expand enum property accesses
  *
- * Callers provide language-specific config (marker, target, extra plugins).
+ * Callers provide language-specific config (marker, extra plugins).
  */
 export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleResult> {
     await ensureEsbuild();
 
-    const { filePath, sourceText, marker, target, metafile } = config;
+    const { filePath, sourceText, marker } = config;
 
     // Pre-transform: convert enums to flat consts before esbuild sees them.
     // Where each line of the entry stood before its enums were flattened: without the map, the lines
@@ -127,8 +112,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     // need prefix stripping (ClassID.ANKHEG -> ANKHEG) in post-processing.
     const externalEnumNames = config.sharedExternalEnumNames ?? new Set<string>();
 
-    // Prepend marker, append extra code if provided
-    const sourceWithMarker = marker + "\n" + enumTransformed + (config.appendCode ?? "");
+    const sourceWithMarker = marker + "\n" + enumTransformed;
 
     // Resolve symlinks so esbuild's absWorkingDir and sourcefile agree on real paths.
     // Without this, esbuild resolves absWorkingDir through symlinks but keeps sourcefile
@@ -140,7 +124,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
         stdin: {
             contents: sourceWithMarker,
             resolveDir,
-            sourcefile: config.sourcefile ?? realPath,
+            sourcefile: realPath,
             loader: "ts",
         },
         // Use the file's directory as working dir so error paths are relative to it,
@@ -156,12 +140,11 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
         // Named only because an external map is refused without an output path. `write: false` means
         // nothing reaches disk under this name; it exists so the map arrives as its own output file.
         outfile: path.join(resolveDir, "bundle.js"),
-        metafile: metafile ?? false,
         format: "esm",
         treeShaking: true,
         minify: false,
         keepNames: false,
-        target,
+        target: "esnext",
         platform: "neutral",
         plugins: [
             externalDeclarationsPlugin(externalEnumNames),
@@ -201,12 +184,9 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
     // line of that output; the source map then says which file and line that came from.
     const lineMap = composeLineMaps(afterCleanup, afterExpand);
     const origins = resolveOrigins(lineMap, mapFile?.text, resolveDir, {
-        // What esbuild will call the entry in its map. `sourcefile` is a label, not a path, so it is
-        // resolved the way the map's other sources are - otherwise a relative one never compares equal
-        // and the entry is mistaken for an import.
-        alias: path.resolve(resolveDir, config.sourcefile ?? realPath),
-        // What to report it as: the path the caller passed in. The label above stands in for it where a
-        // transpiler hands esbuild a name its own loader understands, and the resolved form names the
+        // What esbuild will call the entry in its map: the symlink-resolved path it was handed as `sourcefile`.
+        alias: realPath,
+        // What to report it as: the path the caller passed in. Through a symlink the resolved form names the
         // same file under a path the caller never used - which a consumer comparing the two reads as a
         // different file entirely.
         file: filePath,
@@ -216,17 +196,7 @@ export async function bundleWithEsbuild(config: BundleConfig): Promise<BundleRes
         lineMap: entryLineMap,
     });
 
-    // Extract input files from metafile if requested.
-    // Only .ts files, not .d.ts.
-    // Metafile paths are relative to absWorkingDir - resolve to absolute.
-    const inputFiles =
-        metafile && result.metafile
-            ? Object.keys(result.metafile.inputs)
-                  .filter((f) => f.endsWith(".ts") && !f.endsWith(".d.ts"))
-                  .map((f) => path.resolve(resolveDir, f))
-            : [];
-
-    return { code, allEnums, externalEnumNames, inputFiles, origins };
+    return { code, origins };
 }
 
 /**

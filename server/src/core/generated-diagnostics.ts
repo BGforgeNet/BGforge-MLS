@@ -13,7 +13,7 @@
  */
 
 import type { Diagnostic } from "vscode-languageserver/node";
-import type { SourcePosition } from "../../../transpilers/common/line-map";
+import type { SourcePosition } from "@bgforge/transpile/internal";
 import { getDiagnostics, setDiagnostics } from "../diagnostic-store";
 import { pathToUri } from "../uri-utils";
 

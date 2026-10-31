@@ -1,9 +1,0 @@
-{
-    "name": "@bgforge/tbaf",
-    "version": "0.1.0",
-    "private": true,
-    "description": "TBAF transpiler (TypeScript to WeiDU BAF)",
-    "devDependencies": {
-        "ts-morph": "catalog:"
-    }
-}

@@ -3,7 +3,7 @@
  * (compiling a `.baf` with the built-in compiler) so both agree on which engine a configured install is.
  */
 
-import type { IeScriptStyle } from "../../../binary/src/archive/game-type";
+import type { IeScriptStyle } from "@bgforge/binary/archive";
 import type { BcsEngine } from "./signature";
 
 /**

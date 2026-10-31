@@ -13,9 +13,6 @@ packages:
   - grammars/*
   - plugins/*
   - transpilers
-  - transpilers/common
-  - transpilers/tbaf
-  - transpilers/td
 
 # Mechanical enforcement for the lockstep dependency groups documented in
 # docs/dependencies.md, plus single-version enforcement for deps that several

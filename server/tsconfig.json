@@ -13,10 +13,15 @@
         "rootDir": "..",
         "tsBuildInfoFile": "../tmp/server.tsbuildinfo",
         "paths": {
+            "@bgforge/bcs": ["../compilers/bcs/src/index.ts"],
             "@bgforge/binary/archive": ["../binary/src/archive/index.ts"],
             "@bgforge/format": ["../format/src/index.ts"],
             "@bgforge/format/internal": ["../format/src/internal.ts"],
-            "@bgforge/ssl": ["../compilers/ssl/src/index.ts"]
+            "@bgforge/ssl": ["../compilers/ssl/src/index.ts"],
+            "@bgforge/transpile": ["../transpilers/src/index.ts"],
+            "@bgforge/transpile/internal": ["../transpilers/src/internal.ts"],
+            "@bgforge/tssl": ["../compilers/tssl/src/index.ts"],
+            "@bgforge/tssl/internal": ["../compilers/tssl/src/internal.ts"]
         }
     },
     "include": [

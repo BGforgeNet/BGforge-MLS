@@ -5,7 +5,10 @@ import { coverageConfig } from "../../scripts/utils/src/vitest-coverage-config.t
 export default defineConfig({
     resolve: {
         // Tests run the compiler from source; the package's own entry is its build.
-        alias: { "@bgforge/ssl": path.resolve(import.meta.dirname, "../ssl/src/index.ts") },
+        alias: {
+            "@bgforge/ssl": path.resolve(import.meta.dirname, "../ssl/src/index.ts"),
+            "@bgforge/transpile/internal": path.resolve(import.meta.dirname, "../../transpilers/src/internal.ts"),
+        },
     },
     test: {
         name: "tssl",

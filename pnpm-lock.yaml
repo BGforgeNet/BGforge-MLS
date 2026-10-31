@@ -402,10 +402,10 @@ importers:
       '@bgforge/binary':
         specifier: workspace:*
         version: link:../binary
-    devDependencies:
       '@bgforge/shared':
         specifier: workspace:*
         version: link:../shared
+    devDependencies:
       esbuild:
         specifier: 'catalog:'
         version: 0.28.2
@@ -430,6 +430,9 @@ importers:
       '@bgforge/animation':
         specifier: workspace:*
         version: link:../animation
+      '@bgforge/bcs':
+        specifier: workspace:*
+        version: link:../compilers/bcs
       '@bgforge/binary':
         specifier: workspace:*
         version: link:../binary
@@ -503,16 +506,19 @@ importers:
 
   compilers/bcs:
     dependencies:
-      web-tree-sitter:
-        specifier: 'catalog:'
-        version: 0.27.1
-    devDependencies:
       '@bgforge/shared':
         specifier: workspace:*
         version: link:../../shared
+    devDependencies:
+      '@bgforge/binary':
+        specifier: workspace:*
+        version: link:../../binary
       vitest:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@24.19.2)(@vitest/coverage-v8@4.1.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      web-tree-sitter:
+        specifier: 'catalog:'
+        version: 0.27.1
 
   compilers/ssl:
     dependencies:
@@ -548,6 +554,9 @@ importers:
       '@bgforge/ssl':
         specifier: workspace:*
         version: link:../ssl
+      '@bgforge/transpile':
+        specifier: workspace:*
+        version: link:../../transpilers
       tsdown:
         specifier: 'catalog:'
         version: 0.23.1(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@6.0.3)
@@ -563,9 +572,6 @@ importers:
       diff:
         specifier: 'catalog:'
         version: 9.0.0
-      ini:
-        specifier: ^6.0.0
-        version: 6.0.0
       quick-lru:
         specifier: 'catalog:'
         version: 7.3.0
@@ -576,9 +582,6 @@ importers:
       '@bgforge/shared':
         specifier: workspace:*
         version: link:../shared
-      '@types/ini':
-        specifier: ^4.1.1
-        version: 4.1.1
       fast-check:
         specifier: 'catalog:'
         version: 4.10.2
@@ -662,6 +665,9 @@ importers:
         specifier: 'catalog:'
         version: 0.28.2
     devDependencies:
+      '@bgforge/bcs':
+        specifier: workspace:*
+        version: link:../compilers/bcs
       '@bgforge/binary':
         specifier: workspace:*
         version: link:../binary
@@ -674,6 +680,12 @@ importers:
       '@bgforge/ssl':
         specifier: workspace:*
         version: link:../compilers/ssl
+      '@bgforge/transpile':
+        specifier: workspace:*
+        version: link:../transpilers
+      '@bgforge/tssl':
+        specifier: workspace:*
+        version: link:../compilers/tssl
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
@@ -754,40 +766,18 @@ importers:
       fast-check:
         specifier: 'catalog:'
         version: 4.10.2
+      quick-lru:
+        specifier: 'catalog:'
+        version: 7.3.0
+      ts-morph:
+        specifier: 'catalog:'
+        version: 28.0.0
       tsdown:
         specifier: 'catalog:'
         version: 0.23.1(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@6.0.3)
       vitest:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@24.19.2)(@vitest/coverage-v8@4.1.12)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-
-  transpilers/common:
-    dependencies:
-      quick-lru:
-        specifier: 'catalog:'
-        version: 7.3.0
-    devDependencies:
-      '@bgforge/shared':
-        specifier: workspace:*
-        version: link:../../shared
-      esbuild-wasm:
-        specifier: 'catalog:'
-        version: 0.28.2
-      ts-morph:
-        specifier: 'catalog:'
-        version: 28.0.0
-
-  transpilers/tbaf:
-    devDependencies:
-      ts-morph:
-        specifier: 'catalog:'
-        version: 28.0.0
-
-  transpilers/td:
-    devDependencies:
-      ts-morph:
-        specifier: 'catalog:'
-        version: 28.0.0
 
 packages:
 
@@ -2176,9 +2166,6 @@ packages:
   '@types/hosted-git-info@3.0.5':
     resolution: {integrity: sha512-Dmngh7U003cOHPhKGyA7LWqrnvcTyILNgNPmNCxlx7j8MIi54iBliiT8XqVLIQ3GchoOjVAyBzNJVyuaJjqokg==}
 
-  '@types/ini@4.1.1':
-    resolution: {integrity: sha512-MIyNUZipBTbyUNnhvuXJTY7B6qNI78meck9Jbv3wk0OgNwRyOOVEKDutAkOs1snB/tx0FafyR6/SN4Ps0hZPeg==}
-
   '@types/is-empty@1.2.3':
     resolution: {integrity: sha512-4J1l5d79hoIvsrKh5VUKVRA1aIdsOb10Hu5j3J2VfP/msDnfTdGPmNp2E1Wg+vs97Bktzo+MZePFFXSGoykYJw==}
 
@@ -3189,10 +3176,6 @@ packages:
   ini@4.1.3:
     resolution: {integrity: sha512-X7rqawQBvfdjS10YU1y1YVreA3SsLrW9dX2CewP2EbBJM4ypVNLDkO5y04gejPwKIY9lR+7r9gn3rFPt/kmWFg==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
-
-  ini@6.0.0:
-    resolution: {integrity: sha512-IBTdIkzZNOpqm7q3dRqJvMaldXjDHWkEDfrwGEQTs5eaQMWV+djAhR+wahyNNMAa+qpbDUhBMVt4ZKNwpPm7xQ==}
-    engines: {node: ^20.17.0 || >=22.9.0}
 
   inline-style-parser@0.2.7:
     resolution: {integrity: sha512-Nb2ctOyNR8DqQoR0OwRG95uNWIC0C1lCgf5Naz5H6Ji72KZ8OcFZLz2P5sNgwlyoJ8Yif11oMuYs5pBQa86csA==}
@@ -6092,8 +6075,6 @@ snapshots:
 
   '@types/hosted-git-info@3.0.5': {}
 
-  '@types/ini@4.1.1': {}
-
   '@types/is-empty@1.2.3': {}
 
   '@types/mdast@4.0.4':
@@ -7114,8 +7095,6 @@ snapshots:
     optional: true
 
   ini@4.1.3: {}
-
-  ini@6.0.0: {}
 
   inline-style-parser@0.2.7: {}
 

@@ -1,8 +1,8 @@
 /**
  * @bgforge/transpile - public API.
  *
- * Wraps the internal transpiler workspace packages (common, tbaf, td). They stay private; their code
- * is bundled into this library at publish time.
+ * Wraps the transpilers in this package's common, tbaf and td directories, whose own modules stay
+ * internal; the in-repo plumbing consumers reach is internal.ts.
  *
  * TSSL is NOT here. It moved to `compilers/tssl` and ships as `@bgforge/tssl` with its own `tssl` bin,
  * because it is a compiler now rather than a transpiler: its default output is INT bytecode and the SSL

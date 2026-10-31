@@ -6,10 +6,10 @@
     // per-entry field map is built from the entry's own child rows keyed by semantic key (the global layout
     // `fields` map collapses every list entry to one key, so it can't render a selected entry).
     import type { DetailRow, Diagnostic, LayoutChildList, NodeId, ResolvedLayout, Row } from "@bgforge/binary-editor";
-    // Import the pure helpers from their own module, NOT the package barrel: the barrel re-exports
+    // Import the pure helpers from their own entry, NOT the package barrel: the barrel re-exports
     // dispatch/openSession (protocol/session), which transitively pull node `fs`/`path` and would break the
     // browser webview bundle. `detail-layout.ts` only type-imports binary, so its graph stays browser-safe.
-    import { buildDetailFieldMap, collectEntryRows, detailVariantResolves } from "@bgforge/binary-editor/src/detail-layout";
+    import { buildDetailFieldMap, collectEntryRows, detailVariantResolves } from "@bgforge/binary-editor/detail-layout";
     import type { Bridge } from "../state/bridge";
     import { fetchAllRows } from "../state/list-window";
     import LayoutRenderer from "./LayoutRenderer.svelte";

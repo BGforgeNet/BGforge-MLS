@@ -14,7 +14,7 @@
 
 import { Node, Project, SyntaxKind } from "ts-morph";
 import { EXT_TD } from "../../common/extensions";
-import { createTranspiler, type TranspilerEvent } from "../../common/transpiler-pipeline";
+import { createTranspiler } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
 import { TranspileError } from "../../common/transpile-error";
 import type { SourcePosition } from "../../common/line-map";
@@ -38,14 +38,6 @@ interface EmittedD {
     output: string;
     warnings: TDWarning[];
     origins: readonly LineOrigin[];
-}
-
-interface TDCompileResult {
-    dPath: string;
-    warnings: TDWarning[];
-    events: readonly TranspilerEvent[];
-    /** For each line of the generated D, the file and 0-based line the author wrote it on. */
-    sourceMap: ReadonlyArray<SourcePosition | undefined>;
 }
 
 const td = createTranspiler<TDTranspileResult>({
@@ -102,16 +94,6 @@ function parseBundled(bundled: string, text: string, filePath: string, traTag: s
     const emitted = emitD(ir);
 
     return { output: emitted.text, warnings, origins: emitted.origins };
-}
-
-/**
- * Compile a TD file to D, writing the output to disk.
- * @deprecated `transpile` plus a write to `outputPathFor(path)` does the same. Removed in the next major
- * version.
- */
-export async function compile(uri: string, text: string): Promise<TDCompileResult> {
-    const { outPath, result, events } = await td.compile(uri, text);
-    return { dPath: outPath, warnings: result.warnings, events, sourceMap: result.sourceMap };
 }
 
 /**

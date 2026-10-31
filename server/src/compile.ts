@@ -19,8 +19,7 @@ import { getDocumentSettings } from "./settings-service";
 // NOT the `@bgforge/transpile` barrel: that barrel imports both transpilers, so reaching it for a path
 // helper or an error class would pull ts-morph back into the server bundle - which is the whole point of
 // the worker. Leaf modules only.
-import { outputPathFor } from "../../transpilers/common/output-path";
-import { TranspileError } from "../../transpilers/common/transpile-error";
+import { outputPathFor, TranspileError } from "@bgforge/transpile/internal";
 import { transpileOnWorker } from "./transpile/transpile-worker-client";
 // TSSL is a compiler rather than one of the transpilers above, so it does not come from that barrel and
 // does not chain through a generated file: `compileTsslToInt` produces the bytecode itself.

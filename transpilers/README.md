@@ -107,13 +107,17 @@ and emitting the readable `.ssl` is one option of it (`tssl --ssl`). See
 
 This section describes the repository source, not the published package.
 
+- **One package**: `common/`, `tbaf/` and `td/` are directories of `@bgforge/transpile`, not packages of their own.
+  The public API is `src/index.ts`. `src/internal.ts` is the second entry point, `@bgforge/transpile/internal`: the
+  pipeline, error type, line provenance, output-path mapping, shared parse project and TD warning shape that the
+  BGforge MLS server and the TSSL compiler build on. It has no semver promise and ships no type declarations.
 - **Shared pipeline** (`transpilers/common/transpiler-pipeline.ts`): `createTranspiler()` handles extension
-  validation, `@tra` tag extraction, file I/O and structured compile events, and never writes to stdout. TBAF, TD
-  and the TSSL compiler all build on it.
+  validation and `@tra` tag extraction, and never writes to stdout. TBAF, TD and the TSSL compiler all build on it;
+  only the TSSL compiler's `compile()` uses its file-writing variant.
 - **Shared bundler** (`transpilers/common/bundle.ts`): used by TBAF and TD. TSSL resolves imports through the
   TypeScript checker instead (`compilers/tssl/src/program-model.ts`).
 - **Per-language IR**: TBAF has a structured IR with condition algebra (boolean conditions to CNF for BAF `OR`
   groups); TD has state and transition resolution, method-chain parsing and orphan detection.
 
 `transpilers/common/` plays the role the rest of the repo names "shared". The name stays: renaming it would churn
-every importer plus the `@bgforge/transpiler-common` package name for no functional gain.
+every importer for no functional gain.

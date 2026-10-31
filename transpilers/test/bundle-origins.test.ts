@@ -53,7 +53,6 @@ describe("bundleWithEsbuild line origins", () => {
             filePath: mainPath,
             sourceText: MAIN,
             marker: MARKER,
-            target: "esnext",
         });
 
         const lines = result.code.split("\n");
@@ -77,7 +76,6 @@ describe("bundleWithEsbuild line origins", () => {
             filePath: mainPath,
             sourceText: MAIN,
             marker: MARKER,
-            target: "esnext",
         });
 
         const lines = result.code.split("\n");
@@ -101,7 +99,6 @@ describe("bundleWithEsbuild line origins", () => {
             filePath: enumPath,
             sourceText: withEnum,
             marker: MARKER,
-            target: "esnext",
         });
 
         const index = result.code.split("\n").findIndex((line) => line.includes("333"));
@@ -118,7 +115,6 @@ describe("bundleWithEsbuild line origins", () => {
             filePath: mainPath,
             sourceText: MAIN,
             marker: MARKER,
-            target: "esnext",
         });
 
         const lines = result.code.split("\n");

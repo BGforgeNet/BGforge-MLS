@@ -22,8 +22,7 @@ import { exportSSL } from "./emit";
 import { buildProgramModel } from "./program-model";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh, and inlined into every bundle.
 import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
-import type { SourcePosition } from "../../../transpilers/common/line-map";
-import { createTranspiler, type TranspilerEvent } from "../../../transpilers/common/transpiler-pipeline";
+import { createTranspiler, type SourcePosition, type TranspilerEvent } from "@bgforge/transpile/internal";
 
 // Part of the package's public surface: a caller compiling more than once passes one of these in.
 export { createBatchState, type TranspileBatchState } from "./batch";
