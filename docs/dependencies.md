@@ -94,10 +94,8 @@ So, per bump:
   `.wasm` are gitignored. A CLI release can change highlight captures, fixes included, so re-run
   `pnpm build:grammar && pnpm test:grammars` before moving the pin, and change a corpus expectation only where the
   grammar rule confirms the new capture.
-- `knip` is tilde-pinned. A newer minor false-flags deps imported only from `.svelte` files as unused; the rationale,
-  the version last re-tested and the re-test procedure live at the top of `knip.ts`, beside the config the reports
-  would otherwise be silenced in. The range is deliberately a tilde: under a caret the hold would rest on the lockfile
-  alone and `pnpm update` would walk straight past it.
+- `knip` is exact-pinned, as the linters below are: its findings move between releases. Some releases misread
+  `.svelte` imports; the check to run after a bump is at the top of `knip.ts`.
 - `scslre` moves with `eslint-plugin-regexp`: it is the analyser behind the plugin's two ReDoS rules, and
   `scripts/utils/test/syntaxes-backtracking.test.ts` runs it over the TextMate grammars so the grammars and the
   TypeScript regexes meet one bar. Keep it at the version the plugin resolves.

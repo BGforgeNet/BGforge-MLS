@@ -1,13 +1,9 @@
 import type { KnipConfig } from "knip";
 
-// knip is held at ~6.25.0: 6.26.0 regressed its .svelte import parsing and
-// false-flags genuinely-used deps imported only from .svelte files
-// (@xyflow/svelte, bits-ui) as unused. Re-test .svelte dependency detection
-// before moving past 6.25.x. Still reproduces on 6.35.1 (re-tested 2026-09-17),
-// so the hold is not a stale pin - the two reports are the whole reason for it,
-// and silencing them via ignoreDependencies would blind the check for real.
-// The range is a TILDE, not a caret: a caret leaves the hold resting on whatever
-// the lockfile happens to say, and the next `pnpm update` walks straight past it.
+// knip is exact-pinned, since its findings move between releases. Releases from 6.26.0 to at least 6.35.1 misread
+// .svelte imports and reported @xyflow/svelte and bits-ui, imported only from .svelte files, as unused. After a bump,
+// `pnpm exec knip --trace-dependency bits-ui` must still list the .svelte importers; never silence the report through
+// ignoreDependencies, which would blind the check for real.
 
 const isProductionKnip = process.argv.includes("--production");
 
@@ -104,13 +100,6 @@ const config: KnipConfig = {
             ],
             // Created at runtime by enum-transform.test.ts, may exist during parallel Knip runs
             ignore: [
-                "**/*.d.ts",
-                // Built JS bundles (knip 6.6+ reports these as unused files otherwise).
-                // Pattern is only present when build has run; knip hints "Remove from ignore"
-                // before build, but the ignore is still required after build.
-                "out/**",
-                // Bench files invoked explicitly; not reachable from server.ts entry
-                "test/perf/**",
                 // Started as a worker thread by path from the worker-client tests, never imported.
                 "test/worker/fixtures/**",
                 // In production mode test files are not entries, so any non-.test.ts helper under test/
@@ -139,8 +128,6 @@ const config: KnipConfig = {
             // The tests are entry points of their own; nothing in src imports them. The CLI needs no
             // entry - knip reads it from the package's `bin`.
             entry: ["test/*.test.ts"],
-            // Bench files invoked explicitly; not reachable from any declared entry point.
-            ignore: ["test/perf/**"],
             ignoreDependencies: sharedCliDependencies,
         },
         "transpilers/tbaf": {
@@ -154,12 +141,7 @@ const config: KnipConfig = {
         },
         transpilers: {
             entry: ["test/**/*.test.ts"],
-            // esbuild-wasm is listed as a runtime dependency so the published bundle can
-            // resolve it from node_modules (it refuses to be inlined - see tsdown.config.ts).
-            // Knip sees no TS import within this workspace because the import lives in
-            // transpilers/common (a separate workspace); ignoreDependencies suppresses the
-            // false-positive "unused dependency" report.
-            ignoreDependencies: ["esbuild-wasm", ...sharedCliDependencies],
+            ignoreDependencies: sharedCliDependencies,
             // test/fixtures holds bundler inputs, which the tests hand to esbuild as file PATHS rather
             // than importing - so no TS import reaches them and knip reads them as unused files.
             ignore: ["test/fixtures/**"],
@@ -212,16 +194,14 @@ const config: KnipConfig = {
             // its page entries as paths. Entries rather than ignored, so the Playwright, esbuild and Svelte
             // dependencies only the harness imports count as used.
             entry: ["test/**/*.test.ts", "test/harness/*.mts", "test/harness/*-main.ts"],
-            // Bench files invoked explicitly; not reachable from any declared entry point. test/fixtures
-            // holds fixture data plus standalone generators run via `pnpm exec tsx`, not imported by tests.
-            ignore: ["test/perf/**", "test/fixtures/**"],
+            // test/fixtures holds fixture data plus standalone generators run via `pnpm exec tsx`, not imported
+            // by tests.
+            ignore: ["test/fixtures/**"],
         },
     },
     ignore: [
         // tree-sitter grammars, not TypeScript
         "grammars/**",
-        // external repositories cloned for testing
-        "external/**",
         // ambient declarations for the sibling esbuild plugin .mjs files, read by tsc only
         "scripts/*.d.mts",
     ],
