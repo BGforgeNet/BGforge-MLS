@@ -1,6 +1,6 @@
 /**
  * Barrel re-export for the PRO canonical data model.
- * Split into: pro-canonical-schemas.ts, pro-canonical-reader.ts, pro-canonical-writer.ts.
+ * Split into: canonical-schemas.ts, canonical-reader.ts, canonical-writer.ts.
  * This file preserves the public surface for all existing importers.
  */
 

@@ -68,7 +68,7 @@ With no mode flag, the JSON snapshot is printed to stdout.
   (`.pro.json` / `.map.json` / `.itm.json` / `.spl.json` / `.eff.json` / `.cre.json` / `.dlg.json`)
 - `--check` - exit 1 if the binary does not match its existing JSON snapshot
 - `--load` - read a JSON snapshot and write the binary back out using the
-  parser's native extension
+  parser's native extension. Ignores `-r`, `-q`, `--jobs`, `--proto-dir` and `--graceful-map`
 - `--parse-only` - parse and report errors without building the snapshot; the
   exit code is the verdict. Cannot be combined with `--save`, `--check` or `--load`
 - `--graceful-map` - opt into permissive MAP boundary guessing for ambiguous

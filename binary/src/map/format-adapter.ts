@@ -26,7 +26,16 @@ import {
 } from "./object-ops";
 import { mapCompiledPatternFields, mapDomainRanges, mapPresentationSchema } from "./presentation-schema";
 import { mapLayout } from "./layout-schema";
-import { slugify } from "../spec/presentation";
+import { fieldLabel, slugify } from "../spec/presentation";
+import { indexedChildGroups } from "./parse-helpers";
+import {
+    elevationObjectsPresentation,
+    mapGroupLabels,
+    objectsSectionPresentation,
+    SCRIPT_EXTENT_SLOTS,
+    scriptExtentPresentation,
+    scriptListPresentation,
+} from "./specs/sections";
 
 function mapSemanticFieldKey(segments: readonly string[]): string | undefined {
     if (segments.length === 0) {
@@ -128,7 +137,7 @@ function isGroup(entry: ParsedField | ParsedGroup): entry is ParsedGroup {
 
 /** Receives projected children (after field hiding), not the raw parser group. */
 function shouldHideMapGroup(entry: ParsedGroup): boolean {
-    if (!entry.name.endsWith("Scripts")) {
+    if (!mapGroupLabels.isScriptList(entry.name)) {
         return false;
     }
     if (entry.fields.length !== 1) {
@@ -136,7 +145,10 @@ function shouldHideMapGroup(entry: ParsedGroup): boolean {
     }
     const [firstField] = entry.fields;
     return (
-        firstField !== undefined && !isGroup(firstField) && firstField.name === "Script Count" && firstField.value === 0
+        firstField !== undefined &&
+        !isGroup(firstField) &&
+        firstField.name === fieldLabel(scriptListPresentation, "scriptCount") &&
+        firstField.value === 0
     );
 }
 
@@ -163,9 +175,12 @@ function projectObjectsSection(
     ) => ProjectedEntry | undefined,
 ): ProjectedEntry[] {
     const out: ProjectedEntry[] = [];
-    const totalObjects = section.fields.find((f): f is ParsedField => !isGroup(f) && f.name === "Total Objects");
-    const elevationGroups = section.fields.filter(
-        (f): f is ParsedGroup => isGroup(f) && /^Elevation \d+ Objects$/.test(f.name),
+    const totalLabel = fieldLabel(objectsSectionPresentation, "totalObjects");
+    const countLabel = fieldLabel(elevationObjectsPresentation, "objectCount");
+    const totalObjects = section.fields.find((f): f is ParsedField => !isGroup(f) && f.name === totalLabel);
+    const elevationGroups = indexedChildGroups(
+        section,
+        (name, index) => name === mapGroupLabels.elevationObjects(index),
     );
 
     // sourceSegments stay rooted at the raw "Objects Section" path so a projected
@@ -176,17 +191,17 @@ function projectObjectsSection(
     if (totalObjects) {
         countChildren.push({
             kind: "field",
-            entry: readonlyCountField("Total Objects", totalObjects),
-            sourceSegments: [SECTION, "Total Objects"],
+            entry: readonlyCountField(totalLabel, totalObjects),
+            sourceSegments: [SECTION, totalLabel],
         });
     }
     elevationGroups.forEach((g, i) => {
-        const c = g.fields.find((f): f is ParsedField => !isGroup(f) && f.name === "Object Count");
+        const c = g.fields.find((f): f is ParsedField => !isGroup(f) && f.name === countLabel);
         if (c) {
             countChildren.push({
                 kind: "field",
-                entry: readonlyCountField(`Elevation ${i} Object Count`, c),
-                sourceSegments: [SECTION, g.name, "Object Count"],
+                entry: readonlyCountField(`Elevation ${i} ${countLabel}`, c),
+                sourceSegments: [SECTION, g.name, countLabel],
             });
         }
     });
@@ -200,7 +215,7 @@ function projectObjectsSection(
 
     for (const g of elevationGroups) {
         const children = g.fields
-            .filter((f) => isGroup(f) || f.name !== "Object Count")
+            .filter((f) => isGroup(f) || f.name !== countLabel)
             .map((c) => projectEntry(parseResult, c, [SECTION, g.name, c.name]))
             .filter((c): c is ProjectedEntry => c !== undefined);
         out.push({ kind: "group", entry: g, sourceSegments: [SECTION, g.name], children });
@@ -230,20 +245,28 @@ function projectScriptsSection(
 ): ProjectedEntry {
     const SECTION = section.name;
     // "Item Scripts" -> "Item": the per-entry label prefix so each script self-describes its type.
-    const scriptType = SECTION.replace(/ Scripts$/, "");
+    const scriptType = mapGroupLabels.scriptListType(SECTION);
     const slotChildren: ProjectedEntry[] = [];
     let globalIndex = 0;
-    for (const extent of section.fields) {
-        if (!isGroup(extent) || !/^Extent \d+$/.test(extent.name)) continue;
+    const extents = indexedChildGroups(section, (name, index) => name === mapGroupLabels.extent(index));
+    for (const [extentIndex, extent] of extents.entries()) {
         // Each extent is padded to 16 physical slots on disk; only the first `Extent Length` are real scripts
         // (the rest are leftover bytes that round-trip via the canonical document but are NOT scripts). Lift
         // only the used slots - otherwise the list and the tab count are inflated by the padding. Clamp
         // defensively (a broken map can store a garbage length).
-        const extentLength = extent.fields.find((f): f is ParsedField => !isGroup(f) && f.name === "Extent Length");
-        const used = Math.max(0, Math.min(16, typeof extentLength?.value === "number" ? extentLength.value : 16));
-        const slots = extent.fields.filter((f): f is ParsedGroup => isGroup(f) && /^Slot \d+$/.test(f.name));
+        const lengthLabel = fieldLabel(scriptExtentPresentation, "extentLength");
+        const extentLength = extent.fields.find((f): f is ParsedField => !isGroup(f) && f.name === lengthLabel);
+        const used = Math.max(
+            0,
+            Math.min(
+                SCRIPT_EXTENT_SLOTS,
+                typeof extentLength?.value === "number" ? extentLength.value : SCRIPT_EXTENT_SLOTS,
+            ),
+        );
+        const slots = indexedChildGroups(extent, (name, index) => name === mapGroupLabels.slot(index));
         for (let i = 0; i < Math.min(used, slots.length); i++) {
             const slot = slots[i]!;
+            const entryPrefix = `${mapGroupLabels.slotEntry(extentIndex * SCRIPT_EXTENT_SLOTS + i)} `;
             // Relabel to "<Type> Script <globalIndex>" (e.g. "Item Script 7") so the entry self-describes its
             // script type out of the subtab context, and strip the per-slot "Entry N " prefix from each field
             // label - it was the slot's storage index, now redundant since the entry names itself. The semantic
@@ -253,7 +276,9 @@ function projectScriptsSection(
             const relabeled: ParsedGroup = {
                 ...slot,
                 name: `${scriptType} Script ${globalIndex}`,
-                fields: slot.fields.map((f) => ({ ...f, name: f.name.replace(/^Entry \d+ /, "") })),
+                fields: slot.fields.map((f) =>
+                    f.name.startsWith(entryPrefix) ? { ...f, name: f.name.slice(entryPrefix.length) } : f,
+                ),
             };
             const projected = projectEntry(parseResult, relabeled, [SECTION, extent.name, slot.name]);
             if (projected) slotChildren.push(projected);
@@ -323,7 +348,7 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
                 continue;
             }
 
-            if (isGroup(entry) && entry.name === "Objects Section") {
+            if (isGroup(entry) && entry.name === mapGroupLabels.objectsSection) {
                 projectedFields.push(...projectObjectsSection(parseResult, entry, projectEntry));
                 continue;
             }
@@ -332,8 +357,8 @@ export const mapFormatAdapter: BinaryFormatAdapter = {
             // extents) falls through to projectEntry, where shouldHideGroup hides it.
             if (
                 isGroup(entry) &&
-                entry.name.endsWith("Scripts") &&
-                entry.fields.some((f) => isGroup(f) && /^Extent \d+$/.test(f.name))
+                mapGroupLabels.isScriptList(entry.name) &&
+                entry.fields.some((f) => isGroup(f) && f.name === mapGroupLabels.extent(0))
             ) {
                 projectedFields.push(projectScriptsSection(parseResult, entry, projectEntry));
                 continue;

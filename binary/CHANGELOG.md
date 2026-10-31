@@ -2,6 +2,26 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
+## Unreleased
+
+### Changed
+
+- `createBinaryJsonSnapshot` and `loadBinaryJsonSnapshot` refuse a format with no registered format adapter
+  (`No format adapter is registered for format "<id>"`) instead of writing or reading a generic display-tree
+  snapshot. Every built-in format registers one.
+- A `weidu.conf`, `baldur.ini`, `lang` folder or other folder of the game that is present but unreadable is refused
+  by name (`Cannot read <path>: EACCES`, `Cannot list <path>: EACCES`) instead of being treated as absent.
+- `Tlk.search` refuses an entry whose text runs past the end of the file, as `Tlk.get` does, instead of matching
+  the text cut short; both name the entry.
+
+### Fixed
+
+- Opening a BIF or TLK closes the file when it refuses it. A game read a corrupt BIF again on every read of a
+  resource in it, leaving a file descriptor open each time; it now keeps the refusal.
+- `fgbin --load` reads the snapshot named on the command line, not the value of a flag before it:
+  `fgbin --load --proto-dir <dir> file.json` used to read `<dir>`. `--help` says which options `--load` ignores.
+- `fgbin --help` lists every option in its usage line.
+
 ## 0.9.0
 
 ### Changed

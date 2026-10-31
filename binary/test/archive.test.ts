@@ -247,6 +247,20 @@ function sampleBif(): Uint8Array {
     );
 }
 
+/** An in-memory source that counts its `close` calls, to check an open releases the source it was handed. */
+function trackedSource(bytes: Uint8Array): { source: ByteSource; closes: () => number } {
+    const inner = bufferSource(bytes);
+    let closes = 0;
+    const source: ByteSource = {
+        size: inner.size,
+        read: (offset, length) => inner.read(offset, length),
+        close: () => {
+            closes++;
+        },
+    };
+    return { source, closes: () => closes };
+}
+
 function sampleKey(): Uint8Array {
     return buildKey(
         [{ name: "data\\test.bif", fileLength: 999 }],
@@ -447,6 +461,45 @@ describe("openBif (compressed)", () => {
     });
 });
 
+// A game opens a BIF over a file descriptor, so a refusal that keeps the source open leaks one per attempt.
+describe("openBif releases its source", () => {
+    const truncatedWhole = buildBifcWhole(sampleBif());
+    const truncatedBlocks = buildBifcBlocks(sampleBif());
+    it.each([
+        [
+            "shorter than a signature",
+            Uint8Array.from([0x42, 0x49]),
+            "Read out of bounds: offset=0 length=4 exceeds size=2",
+        ],
+        ["a plain BIF cut off before its file table", sampleBif().subarray(0, 24), /^Read out of bounds: offset=20 /],
+        ["an unrecognized signature", new Uint8Array(16), 'Unrecognized BIF signature "\0\0\0\0"'],
+        ["a BIF V1.0 stream cut short", truncatedWhole.subarray(0, truncatedWhole.byteLength - 4), /^unexpected end/],
+        [
+            "a BIFC V1.0 archive cut off",
+            truncatedBlocks.subarray(0, truncatedBlocks.byteLength - 4),
+            /runs past the end/,
+        ],
+    ])("closes it when refusing %s", (_name, bytes, message) => {
+        const { source, closes } = trackedSource(bytes);
+        expect(() => openBif(source)).toThrow(message);
+        expect(closes()).toBe(1);
+    });
+
+    it("keeps a plain BIF's source open until the archive closes", () => {
+        const { source, closes } = trackedSource(sampleBif());
+        const bif = openBif(source);
+        expect(closes()).toBe(0);
+        bif.close();
+        expect(closes()).toBe(1);
+    });
+
+    it("closes a compressed BIF's source once it is inflated", () => {
+        const { source, closes } = trackedSource(buildBifcWhole(sampleBif()));
+        openBif(source).close();
+        expect(closes()).toBe(1);
+    });
+});
+
 describe("byte-source bounds", () => {
     it("throws on an out-of-bounds read", () => {
         const src = bufferSource(Uint8Array.from([1, 2, 3]));
@@ -502,6 +555,25 @@ describe("TLK (dialog.tlk)", () => {
     it("throws on an unsupported encoding label", () => {
         // TextDecoder's own rejection; the class is the stable part of it, the wording is the runtime's.
         expect(() => parseTlk(buildTlk(["x"]), { encoding: "not-an-encoding" })).toThrow(RangeError);
+    });
+
+    it("closes its source when refusing a file shorter than the header or an unsupported encoding", () => {
+        const short = trackedSource(buildTlk(["x"]).subarray(0, 10));
+        expect(() => openTlk(short.source)).toThrow("Read out of bounds: offset=0 length=18 exceeds size=10");
+        expect(short.closes()).toBe(1);
+
+        const badLabel = trackedSource(buildTlk(["x"]));
+        expect(() => openTlk(badLabel.source, { encoding: "not-an-encoding" })).toThrow(RangeError);
+        expect(badLabel.closes()).toBe(1);
+    });
+
+    // Strings start at 18 + 26 = 44; "Hello" ends the file at 49, and the entry claims 1000 bytes of it.
+    it("refuses an entry whose text runs past the file, naming the entry, in get and search alike", async () => {
+        const bytes = buildTlk(["Hello"]);
+        new DataView(bytes.buffer).setUint32(18 + 22, 1000, true);
+        const message = "TLK entry 0 text region [44, 1044) exceeds file size 49";
+        expect(() => parseTlk(bytes).get(0)).toThrow(new RangeError(message));
+        await expect(parseTlk(bytes).search("H")).rejects.toThrow(new RangeError(message));
     });
 
     describe("search", () => {
@@ -851,6 +923,77 @@ describe("openGame (real filesystem)", () => {
         } finally {
             game.close();
         }
+    });
+
+    // Each read of a resource in a corrupt BIF used to open the file again and leave the descriptor behind.
+    it.skipIf(!fs.existsSync("/proc/self/fd"))(
+        "refuses a corrupt BIF on every read without leaking a descriptor",
+        () => {
+            const dir = makeGameDir();
+            const bifPath = path.join(dir, "data", "test.bif");
+            fs.writeFileSync(bifPath, sampleBif().subarray(0, 24));
+            const openFds = (): number => fs.readdirSync("/proc/self/fd").length;
+            const game = openGame(dir);
+            try {
+                const before = openFds();
+                for (let attempt = 0; attempt < 3; attempt++) {
+                    expect(() => game.read("item01", "itm")).toThrow(`${bifPath}: Read out of bounds: offset=20 `);
+                }
+                expect(openFds()).toBe(before);
+            } finally {
+                game.close();
+            }
+        },
+    );
+
+    // Absent is an answer; present but unreadable is a fault, and reading it as absent would quietly change what
+    // the game resolves to. Permission bits do not bind root, and Windows has no chmod 000.
+    describe.skipIf(process.getuid?.() === 0 || process.platform === "win32")("unreadable inputs", () => {
+        const locked: string[] = [];
+        afterEach(() => {
+            for (const p of locked.splice(0)) fs.chmodSync(p, 0o755);
+        });
+        const lock = (p: string): void => {
+            fs.chmodSync(p, 0o000);
+            locked.push(p);
+        };
+        const ee: KeyRes[] = [{ resref: "OH1000", type: RESTYPE_ARE, bifIndex: 0, tilesetIndex: 0, fileIndex: 9 }];
+
+        it("refuses an unreadable weidu.conf, naming it", () => {
+            const dir = makeGameDir(
+                { "lang/en_US/dialog.tlk": buildTlk(["English"]), "weidu.conf": new Uint8Array() },
+                ee,
+            );
+            lock(path.join(dir, "weidu.conf"));
+            expect(() => openGame(dir)).toThrow(`Cannot read ${path.join(dir, "weidu.conf")}: EACCES`);
+        });
+
+        it("refuses an unreadable lang folder, naming it", () => {
+            const dir = makeGameDir({ "lang/en_US/dialog.tlk": buildTlk(["English"]) }, ee);
+            lock(path.join(dir, "lang"));
+            expect(() => openGame(dir)).toThrow(`Cannot list ${path.join(dir, "lang")}: EACCES`);
+        });
+
+        it("refuses an unreadable baldur.ini, naming it", () => {
+            const dir = makeGameDir({ "baldur.ini": new Uint8Array() });
+            lock(path.join(dir, "baldur.ini"));
+            expect(() => openGame(dir)).toThrow(`Cannot read ${path.join(dir, "baldur.ini")}: EACCES`);
+        });
+
+        it("refuses a game folder it cannot list, naming it", () => {
+            const dir = makeGameDir();
+            lock(path.join(dir, "data"));
+            expect(() => openGame(dir)).toThrow(`Cannot list ${path.join(dir, "data")}: EACCES`);
+        });
+
+        it("still reads a missing weidu.conf as absent", () => {
+            const game = openGame(makeGameDir({ "lang/en_US/dialog.tlk": buildTlk(["English"]) }, ee));
+            try {
+                expect(game.tlk()?.get(0)).toBe("English");
+            } finally {
+                game.close();
+            }
+        });
     });
 
     // The read of an auxiliary file takes the same plain file name its write does - not a path into

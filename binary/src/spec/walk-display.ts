@@ -1,6 +1,6 @@
 import { codecByteLength, codecNumericTypeName } from "./codec-meta";
 import { flagArrayToInt, intToFlagArray, type FlagArray } from "./coded-projection";
-import { humanize, type FieldPresentation, type StructPresentation } from "./presentation";
+import { fieldLabel, type FieldPresentation, type StructPresentation } from "./presentation";
 import { stringifyKeys } from "../presentation-schema-types";
 import {
     isArraySpec,
@@ -52,8 +52,7 @@ export function walkGroup<S extends Record<string, FieldSpec>>(
             // through a typed-binary read instead.
             throw new Error(`walkGroup: chars field "${key}" is not supported; read the bytes through the codec.`);
         }
-        const presKey = key as keyof SpecData<S>;
-        const label = presentation[presKey]?.label ?? humanize(key);
+        const label = fieldLabel(presentation, key as keyof SpecData<S> & string);
         const found = byName.get(label);
         if (!found) {
             throw new Error(
@@ -112,8 +111,7 @@ export function structFromDisplay<S extends Record<string, FieldSpec>>(
                 `structFromDisplay: array field "${key}" is not supported; iterate the array group at the call site.`,
             );
         }
-        const presKey = key as keyof SpecData<S>;
-        const label = presentation[presKey]?.label ?? humanize(key);
+        const label = fieldLabel(presentation, key as keyof SpecData<S> & string);
         const found = byName.get(label);
         if (!found) {
             throw new Error(
@@ -216,7 +214,7 @@ function buildWalkPlan<TSpec>(spec: StructSpec<TSpec>, presentation: StructPrese
             key: k,
             fs: f,
             pres: presentation[k],
-            baseLabel: presentation[k]?.label ?? humanize(k),
+            baseLabel: fieldLabel(presentation, k),
             fixedSize,
             advance,
         });

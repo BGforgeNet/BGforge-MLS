@@ -4,39 +4,47 @@
  */
 
 import type { ParsedGroup } from "../types";
-import { makeGroup, noteField, fieldNumber, PID_TYPE_MISC, TRUNCATED_SENTINEL } from "./parse-helpers";
+import { fieldLabel } from "../spec/presentation";
+import {
+    makeGroup,
+    noteField,
+    fieldNumber,
+    elevationObjectGroups,
+    indexedChildGroups,
+    PID_TYPE_MISC,
+    TRUNCATED_SENTINEL,
+} from "./parse-helpers";
+import { objectBasePresentation } from "./specs/object";
+import { elevationObjectsPresentation, mapGroupLabels, objectsSectionPresentation } from "./specs/sections";
 
-function findFirstObjectGroup(group: ParsedGroup): ParsedGroup | undefined {
-    for (const entry of group.fields) {
-        if (!("fields" in entry)) {
-            continue;
-        }
+function elevationGroups(objectsGroup: ParsedGroup): ParsedGroup[] {
+    return indexedChildGroups(objectsGroup, (name, index) => name === mapGroupLabels.elevationObjects(index));
+}
 
-        if (/^Object \d+\.\d+ /.test(entry.name)) {
-            return entry;
-        }
-
-        const nested = findFirstObjectGroup(entry);
-        if (nested) {
-            return nested;
-        }
+/** The first decoded object of the lowest elevation that has one. */
+function findFirstObjectGroup(objectsGroup: ParsedGroup): ParsedGroup | undefined {
+    for (const [elevation, group] of elevationGroups(objectsGroup).entries()) {
+        const first = elevationObjectGroups(group, elevation)[0];
+        if (first) return first;
     }
-
     return undefined;
 }
 
 export function buildOpaqueObjectsGroup(offset: number): ParsedGroup {
-    return makeGroup("Objects Section", [
-        { name: "Total Objects", value: 0, offset, size: 0, type: "int32" as const },
-        makeGroup("Elevation 0 Objects", [
-            { name: "Object Count", value: 0, offset: offset + 4, size: 0, type: "int32" as const },
-        ]),
-        makeGroup("Elevation 1 Objects", [
-            { name: "Object Count", value: 0, offset: offset + 8, size: 0, type: "int32" as const },
-        ]),
-        makeGroup("Elevation 2 Objects", [
-            { name: "Object Count", value: 0, offset: offset + 12, size: 0, type: "int32" as const },
-        ]),
+    const objectCount = fieldLabel(elevationObjectsPresentation, "objectCount");
+    return makeGroup(mapGroupLabels.objectsSection, [
+        {
+            name: fieldLabel(objectsSectionPresentation, "totalObjects"),
+            value: 0,
+            offset,
+            size: 0,
+            type: "int32" as const,
+        },
+        ...[0, 1, 2].map((elevation) =>
+            makeGroup(mapGroupLabels.elevationObjects(elevation), [
+                { name: objectCount, value: 0, offset: offset + 4 + elevation * 4, size: 0, type: "int32" as const },
+            ]),
+        ),
         noteField(
             TRUNCATED_SENTINEL,
             `Unable to confidently decode object section: script/object boundary is ambiguous near offset 0x${offset.toString(16)}; preserving remaining bytes opaquely`,
@@ -46,9 +54,8 @@ export function buildOpaqueObjectsGroup(offset: number): ParsedGroup {
 }
 
 function objectCountNumbers(objectsGroup: ParsedGroup): number[] {
-    return objectsGroup.fields
-        .filter((entry): entry is ParsedGroup => "fields" in entry && /^Elevation \d+ Objects$/.test(entry.name))
-        .map((entry) => fieldNumber(entry, "Object Count"))
+    return elevationGroups(objectsGroup)
+        .map((entry) => fieldNumber(entry, elevationObjectsPresentation, "objectCount"))
         .filter((value): value is number => value !== undefined);
 }
 
@@ -57,13 +64,7 @@ function hasTruncatedNote(group: ParsedGroup): boolean {
 }
 
 export function isConfidentObjectsGroup(objectsGroup: ParsedGroup): boolean {
-    const totalObjectsEntry = objectsGroup.fields.find(
-        (entry) => !("fields" in entry) && entry.name === "Total Objects",
-    );
-    const totalObjects =
-        totalObjectsEntry && !("fields" in totalObjectsEntry) && typeof totalObjectsEntry.value === "number"
-            ? totalObjectsEntry.value
-            : undefined;
+    const totalObjects = fieldNumber(objectsGroup, objectsSectionPresentation, "totalObjects");
 
     if (totalObjects === undefined || totalObjects < 0) {
         return false;
@@ -84,9 +85,9 @@ export function isConfidentObjectsGroup(objectsGroup: ParsedGroup): boolean {
         return totalObjects === 0 && !hasTruncatedNote(objectsGroup);
     }
 
-    const rotation = fieldNumber(firstObject, "Rotation");
-    const elevation = fieldNumber(firstObject, "Elevation");
-    const pid = fieldNumber(firstObject, "PID");
+    const rotation = fieldNumber(firstObject, objectBasePresentation, "rotation");
+    const elevation = fieldNumber(firstObject, objectBasePresentation, "elevation");
+    const pid = fieldNumber(firstObject, objectBasePresentation, "pid");
 
     if (rotation === undefined || rotation < 0 || rotation > 5) {
         return false;
@@ -108,13 +109,7 @@ export function scoreParsedTail(scriptTypeCount: number, scriptErrors: string[],
     let score = -scriptErrors.length * 100000;
     score += (6 - scriptTypeCount) * 5;
 
-    const totalObjectsEntry = objectsGroup.fields.find(
-        (entry) => !("fields" in entry) && entry.name === "Total Objects",
-    );
-    const totalObjects =
-        totalObjectsEntry && !("fields" in totalObjectsEntry) && typeof totalObjectsEntry.value === "number"
-            ? totalObjectsEntry.value
-            : undefined;
+    const totalObjects = fieldNumber(objectsGroup, objectsSectionPresentation, "totalObjects");
 
     if (totalObjects !== undefined && totalObjects >= 0) {
         score += 50;
@@ -155,27 +150,28 @@ export function scoreParsedTail(scriptTypeCount: number, scriptErrors: string[],
         return score;
     }
 
-    if (!firstObject.name.includes("Type")) {
+    const pid = fieldNumber(firstObject, objectBasePresentation, "pid");
+    // A PID type `objectTypeName` names (0-5); -1 and higher types read as "TypeN".
+    const pidType = pid === undefined ? undefined : (pid >>> 24) & 0xff;
+    if (pidType !== undefined && pidType <= PID_TYPE_MISC) {
         score += 100;
     }
 
-    const rotation = fieldNumber(firstObject, "Rotation");
+    const rotation = fieldNumber(firstObject, objectBasePresentation, "rotation");
     if (rotation !== undefined) {
         score += rotation >= 0 && rotation <= 5 ? 40 : -250;
     }
 
-    const elevation = fieldNumber(firstObject, "Elevation");
+    const elevation = fieldNumber(firstObject, objectBasePresentation, "elevation");
     if (elevation !== undefined) {
         score += elevation >= 0 && elevation <= 2 ? 40 : -175;
     }
 
-    const pid = fieldNumber(firstObject, "PID");
-    if (pid !== undefined) {
-        const pidType = (pid >>> 24) & 0xff;
+    if (pid !== undefined && pidType !== undefined) {
         score += pid === -1 || pidType <= PID_TYPE_MISC ? 40 : -175;
     }
 
-    const sid = fieldNumber(firstObject, "SID");
+    const sid = fieldNumber(firstObject, objectBasePresentation, "sid");
     if (sid !== undefined) {
         score += sid >= -1 ? 10 : -10;
     }

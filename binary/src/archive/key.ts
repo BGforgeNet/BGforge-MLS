@@ -9,6 +9,7 @@
  */
 
 import { BufferReader, u16, u32 } from "typed-binary";
+import { decodeByteString } from "../byte-text";
 import { charsSpec, type FieldSpec } from "../spec/types";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { resourceTypeExt } from "./resource-type";
@@ -91,12 +92,6 @@ function requireInBounds(bytes: Uint8Array, offset: number, length: number, what
     }
 }
 
-function charsAt(bytes: Uint8Array, offset: number, length: number): string {
-    let s = "";
-    for (let i = 0; i < length; i++) s += String.fromCodePoint(bytes[offset + i]!);
-    return s;
-}
-
 export function parseKey(bytes: Uint8Array): KeyIndex {
     requireInBounds(bytes, 0, KEY_HEADER_BYTES, "header");
     const header = headerCodec.read(readerAt(bytes, 0));
@@ -111,7 +106,7 @@ export function parseKey(bytes: Uint8Array): KeyIndex {
         const e = bifEntryCodec.read(bifReader);
         requireInBounds(bytes, e.nameOffset, e.nameLength, `BIF ${i} name`);
         bifs.push({
-            name: trimNul(charsAt(bytes, e.nameOffset, e.nameLength)).replaceAll("\\", "/"),
+            name: trimNul(decodeByteString(bytes, e.nameOffset, e.nameOffset + e.nameLength)).replaceAll("\\", "/"),
             fileLength: e.fileLength,
             locationFlags: e.locationFlags,
         });
@@ -126,12 +121,10 @@ export function parseKey(bytes: Uint8Array): KeyIndex {
     const resources: KeyResource[] = [];
     for (let i = 0; i < header.resCount; i++) {
         const at = header.resOffset + i * KEY_RES_ENTRY_BYTES;
-        let resref = "";
-        for (let c = 0; c < KEY_RESREF_BYTES; c++) {
-            const byte = view.getUint8(at + c);
-            if (byte === 0) break; // NUL-terminated within the fixed 8-byte field
-            resref += String.fromCodePoint(byte);
-        }
+        let resrefEnd = at;
+        // NUL-terminated within the fixed 8-byte field
+        while (resrefEnd < at + KEY_RESREF_BYTES && view.getUint8(resrefEnd) !== 0) resrefEnd++;
+        const resref = decodeByteString(bytes, at, resrefEnd);
         const type = view.getUint16(at + KEY_RES_TYPE_OFFSET, true);
         const locator = view.getUint32(at + KEY_RES_LOCATOR_OFFSET, true) >>> 0;
         resources.push({

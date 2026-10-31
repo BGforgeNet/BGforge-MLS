@@ -252,7 +252,9 @@ toTypedBinarySchema toZodSchema walkStruct  toDomainRanges toPresentationEntries
 - **`walkGroup(group, spec, presentation): SpecData<S>`** - inverse of `walkStruct`. Used by canonical-readers to
   extract typed data from a display group. Looks up by display label (presentation override or humanized field name);
   prefers `rawValue` over `value` for enum/flags. Throws on array fields - caller iterates the array group structure
-  manually.
+  manually. `fieldLabel(presentation, key)` is the one labelling rule both sides use; the MAP parser's own lookups
+  (boundary scoring, projection, canonical reader) go through it by spec key, with the section counts and the
+  record-holding group labels declared in `map/specs/sections.ts`.
 - **`enforceDerivedFields(spec, doc, ctx?)`** - pre-serialise helper. Walks the spec and writes every field the spec
   derives - a linked `count` from `doc[arrayName].length`, and the offset/size roles the `ctx` supplies - into a copy of
   the doc. Returns a new object only when something changed; does not mutate. Use as the pre-write step in
@@ -350,7 +352,9 @@ These are non-negotiable across every format:
 
 ## JSON snapshots
 
-Snapshots are canonical `schemaVersion: 1` documents, not raw `ParseResult` dumps:
+Snapshots are canonical `schemaVersion: 1` documents, not raw `ParseResult` dumps. `json-snapshot.ts` dispatches
+on the format to its adapter's `createJsonSnapshot` / `loadJsonSnapshot`; a format with no registered adapter is
+refused, in both directions, rather than dumped as a display tree:
 
 - `ParseResult.root` - display tree (editor)
 - `ParseResult.document` - canonical data (round-trip)

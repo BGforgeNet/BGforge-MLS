@@ -1,7 +1,7 @@
 /**
  * Extended unit tests for display-lookups.ts.
  * Covers uncovered branches: isFlagActive (equal/clear/set with bitValue=0),
- * resolveDisplayValue (unknown enum, empty flags, no lookup), resolveStoredFieldValue,
+ * resolveDisplayValue (unknown enum, empty flags, no lookup),
  * resolveRawValueFromDisplay (flag with "(none)", unrecognized part, equal-activation).
  */
 
@@ -14,7 +14,6 @@ import {
     resolveRawValueFromDisplay,
     resolveStringCharset,
     formatEnumDisplayValue,
-    resolveStoredFieldValue,
 } from "../src/display-lookups";
 
 // ---------------------------------------------------------------------------
@@ -110,34 +109,6 @@ describe("resolveDisplayValue", () => {
         // Line 72: no enum, no flags - falls through to String(rawValue)
         const result = resolveDisplayValue("testbin", "testbin.any.key", "Unknown Field", 42);
         expect(result).toBe("42");
-    });
-});
-
-// ---------------------------------------------------------------------------
-// resolveStoredFieldValue
-// ---------------------------------------------------------------------------
-
-describe("resolveStoredFieldValue", () => {
-    it("returns enum label without numeric suffix for stored values", () => {
-        const result = resolveStoredFieldValue("pro", "pro.header.objectType", "Object Type", 5);
-        expect(result).toBe("Misc");
-    });
-
-    it("returns 'Unknown (N)' for unrecognised enum raw value", () => {
-        const result = resolveStoredFieldValue("pro", "pro.header.objectType", "Object Type", 99);
-        expect(result).toBe("Unknown (99)");
-    });
-
-    it("returns joined flag labels for flags field", () => {
-        // flags field with all flags clear returns "(none)"
-        const result = resolveStoredFieldValue("pro", "pro.header.flags", "Flags", 0);
-        expect(result).toBe("(none)");
-    });
-
-    it("returns stringified raw value for fields with no lookup", () => {
-        // Line 95-97: falls through to String(rawValue)
-        const result = resolveStoredFieldValue("testbin", "no.lookup.field", "Field", 7);
-        expect(result).toBe("7");
     });
 });
 

@@ -219,6 +219,23 @@ interface TreeEntry {
 }
 
 /**
+ * Run a read or listing of `target`, answering undefined when it is not there: ENOENT, or ENOTDIR for a plain
+ * file where a folder was expected. Any other failure (EACCES and the like) is refused, naming the target, since
+ * reading an unreadable input as absent would quietly change what the game resolves to.
+ */
+function ifPresent<T>(action: "read" | "list", target: string, run: () => T): T | undefined {
+    try {
+        return run();
+    } catch (error) {
+        const code = error instanceof Error && "code" in error ? error.code : undefined;
+        if (code === "ENOENT" || code === "ENOTDIR") return undefined;
+        throw new Error(`Cannot ${action} ${target}: ${typeof code === "string" ? code : String(error)}`, {
+            cause: error,
+        });
+    }
+}
+
+/**
  * Resolve `name` in `dir` allowing a case difference (IE ships lowercase names; case-sensitive hosts differ).
  *
  * Not memoized, deliberately: the exact-path probe answers first, so a correctly-cased hit costs one `stat`
@@ -228,12 +245,8 @@ interface TreeEntry {
 function resolveCaseInsensitive(dir: string, name: string): string | undefined {
     const exact = path.join(dir, name);
     if (fs.existsSync(exact)) return exact;
-    let entries: string[];
-    try {
-        entries = fs.readdirSync(dir);
-    } catch {
-        return undefined;
-    }
+    const entries = ifPresent("list", dir, () => fs.readdirSync(dir));
+    if (entries === undefined) return undefined;
     const lower = name.toLowerCase();
     const hit = entries.find((e) => e.toLowerCase() === lower);
     return hit ? path.join(dir, hit) : undefined;
@@ -258,15 +271,12 @@ function confLangDir(line: string): string | undefined {
 function readWeiduConfLang(gameDir: string): string | undefined {
     const conf = resolveCaseInsensitive(gameDir, "weidu.conf");
     if (!conf) return undefined;
-    try {
-        for (const line of fs.readFileSync(conf, "utf8").split(LINE_BREAK)) {
-            const value = confLangDir(line);
-            if (value) return value;
-        }
-        return undefined;
-    } catch {
-        return undefined;
+    const text = ifPresent("read", conf, () => fs.readFileSync(conf, "utf8"));
+    for (const line of text?.split(LINE_BREAK) ?? []) {
+        const value = confLangDir(line);
+        if (value) return value;
     }
+    return undefined;
 }
 
 /**
@@ -287,13 +297,8 @@ function resolveLangDir(gameDir: string, edition: string, explicitLang?: string)
     };
     const confLang = readWeiduConfLang(gameDir);
     if (confLang && hasDialog(confLang)) return confLang;
-    let entries: string[];
-    try {
-        entries = fs.readdirSync(langRoot);
-    } catch {
-        return undefined;
-    }
-    return entries.filter((e) => hasDialog(e)).sort()[0];
+    const entries = ifPresent("list", langRoot, () => fs.readdirSync(langRoot));
+    return entries?.filter((e) => hasDialog(e)).sort()[0];
 }
 
 /**
@@ -341,39 +346,36 @@ function resolveGamePath(gameDir: string, relative: string): string | undefined 
 function bifSearchRelRoots(gameDir: string): string[] {
     const roots = new Set<string>([""]); // "" = the game dir itself (HD0)
     const iniPath = resolveCaseInsensitive(gameDir, "baldur.ini");
-    if (iniPath) {
-        try {
-            const text = fs.readFileSync(iniPath, "latin1");
-            const alias: Record<string, string> = {};
-            let inAlias = false;
-            for (const line of text.split(/\r?\n/)) {
-                const section = /^\s*\[(.+?)\]\s*$/.exec(line);
-                if (section) {
-                    inAlias = section[1]!.toLowerCase() === "alias";
-                } else if (inAlias) {
-                    // Key and `=` by regex, the value by trim: a lazy `(.+?)\s*$` tail backtracks quadratically.
-                    const body = line.trimStart();
-                    const kv = /^([A-Za-z0-9]+)\s*:?=/.exec(body);
-                    const value = kv ? body.slice(kv[0].length).trim() : "";
-                    if (kv && value !== "" && !LINE_BREAK.test(value)) alias[kv[1]!.toUpperCase()] = value;
-                }
+    const text =
+        iniPath === undefined ? undefined : ifPresent("read", iniPath, () => fs.readFileSync(iniPath, "latin1"));
+    if (text !== undefined) {
+        const alias: Record<string, string> = {};
+        let inAlias = false;
+        for (const line of text.split(/\r?\n/)) {
+            const section = /^\s*\[(.+?)\]\s*$/.exec(line);
+            if (section) {
+                inAlias = section[1]!.toLowerCase() === "alias";
+            } else if (inAlias) {
+                // Key and `=` by regex, the value by trim: a lazy `(.+?)\s*$` tail backtracks quadratically.
+                const body = line.trimStart();
+                const kv = /^([A-Za-z0-9]+)\s*:?=/.exec(body);
+                const value = kv ? body.slice(kv[0].length).trim() : "";
+                if (kv && value !== "" && !LINE_BREAK.test(value)) alias[kv[1]!.toUpperCase()] = value;
             }
-            const norm = (p: string): string => {
-                const slashed = p.replaceAll("\\", "/");
-                // A loop, not /\/+$/: that regex rescans a long slash run from every start when the tail rejects.
-                let end = slashed.length;
-                while (end > 0 && slashed[end - 1] === "/") end--;
-                return slashed.slice(0, end).toLowerCase();
-            };
-            const hd0 = alias["HD0"] ? norm(alias["HD0"]) : undefined;
-            for (const [name, value] of Object.entries(alias)) {
-                if (name === "HD0") continue;
-                const cd = norm(value);
-                if (hd0 && cd.startsWith(`${hd0}/`)) roots.add(cd.slice(hd0.length + 1));
-                else if (hd0 && cd === hd0) roots.add("");
-            }
-        } catch {
-            // Fall through to the defaults below.
+        }
+        const norm = (p: string): string => {
+            const slashed = p.replaceAll("\\", "/");
+            // A loop, not /\/+$/: that regex rescans a long slash run from every start when the tail rejects.
+            let end = slashed.length;
+            while (end > 0 && slashed[end - 1] === "/") end--;
+            return slashed.slice(0, end).toLowerCase();
+        };
+        const hd0 = alias["HD0"] ? norm(alias["HD0"]) : undefined;
+        for (const [name, value] of Object.entries(alias)) {
+            if (name === "HD0") continue;
+            const cd = norm(value);
+            if (hd0 && cd.startsWith(`${hd0}/`)) roots.add(cd.slice(hd0.length + 1));
+            else if (hd0 && cd === hd0) roots.add("");
         }
     }
     for (const rel of ["data", "cache", "CD1", "CD2", "CD3", "CD4", "CD5", "CD6"]) roots.add(rel);
@@ -395,6 +397,7 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
     if (!keyPath) throw new Error(`chitin.key not found in ${gameDir}`);
     const key = named(keyPath, () => parseKey(fs.readFileSync(keyPath)));
     const openBifs = new Map<number, BifArchive>();
+    const failedBifs = new Map<number, unknown>();
     const bifRelRoots = bifSearchRelRoots(gameDir);
 
     // Game identity via WeiDU's KEY-marker autodetect (see ./game-type). TLK encoding follows the edition:
@@ -486,17 +489,10 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
         folders.forEach((folder, rank) => {
             const dirPath = resolveGamePath(gameDir, folder);
             if (!dirPath) return;
-            let names: string[];
-            try {
-                names = fs.readdirSync(dirPath);
-            } catch (error) {
-                const code = (error as NodeJS.ErrnoException).code;
-                // A plain file at the folder's name holds no overrides; any other failure would serve the
-                // folder's files from the BIF below them without a word, so it is refused.
-                if (code === "ENOTDIR") return;
-                throw new Error(`Cannot list ${dirPath}: ${code ?? String(error)}`, { cause: error });
-            }
-            for (const name of names) {
+            // A plain file at the folder's name holds no overrides; any other failure would serve the folder's
+            // files from the BIF below them without a word, so it is refused.
+            const names = ifPresent("list", dirPath, () => fs.readdirSync(dirPath));
+            for (const name of names ?? []) {
                 const dot = name.lastIndexOf(".");
                 if (dot <= 0) continue;
                 const type = resourceTypeCode(name.slice(dot + 1));
@@ -561,7 +557,17 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                     : `BIF file not found: ${entry.name}`,
             );
         }
-        const archive = named(bifPath, () => openBif(fileSource(bifPath)));
+        const failed = failedBifs.get(bifIndex);
+        if (failed) throw failed;
+        let archive: BifArchive;
+        try {
+            archive = named(bifPath, () => openBif(fileSource(bifPath)));
+        } catch (error) {
+            // BIF content is read-only for the game's lifetime, so a refusal stands: every later read rethrows it
+            // rather than reopening, and for a compressed archive re-inflating, the same bad file.
+            failedBifs.set(bifIndex, error);
+            throw error;
+        }
         openBifs.set(bifIndex, archive);
         return archive;
     }

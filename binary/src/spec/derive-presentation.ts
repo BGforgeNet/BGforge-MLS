@@ -1,5 +1,5 @@
 import { isArraySpec, isCharsSpec, type StructSpec } from "./types";
-import { humanize, slugify, type StructPresentation } from "./presentation";
+import { fieldLabel, slugify, type StructPresentation } from "./presentation";
 import { stringifyKeys } from "../presentation-schema-types";
 
 interface PresentationEntry {
@@ -55,7 +55,7 @@ function emitPresentationEntries<T>(
         // is called with the field's semantic key, which the walker builds as slugify(pres.label ?? humanize).
         // For a default label these coincide; for a custom label (idRequired -> "Identification") they diverge,
         // and only slugify(label) matches what the consumer looks up.
-        const fieldKey = slugify(pres?.label ?? humanize(key));
+        const fieldKey = slugify(fieldLabel(presentation, key));
 
         if (isArraySpec(fs)) {
             // A "slots" array (e.g. ITM usabilityFlags) renders as a subgroup whose children carry per-slot

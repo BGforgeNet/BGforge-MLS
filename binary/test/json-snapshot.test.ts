@@ -29,31 +29,17 @@ function makeSnapshotResult(): ParseResult {
 }
 
 describe("json-snapshot", () => {
-    it("serializes generic parse results as schema version 1 with a trailing newline", () => {
-        const json = createBinaryJsonSnapshot(makeSnapshotResult());
-        expect(json.endsWith("\n")).toBe(true);
-        expect(json).toContain('"opaqueRanges"');
-        const parsed = JSON.parse(json) as {
-            schemaVersion: number;
-            root: {
-                nodeType: string;
-                children: Array<{ nodeType: string; key: string; children?: Array<{ key: string; value: unknown }> }>;
-            };
-        };
-        expect(parsed.schemaVersion).toBe(1);
-        expect(parsed.root.nodeType).toBe("group");
-        expect(parsed.root.children[0]?.key).toBe("header");
-        expect(parsed.root.children[0]?.children?.[0]).toMatchObject({
-            nodeType: "field",
-            key: "version",
-            value: 20,
-        });
+    it("refuses to snapshot a format that has no registered adapter", () => {
+        expect(() => createBinaryJsonSnapshot(makeSnapshotResult())).toThrow(
+            new Error('No format adapter is registered for format "testbin"'),
+        );
     });
 
-    it("parses serialized version 1 snapshots back into parse results", () => {
-        const original = makeSnapshotResult();
-        const parsed = parseBinaryJsonSnapshot(createBinaryJsonSnapshot(original));
-        expect(parsed).toEqual(original);
+    it("refuses to load a snapshot whose format has no registered adapter", () => {
+        const snapshot = JSON.stringify({ schemaVersion: 1, format: "testbin", formatName: "Test Binary" });
+        expect(() => loadBinaryJsonSnapshot(snapshot)).toThrow(
+            new Error('Invalid JSON snapshot: No format adapter is registered for format "testbin"'),
+        );
     });
 
     it("stores PRO snapshots as canonical document data instead of display-tree nodes", () => {
@@ -361,7 +347,7 @@ describe("json-snapshot", () => {
     });
 
     it("rejects legacy snapshots without a schema version", () => {
-        const legacy = JSON.stringify(makeSnapshotResult());
+        const legacy = JSON.stringify({ ...makeSnapshotResult(), format: "pro" });
         expect(() => parseBinaryJsonSnapshot(legacy)).toThrow(/invalid json snapshot/i);
     });
 

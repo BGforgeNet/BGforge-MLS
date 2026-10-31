@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import "../src/register-formats";
 import { mapParser } from "../src/map";
 import { createBinaryJsonSnapshot, parseBinaryJsonSnapshot } from "../src/json-snapshot";
 import { loadMap, resolveMapPath, SNAPSHOT_GRACEFUL_MAPS, SNAPSHOT_STRICT_MAPS } from "./map-fixtures";

@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
  * CLI tool to parse the binary formats in `parserRegistry` (Fallout PRO/MAP, Infinity Engine ITM/SPL/EFF/CRE/DLG)
- * and output structured JSON. Also supports loading JSON back to binary via --load.
- * Usage: fgbin <file|dir> [--save] [--check] [--load] [-r] [-q]
+ * and output structured JSON. Also supports loading JSON back to binary via --load. Usage: `HELP` below.
  */
 
 import * as fs from "fs";
@@ -178,16 +177,20 @@ async function processFile(
     });
 }
 
-const HELP = `Usage: fgbin <file|dir> [--save] [--check] [--load] [--proto-dir <dir>] [-r] [-q]
+const HELP = `Usage: fgbin <file|dir> [--save | --check | --parse-only] [--graceful-map] [--proto-dir <dir>] [-r] [-q]
+                    [--jobs <n>] [--exclude-from <path>] [--exclude-base <dir>]
+       fgbin <file.json> --load
+       fgbin --extensions
   Supported files: ${EXTENSIONS.join(", ")}
   --save    Save parsed JSON alongside the binary file (file.pro -> file.pro.json)
   --check   Compare parsed output against existing JSON snapshot (exit 1 if diff)
-  --load    Load JSON and write binary using the parser's native extension
+  --load    Load JSON and write binary using the parser's native extension.
+            Ignores -r, -q, --jobs, --proto-dir and --graceful-map
   --extensions    Print supported file extensions (one per line) and exit
   --parse-only    Parse and report errors without building the JSON snapshot; exit code is the verdict.
                   For corpus sweeps that only check that files parse. Not valid with --save/--check/--load.
   --graceful-map  Opt into permissive MAP boundary guessing for ambiguous files (default is strict).
-                  Not used by --load: a MAP snapshot reloads permissively only when it carries an
+                  --load needs no flag: a MAP snapshot reloads permissively only when it carries an
                   objects-tail opaque range
   --proto-dir <dir>  Load MAP proto subtype overrides from <dir>/{items,scenery} instead of the
                      default sibling <mapDir>/../proto/. Affects MAP inputs only; errors if <dir>
@@ -291,22 +294,17 @@ function readProtoDirOverride(extra: Record<string, unknown>): string | undefine
 }
 
 async function main() {
-    const argv = process.argv.slice(2);
+    const argv = new Set(process.argv.slice(2));
 
-    // `--graceful-map` is a binary-specific preference axis, so it stays out of
-    // the shared cac parser (`parseCliArgs`, also backing fgfmt/fgtp) and is
-    // read straight from argv. The `--load` branch below returns before
-    // `parseCliArgs` runs, so this single read is the one point that serves both
-    // the --load and the normal parse paths. `-q`/`--quiet`, by contrast, is a
-    // shared flag and comes from `parseCliArgs` on the normal path (args.quiet).
-    const cliParseOptions: ParseOptions = { gracefulMapBoundaries: argv.includes("--graceful-map") };
+    // `--graceful-map` is a binary-specific preference axis, so it stays out of the shared cac parser
+    // (`parseCliArgs`, also backing fgfmt/fgtp) and is read straight from argv.
+    const cliParseOptions: ParseOptions = { gracefulMapBoundaries: argv.has("--graceful-map") };
 
-    // Same argv-read convention as --graceful-map: binary-specific, no value, and it must be visible on
-    // both the --load short-circuit below and the normal path. The output modes all consume the snapshot
-    // this flag skips, so combining them would silently write or compare nothing.
-    const parseOnly = argv.includes("--parse-only");
+    // Same argv-read convention as --graceful-map: binary-specific and no value. The output modes all consume
+    // the snapshot this flag skips, so combining them would silently write or compare nothing.
+    const parseOnly = argv.has("--parse-only");
     if (parseOnly) {
-        const conflicting = ["--save", "--check", "--save-and-check", "--load"].filter((flag) => argv.includes(flag));
+        const conflicting = ["--save", "--check", "--save-and-check", "--load"].filter((flag) => argv.has(flag));
         if (conflicting.length > 0) {
             console.error(`Error: --parse-only cannot be combined with ${conflicting.join(", ")}`);
             process.exit(1);
@@ -318,29 +316,29 @@ async function main() {
     // filters from the same source the parsers register, so a new format
     // landing in @bgforge/binary is picked up by the action without a
     // matching action release.
-    if (argv.includes("--extensions")) {
+    if (argv.has("--extensions")) {
         for (const ext of parserRegistry.getExtensions()) {
             process.stdout.write(`${ext}\n`);
         }
         return;
     }
 
-    // Handle --load separately: it takes .json input, not .pro
-    if (argv.includes("--load")) {
-        const jsonPath = argv.find((a) => !a.startsWith("-"));
-        if (!jsonPath) {
-            console.error("Error: No file specified");
-            process.exit(1);
-        }
-        loadJsonToBinary(jsonPath, cliParseOptions);
-        return;
-    }
-
+    // --load is registered so cac knows it takes no value: an unregistered flag takes the argument after it.
     const args = parseCliArgs(HELP, {
-        extraOptions: [["--proto-dir <dir>", "Load MAP proto subtype overrides from <dir>"]],
+        extraOptions: [
+            ["--proto-dir <dir>", "Load MAP proto subtype overrides from <dir>"],
+            ["--load", "Load JSON and write binary"],
+        ],
         modes: ["save", "check"],
     });
     if (!args) return;
+
+    // --load takes .json input, not a binary file, and none of the parse path's options apply to it.
+    if (args.extra?.load === true) {
+        loadJsonToBinary(args.target, cliParseOptions);
+        return;
+    }
+
     const protoDirOverride = readProtoDirOverride(args.extra ?? {});
 
     await runCli({

@@ -15,7 +15,7 @@ const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 /**
  * Convert a flag/enum table's display name into a canonical JSON / TypeScript
  * key. Lowercases the first character of each word, strips non-alphanumerics,
- * joins as camelCase. Mirrors `snapshot-common.ts:slugify` but enforces a
+ * joins as camelCase. Mirrors `slugify` in `spec/presentation.ts` but enforces a
  * strict identifier-shape result; throws on tables whose display strings
  * cannot be safely slugified (e.g. starts with a digit), so spec authors fix
  * the table at declaration rather than producing invalid JSON keys at

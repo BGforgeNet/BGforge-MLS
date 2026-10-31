@@ -4,6 +4,8 @@
 
 import type { ParsedField, ParsedFieldType, ParsedGroup } from "../types";
 import { stringifyKeys } from "../presentation-schema-types";
+import { fieldLabel, type StructPresentation } from "../spec/presentation";
+import { mapGroupLabels } from "./specs/sections";
 export { HEADER_SIZE as HEADER_OPAQUE_END } from "./schemas";
 export const MAP_OBJECT_BASE_SIZE = 0x48;
 export const MAP_OBJECT_DATA_HEADER_SIZE = 0x0c;
@@ -143,8 +145,17 @@ export function objectTypeName(pid: number): string {
     }
 }
 
-export function fieldNumber(objectGroup: ParsedGroup, name: string): number | undefined {
-    const found = objectGroup.fields.find((entry) => !("fields" in entry) && entry.name === name);
+/**
+ * The number in `group`'s field for spec key `key`, found under the label `presentation` gives it - the label the
+ * parser emitted it with. Undefined when the field is absent or not numeric.
+ */
+export function fieldNumber<T>(
+    group: ParsedGroup,
+    presentation: StructPresentation<T>,
+    key: keyof T & string,
+): number | undefined {
+    const label = fieldLabel(presentation, key);
+    const found = group.fields.find((entry) => !("fields" in entry) && entry.name === label);
     if (!found || "fields" in found) {
         return undefined;
     }
@@ -154,4 +165,26 @@ export function fieldNumber(objectGroup: ParsedGroup, name: string): number | un
     }
 
     return typeof found.value === "number" ? found.value : undefined;
+}
+
+/**
+ * `group`'s child groups of one indexed kind, in order: each candidate is tested with the index the next match
+ * would take, so `matches` compares against the label the parser built for that index (`mapGroupLabels`).
+ */
+export function indexedChildGroups(
+    group: ParsedGroup,
+    matches: (name: string, index: number) => boolean,
+): ParsedGroup[] {
+    const out: ParsedGroup[] = [];
+    for (const entry of group.fields) {
+        if ("fields" in entry && matches(entry.name, out.length)) out.push(entry);
+    }
+    return out;
+}
+
+/** The decoded objects of the elevation group for `elevation`, in order. */
+export function elevationObjectGroups(elevationGroup: ParsedGroup, elevation: number): ParsedGroup[] {
+    return indexedChildGroups(elevationGroup, (name, index) =>
+        name.startsWith(mapGroupLabels.objectPrefix(`${elevation}.${index}`)),
+    );
 }

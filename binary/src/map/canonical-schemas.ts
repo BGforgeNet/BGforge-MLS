@@ -1,6 +1,6 @@
 /**
  * Zod schemas and TypeScript types for the MAP canonical data model.
- * Shared by map-canonical-reader.ts and map-canonical-writer.ts.
+ * Shared by canonical-reader.ts and canonical-writer.ts.
  */
 
 import { z } from "zod";

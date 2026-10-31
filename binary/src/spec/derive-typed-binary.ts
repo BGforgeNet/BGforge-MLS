@@ -10,6 +10,7 @@ import {
     type IMeasurer,
     type MaxValue,
 } from "typed-binary";
+import { decodeByteString } from "../byte-text";
 import { codecByteLength } from "./codec-meta";
 import { flagArrayToInt, intToFlagArray, type FlagArray } from "./coded-projection";
 import {
@@ -85,7 +86,7 @@ class CharsSchema extends Schema<string> {
         for (let i = 0; i < this.count; i++) {
             bytes.push(input.readByte());
         }
-        return String.fromCodePoint(...bytes);
+        return decodeByteString(bytes);
     }
     write(output: ISerialOutput, value: string): void {
         // The string carries the byte content one char per byte. Truncate to
@@ -288,10 +289,9 @@ class SpecStructSchema extends Schema<unknown> {
                 }
             } else {
                 // Both array kinds resolve a count; only the source and validation differ.
-                // Neither bounds the count against the remaining buffer: the caller owns that
-                // (fromCtx counts are pre-clamped upstream, e.g. clampVarCount; fromField counts
-                // rely on the format's MAX_FILE_SIZES cap making an oversized read throw). A new
-                // format adding a large array here needs an equivalent caller-side bound.
+                // Neither checks the count against the remaining buffer. fromCtx counts are pre-clamped
+                // upstream (e.g. clampVarCount); a fromField count is bounded only by the buffer end, where
+                // the element read throws a RangeError, so an oversized count costs at most one pass to it.
                 const count = ((): number => {
                     if (entry.kind === "fromFieldArray") {
                         const c = out[entry.fromField];

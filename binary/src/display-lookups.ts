@@ -68,21 +68,6 @@ export function formatEnumDisplayValue(label: string, rawValue: number): string 
     return label === String(rawValue) ? label : `${label} (${rawValue})`;
 }
 
-export function resolveStoredFieldValue(format: string, fieldKey: string, fieldName: string, rawValue: number): string {
-    const enumTable = resolveEnumLookup(format, fieldKey, fieldName);
-    if (enumTable) {
-        return enumTable[rawValue] ?? `Unknown (${rawValue})`;
-    }
-
-    const flagTable = resolveFlagLookup(format, fieldKey, fieldName);
-    if (flagTable) {
-        const flags = getActiveFlagLabels(format, fieldKey, fieldName, rawValue) ?? [];
-        return flags.length > 0 ? flags.join(", ") : "(none)";
-    }
-
-    return String(rawValue);
-}
-
 // Strip a trailing " (123)" annotation produced by `formatEnumDisplayValue`.
 // Implemented as an indexed scan rather than the natural `/\s+\((-?\d+)\)$/`
 // because that pattern is polynomial: the `\s+...$` shape forces the engine

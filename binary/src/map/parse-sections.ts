@@ -29,7 +29,14 @@ import {
     timerSlotPresentation,
 } from "./specs/script-slot";
 import { walkStruct } from "../spec/walk-display";
+import { fieldLabel } from "../spec/presentation";
 import { field, makeGroup, int32Field, HEADER_PADDING_OFFSET, HEADER_PADDING_SIZE } from "./parse-helpers";
+import {
+    mapGroupLabels,
+    SCRIPT_EXTENT_SLOTS,
+    scriptExtentPresentation,
+    scriptListPresentation,
+} from "./specs/sections";
 
 export function parseHeaderSection(data: Uint8Array, _errors: string[]): ParsedGroup {
     const header = parseHeader(data);
@@ -275,7 +282,9 @@ export function parseScripts(
             break;
         }
 
-        const scriptEntries: (ParsedField | ParsedGroup)[] = [field("Script Count", count, countOffset, 4, "int32")];
+        const scriptEntries: (ParsedField | ParsedGroup)[] = [
+            field(fieldLabel(scriptListPresentation, "scriptCount"), count, countOffset, 4, "int32"),
+        ];
 
         // Label the list by its scripts' actual SID type, not the read index. Fallout maps omit the global
         // `system` list (system scripts are not map-bound), so the on-disk lists are spatial/timed/item/critter
@@ -287,7 +296,7 @@ export function parseScripts(
             count > 0 && currentOffset + 4 <= data.length
                 ? getScriptType(new DataView(data.buffer, data.byteOffset + currentOffset, 4).getUint32(0, false))
                 : scriptType + 1;
-        const listLabel = `${ScriptType[listType] ?? `Type${listType}`} Scripts`;
+        const listLabel = mapGroupLabels.scriptList(ScriptType[listType] ?? `Type${listType}`);
 
         if (count === 0) {
             scripts.push(makeGroup(listLabel, scriptEntries));
@@ -297,7 +306,7 @@ export function parseScripts(
             scripts.push(makeGroup(listLabel, scriptEntries));
             break;
         }
-        const extentCount = Math.ceil(count / 16);
+        const extentCount = Math.ceil(count / SCRIPT_EXTENT_SLOTS);
 
         let scriptTypeAborted = false;
         for (let extentIndex = 0; extentIndex < extentCount; extentIndex++) {
@@ -305,11 +314,11 @@ export function parseScripts(
             const extentFields: (ParsedField | ParsedGroup)[] = [];
             let extentAborted = false;
 
-            for (let slotIndex = 0; slotIndex < 16; slotIndex++) {
+            for (let slotIndex = 0; slotIndex < SCRIPT_EXTENT_SLOTS; slotIndex++) {
                 const entry = parseScriptEntryFields(
                     data,
                     currentOffset,
-                    `Entry ${extentIndex * 16 + slotIndex}`,
+                    mapGroupLabels.slotEntry(extentIndex * SCRIPT_EXTENT_SLOTS + slotIndex),
                     errors,
                 );
                 if (entry.fields.length === 0) {
@@ -318,7 +327,7 @@ export function parseScripts(
                     break;
                 }
 
-                extentFields.push(makeGroup(`Slot ${slotIndex}`, entry.fields));
+                extentFields.push(makeGroup(mapGroupLabels.slot(slotIndex), entry.fields));
                 currentOffset = entry.offset;
             }
 
@@ -337,12 +346,12 @@ export function parseScripts(
             }
 
             extentFields.push(
-                int32Field("Extent Length", data, currentOffset),
-                int32Field("Extent Next", data, currentOffset + 4),
+                int32Field(fieldLabel(scriptExtentPresentation, "extentLength"), data, currentOffset),
+                int32Field(fieldLabel(scriptExtentPresentation, "extentNext"), data, currentOffset + 4),
             );
             currentOffset += 8;
 
-            scriptEntries.push(makeGroup(`Extent ${extentIndex}`, extentFields));
+            scriptEntries.push(makeGroup(mapGroupLabels.extent(extentIndex), extentFields));
         }
 
         scripts.push(makeGroup(listLabel, scriptEntries));

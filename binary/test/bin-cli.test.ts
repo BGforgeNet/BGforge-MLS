@@ -86,6 +86,20 @@ describe("bin CLI integration", () => {
             const { stdout } = run("--help");
             expect(stdout).toContain("Usage: fgbin");
         });
+
+        it("names every option the help lists in its usage synopsis", () => {
+            const { stdout } = run("--help");
+            const lines = stdout.split("\n");
+            const start = lines.findIndex((line) => line.startsWith("Usage: fgbin"));
+            const end = lines.findIndex((line, i) => i > start && line.startsWith("  Supported files"));
+            const synopsis = lines.slice(start, end).join(" ");
+            const listed = lines
+                .slice(end)
+                .map((line) => /^ {2}(-[a-z]|--[a-z-]+)\b/.exec(line)?.[1])
+                .filter((flag): flag is string => flag !== undefined);
+            expect(listed.length).toBeGreaterThan(10);
+            expect(listed.filter((flag) => !synopsis.includes(flag))).toEqual([]);
+        });
     });
 
     describe("stdout mode", () => {
@@ -590,6 +604,20 @@ describe("bin CLI integration", () => {
             const { code, stderr } = run("/nonexistent/file.json", "--load");
             expect(code).toBe(1);
             expect(stderr).toContain("Not found");
+        });
+
+        // A valued flag ahead of the snapshot used to be taken for it: the first non-dash argument was the
+        // flag's value. --load ignores these flags, so the snapshot loads as it would without them.
+        it("takes the snapshot, not a preceding flag's value, as its input", () => {
+            const tmpJson = path.join(tmpDir, "flags.pro.json");
+            fs.copyFileSync(path.join(FIXTURES, "misc", "00000001.pro.json"), tmpJson);
+
+            const { code, stdout, stderr } = run("--load", "--proto-dir", tmpDir, "--jobs", "2", "-q", tmpJson);
+            expect(stderr).toBe("");
+            expect(code).toBe(0);
+            expect(stdout).toBe(
+                `Wrote: ${path.join(tmpDir, "flags.pro")} (${fs.statSync(path.join(FIXTURES, "misc", "00000001.pro")).size} bytes)\n`,
+            );
         });
     });
 

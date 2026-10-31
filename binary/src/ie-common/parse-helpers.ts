@@ -9,6 +9,7 @@
  */
 
 import { BufferReader } from "typed-binary";
+import { decodeByteString } from "../byte-text";
 import type { ParsedField, ParsedGroup } from "../types";
 import { bytesEqual } from "./types";
 
@@ -22,7 +23,7 @@ export function readerAt(data: Uint8Array, offset: number): BufferReader {
     return new BufferReader(data.buffer, { byteOffset: data.byteOffset + offset });
 }
 
-const text = (bytes: readonly number[]): string => String.fromCodePoint(...bytes);
+const text = (bytes: readonly number[]): string => decodeByteString(bytes);
 
 /**
  * Why a file's 8-byte signature and version are not the ones `label` reads, or undefined when they are. The

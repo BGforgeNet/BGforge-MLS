@@ -8,6 +8,7 @@
  */
 
 import { BufferReader, u16, u32 } from "typed-binary";
+import { decodeWindows1252 } from "../byte-text";
 import { charsSpec, type FieldSpec } from "../spec/types";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { bufferSource, type ByteSource } from "./byte-source";
@@ -42,7 +43,6 @@ const entryCodec = toTypedBinarySchema(tlkEntrySpec);
 // knows EE-vs-classic and the configured language) passes the encoding; a bare open with none falls back to a
 // UTF-8-then-windows-1252 guess for the two most common cases.
 const UTF8_STRICT = new TextDecoder("utf-8", { fatal: true });
-const WINDOWS_1252 = new TextDecoder("windows-1252");
 const decoderCache = new Map<string, InstanceType<typeof TextDecoder>>();
 
 function decoderFor(encoding: string): InstanceType<typeof TextDecoder> {
@@ -65,7 +65,7 @@ function decodeString(bytes: Uint8Array, encoding: string | undefined): string {
     try {
         return trimNul(UTF8_STRICT.decode(bytes));
     } catch {
-        return trimNul(WINDOWS_1252.decode(bytes));
+        return trimNul(decodeWindows1252(bytes));
     }
 }
 
@@ -126,14 +126,40 @@ function yieldToLoop(): Promise<void> {
     });
 }
 
-export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
+/** Reads the header and validates the encoding label, so a bad one fails at open. */
+function readHeader(source: ByteSource, encoding: string | undefined): ReturnType<typeof headerCodec.read> {
     const header = headerCodec.read(readerOf(source.read(0, TLK_HEADER_BYTES)));
     if (header.signature !== "TLK " || !header.version.startsWith("V1")) {
-        source.close();
         throw new Error(`Not a TLK V1 file (signature="${header.signature}" version="${header.version}")`);
     }
+    if (encoding !== undefined) decoderFor(encoding);
+    return header;
+}
+
+/** Where an entry's text sits in the file, refused when it runs past the end rather than read short. */
+function textRange(
+    strref: number,
+    entry: { stringOffset: number; stringLength: number },
+    stringsOffset: number,
+    size: number,
+): { start: number; end: number } {
+    const start = stringsOffset + entry.stringOffset;
+    const end = start + entry.stringLength;
+    if (end > size) {
+        throw new RangeError(`TLK entry ${strref} text region [${start}, ${end}) exceeds file size ${size}`);
+    }
+    return { start, end };
+}
+
+export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
     const { encoding } = options;
-    if (encoding !== undefined) decoderFor(encoding); // validate the label now, so a bad one fails at open
+    let header: ReturnType<typeof headerCodec.read>;
+    try {
+        header = readHeader(source, encoding);
+    } catch (error) {
+        source.close();
+        throw error;
+    }
 
     const count = header.stringCount;
     const stringsOffset = header.stringsOffset;
@@ -175,13 +201,11 @@ export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
             if (strref > 0 && strref % BUILD_CHUNK === 0) await yieldToLoop();
             const entry = entryCodec.read(readerOf(entries.subarray(strref * TLK_ENTRY_BYTES)));
             // Pushed for every strref, no-text entries included, so the index stays the strref.
-            const decoded =
-                (entry.flags & TLK_TEXT_FLAG) === 0 || entry.stringLength === 0
-                    ? undefined
-                    : decodeString(
-                          stringBytes.subarray(entry.stringOffset, entry.stringOffset + entry.stringLength),
-                          encoding,
-                      );
+            let decoded: string | undefined;
+            if ((entry.flags & TLK_TEXT_FLAG) !== 0 && entry.stringLength !== 0) {
+                const { start, end } = textRange(strref, entry, stringsOffset, source.size);
+                decoded = decodeString(stringBytes.subarray(start - stringsOffset, end - stringsOffset), encoding);
+            }
             text.push(decoded);
             lower.push(decoded?.toLowerCase());
         }
@@ -222,10 +246,11 @@ export function openTlk(source: ByteSource, options: TlkOptions = {}): Tlk {
             const entry = entryCodec.read(
                 readerOf(source.read(TLK_HEADER_BYTES + strref * TLK_ENTRY_BYTES, TLK_ENTRY_BYTES)),
             );
-            const text =
-                (entry.flags & TLK_TEXT_FLAG) === 0 || entry.stringLength === 0
-                    ? ""
-                    : decodeString(source.read(stringsOffset + entry.stringOffset, entry.stringLength), encoding);
+            let text = "";
+            if ((entry.flags & TLK_TEXT_FLAG) !== 0 && entry.stringLength !== 0) {
+                const { start, end } = textRange(strref, entry, stringsOffset, source.size);
+                text = decodeString(source.read(start, end - start), encoding);
+            }
             strings.set(strref, text);
             return text;
         },

@@ -1,6 +1,6 @@
 /**
  * Zod schemas and TypeScript types for the PRO canonical data model.
- * Shared by pro-canonical-reader.ts and pro-canonical-writer.ts.
+ * Shared by canonical-reader.ts and canonical-writer.ts.
  */
 
 import { z } from "zod";

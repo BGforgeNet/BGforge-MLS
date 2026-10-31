@@ -7,6 +7,7 @@
  * compiler and no open install. Only the spoken text is external, held as strrefs into `dialog.tlk`.
  */
 
+import { decodeByteString } from "../byte-text";
 import { group, iePreambleError, readerAt } from "../ie-common/parse-helpers";
 import { type DlgBuildInput, writeRecord } from "./build";
 import { encodeOpaqueRange } from "../opaque-range";
@@ -82,13 +83,6 @@ export interface Dlg {
     transitionTriggers: string[];
     /** Action lists, indexed by `DlgTransition.actionIndex`. */
     actions: string[];
-}
-
-/** Reads N bytes verbatim, one byte per character, matching how the spec system surfaces `chars` fields. */
-function latin1(bytes: Uint8Array, at: number, length: number): string {
-    let out = "";
-    for (let i = 0; i < length; i++) out += String.fromCodePoint(bytes[at + i]!);
-    return out;
 }
 
 function readRecords<T>(
@@ -222,11 +216,13 @@ function textBlockStart(sections: DlgSections): number {
  */
 export function readDlg(bytes: Uint8Array): Dlg {
     const sections = readSections(bytes);
-    const resolve = (refs: DlgTextRefData[]): string[] => refs.map((r) => latin1(bytes, r.offset, r.length));
+    // Verbatim, one byte per character, matching how the spec system surfaces `chars` fields.
+    const resolve = (refs: DlgTextRefData[]): string[] =>
+        refs.map((r) => decodeByteString(bytes, r.offset, r.offset + r.length));
 
     return {
-        signature: latin1(bytes, 0x00, 4),
-        version: latin1(bytes, 0x04, 4),
+        signature: decodeByteString(bytes, 0x00, 4),
+        version: decodeByteString(bytes, 0x04, 8),
         states: sections.states,
         transitions: sections.transitions.map((t) => {
             const set = new Set(t.flags);

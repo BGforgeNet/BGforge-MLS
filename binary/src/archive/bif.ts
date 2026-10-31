@@ -14,6 +14,7 @@
 
 import { BufferReader, u16, u32 } from "typed-binary";
 import * as zlib from "zlib";
+import { decodeByteString } from "../byte-text";
 import { charsSpec, type FieldSpec } from "../spec/types";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { bufferSource, type ByteSource } from "./byte-source";
@@ -78,18 +79,28 @@ export interface BifArchive {
 }
 
 function signatureOf(source: ByteSource): string {
-    const b = source.read(0, 4);
-    return String.fromCodePoint(b[0]!, b[1]!, b[2]!, b[3]!);
+    return decodeByteString(source.read(0, 4));
 }
 
-/** Open a BIF over any byte source, transparently inflating the compressed variants. */
+/**
+ * Open a BIF over any byte source, transparently inflating the compressed variants. The source is closed on
+ * every refusal, and once a compressed archive is inflated; a plain archive keeps it until `close`.
+ */
 export function openBif(source: ByteSource): BifArchive {
-    const signature = signatureOf(source);
-    if (signature === "BIFF") return openPlainBif(source);
-    if (signature === "BIF ") return openInflatedBif(inflateWhole(source), source);
-    if (signature === "BIFC") return openInflatedBif(inflateBlocks(source), source);
-    source.close();
-    throw new Error(`Unrecognized BIF signature "${signature}"`);
+    let keepSource = false;
+    try {
+        const signature = signatureOf(source);
+        if (signature === "BIFF") {
+            const archive = openPlainBif(source);
+            keepSource = true;
+            return archive;
+        }
+        if (signature === "BIF ") return openInflatedBif(inflateWhole(source));
+        if (signature === "BIFC") return openInflatedBif(inflateBlocks(source));
+        throw new Error(`Unrecognized BIF signature "${signature}"`);
+    } finally {
+        if (!keepSource) source.close();
+    }
 }
 
 /** Convenience: open a BIF already fully in memory. */
@@ -97,9 +108,7 @@ export function parseBif(bytes: Uint8Array): BifArchive {
     return openBif(bufferSource(bytes));
 }
 
-function openInflatedBif(inner: Uint8Array, original: ByteSource): BifArchive {
-    // The whole archive was read to inflate it, so the original source is done.
-    original.close();
+function openInflatedBif(inner: Uint8Array): BifArchive {
     return { ...openPlainBif(bufferSource(inner)), compressed: true };
 }
 
@@ -107,7 +116,6 @@ function openPlainBif(source: ByteSource): BifArchive {
     const head = source.read(0, BIF_HEADER_BYTES);
     const header = bifHeaderCodec.read(new BufferReader(head.buffer, { byteOffset: head.byteOffset }));
     if (header.signature !== "BIFF") {
-        source.close();
         throw new Error(`Not a BIFF V1 archive (signature="${header.signature}")`);
     }
 

@@ -22,6 +22,14 @@ export interface FieldPresentation {
 export type StructPresentation<T> = Partial<Record<keyof T, FieldPresentation>>;
 
 /**
+ * A field's display label: its presentation `label`, else `humanize(key)`. The one rule the display walker
+ * labels by and the readers of a display tree find a field by.
+ */
+export function fieldLabel<T>(presentation: StructPresentation<T>, key: keyof T & string): string {
+    return presentation[key]?.label ?? humanize(key);
+}
+
+/**
  * Convert a camelCase field name to a Title Case display label. Used as a
  * fallback when no `label` override is provided. Handles consecutive uppercase
  * runs as acronyms ("acID" -> "Ac ID", not "Ac I D").

@@ -6,6 +6,8 @@
  * noise rather than a table, so both parsers decode through here.
  */
 
+import { decodeWindows1252 } from "../byte-text";
+
 const ENCRYPTED_MARKER = 0xff;
 // prettier-ignore
 const IE_XOR_KEY = Uint8Array.from([
@@ -15,13 +17,13 @@ const IE_XOR_KEY = Uint8Array.from([
     0xb4, 0x9d, 0xcc, 0xaf, 0xa5, 0x95, 0xba, 0x99, 0x87, 0xd2, 0x9d, 0xe3, 0x91, 0xba, 0x90, 0xca,
 ]);
 
-/** Decode a text resource, decrypting first when it carries the 0xFFFF marker. */
+/** Decode a text resource as windows-1252, decrypting first when it carries the 0xFFFF marker. */
 export function decodeTextResource(bytes: Uint8Array): string {
     if (bytes[0] !== ENCRYPTED_MARKER || bytes[1] !== ENCRYPTED_MARKER) {
-        return new TextDecoder("latin1").decode(bytes);
+        return decodeWindows1252(bytes);
     }
     const body = bytes.subarray(2);
     const plain = new Uint8Array(body.length);
     for (const [i, byte] of body.entries()) plain[i] = byte ^ IE_XOR_KEY[i % IE_XOR_KEY.length]!;
-    return new TextDecoder("latin1").decode(plain);
+    return decodeWindows1252(plain);
 }

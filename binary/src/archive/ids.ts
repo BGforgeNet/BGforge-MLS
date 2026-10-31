@@ -49,7 +49,7 @@ function* idsRows(bytes: Uint8Array): Generator<[number, string]> {
         // lines - a file identifier such as "IDS V1.0" and an entry count - still fail this shape, the first on
         // its non-numeric value and the second on having no second column.
         // Trimmed first: a lazy `.*?` directly against a trailing `\s*$` lets a run of spaces split
-        // between the two quantifiers in exponentially many ways (CodeQL js/polynomial-redos).
+        // between the two quantifiers in polynomially many ways (CodeQL js/polynomial-redos).
         const trimmed = line.trim();
         const match = /^(\S+)\s+(\S.*)$/.exec(trimmed);
         const name = match?.[2];

@@ -7,6 +7,13 @@ import type { ParsedField, ParsedGroup } from "../types";
 import type { MapHeader } from "./schemas";
 import { toTypedBinarySchema } from "../spec/derive-typed-binary";
 import { walkStruct } from "../spec/walk-display";
+import { fieldLabel } from "../spec/presentation";
+import {
+    elevationObjectsPresentation,
+    inventoryEntryPresentation,
+    mapGroupLabels,
+    objectsSectionPresentation,
+} from "./specs/sections";
 import { resolvePidSubType, type PidResolver } from "../pid-resolver";
 import {
     makeGroup,
@@ -18,6 +25,7 @@ import {
     isExitGridPid,
     objectTypeName,
     fieldNumber,
+    indexedChildGroups,
     MAP_OBJECT_BASE_SIZE,
     MAP_OBJECT_DATA_HEADER_SIZE,
     PID_TYPE_CRITTER,
@@ -262,7 +270,7 @@ function parseObjectAt(
         );
         return incompleteObjectResult(
             makeGroup(
-                `Object ${index}`,
+                mapGroupLabels.incompleteObject(index),
                 [
                     noteField(
                         TRUNCATED_SENTINEL,
@@ -278,7 +286,11 @@ function parseObjectAt(
     if (offset + MAP_OBJECT_BASE_SIZE + MAP_OBJECT_DATA_HEADER_SIZE > data.length) {
         errors.push(`Object ${index} truncated at offset 0x${offset.toString(16)}`);
         return incompleteObjectResult(
-            makeGroup(`Object ${index}`, [noteField(TRUNCATED_SENTINEL, "Truncated object data", offset)], true),
+            makeGroup(
+                mapGroupLabels.incompleteObject(index),
+                [noteField(TRUNCATED_SENTINEL, "Truncated object data", offset)],
+                true,
+            ),
             data.length,
         );
     }
@@ -297,7 +309,7 @@ function parseObjectAt(
             errors.push(`Critter object ${index} payload truncated at offset 0x${currentOffset.toString(16)}`);
             objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated critter payload", currentOffset));
             return incompleteObjectResult(
-                makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), objectFields),
                 data.length,
             );
         }
@@ -309,7 +321,7 @@ function parseObjectAt(
             errors.push(`Object ${index} flags truncated at offset 0x${currentOffset.toString(16)}`);
             objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated object flags", currentOffset));
             return incompleteObjectResult(
-                makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), objectFields),
                 data.length,
             );
         }
@@ -323,7 +335,7 @@ function parseObjectAt(
                 errors.push(`Exit grid object ${index} payload truncated at offset 0x${currentOffset.toString(16)}`);
                 objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated exit grid payload", currentOffset));
                 return incompleteObjectResult(
-                    makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                    makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), objectFields),
                     data.length,
                 );
             }
@@ -351,7 +363,7 @@ function parseObjectAt(
                     ),
                 );
                 return incompleteObjectResult(
-                    makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                    makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), objectFields),
                     currentOffset,
                 );
             }
@@ -365,7 +377,7 @@ function parseObjectAt(
                 errors.push(`Object ${index} subtype trailer truncated at offset 0x${currentOffset.toString(16)}`);
                 objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated subtype trailer", currentOffset));
                 return incompleteObjectResult(
-                    makeGroup(`Object ${index} (${objectTypeName(pid)})`, objectFields),
+                    makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), objectFields),
                     data.length,
                 );
             }
@@ -410,12 +422,12 @@ function parseObjectAt(
             );
             objectFields.push(noteField(TRUNCATED_SENTINEL, "Truncated inventory entry", currentOffset));
             return incompleteObjectResult(
-                makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+                makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), [...objectFields, ...inventoryGroups]),
                 data.length,
             );
         }
 
-        const quantityField = int32Field("Quantity", data, currentOffset);
+        const quantityField = int32Field(fieldLabel(inventoryEntryPresentation, "quantity"), data, currentOffset);
         currentOffset += 4;
 
         const nestedObject = parseObjectAt(
@@ -427,12 +439,14 @@ function parseObjectAt(
             options,
             depth + 1,
         );
-        inventoryGroups.push(makeGroup(`Inventory Entry ${inventoryIndex}`, [quantityField, nestedObject.group]));
+        inventoryGroups.push(
+            makeGroup(mapGroupLabels.inventoryEntry(inventoryIndex), [quantityField, nestedObject.group]),
+        );
         currentOffset = nestedObject.offset;
 
         if (!nestedObject.complete) {
             return incompleteObjectResult(
-                makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+                makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), [...objectFields, ...inventoryGroups]),
                 currentOffset,
             );
         }
@@ -440,7 +454,7 @@ function parseObjectAt(
 
     return {
         complete: true,
-        group: makeGroup(`Object ${index} (${objectTypeName(pid)})`, [...objectFields, ...inventoryGroups]),
+        group: makeGroup(mapGroupLabels.object(index, objectTypeName(pid)), [...objectFields, ...inventoryGroups]),
         offset: currentOffset,
     };
 }
@@ -455,8 +469,14 @@ export function parseObjects(
     if (currentOffset >= data.length) {
         return {
             offset: currentOffset,
-            group: makeGroup("Objects Section", [
-                { name: "Total Objects", value: 0, offset: currentOffset, size: 0, type: "int32" },
+            group: makeGroup(mapGroupLabels.objectsSection, [
+                {
+                    name: fieldLabel(objectsSectionPresentation, "totalObjects"),
+                    value: 0,
+                    offset: currentOffset,
+                    size: 0,
+                    type: "int32",
+                },
             ]),
         };
     }
@@ -465,14 +485,14 @@ export function parseObjects(
         errors.push(`Object section truncated at offset 0x${currentOffset.toString(16)}`);
         return {
             offset: data.length,
-            group: makeGroup("Objects Section", [
+            group: makeGroup(mapGroupLabels.objectsSection, [
                 noteField(TRUNCATED_SENTINEL, "Truncated object section header", currentOffset),
             ]),
         };
     }
 
     const sectionFields: (ParsedField | ParsedGroup)[] = [];
-    const totalObjects = int32Field("Total Objects", data, currentOffset);
+    const totalObjects = int32Field(fieldLabel(objectsSectionPresentation, "totalObjects"), data, currentOffset);
     sectionFields.push(totalObjects);
     currentOffset += 4;
 
@@ -481,14 +501,14 @@ export function parseObjects(
         if (currentOffset + 4 > data.length) {
             errors.push(`Elevation ${elev} object count truncated at offset 0x${currentOffset.toString(16)}`);
             sectionFields.push(
-                makeGroup(`Elevation ${elev} Objects`, [
+                makeGroup(mapGroupLabels.elevationObjects(elev), [
                     noteField(TRUNCATED_SENTINEL, "Truncated elevation object count", currentOffset),
                 ]),
             );
-            return { offset: data.length, group: makeGroup("Objects Section", sectionFields) };
+            return { offset: data.length, group: makeGroup(mapGroupLabels.objectsSection, sectionFields) };
         }
 
-        const countField = int32Field("Object Count", data, currentOffset);
+        const countField = int32Field(fieldLabel(elevationObjectsPresentation, "objectCount"), data, currentOffset);
         currentOffset += 4;
 
         const elevationFields: (ParsedField | ParsedGroup)[] = [countField];
@@ -521,7 +541,7 @@ export function parseObjects(
             }
         }
 
-        sectionFields.push(makeGroup(`Elevation ${elev} Objects`, elevationFields));
+        sectionFields.push(makeGroup(mapGroupLabels.elevationObjects(elev), elevationFields));
         if (stoppedEarly) {
             break;
         }
@@ -530,11 +550,10 @@ export function parseObjects(
     if (currentOffset < data.length) {
         const hasOnlyZeroCounts =
             totalObjects.value === 0 &&
-            sectionFields
-                .filter(
-                    (entry): entry is ParsedGroup => "fields" in entry && /^Elevation \d+ Objects$/.test(entry.name),
-                )
-                .every((entry) => fieldNumber(entry, "Object Count") === 0);
+            indexedChildGroups(
+                { name: mapGroupLabels.objectsSection, fields: sectionFields },
+                (name, index) => name === mapGroupLabels.elevationObjects(index),
+            ).every((entry) => fieldNumber(entry, elevationObjectsPresentation, "objectCount") === 0);
 
         sectionFields.push(
             noteField(
@@ -548,10 +567,10 @@ export function parseObjects(
 
         return {
             offset: data.length,
-            group: makeGroup("Objects Section", sectionFields),
+            group: makeGroup(mapGroupLabels.objectsSection, sectionFields),
             opaqueTailOffset: currentOffset,
         };
     }
 
-    return { offset: data.length, group: makeGroup("Objects Section", sectionFields) };
+    return { offset: data.length, group: makeGroup(mapGroupLabels.objectsSection, sectionFields) };
 }

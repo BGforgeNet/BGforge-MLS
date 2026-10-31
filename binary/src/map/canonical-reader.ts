@@ -8,6 +8,17 @@ import { clampNumericValue } from "../binary-format-contract";
 import { parseWithSchemaValidation } from "../schema-validation";
 import { displayNavigator, isGroup } from "../spec/navigate-display";
 import { walkGroup } from "../spec/walk-display";
+import { fieldLabel, type StructPresentation } from "../spec/presentation";
+import { elevationObjectGroups, indexedChildGroups } from "./parse-helpers";
+import {
+    elevationObjectsPresentation,
+    inventoryEntryPresentation,
+    mapGroupLabels,
+    objectsSectionPresentation,
+    scriptExtentPresentation,
+    SCRIPT_EXTENT_SLOTS,
+    scriptListPresentation,
+} from "./specs/sections";
 
 import { ScriptType } from "./types";
 import { getScriptType } from "./schemas";
@@ -16,6 +27,7 @@ import { mapHeaderCanonicalSpec, mapHeaderPresentation } from "./specs/header";
 import {
     objectBaseSpec,
     objectBasePresentation,
+    objectDataPresentation,
     inventoryHeaderSpec,
     inventoryHeaderPresentation,
     critterDataSpec,
@@ -44,7 +56,9 @@ import {
 } from "./canonical-schemas";
 const { getGroup, getOptionalGroup, getField } = displayNavigator("MAP");
 
-function readNumber(group: ParsedGroup, name: string): number {
+/** The number in `group`'s field for spec key `key`, found under the label `presentation` gives it. */
+function readNumber<T>(group: ParsedGroup, presentation: StructPresentation<T>, key: keyof T & string): number {
+    const name = fieldLabel(presentation, key);
     const field = getField(group, name);
     if (typeof field.rawValue === "number") {
         return field.rawValue;
@@ -107,23 +121,26 @@ function parseTileElevation(group: ParsedGroup): z.infer<typeof mapTileElevation
     };
 }
 
-// Slot fields are wrapped in `${label} ${fieldName}` by the display tree
-// so the surrounding "Slot N" group can host an outer label. walkGroup
-// looks up by exact name, so strip the prefix before walking.
-function stripFieldPrefix(group: ParsedGroup, prefixPattern: RegExp): ParsedGroup {
+// Slot fields are labelled `${slotEntry} ${fieldName}` by the display tree so the surrounding slot group can
+// host an outer label. walkGroup looks up by exact name, so strip the prefix before walking.
+function stripFieldPrefix(group: ParsedGroup, prefix: string): ParsedGroup {
     return {
         ...group,
         fields: group.fields.map((entry) =>
-            isGroup(entry) ? entry : { ...entry, name: entry.name.replace(prefixPattern, "") },
+            isGroup(entry) || !entry.name.startsWith(prefix)
+                ? entry
+                : { ...entry, name: entry.name.slice(prefix.length) },
         ),
     };
 }
 
-function parseScriptSlot(group: ParsedGroup): z.infer<typeof mapScriptSlotSchema> {
-    const cleaned = stripFieldPrefix(group, /^Entry \d+ /);
-    const sidField = cleaned.fields.find((entry): entry is ParsedField => !isGroup(entry) && entry.name === "SID");
+/** `entryIndex` counts slots across the whole list, as the parser labels them. */
+function parseScriptSlot(group: ParsedGroup, entryIndex: number): z.infer<typeof mapScriptSlotSchema> {
+    const cleaned = stripFieldPrefix(group, `${mapGroupLabels.slotEntry(entryIndex)} `);
+    const sidLabel = fieldLabel(otherSlotPresentation, "sid");
+    const sidField = cleaned.fields.find((entry): entry is ParsedField => !isGroup(entry) && entry.name === sidLabel);
     if (!sidField) {
-        throw new Error(`Missing MAP field: ${group.name}.SID`);
+        throw new Error(`Missing MAP field: ${group.name}.${sidLabel}`);
     }
     const sidRaw = typeof sidField.rawValue === "number" ? sidField.rawValue : Number(sidField.value);
     const scriptType = getScriptType(sidRaw >>> 0);
@@ -141,18 +158,18 @@ function parseScriptSlot(group: ParsedGroup): z.infer<typeof mapScriptSlotSchema
 }
 
 function parseScriptSection(group: ParsedGroup): z.infer<typeof mapScriptSectionSchema> {
-    const typeName = group.name.replace(/ Scripts$/, "");
+    const typeName = mapGroupLabels.scriptListType(group.name);
     const type = Number(Object.entries(ScriptType).find(([, value]) => value === typeName)?.[0] ?? -1);
-    const count = readNumber(group, "Script Count");
-    const extents = group.fields
-        .filter((entry): entry is ParsedGroup => isGroup(entry) && /^Extent \d+$/.test(entry.name))
-        .map((extentGroup) => ({
-            slots: extentGroup.fields
-                .filter((entry): entry is ParsedGroup => isGroup(entry) && /^Slot \d+$/.test(entry.name))
-                .map((slotGroup) => parseScriptSlot(slotGroup)),
-            extentLength: readNumber(extentGroup, "Extent Length"),
-            extentNext: readNumber(extentGroup, "Extent Next"),
-        }));
+    const count = readNumber(group, scriptListPresentation, "scriptCount");
+    const extents = indexedChildGroups(group, (name, index) => name === mapGroupLabels.extent(index)).map(
+        (extentGroup, extentIndex) => ({
+            slots: indexedChildGroups(extentGroup, (name, index) => name === mapGroupLabels.slot(index)).map(
+                (slotGroup, slotIndex) => parseScriptSlot(slotGroup, extentIndex * SCRIPT_EXTENT_SLOTS + slotIndex),
+            ),
+            extentLength: readNumber(extentGroup, scriptExtentPresentation, "extentLength"),
+            extentNext: readNumber(extentGroup, scriptExtentPresentation, "extentNext"),
+        }),
+    );
 
     return {
         type: Math.max(type, 0),
@@ -180,7 +197,8 @@ function objectKindFromPid(pid: number): z.infer<typeof mapObjectSchema>["kind"]
     }
 }
 
-function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
+/** `path` is the object's elevation and index, then an inventory index per nesting level, as the parser labels it. */
+function parseMapObject(group: ParsedGroup, path: string): z.infer<typeof mapObjectSchema> {
     const inventoryHeader = getOptionalGroup(group, "Inventory Header");
     const objectData = getOptionalGroup(group, "Object Data");
     const critterData = getOptionalGroup(group, "Critter Data");
@@ -194,24 +212,26 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
         inventoryHeader: inventoryHeader
             ? walkGroup(inventoryHeader, inventoryHeaderSpec, inventoryHeaderPresentation)
             : { inventoryLength: 0, inventoryCapacity: 0, inventoryPointer: 0 },
-        inventory: group.fields
-            .filter((entry): entry is ParsedGroup => isGroup(entry) && /^Inventory Entry \d+$/.test(entry.name))
-            .map((entry) => ({
-                quantity: readNumber(entry, "Quantity"),
-                object: parseMapObject(
-                    // Inventory recursion creates names like "Object 0.0.0 (Item)" /
-                    // "Object 0.0.0.0 (Item)" - match any dotted index path, not
-                    // just the two-level "elevation.index" form used at top level.
-                    entry.fields.find(
-                        (field): field is ParsedGroup => isGroup(field) && /^Object [\d.]+ /.test(field.name),
-                    )!,
-                ),
-            })),
+        inventory: indexedChildGroups(group, (name, index) => name === mapGroupLabels.inventoryEntry(index)).map(
+            (entry, index) => {
+                const nestedPath = `${path}.${index}`;
+                const prefix = mapGroupLabels.objectPrefix(nestedPath);
+                return {
+                    quantity: readNumber(entry, inventoryEntryPresentation, "quantity"),
+                    object: parseMapObject(
+                        entry.fields.find(
+                            (field): field is ParsedGroup => isGroup(field) && field.name.startsWith(prefix),
+                        )!,
+                        nestedPath,
+                    ),
+                };
+            },
+        ),
     };
 
     if (objectData) {
         object.objectData = {
-            dataFlags: readNumber(objectData, "Data Flags") >>> 0,
+            dataFlags: readNumber(objectData, objectDataPresentation, "dataFlags") >>> 0,
         };
     }
 
@@ -259,7 +279,7 @@ function parseMapObject(group: ParsedGroup): z.infer<typeof mapObjectSchema> {
 
 function parseObjects(group: ParsedGroup): z.infer<typeof mapObjectsSchema> {
     const elevations = [0, 1, 2].map((elevation) => {
-        const elevationGroup = getOptionalGroup(group, `Elevation ${elevation} Objects`);
+        const elevationGroup = getOptionalGroup(group, mapGroupLabels.elevationObjects(elevation));
         if (!elevationGroup) {
             return {
                 elevation,
@@ -267,19 +287,19 @@ function parseObjects(group: ParsedGroup): z.infer<typeof mapObjectsSchema> {
                 objects: [],
             };
         }
-        const objects = elevationGroup.fields
-            .filter((entry): entry is ParsedGroup => isGroup(entry) && /^Object \d+\.\d+ /.test(entry.name))
-            .map((entry) => parseMapObject(entry));
+        const objects = elevationObjectGroups(elevationGroup, elevation).map((entry, index) =>
+            parseMapObject(entry, `${elevation}.${index}`),
+        );
 
         return {
             elevation,
-            objectCount: readNumber(elevationGroup, "Object Count"),
+            objectCount: readNumber(elevationGroup, elevationObjectsPresentation, "objectCount"),
             objects,
         };
     });
 
     return {
-        totalObjects: readNumber(group, "Total Objects"),
+        totalObjects: readNumber(group, objectsSectionPresentation, "totalObjects"),
         elevations,
     };
 }
@@ -326,10 +346,10 @@ export function rebuildMapCanonicalDocument(parseResult: ParseResult): MapCanoni
         .map((entry) => parseTileElevation(entry));
 
     const scripts = parseResult.root.fields
-        .filter((entry): entry is ParsedGroup => isGroup(entry) && entry.name.endsWith(" Scripts"))
+        .filter((entry): entry is ParsedGroup => isGroup(entry) && mapGroupLabels.isScriptList(entry.name))
         .map((entry) => parseScriptSection(entry));
 
-    const objects = parseObjects(getGroup(parseResult.root, "Objects Section"));
+    const objects = parseObjects(getGroup(parseResult.root, mapGroupLabels.objectsSection));
 
     const document = parseWithSchemaValidation(
         mapCanonicalDocumentSchema,
