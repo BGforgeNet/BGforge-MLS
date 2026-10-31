@@ -881,7 +881,8 @@
         "keybindings": [
             {
                 "command": "extension.bgforge.compile",
-                "key": "ctrl+r"
+                "key": "ctrl+r",
+                "when": "editorLangId == fallout-ssl || editorLangId == weidu-baf || editorLangId == weidu-slb || editorLangId == weidu-ssl || editorLangId == weidu-d || editorLangId == weidu-tp2 || resourceExtname == .tssl || resourceExtname == .tbaf || resourceExtname == .td"
             },
             {
                 "command": "extension.bgforge.dialogEditor",
