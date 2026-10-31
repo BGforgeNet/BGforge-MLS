@@ -176,13 +176,11 @@ const CASES: Case[] = [
         code: `procedure p begin end\n#define C(proc, when) if (when) then call proc\n${stmt("C(p, 1);")}`,
         expect: "accept",
     },
-    // The preprocessor replaces every occurrence, so the body cannot use the parameter's word as a keyword. The
-    // grammar still reads it as one where no expression may start, accepting a body the compiler refuses.
+    // The preprocessor replaces every occurrence, so the body cannot use the parameter's word as a keyword.
     {
         name: "a keyword parameter replaces the keyword everywhere in its body",
         code: `procedure p begin end\n#define C(proc, when) call proc when when\n${stmt("C(p, 1);")}`,
         expect: "refuse",
-        referenceOnly: true,
     },
     {
         name: "a keyword parameter is substituted only in its own spelling",

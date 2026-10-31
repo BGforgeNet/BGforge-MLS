@@ -37,8 +37,8 @@ enum TokenType { NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_RE
  * macro body. The preprocessor substitutes a parameter before the compiler's lexer sees a keyword, so
  * `#define season_morning(when) ((when) + 1)` is valid. The scanner reads such a parameter (KEYWORD_PARAM),
  * remembers its exact spelling (the preprocessor is case-sensitive) until the #define ends at LINE_END, and
- * returns the same word as KEYWORD_PARAM_REF wherever the grammar lets an expression start. Any other
- * parameter is an ordinary identifier, lexed by the internal lexer.
+ * returns the same word as KEYWORD_PARAM_REF anywhere in the body: a name where the grammar lets an expression
+ * start, and an error elsewhere. Any other parameter is an ordinary identifier, lexed by the internal lexer.
  *
  * This list is a copy of RESERVED_WORDS in grammar.js, which the scanner cannot read;
  * server/test/fallout-ssl/scanner-reserved-words.test.ts keeps the two equal.
@@ -194,7 +194,11 @@ bool tree_sitter_ssl_external_scanner_scan(
     /* The two never share a parse state, so both valid at once means error recovery, which marks every
      * external token valid; a keyword is not read as a name there. */
     bool recovering = valid_symbols[KEYWORD_PARAM] && valid_symbols[KEYWORD_PARAM_REF];
-    if (!recovering && (valid_symbols[KEYWORD_PARAM] || (valid_symbols[KEYWORD_PARAM_REF] && scanner->length > 0))) {
+    /* The preprocessor replaces the parameter wherever it stands, so in its body the word is never the keyword.
+     * Where no expression may start, KEYWORD_PARAM_REF is a token no state accepts, and the parse reports the
+     * body the compiler refuses. IMPLICIT_END reads a word as well, so where it is due the word is left to it. */
+    bool in_body = scanner->length > 0 && (valid_symbols[KEYWORD_PARAM_REF] || !valid_symbols[IMPLICIT_END]);
+    if (!recovering && (valid_symbols[KEYWORD_PARAM] || in_body)) {
         skip_horizontal_space(lexer);
         if (is_word_start(lexer->lookahead)) {
             char word[MAX_WORD];
