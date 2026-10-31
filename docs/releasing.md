@@ -31,8 +31,9 @@ so a new `dist/*.zip` is covered by both without being listed again.
 
 The grammar bundle is built on every push, not only on tags, so a non-tag build attaches it to the
 `bgforge-mls-bundles` CI artifact beside the editor bundles - the same `dist/*.zip` glob. That is where an
-unreleased grammar fix is available from; releases remain the only published channel. The SBOM is generated on
-release tags only, so no CI artifact carries one.
+unreleased grammar fix is available from; releases remain the only published channel. Every release step that
+publishes nothing (E2E, the SBOM, the provenance hashes) runs on every push as well, so a toolchain bump breaks a
+branch build before it can break a release; the SBOM is generated there but published with a release only.
 
 ## Pre-release checklist
 
@@ -47,7 +48,7 @@ Walk this before tagging a `vX.Y.Z` extension release. The detailed procedures a
 - [ ] **Pins and overrides still necessary.** Each version pin and override is a workaround for a specific upstream state, not a permanent fixture. Walk every entry in [dependencies.md](dependencies.md) and the `overrides` + `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. For each deliberate hold, check whether its "revisit when X" trigger is now met (a matured major shipped, an advisory closed, an upstream patched its bundled dep so the override is redundant); for each override, test removing it (`pnpm install` + the gate) and keep only the minimal set still required. Drop what is no longer needed and keep the recorded rationale current for what stays.
 - [ ] **Release secrets valid.** The tag workflow publishes with the `VS_MARKETPLACE_TOKEN`, `OPEN_VSX_TOKEN` and `NPM_TOKEN` repository secrets; an expired token fails its publish step after the GitHub Release already exists (see _Recovering from a partial release_ below).
 - [ ] **Full gate green.** `pnpm build:all && pnpm test:all` passes (the cross-subsystem close-out gate) - run it last, on the final tree, after any library bump, security fix, or override drop above.
-- [ ] **E2E green.** `pnpm test:e2e` passes (after `pnpm build`). `test:all` excludes it and CI runs it only on release tags, so otherwise the tag push is its first run.
+- [ ] **CI green on the release commit.** The Build run for the commit you are about to tag passed: it runs E2E and the SBOM, which `test:all` excludes.
 - [ ] **Commit, tag, push.** Commit the version bump and changelog as `Update changelog, bump version: X.Y.Z`, then tag `vX.Y.Z` and push the tag.
 
 ## Releasing the extension (`vX.Y.Z`)

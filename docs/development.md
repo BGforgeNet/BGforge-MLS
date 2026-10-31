@@ -75,7 +75,7 @@ and CI do - so a change can pass `pnpm test` and still commit a breach. What eac
 or layout regression. Run it yourself after a webview change rather than finding out on push. The harness READMEs
 cover the individual drivers.
 
-`pnpm test:e2e` is outside `test:all` too, and CI runs it only on release tags.
+`pnpm test:e2e` is outside `test:all` too; CI runs it on every push.
 
 Every vitest config and suite runs from any working directory; includes and fixture paths are anchored to their own
 file. Keep it that way.
