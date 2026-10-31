@@ -243,9 +243,11 @@ class Emitter {
                     break;
                 case "timedCallStmt":
                     value(stmt.delay);
+                    value(stmt.target);
                     break;
                 case "conditionalCallStmt":
                     value(stmt.condition);
+                    value(stmt.target);
                     break;
                 case "libStmt":
                 case "opStmt":
@@ -498,7 +500,7 @@ class Emitter {
             // returns nothing, so there is no return address to push and no result to pop.
             case "timedCallStmt":
                 this.writeExpression(statement.delay);
-                this.w.int(statement.target.index + 1);
+                this.writeScheduledTarget(statement.target);
                 this.w.op(Op.CALL_AT);
                 break;
 
@@ -515,7 +517,7 @@ class Emitter {
                 this.w.op(Op.STOP_PROG);
                 this.w.patchLong(jumpPatch, this.w.tell());
                 this.w.int(conditionAt);
-                this.w.int(statement.target.index + 1);
+                this.writeScheduledTarget(statement.target);
                 this.w.op(Op.CALL_CONDITION);
                 break;
             }
@@ -749,6 +751,18 @@ class Emitter {
         }
         this.w.op(Op.CALL);
         this.w.patchLong(returnPatch, this.w.tell());
+    }
+
+    /**
+     * The procedure a timed or conditional call schedules. One named at run time goes through the name lookup, and
+     * the engine checks that what it finds takes no arguments, since the scheduler passes none.
+     */
+    private writeScheduledTarget(target: Expr): void {
+        this.writeProcAddress(target);
+        if (target.kind === "procRef") return;
+        this.w.op(Op.DUP);
+        this.w.int(0);
+        this.w.op(Op.CHECK_ARG_COUNT);
     }
 
     /**

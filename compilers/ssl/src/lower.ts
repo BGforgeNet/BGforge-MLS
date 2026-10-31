@@ -1123,12 +1123,9 @@ class Lowering {
                 this.report(`a ${delay ? "timed" : "conditional"} call cannot pass arguments`, node);
                 return null;
             }
+            // A string or variable target names the procedure at run time, as it does for a plain call.
             const callee = this.procedureRef(target, scope);
-            if (callee.kind !== "procRef") {
-                if (callee !== POISON) this.report(`unknown procedure '${target.text}'`, target);
-                return null;
-            }
-            if (this.refusePureCallStatement(callee, target)) return null;
+            if (callee === POISON || this.refusePureCallStatement(callee, target)) return null;
             if (condition) {
                 return {
                     kind: "conditionalCallStmt",

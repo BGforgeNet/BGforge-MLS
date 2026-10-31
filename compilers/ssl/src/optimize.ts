@@ -426,17 +426,9 @@ function remapWith(statement: Stmt, leaf: (expr: Expr) => Expr): Stmt {
             case "callStmt":
                 return { ...stmt, target: expression(stmt.target), args: stmt.args.map(expression) };
             case "timedCallStmt":
-                return {
-                    ...stmt,
-                    target: expression(stmt.target) as Extract<Expr, { kind: "procRef" }>,
-                    delay: expression(stmt.delay),
-                };
+                return { ...stmt, target: expression(stmt.target), delay: expression(stmt.delay) };
             case "conditionalCallStmt":
-                return {
-                    ...stmt,
-                    target: expression(stmt.target) as Extract<Expr, { kind: "procRef" }>,
-                    condition: expression(stmt.condition),
-                };
+                return { ...stmt, target: expression(stmt.target), condition: expression(stmt.condition) };
             case "libStmt":
             case "opStmt":
                 return { ...stmt, args: stmt.args.map(expression) };

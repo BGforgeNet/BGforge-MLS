@@ -41,6 +41,8 @@
 - Hovers and signature help show `critter_injure`, `critter_mod_skill`, `critter_set_flee_state`,
   `critter_stop_attacking`, `destroy_object`, `explosion`, `gdialog_mod_barter`, `jam_lock` and `use_obj_on_obj`
   as returning nothing, as the engine does.
+- The compiler accepts a timed or conditional call to a string or variable, `call "p" in 5` and `call s when x`, as
+  the reference compiler does.
 
 ### Transpilers
 

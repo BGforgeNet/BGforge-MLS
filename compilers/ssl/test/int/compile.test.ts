@@ -314,6 +314,13 @@ const CASES: Case[] = [
             "procedure foo begin end\n",
     },
     {
+        // The target is looked up by name at run time, and the engine checks it takes no arguments.
+        name: "a timed or conditional call to a string or variable target",
+        source:
+            'procedure foo begin end\nprocedure start begin\n variable s := "foo";\n' +
+            ' call "foo" in 1;\n call s in 2;\n call "foo" when s;\n call s when 1;\nend\n',
+    },
+    {
         name: "imported and exported procedures reach the table",
         source:
             "import procedure ext(variable a);\nexport procedure pub(variable a, variable b);\n" +
@@ -375,6 +382,13 @@ const OPTIMIZED_CASES: Case[] = [
         // the reference, the optimiser removes the procedure and cancels something that is no longer there.
         name: "cancel keeps the procedure it names",
         source: "procedure foo;\nprocedure foo begin end\nprocedure start begin\n cancel(foo);\n cancelall;\nend\n",
+    },
+    {
+        // Called by name as well: the reference drops a procedure only a string names, and this compiler keeps it.
+        name: "a timed or conditional call to a string or variable target",
+        source:
+            'procedure foo begin end\nprocedure start begin\n variable s := "foo";\n call foo;\n' +
+            ' call "foo" in 1;\n call s in 2;\n call "foo" when s;\n call s when 1;\nend\n',
     },
     {
         // A trailing argument nothing reads gives its slot to the first local, and the optimiser's

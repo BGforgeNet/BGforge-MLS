@@ -81,13 +81,13 @@ export type Stmt =
      * `call foo in <delay>`. The engine schedules the procedure rather than entering it, so unlike
      * `callStmt` this passes no return address and no arguments, and leaves nothing to discard.
      */
-    | { kind: "timedCallStmt"; target: Extract<Expr, { kind: "procRef" }>; delay: Expr }
+    | { kind: "timedCallStmt"; target: Expr; delay: Expr }
     /**
      * `call foo when <condition>`. The engine runs the procedure once the condition holds, so like a timed
      * call it takes no arguments; the condition is compiled as a guard block beside the call, as a
      * conditional procedure's is.
      */
-    | { kind: "conditionalCallStmt"; target: Extract<Expr, { kind: "procRef" }>; condition: Expr }
+    | { kind: "conditionalCallStmt"; target: Expr; condition: Expr }
     /**
      * A statement-position engine function. Some engine functions return a value even when called as a
      * statement; those set `popsResult` so the unused result is dropped rather than left on the stack.
