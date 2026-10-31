@@ -5,7 +5,7 @@
  * with `gcc -E -x c -P`. So this needs to be *a* conforming preprocessor, not a bug-for-bug copy of any
  * particular one.
  *
- * Supported set is bounded by what the real corpus uses (1599 `.ssl` plus 169 SSL headers): `#include`
+ * Supported set is bounded by what the real corpus's scripts and headers use: `#include`
  * (literal and computed), `#define` (object-like, function-like and variadic), `#undef`,
  * `#ifdef`/`#ifndef`/`#else`/`#endif`, `#if` with constant expressions, and the `#` and `##` operators.
  * `#pragma` is passed through untouched because it belongs to the compiler, not to us.

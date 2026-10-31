@@ -1,8 +1,8 @@
 /**
  * Library and engine opcode tables.
  *
- * The interpreter's opcode space is one contiguous run: the 76 core instructions in `opcodes.ts`,
- * then 85 library opcodes, then 481 engine ("extended") opcodes. Only the core set is instruction
+ * The interpreter's opcode space is one contiguous run: the core instructions in `opcodes.ts`, then the
+ * library opcodes, then the engine ("extended") opcodes. Only the core set is instruction
  * semantics; everything here is a named engine function dispatched by number, so a call site pushes its
  * arguments in order and then the opcode.
  *
@@ -15,10 +15,7 @@
  * decoded without knowing the target game is still unambiguous as a number - just not as a name.
  */
 
-import { O_OPERATOR } from "./opcodes";
-
-/** Count of core opcodes; the library table starts immediately after them. */
-const CORE_COUNT = 76;
+import { CORE_OPCODE_COUNT, O_OPERATOR } from "./opcodes";
 
 // Order is the contract. Do not sort, insert, or remove.
 const LIB_OPCODES = [
@@ -611,7 +608,7 @@ const FALLOUT1_OVERRIDES: Readonly<Record<number, string>> = {
 export type LibOpcodeName = (typeof LIB_OPCODES)[number];
 export type EngineOpcodeName = (typeof ENGINE_OPCODES)[number];
 
-const LIB_BASE = O_OPERATOR + CORE_COUNT;
+const LIB_BASE = O_OPERATOR + CORE_OPCODE_COUNT;
 const ENGINE_BASE = LIB_BASE + LIB_OPCODES.length;
 
 function tableOf(names: readonly string[], base: number): Readonly<Record<string, number>> {

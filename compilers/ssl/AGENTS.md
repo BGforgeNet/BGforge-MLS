@@ -6,11 +6,12 @@ end: `compilers/README.md`.
 
 ## Pick the probe that answers the question
 
-| Question                            | Probe                     | Cost    |
-| ----------------------------------- | ------------------------- | ------- |
-| Does THIS construct match?          | `pnpm ssl-diff`           | seconds |
-| Did anything about the corpus move? | `pnpm ssl-verdicts`       | minutes |
-| Did anything regress? (close-out)   | `test/integration/` sweep | longest |
+| Question                                                     | Probe                       | Cost             |
+| ------------------------------------------------------------ | --------------------------- | ---------------- |
+| Does THIS construct match?                                   | `pnpm ssl-diff`             | seconds          |
+| Do a repo's modified `.ssl` still compile to the HEAD bytes? | `pnpm ssl-equiv <repo-dir>` | seconds per file |
+| Did anything about the corpus move?                          | `pnpm ssl-verdicts`         | minutes          |
+| Did anything regress? (close-out)                            | `test/integration/` sweep   | longest          |
 
 ```bash
 pnpm ssl-diff -e 'procedure start begin variable a[10]; end'

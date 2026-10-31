@@ -2,6 +2,15 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
+## Unreleased
+
+### Fixed
+
+- A numeric literal written with `_` separators (`1_000`) compiles to its value. The bytecode used to hold 0 in
+  its place, and `--ssl` wrote it unchanged, which SSL does not read.
+- `--opt 2` folds a hex literal past `0x7FFFFFFF` as its 32-bit pattern: `0xFFFFFFFF == -1` folds to 1, as in
+  the reference SSL compiler.
+
 ## 0.3.0
 
 ### Changed

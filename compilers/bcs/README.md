@@ -249,14 +249,14 @@ it cannot describe, but nothing a real file contains takes that path.
 ## Tests
 
 ```bash
-pnpm exec vitest run --config compilers/bcs/vitest.config.ts
+pnpm test:project bcs
 
 # The install sweep, which needs a game to point at - see test/corpus.test.ts. Add BGFORGE_BCS_IDS, pointing
 # at that install's IDS tables, and the sweep also compiles every script back and checks the round trip is
 # stable.
-BGFORGE_BCS_CORPUS=/path/to/game pnpm exec vitest run --config compilers/bcs/vitest.config.ts corpus
+BGFORGE_BCS_CORPUS=/path/to/game pnpm test:project bcs corpus
 
 # The differential needs a WeiDU; scripts/ensure-weidu.sh prints one, downloading a pinned build if the
 # host has none. `pnpm test` resolves it before the unit phase, so it only has to be done by hand here.
-WEIDU_BIN="$(scripts/ensure-weidu.sh)" pnpm exec vitest run --config compilers/bcs/vitest.config.ts weidu
+WEIDU_BIN="$(scripts/ensure-weidu.sh)" pnpm test:project bcs weidu
 ```

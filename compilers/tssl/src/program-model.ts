@@ -107,6 +107,12 @@ export function realFileOf(node: Node): string {
     return file.endsWith(".tssl.ts") ? file.slice(0, -".ts".length) : file;
 }
 
+/** The refusal for a binding pattern where SSL declares one name at a time. */
+export const DESTRUCTURING_REFUSAL = "destructuring is not supported; declare each variable separately";
+
+/** The refusal for a `for` initializer declaring more than the one variable SSL's holds. */
+export const FOR_INITIALIZER_REFUSAL = "a for initializer declares one variable; declare the others before the loop";
+
 /** A refusal pinned to the node that earned it, in the file and line the author can open. */
 export function refuseAt(node: Node, message: string): TranspileError {
     return new TranspileError(message, { file: realFileOf(node), line: node.getStartLineNumber() });
@@ -135,7 +141,7 @@ function collectModuleItems(source: SourceFile, file: string, isEntry: boolean):
                         // A binding pattern's `getName()` is the pattern text, which both back ends would
                         // emit as though it were an identifier. Refused here so neither has to.
                         if (decl.getNameNode().getKind() !== SyntaxKind.Identifier) {
-                            throw refuseAt(decl, "destructuring is not supported; declare each variable separately");
+                            throw refuseAt(decl, DESTRUCTURING_REFUSAL);
                         }
                         bucket.push(decl);
                     }

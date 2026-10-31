@@ -24,8 +24,7 @@ import { SyntaxKind, type FunctionDeclaration, type Node, type Project } from "t
 import {
     engineFunction,
     Expansions,
-    intLiteralProblem,
-    type BinaryOp,
+    numberLiteral,
     type Declaration,
     type Desugarer,
     type Expr,
@@ -35,8 +34,15 @@ import {
     type Stmt,
     type VariableDecl,
 } from "@bgforge/ssl";
-import { buildProgramModel, refuseAt, type TsslProgram } from "../program-model";
-import { sslName, type InlineFunc } from "../types";
+import {
+    buildProgramModel,
+    DESTRUCTURING_REFUSAL,
+    FOR_INITIALIZER_REFUSAL,
+    refuseAt,
+    type TsslProgram,
+} from "../program-model";
+import { ASSIGN_OPS, BINARY_OPS } from "../operators";
+import { RESERVED_VAR_NAMES, sslName, sslNumber, type InlineFunc } from "../types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";
 import { extractInlineFunctions } from "../inline-functions";
 // Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
@@ -81,38 +87,8 @@ interface Scope {
     bindings?: Map<string, Expr>;
 }
 
-/** TypeScript spellings that mean an SSL binary operator. Anything absent is refused, not guessed. */
-const BINARY_OPS = new Map<string, BinaryOp>([
-    ["+", "+"],
-    ["-", "-"],
-    ["*", "*"],
-    ["/", "/"],
-    ["%", "%"],
-    ["==", "=="],
-    ["===", "=="],
-    ["!=", "!="],
-    ["!==", "!="],
-    ["<", "<"],
-    ["<=", "<="],
-    [">", ">"],
-    [">=", ">="],
-    ["&", "bwand"],
-    ["|", "bwor"],
-    ["^", "bwxor"],
-    ["&&", "and"],
-    ["||", "or"],
-]);
-
 /** Comments reach the statement walk as trivia nodes; they contribute nothing to the output. */
 const COMMENT_KINDS = new Set([SyntaxKind.SingleLineCommentTrivia, SyntaxKind.MultiLineCommentTrivia]);
-
-const ASSIGN_OPS = new Map<string, "=" | "+=" | "-=" | "*=" | "/=">([
-    ["=", "="],
-    ["+=", "+="],
-    ["-=", "-="],
-    ["*=", "*="],
-    ["/=", "/="],
-]);
 
 class TsslLowering {
     private readonly declarations: Declaration[] = [];
@@ -230,7 +206,7 @@ class TsslLowering {
             for (const func of module.functions) {
                 const name = func.getName();
                 if (name === undefined || !this.model.kept.has(func)) continue;
-                if (this.model.inlineFunctions.has(name) || name === "list" || name === "map") continue;
+                if (this.model.inlineFunctions.has(name) || RESERVED_VAR_NAMES.has(name)) continue;
                 out.push(func);
             }
         }
@@ -438,7 +414,7 @@ class TsslLowering {
         // spliced text, so lowering the arguments first would intern their string literals twice and in
         // the wrong order - and the string table is built in intern order, which fixes every offset.
         // folib spells an array or map literal as a call; both are literals, not procedures.
-        if (name === "list" || name === "map") {
+        if (RESERVED_VAR_NAMES.has(name)) {
             return { kind: "expr", expr: this.lowerListHelper(call, name === "map", scope) };
         }
         const inlineMacro = this.model.inlineFunctions.get(name);
@@ -517,13 +493,13 @@ class TsslLowering {
         // declarator. Refused rather than lowered: the text route has to put the extras somewhere else,
         // and wherever it puts them they take different slots than they do here.
         if (!statement && list.getDeclarations().length > 1) {
-            throw refuseAt(node, "a for initializer declares one variable; declare the others before the loop");
+            throw refuseAt(node, FOR_INITIALIZER_REFUSAL);
         }
         for (const decl of list.getDeclarations()) {
             // The text route refuses this too; a binding pattern here would declare a local named after
             // the pattern text. The key/value form a for-of takes never reaches this method.
             if (decl.getNameNode().getKind() !== SyntaxKind.Identifier) {
-                throw refuseAt(decl, "destructuring is not supported; declare each variable separately");
+                throw refuseAt(decl, DESTRUCTURING_REFUSAL);
             }
             const name = decl.getName();
             const initializer = decl.getInitializer();
@@ -967,15 +943,11 @@ class TsslLowering {
             }
 
             case SyntaxKind.NumericLiteral: {
-                const text = node.getText();
-                const value = Number(text);
-                // The spelling decides the type, as it does in SSL: `100.0` is a float, `100` an integer. An `e` is an
-                // exponent only in a decimal spelling; in `0xFE` it is a digit.
-                const hex = /^0x/i.test(text);
-                if (text.includes(".") || (!hex && /e/i.test(text))) return { kind: "float", value };
-                const problem = intLiteralProblem(text, value);
-                if (problem) throw refuseAt(node, problem);
-                return { kind: "int", value };
+                // The spelling decides the type, as it does in SSL: `100.0` is a float, `100` an integer.
+                const literal = numberLiteral(sslNumber(node.getText()));
+                if (literal.kind === "float") return literal;
+                if (literal.problem) throw refuseAt(node, literal.problem);
+                return { kind: "int", value: literal.value };
             }
             case SyntaxKind.StringLiteral: {
                 const value = node.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue();

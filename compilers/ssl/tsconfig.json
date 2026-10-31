@@ -6,7 +6,8 @@
         "noEmit": true,
         "tsBuildInfoFile": "../../tmp/ssl-lib.tsbuildinfo",
         "paths": {
-            "@bgforge/ssl": ["./src/index.ts"]
+            "@bgforge/ssl": ["./src/index.ts"],
+            "@bgforge/transpile/internal": ["../../transpilers/src/internal.ts"]
         }
     },
     "include": ["src", "test", "scripts"]

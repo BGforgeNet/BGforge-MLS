@@ -93,8 +93,11 @@ export const FORBIDDEN_GLOBALS = new Set([
     "Proxy",
 ]);
 
-/** Variable names that conflict with the folib list()/map() helper functions. */
-export const RESERVED_VAR_NAMES = new Set(["list", "map"]);
+/**
+ * folib's `list()`/`map()` helpers: array and map literal syntax, which both routes expand at the call site and
+ * never emit as procedures, and so names no variable may take.
+ */
+export const RESERVED_VAR_NAMES: ReadonlySet<string> = new Set(["list", "map"]);
 
 /**
  * The name SSL knows a TSSL identifier by. `typeof` is a keyword in both languages, so folib declares
@@ -107,8 +110,16 @@ export function sslName(name: string): string {
     return name === "sfall_typeof" ? "typeof" : name;
 }
 
-// Route diagnostics to stderr so CLI stdout mode (`fgtp file.tssl`) stays a clean
-// pipe. `setConlog()` lets a host swap this sink (the test suite installs a
+/**
+ * A numeric literal as SSL spells it: TypeScript's `_` separators dropped, the radix and the `.` that makes it a
+ * float kept as written. SSL has no separator, so both routes read the literal through this one spelling.
+ */
+export function sslNumber(text: string): string {
+    return text.replaceAll("_", "");
+}
+
+// Route diagnostics to stderr, apart from the per-file progress lines the CLI prints on
+// stdout. `setConlog()` lets a host swap this sink (the test suite installs a
 // capturing logger); with no override the sink stays `console.error`, preserving
 // the CLI's stderr/stdout separation.
 type Conlog = (message: string) => void;

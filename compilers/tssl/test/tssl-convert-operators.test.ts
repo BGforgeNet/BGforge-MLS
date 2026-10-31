@@ -60,6 +60,17 @@ describe("operator mappings", () => {
         expect(out).toContain("1.0 * 3 / 2");
     });
 
+    // SSL has no numeric separator, so the literal is written without it, in the author's radix and type.
+    it("drops numeric separators from a literal", async () => {
+        const out = await emit(`function start() {\n    let x = 1_000 + 0xFF_FF + 1_0.5;\n}\n`);
+        expect(out).toContain("variable x = 1000 + 0xFFFF + 10.5;");
+    });
+
+    it("drops numeric separators from a map key", async () => {
+        const out = await emit(`function start() {\n    let m = { 1_000: 5 };\n}\n`);
+        expect(out).toContain("{1000: 5}");
+    });
+
     it("keeps ternaries with a parenthesized condition", async () => {
         const out = await emit(`function start() {\n    let x = global_var(1) ? 10 : 20;\n}\n`);
         expect(out).toContain("(global_var(1)) ? 10 : 20");

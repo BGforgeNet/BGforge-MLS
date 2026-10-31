@@ -3,7 +3,7 @@
  *
  * A compile is CPU-bound and single-threaded, and inputs do not interact - each is its own translation
  * unit, reading only its own source and the headers it includes - so a whole mod's worth of scripts is
- * work N cores can finish in a fraction of the time. Over the 1525-script Restoration Project corpus at
+ * work N cores can finish in a fraction of the time. Over the Restoration Project corpus at
  * -O2 the wall time falls close to linearly in `-j` until the machine's cores run out.
  *
  * Output is buffered per input and flushed IN INPUT ORDER, so a parallel run reads exactly like a

@@ -53,6 +53,10 @@ describe("declarations", () => {
         ["0xe", { kind: "int", value: 14 }],
         ["1e3", { kind: "float", value: 1000 }],
         ["2.5", { kind: "float", value: 2.5 }],
+        // A numeric separator is spelling only: the value is the literal without it.
+        ["1_000", { kind: "int", value: 1000 }],
+        ["0xFF_FF", { kind: "int", value: 65535 }],
+        ["1_000.5", { kind: "float", value: 1000.5 }],
     ])("types the literal %s by its spelling", (literal, initial) => {
         const [first] = lower(`function start() {\n    let x = ${literal};\n}\n`).declarations;
         if (first?.kind !== "procedure") throw new Error("expected a procedure");

@@ -22,5 +22,20 @@ const INT_LITERAL_MAX = 0xffffffff;
 
 /** The refusal for an integer literal the operand cannot hold, or `null` when it fits. Front ends position it. */
 export function intLiteralProblem(text: string, value: number): string | null {
+    // NaN compares false against the bound, so it is refused by name rather than written out as zero.
+    if (!Number.isFinite(value)) return `integer literal ${text} is not a finite number`;
     return value > INT_LITERAL_MAX ? `integer literal ${text} does not fit in 32 bits` : null;
+}
+
+/** A numeric literal's type and value; an integer carries its `intLiteralProblem` verdict. */
+export type NumberLiteral = { kind: "float"; value: number } | { kind: "int"; value: number; problem: string | null };
+
+/**
+ * Reads a numeric literal the way both front ends spell one: a `.`, or an `e` in a decimal spelling, makes it a
+ * float, and anything else is an integer. In a hex spelling such as `0xFE` an `e` is a digit.
+ */
+export function numberLiteral(text: string): NumberLiteral {
+    const value = Number(text);
+    if (text.includes(".") || (!/^0x/i.test(text) && /e/i.test(text))) return { kind: "float", value };
+    return { kind: "int", value, problem: intLiteralProblem(text, value) };
 }

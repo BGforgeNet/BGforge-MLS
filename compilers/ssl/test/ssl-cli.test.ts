@@ -163,6 +163,16 @@ describe("ssl CLI", () => {
             expect(stdout).toContain("Usage: ssl");
         });
 
+        // The README carries the switch list for readers who have not installed the CLI, so it is a copy that
+        // has to move with the help text.
+        it("prints the usage the README documents", () => {
+            const readme = fs.readFileSync(path.join(REPO_ROOT, "compilers/ssl/README.md"), "utf-8");
+            const start = readme.indexOf("```\nUsage: ssl") + "```\n".length;
+            const documented = readme.slice(start, readme.indexOf("\n```", start));
+            const { stdout } = run("--help");
+            expect(stdout.slice(stdout.indexOf("Usage: ssl")).trimEnd()).toBe(documented);
+        });
+
         it("exits 1 with no arguments, printing the usage", () => {
             const { code, stdout } = run();
             expect(code).toBe(1);

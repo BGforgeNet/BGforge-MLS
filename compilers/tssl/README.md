@@ -82,11 +82,11 @@ in-repo test stands folib up.
 Four names, and they are the whole of what folib's vocabulary costs. `list` and `map` share every site, so they
 share a row.
 
-| Name           | Meaning                                                   | Where                                      |
-| -------------- | --------------------------------------------------------- | ------------------------------------------ |
-| `list`, `map`  | Array and map literal syntax, and reserved variable names | `src/types.ts`, then both routes' lowering |
-| `sfall_typeof` | The engine's `typeof`, renamed around the TS keyword      | `src/types.ts` (`sslName`)                 |
-| `FLOAT1`       | `1.0`, for sources predating float-literal preservation   | `src/convert-operators.ts`, marked to go   |
+| Name           | Meaning                                                   | Where                                                      |
+| -------------- | --------------------------------------------------------- | ---------------------------------------------------------- |
+| `list`, `map`  | Array and map literal syntax, and reserved variable names | `src/types.ts` (`RESERVED_VAR_NAMES`), read by both routes |
+| `sfall_typeof` | The engine's `typeof`, renamed around the TS keyword      | `src/types.ts` (`sslName`)                                 |
+| `FLOAT1`       | `1.0`, for sources predating float-literal preservation   | `src/convert-operators.ts`, marked to go                   |
 
 These are hardcoded rather than read off tags on folib's declarations, the way `@inline` is, because both sets are
 closed. `sfall_typeof` is the only rename among folib's 22 `sfall_*` names - the rest are the engine's own

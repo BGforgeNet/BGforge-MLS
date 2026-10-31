@@ -378,6 +378,14 @@ const OPTIMIZED_CASES: Case[] = [
             " g := 16777217 + 0.5;\nend\n",
     },
     {
+        // A hex literal past 2^31 is its 32-bit pattern, so a fold reads `0xFFFFFFFF` as -1 - in a float
+        // operation too, where it converts to float only after that reading.
+        name: "a hex literal past 2^31 folds as its 32-bit pattern",
+        source:
+            "variable g;\nprocedure start begin\n g := 0xFFFFFFFF == -1;\n g := 0xFFFFFFFF / 2;\n" +
+            " g := 0x80000000 < 0;\n g := 0xFFFFFFFF + 0.5;\nend\n",
+    },
+    {
         // `cancel` names a procedure, and that name is the only thing keeping it alive: without counting
         // the reference, the optimiser removes the procedure and cancels something that is no longer there.
         name: "cancel keeps the procedure it names",

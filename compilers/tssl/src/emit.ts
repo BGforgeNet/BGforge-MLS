@@ -9,10 +9,10 @@
  */
 
 import type { EnumDeclaration, FunctionDeclaration, Node, VariableDeclaration } from "ts-morph";
-import { SyntaxKind, conlog, type TsslContext } from "./types";
+import { RESERVED_VAR_NAMES, SyntaxKind, conlog, type TsslContext } from "./types";
 import { convertOperatorsAST, convertVarOrConstToVariable } from "./convert-operators";
 import { generateInlineMacros } from "./inline-functions";
-import { refuseAt, type ModuleItems, type TsslProgram } from "./program-model";
+import { FOR_INITIALIZER_REFUSAL, refuseAt, type ModuleItems, type TsslProgram } from "./program-model";
 import {
     makeGeneratedHeader,
     TrackedText,
@@ -152,7 +152,7 @@ function renderModule(module: ModuleItems, program: TsslProgram, ctx: TsslContex
                 const name = func.getName();
                 if (!name || !program.kept.has(func)) break;
                 // Extracted inline functions expand at call sites; list() and map() become literals.
-                if (program.inlineFunctions.has(name) || name === "list" || name === "map") break;
+                if (program.inlineFunctions.has(name) || RESERVED_VAR_NAMES.has(name)) break;
                 renderProcedure(func, name, module, ctx, section, originOf(func));
                 break;
             }
@@ -288,7 +288,7 @@ function handleForStatement(stmt: Node, indent: string, ctx: TsslContext): strin
             // lower slots, where lowering the list in place keeps source order. Slot indices are baked
             // into the output, so the two routes would compile the same source to different bytes.
             if (declarations.length > 1) {
-                throw refuseAt(init, "a for initializer declares one variable; declare the others before the loop");
+                throw refuseAt(init, FOR_INITIALIZER_REFUSAL);
             }
             const [first] = declarations;
             if (first) {

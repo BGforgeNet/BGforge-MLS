@@ -72,7 +72,8 @@ function parseArgs(argv: string[]) {
  * preprocess once their dependencies' headers are linked into their trees, which the suites' `globalSetup`
  * does and this cannot reach - it lives in a module that resolves paths through `__dirname`, and this is an
  * ES module. Sweeping them from here would report all 28 as refused and bury a real change in the noise.
- * What this answers - "did anything about my own front end move" - is served by the 1500 either way.
+ * What this answers - "did anything about my own front end move" - is served by the Restoration Project's
+ * scripts either way.
  */
 function listScripts(): string[] {
     const scripts = narrow(scriptsUnder(RP_SCRIPTS));

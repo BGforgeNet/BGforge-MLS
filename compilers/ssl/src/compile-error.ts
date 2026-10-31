@@ -17,8 +17,8 @@ export class CompileError extends Error {
      * Every problem this compile found, not just the one the message names.
      *
      * `message` stays the FIRST of them, formatted exactly as it always was, so a caller that only knows
-     * how to show one error keeps working unchanged - including the language server's `line:column:`
-     * parsing. A caller that can show more reads this instead.
+     * how to show one error, `line:column:` prefix and all, keeps working unchanged. A caller that can
+     * show more reads this instead.
      */
     readonly diagnostics: readonly CompileDiagnostic[];
 

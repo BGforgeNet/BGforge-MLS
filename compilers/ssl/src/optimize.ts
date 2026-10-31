@@ -9,7 +9,7 @@
  * bails out when the script can name a procedure the analysis cannot see.
  *
  * Level 2 goes further; see `OptimizeOptions.level`. Every rule here is transcribed from the reference
- * compiler's own `optimize.c`, not inferred from its output. That distinction is the whole reason the
+ * compiler's own optimiser source, not inferred from its output. That distinction is the whole reason the
  * level works: folds guessed from byte diffs were wrong in both directions - one of them deleted branches
  * the reference keeps - and each was settled by a line of its source. Its pass ORDER is load-bearing too,
  * including where procedure elimination sits inside the outer loop.
@@ -106,9 +106,14 @@ function foldConstants(expr: Expr): Expr {
     // A float operand makes an ARITHMETIC result float; comparisons, logicals and bitwise stay integer.
     // Either way a float operation reads both operands as 32-bit floats, an int one included, and rounding the
     // double result once to 32-bit float then gives the float32 result exactly for + - * /.
+    // An int operand is read as its 32-bit pattern before anything else, so a literal such as `0xFFFFFFFF` is -1.
     const isFloat = left.kind === "float" || right.kind === "float";
-    const a = isFloat ? Math.fround(left.value) : left.value;
-    const b = isFloat ? Math.fround(right.value) : right.value;
+    const read = (operand: { kind: "int" | "float"; value: number }): number => {
+        const value = operand.kind === "int" ? wrapInt32(operand.value) : operand.value;
+        return isFloat ? Math.fround(value) : value;
+    };
+    const a = read(left);
+    const b = read(right);
     const arith = (value: number): Expr => (isFloat ? { kind: "float", value: Math.fround(value) } : int(value));
 
     switch (expr.op) {
@@ -123,9 +128,9 @@ function foldConstants(expr: Expr): Expr {
         case "div":
             if (b === 0) return expr; // Left for the engine rather than decided here.
             return isFloat ? arith(a / b) : int(Math.trunc(a / b));
-        // `and`/`or` are listed in the reference's fold set but never reach it: its own comment in
-        // `ConstantFolding` records that they "were changed in the tree", so by the time folding runs
-        // they are no longer plain binary nodes. Folding them here decides branches it keeps.
+        // `and`/`or` are listed in the reference's fold set but never reach it: an earlier pass has already
+        // rewritten them into another node shape, so by the time folding runs they are no longer plain binary
+        // nodes. Folding them here decides branches it keeps.
         case "bwand":
             return int(a & b);
         case "bwor":

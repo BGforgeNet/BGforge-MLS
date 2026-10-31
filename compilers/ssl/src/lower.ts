@@ -25,7 +25,7 @@ import {
     type VarExpr,
 } from "./desugar";
 import { engineFunction, type EngineFunction } from "./int/engine-functions";
-import { intLiteralProblem } from "./int/limits";
+import { numberLiteral } from "./int/limits";
 import { Op } from "./int/opcodes";
 import type {
     AssignOp,
@@ -150,10 +150,7 @@ function isZeroLiteral(node: SyntaxNode): boolean {
         return inner ? isZeroLiteral(inner) : false;
     }
     if (node.type === "boolean") return node.text.toLowerCase() === "false";
-    if (node.type !== "number") return false;
-    const text = node.text;
-    const radix = text.startsWith("0x") || text.startsWith("0X") ? 16 : 10;
-    return (text.includes(".") ? Number.parseFloat(text) : Number.parseInt(text, radix)) === 0;
+    return node.type === "number" && numberLiteral(node.text).value === 0;
 }
 
 /** Process-control statements to their core opcode. `noop` is absent: it emits nothing at all. */
@@ -523,13 +520,10 @@ class Lowering {
                 break;
             }
             case "number": {
-                const text = node.text;
-                if (text.includes(".")) return { kind: "float", value: Number.parseFloat(text) };
-                const radix = text.startsWith("0x") || text.startsWith("0X") ? 16 : 10;
-                const value = Number.parseInt(text, radix);
-                const problem = intLiteralProblem(text, value);
-                if (problem) this.report(problem, node);
-                return { kind: "int", value };
+                const literal = numberLiteral(node.text);
+                if (literal.kind === "float") return literal;
+                if (literal.problem) this.report(literal.problem, node);
+                return { kind: "int", value: literal.value };
             }
             case "string":
                 return { kind: "string", value: unquote(node.text) };

@@ -17,6 +17,7 @@ import { CompileError, compileFile, compileText } from "../src/compile.ts";
 import { EmitError, emitInt } from "../src/int/emit.ts";
 import { NameTable } from "../src/int/namelist.ts";
 import { IntWriter } from "../src/int/writer.ts";
+import { intLiteralProblem } from "../src/int/limits.ts";
 import { engineFunction } from "../src/int/engine-functions.ts";
 import { LowerError, lowerProgram } from "../src/lower.ts";
 import type { Program, Stmt } from "../src/int/ir.ts";
@@ -369,6 +370,12 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
 
     it.each(["4294967295", "0xFFFFFFFF", "2147483648"])("takes the 32-bit integer literal %s", (literal) => {
         expect(refuse(`procedure start begin\n variable x;\n x := ${literal};\nend\n`)).not.toThrow();
+    });
+
+    // A front end that misreads a spelling hands over NaN, which compares false against every bound and would
+    // otherwise be written as zero.
+    it.each([Number.NaN, Number.POSITIVE_INFINITY])("refuses an integer literal whose value is %s", (value) => {
+        expect(intLiteralProblem("1_000", value)).toBe("integer literal 1_000 is not a finite number");
     });
 
     it("accepts break in a loop nested inside a conditional", () => {

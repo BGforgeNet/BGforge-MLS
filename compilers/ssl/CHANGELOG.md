@@ -2,6 +2,11 @@
 
 Notable changes to `@bgforge/ssl` (the compiler library and the `ssl` CLI).
 
+## Unreleased
+
+- `-O2` folds a hex literal past `0x7FFFFFFF` as its 32-bit pattern, as the reference does: `0xFFFFFFFF == -1`
+  folds to 1 and `0xFFFFFFFF / 2` to 0, where they folded to 0 and 2147483647.
+
 ## 0.2.0
 
 - Compiles `call ... when`, `import` and `export` procedures and blocks, and `export variable` blocks as the

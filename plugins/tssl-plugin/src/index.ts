@@ -6,8 +6,8 @@
  * Loaded by tsserver via contributes.typescriptServerPlugins in package.json
  * (VSCode) or via the TypeScript language server's plugin settings (other editors).
  *
- * Build dependency: engine-proc-docs.json must be generated before bundling.
- * This is done by generate-data.sh, which must run before build:tssl-plugin.
+ * Build dependency: the bundle inlines shared/data/fallout-ssl-engine-proc-docs.json, which
+ * generate-data.sh regenerates from the YAML; build:ts-plugin reads the committed copy.
  */
 
 import type ts from "typescript";

@@ -121,6 +121,9 @@ const CORE_OPCODES = [
 
 export type CoreOpcodeName = (typeof CORE_OPCODES)[number];
 
+/** Count of core opcodes; the library opcodes are numbered straight after them. */
+export const CORE_OPCODE_COUNT = CORE_OPCODES.length;
+
 function buildTable(): Readonly<Record<CoreOpcodeName, number>> {
     const table = {} as Record<CoreOpcodeName, number>;
     CORE_OPCODES.forEach((name, index) => {
