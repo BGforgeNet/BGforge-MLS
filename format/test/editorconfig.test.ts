@@ -1,12 +1,10 @@
 /**
- * Tests for shared/editorconfig.ts - editorconfig parsing utilities.
- *
- * Note: The 'ini' library has limitations with editorconfig-style sections.
- * Sections like [*.txt] are parsed as nested objects, not separate sections.
- * Only simple sections like [*], exact filenames, and brace patterns work correctly.
+ * Tests for getEditorconfigSettings: section matching, the upward walk with nearest-wins precedence, `root = true`,
+ * and errors from an `.editorconfig` that exists but cannot be read or parsed.
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import * as path from "path";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // Mock fs module before importing the module under test
 const mockExistsSync = vi.fn();
@@ -22,200 +20,148 @@ vi.mock("fs", () => ({
 
 import { getEditorconfigSettings } from "@bgforge/format";
 
-describe("shared/editorconfig", () => {
+/** The `.editorconfig` path in `dir`, built the way the reader builds it so the keys match on every platform. */
+function configIn(dir: string): string {
+    return path.join(dir, ".editorconfig");
+}
+
+/** Serves the given `.editorconfig` contents by directory; every other path does not exist. */
+function withConfigs(configs: Record<string, string>): void {
+    const byPath = new Map(Object.entries(configs).map(([dir, content]) => [configIn(dir), content]));
+    mockExistsSync.mockImplementation((p: string) => byPath.has(p));
+    mockReadFileSync.mockImplementation((p: string) => {
+        const content = byPath.get(p);
+        if (content === undefined) throw new Error(`unexpected read of ${p}`);
+        return content;
+    });
+}
+
+describe("getEditorconfigSettings()", () => {
     beforeEach(() => {
         mockExistsSync.mockReset();
         mockReadFileSync.mockReset();
     });
 
-    afterEach(() => {
-        vi.restoreAllMocks();
+    it("returns nulls when no .editorconfig exists", () => {
+        withConfigs({});
+
+        expect(getEditorconfigSettings("/path/to/file.txt")).toEqual({ indentSize: null, maxLineLength: null });
     });
 
-    describe("getEditorconfigSettings()", () => {
-        it("should return nulls when no .editorconfig exists", () => {
-            mockExistsSync.mockReturnValue(false);
+    it("reads indent_size and max_line_length from a [*] section", () => {
+        withConfigs({ "/path/to": "[*]\nindent_size = 4\nmax_line_length = 100\n" });
 
-            const result = getEditorconfigSettings("/path/to/file.txt");
+        expect(getEditorconfigSettings("/path/to/file.txt")).toEqual({ indentSize: 4, maxLineLength: 100 });
+    });
 
-            expect(result.indentSize).toBeNull();
-            expect(result.maxLineLength).toBeNull();
+    it("treats max_line_length = off as no limit", () => {
+        withConfigs({ "/path/to": "[*]\nmax_line_length = off\n" });
+
+        expect(getEditorconfigSettings("/path/to/file.txt").maxLineLength).toBeNull();
+    });
+
+    it("returns null for a value that is not a number", () => {
+        withConfigs({ "/path/to": "[*]\nindent_size = invalid\nmax_line_length = invalid\n" });
+
+        expect(getEditorconfigSettings("/path/to/file.txt")).toEqual({ indentSize: null, maxLineLength: null });
+    });
+
+    it("matches an exact filename section and not another file", () => {
+        withConfigs({ "/path/to": "[Makefile]\nindent_size = 8\n" });
+
+        expect(getEditorconfigSettings("/path/to/Makefile").indentSize).toBe(8);
+        expect(getEditorconfigSettings("/path/to/other.txt").indentSize).toBeNull();
+    });
+
+    it("applies a [*.ext] section to that extension only", () => {
+        withConfigs({ "/proj": "[*.ssl]\nindent_size = 2\n" });
+
+        expect(getEditorconfigSettings("/proj/a.ssl").indentSize).toBe(2);
+        expect(getEditorconfigSettings("/proj/a.d").indentSize).toBeNull();
+    });
+
+    it("applies a [*.{a,b}] section to every listed extension", () => {
+        withConfigs({ "/proj": "[*.{d,tp2}]\nindent_size = 3\n" });
+
+        expect(getEditorconfigSettings("/proj/a.d").indentSize).toBe(3);
+        expect(getEditorconfigSettings("/proj/setup.tp2").indentSize).toBe(3);
+        expect(getEditorconfigSettings("/proj/a.ssl").indentSize).toBeNull();
+    });
+
+    it("lets a later matching section in the same file override an earlier one", () => {
+        withConfigs({ "/proj": "[*]\nindent_size = 4\n\n[*.ssl]\nindent_size = 2\n" });
+        expect(getEditorconfigSettings("/proj/a.ssl").indentSize).toBe(2);
+
+        withConfigs({ "/proj": "[*.ssl]\nindent_size = 2\n\n[*]\nindent_size = 4\n" });
+        expect(getEditorconfigSettings("/proj/a.ssl").indentSize).toBe(4);
+    });
+
+    it("reads keys case-insensitively and skips # and ; comments", () => {
+        withConfigs({ "/proj": "# comment\n; another\n[*]\nIndent_Size = 2\n  MAX_LINE_LENGTH=90  \n" });
+
+        expect(getEditorconfigSettings("/proj/a.ssl")).toEqual({ indentSize: 2, maxLineLength: 90 });
+    });
+
+    it("lets a nearer .editorconfig override its parent for the same key", () => {
+        withConfigs({
+            "/parent": "[*]\nindent_size = 8\nmax_line_length = 100\n",
+            "/parent/child": "[*]\nindent_size = 2\n",
         });
 
-        it("should parse indent_size from .editorconfig with [*] section", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-indent_size = 4
-`);
+        // indent_size comes from the child, max_line_length from the parent, which the child does not set.
+        expect(getEditorconfigSettings("/parent/child/file.txt")).toEqual({ indentSize: 2, maxLineLength: 100 });
+    });
 
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.indentSize).toBe(4);
+    it("lets a nearer max_line_length = off override a parent's limit", () => {
+        withConfigs({
+            "/parent": "[*]\nmax_line_length = 100\n",
+            "/parent/child": "[*]\nmax_line_length = off\n",
         });
 
-        it("should parse max_line_length from .editorconfig", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-max_line_length = 120
-`);
+        expect(getEditorconfigSettings("/parent/child/file.txt").maxLineLength).toBeNull();
+    });
 
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.maxLineLength).toBe(120);
+    it("stops the walk at root = true", () => {
+        withConfigs({
+            "/parent": "[*]\nindent_size = 8\nmax_line_length = 100\n",
+            "/parent/child": "root = TRUE\n\n[*]\nindent_size = 2\n",
         });
 
-        it("should parse string indent_size", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-indent_size = 2
-`);
+        expect(getEditorconfigSettings("/parent/child/file.txt")).toEqual({ indentSize: 2, maxLineLength: null });
+        expect(mockReadFileSync).not.toHaveBeenCalledWith(configIn("/parent"), "utf-8");
+    });
 
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.indentSize).toBe(2);
+    it("ignores root = true inside a section", () => {
+        withConfigs({
+            "/parent": "[*]\nmax_line_length = 100\n",
+            "/parent/child": "[*]\nroot = true\nindent_size = 2\n",
         });
 
-        it("should ignore max_line_length = off", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-max_line_length = off
-`);
+        expect(getEditorconfigSettings("/parent/child/file.txt")).toEqual({ indentSize: 2, maxLineLength: 100 });
+    });
 
-            const result = getEditorconfigSettings("/path/to/file.txt");
+    it("returns nulls for an empty file", () => {
+        withConfigs({ "/path/to": "" });
 
-            expect(result.maxLineLength).toBeNull();
+        expect(getEditorconfigSettings("/path/to/file.txt")).toEqual({ indentSize: null, maxLineLength: null });
+    });
+
+    it("throws, naming the file, when an .editorconfig cannot be read", () => {
+        mockExistsSync.mockImplementation((p: string) => p === configIn("/path/to"));
+        mockReadFileSync.mockImplementation(() => {
+            throw new Error("Permission denied");
         });
 
-        it("should match * pattern for all files", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-indent_size = 3
-`);
+        expect(() => getEditorconfigSettings("/path/to/file.txt")).toThrow(
+            `${configIn("/path/to")}: Permission denied`,
+        );
+    });
 
-            const result = getEditorconfigSettings("/path/to/anyfile.xyz");
+    it("throws, naming the file and line, on a line that is neither a section nor key = value", () => {
+        withConfigs({ "/path/to": "[*]\nindent_size = 4\nindent_size\n" });
 
-            expect(result.indentSize).toBe(3);
-        });
-
-        it("should match exact filename pattern", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[Makefile]
-indent_size = 8
-`);
-
-            const result = getEditorconfigSettings("/path/to/Makefile");
-
-            expect(result.indentSize).toBe(8);
-        });
-
-        it("should stop at root = true", () => {
-            mockExistsSync.mockImplementation((p: string) => p.includes("child"));
-            mockReadFileSync.mockReturnValue(`
-root = true
-
-[*]
-indent_size = 2
-`);
-
-            const result = getEditorconfigSettings("/parent/child/file.txt");
-
-            expect(result.indentSize).toBe(2);
-        });
-
-        it("should handle read errors gracefully", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockImplementation(() => {
-                throw new Error("Permission denied");
-            });
-
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.indentSize).toBeNull();
-            expect(result.maxLineLength).toBeNull();
-        });
-
-        it("should return both settings when found", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-indent_size = 4
-max_line_length = 100
-`);
-
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.indentSize).toBe(4);
-            expect(result.maxLineLength).toBe(100);
-        });
-
-        it("should return null when section doesn't match filename", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[specific.file]
-indent_size = 4
-`);
-
-            const result = getEditorconfigSettings("/path/to/other.txt");
-
-            expect(result.indentSize).toBeNull();
-        });
-
-        it("should handle empty config file", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue("");
-
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.indentSize).toBeNull();
-            expect(result.maxLineLength).toBeNull();
-        });
-
-        it("should handle invalid indent_size value", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-indent_size = invalid
-`);
-
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.indentSize).toBeNull();
-        });
-
-        it("should handle invalid max_line_length value", () => {
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValue(`
-[*]
-max_line_length = invalid
-`);
-
-            const result = getEditorconfigSettings("/path/to/file.txt");
-
-            expect(result.maxLineLength).toBeNull();
-        });
-
-        it("walks up to parent directory when settings not fully found", () => {
-            // First directory has only indent_size, second has max_line_length
-            mockExistsSync.mockReturnValue(true);
-            mockReadFileSync.mockReturnValueOnce(`
-[*]
-indent_size = 2
-`).mockReturnValueOnce(`
-[*]
-max_line_length = 100
-`);
-
-            const result = getEditorconfigSettings("/parent/child/file.txt");
-
-            expect(result.indentSize).toBe(2);
-            // Walked up and found max_line_length in parent
-            expect(result.maxLineLength).toBe(100);
-        });
+        expect(() => getEditorconfigSettings("/path/to/file.txt")).toThrow(
+            `${configIn("/path/to")}:3: expected a [section] header or a key = value line, got "indent_size"`,
+        );
     });
 });

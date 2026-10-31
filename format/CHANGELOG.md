@@ -32,6 +32,12 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
   (UTF-16) is refused.
 - The formatters and the safety check treat only spaces, tabs and line breaks as blanks: a no-break space,
   ideographic space or other Unicode space at the edge of a comment, note or audio name is kept, not trimmed.
+- `.editorconfig` sections for an extension (`[*.ssl]`) or a brace list (`[*.{d,tp2}]`) now apply; keys are read
+  case-insensitively.
+- A nearer `.editorconfig` now takes precedence over one in a parent directory, `max_line_length = off` included.
+- An `.editorconfig` that cannot be read, or has a line that is neither a `[section]` nor `key = value`, is reported
+  with its path (and line) instead of being ignored; `getEditorconfigSettings` throws, and `fgfmt` reports the file
+  as an error.
 
 ## 0.9.0
 

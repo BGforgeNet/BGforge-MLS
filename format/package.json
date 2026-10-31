@@ -53,13 +53,11 @@
     "dependencies": {
         "cac": "catalog:",
         "diff": "catalog:",
-        "ini": "^6.0.0",
         "quick-lru": "catalog:",
         "web-tree-sitter": "catalog:"
     },
     "devDependencies": {
         "@bgforge/shared": "workspace:*",
-        "@types/ini": "^4.1.1",
         "fast-check": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"

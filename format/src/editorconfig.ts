@@ -1,14 +1,11 @@
 /**
- * Shared editorconfig utilities.
- * Using 'ini' instead of 'editorconfig' package because editorconfig depends on
- * @one-ini/wasm which requires a .wasm file that doesn't bundle properly with esbuild.
- * The npm `editorconfig` package's WASM dependency has not changed; verify before
- * proposing the swap.
+ * Shared editorconfig utilities: a small `.editorconfig` reader for the two properties the formatters use.
+ * Hand-rolled because the `editorconfig` npm package depends on @one-ini/wasm, whose .wasm file does not bundle
+ * with esbuild; verify that dependency has changed before proposing the swap.
  */
 
 import * as fs from "fs";
 import * as path from "path";
-import { parse as parseIni } from "ini";
 
 /**
  * Simple glob matching for editorconfig patterns.
@@ -48,54 +45,95 @@ interface EditorconfigResult {
     maxLineLength: number | null;
 }
 
+interface EditorconfigSection {
+    glob: string;
+    /** Keys lowercased, values as written; a repeated key keeps its last value. */
+    properties: Map<string, string>;
+}
+
+interface EditorconfigFile {
+    root: boolean;
+    sections: EditorconfigSection[];
+}
+
 /**
- * Gets formatting settings from .editorconfig files, walking up the directory tree.
- * Supports indent_size and max_line_length properties.
+ * Parses `.editorconfig` text: `[glob]` section headers over `key = value` lines, full-line `#` and `;` comments,
+ * keys case-insensitive. Before the first section only `root` means anything. Throws, naming the file and line, on
+ * a line that is none of these.
+ */
+function parseEditorconfig(content: string, configPath: string): EditorconfigFile {
+    const file: EditorconfigFile = { root: false, sections: [] };
+    let section: EditorconfigSection | undefined;
+    const lines = content.split(/\r?\n/);
+    for (const [index, rawLine] of lines.entries()) {
+        const line = rawLine.trim();
+        if (line === "" || line.startsWith("#") || line.startsWith(";")) continue;
+        if (line.startsWith("[") && line.endsWith("]")) {
+            section = { glob: line.slice(1, -1), properties: new Map() };
+            file.sections.push(section);
+            continue;
+        }
+        const eq = line.indexOf("=");
+        if (eq <= 0) {
+            throw new Error(
+                `${configPath}:${index + 1}: expected a [section] header or a key = value line, got ${JSON.stringify(line)}`,
+            );
+        }
+        const key = line.slice(0, eq).trim().toLowerCase();
+        const value = line.slice(eq + 1).trim();
+        if (section) section.properties.set(key, value);
+        else if (key === "root") file.root = value.toLowerCase() === "true";
+    }
+    return file;
+}
+
+function readEditorconfig(configPath: string): EditorconfigFile {
+    let content: string;
+    try {
+        content = fs.readFileSync(configPath, "utf-8");
+    } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        throw new Error(`${configPath}: ${reason}`, { cause: error });
+    }
+    return parseEditorconfig(content, configPath);
+}
+
+/** A whole number from a property value; `off`, `tab`, an absent key or any other non-number gives null. */
+function parseCount(value: string | undefined): number | null {
+    const parsed = parseInt(value ?? "", 10);
+    return isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Gets indent_size and max_line_length for a file from the `.editorconfig` files above it, up to and including the
+ * first with `root = true`. The nearest file wins; within a file, the last matching section wins. Throws when an
+ * `.editorconfig` exists but cannot be read or parsed; an absent one is not an error.
  */
 export function getEditorconfigSettings(filePath: string): EditorconfigResult {
     const fileName = path.basename(filePath);
+    const chain: EditorconfigFile[] = [];
     let dir = path.dirname(filePath);
-    const result: EditorconfigResult = { indentSize: null, maxLineLength: null };
-
     for (;;) {
         const configPath = path.join(dir, ".editorconfig");
         if (fs.existsSync(configPath)) {
-            try {
-                const content = fs.readFileSync(configPath, "utf-8");
-                const config = parseIni(content);
-                // Later matching sections override earlier ones
-                for (const section of Object.keys(config)) {
-                    if (matchesGlob(fileName, section)) {
-                        const sectionConfig = config[section];
-
-                        // indent_size
-                        const indent = sectionConfig.indent_size;
-                        if (typeof indent === "number") {
-                            result.indentSize = indent;
-                        } else if (typeof indent === "string") {
-                            const parsed = parseInt(indent, 10);
-                            if (!isNaN(parsed)) result.indentSize = parsed;
-                        }
-
-                        // max_line_length
-                        const maxLen = sectionConfig.max_line_length;
-                        if (typeof maxLen === "number") {
-                            result.maxLineLength = maxLen;
-                        } else if (typeof maxLen === "string" && maxLen !== "off") {
-                            const parsed = parseInt(maxLen, 10);
-                            if (!isNaN(parsed)) result.maxLineLength = parsed;
-                        }
-                    }
-                }
-                if (result.indentSize !== null && result.maxLineLength !== null) return result;
-                if (config.root === true || config.root === "true") break;
-            } catch {
-                // Ignore read errors
-            }
+            const config = readEditorconfig(configPath);
+            chain.push(config);
+            if (config.root) break;
         }
         const parent = path.dirname(dir);
         if (parent === dir) break;
         dir = parent;
     }
-    return result;
+
+    const properties = new Map<string, string>();
+    for (const config of chain.toReversed()) {
+        for (const section of config.sections) {
+            if (!matchesGlob(fileName, section.glob)) continue;
+            for (const [key, value] of section.properties) properties.set(key, value);
+        }
+    }
+    return {
+        indentSize: parseCount(properties.get("indent_size")),
+        maxLineLength: parseCount(properties.get("max_line_length")),
+    };
 }

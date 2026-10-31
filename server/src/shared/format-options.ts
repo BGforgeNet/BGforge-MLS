@@ -40,7 +40,7 @@ export function getFormatOptions(uri: string): FormatOptions {
         };
     } catch (error) {
         // An ABSENT `.editorconfig` never lands here - getEditorconfigSettings handles that itself and
-        // returns nulls. Reaching this means one exists and could not be read, so the user's configured
+        // returns nulls. Reaching this means one exists and could not be read or parsed, so the user's configured
         // indent is being silently replaced by ours on every format. Reported rather than swallowed.
         conlog(`cannot read .editorconfig for ${filePath}: ${(error as Error).message}`);
         return defaults;
