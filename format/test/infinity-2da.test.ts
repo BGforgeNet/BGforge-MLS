@@ -12,6 +12,9 @@ function fmt(text: string): string {
     return result.text;
 }
 
+const NBSP = String.fromCodePoint(0xa0);
+const BOM = String.fromCodePoint(0xfeff);
+
 /** Shorthand: join lines with newline and add trailing newline. */
 function lines(...ls: string[]): string {
     return ls.join("\n") + "\n";
@@ -44,16 +47,10 @@ describe("infinity-2da/format", () => {
         }
     });
 
-    it("strips leading whitespace from data rows (only the column-names row may start with whitespace)", () => {
-        const input = lines(
-            "2DA V1.0",
-            "****",
-            "   Col1",
-            "  bad_row val1", // accidental leading whitespace
-        );
-        const out = fmt(input);
-        const dataLine = out.split("\n")[3] ?? "";
-        expect(dataLine).toMatch(/^bad_row/);
+    it("keeps a data row that starts with whitespace in an empty row-name column", () => {
+        // GemRB reads the row name up to the first space, so this row's name is empty and `p` is its first cell.
+        const input = lines("2DA V1.0", "0", "   A B", "r1 x y", "  p q");
+        expect(fmt(input)).toBe(lines("2DA V1.0", "0", "      A    B", "r1    x    y", "      p    q"));
     });
 
     it("trims trailing whitespace from every line", () => {
@@ -101,6 +98,48 @@ describe("infinity-2da/format", () => {
         expect(out).toContain("extra");
     });
 
+    it("keeps the cells past the last column as written", () => {
+        // GemRB splits a row into at most as many cells as there are columns; the last takes the rest of the line.
+        const input = lines("2DA V1.0", "0", "   A B", "r1 x y   z  w");
+        expect(fmt(input)).toBe(lines("2DA V1.0", "0", "      A    B", "r1    x    y   z  w"));
+    });
+
+    it("gives a one-column table two cells per row before the rest is kept as written", () => {
+        const input = lines("2DA V1.0", "0", "   A", "r x y  z");
+        expect(fmt(input)).toBe(lines("2DA V1.0", "0", "     A", "r    x    y  z"));
+    });
+
+    it("keeps a blank third line, which leaves GemRB's table with no columns", () => {
+        // The column names are the third line by position; with none, rows split into any number of cells.
+        const input = lines("2DA V1.0", "0", "", "   A B", "r1 x  y   z");
+        expect(fmt(input)).toBe(lines("2DA V1.0", "0", "", "      A    B", "r1    x    y    z"));
+    });
+
+    it("separates cells only on spaces and tabs", () => {
+        // GemRB and WeiDU read a no-break space as cell text, at the end of a line too.
+        const input = lines("2DA V1.0", "0", "   A B", `r1 x${NBSP}y z${NBSP}`);
+        expect(fmt(input)).toBe(lines("2DA V1.0", "0", "      A      B", `r1    x${NBSP}y    z${NBSP}`));
+    });
+
+    it("ends a line at a lone carriage return", () => {
+        const input = "2DA V1.0\r0\r   A\rr x\r";
+        expect(fmt(input)).toBe(lines("2DA V1.0", "0", "     A", "r    x"));
+    });
+
+    it("keeps blank lines above the third line in a file without a signature", () => {
+        const input = lines("//a", "//b", "", "x y", "z w");
+        expect(fmt(input)).toBe(lines("//a", "//b", "", "x      y", "z      w"));
+    });
+
+    it("leaves an encrypted file unchanged", () => {
+        // A 2DA whose first two bytes are 0xFF is encrypted; read as Latin-1 or as UTF-8, it is not text to align.
+        for (const marker of [0xff, 0xfffd]) {
+            const lead = String.fromCodePoint(marker, marker);
+            const input = `${lead}a b\nc  d\n`;
+            expect(format2da(input)).toEqual({ text: input, warning: "2DA formatter: encrypted file, skipping" });
+        }
+    });
+
     it("is a no-op for empty/minimal files", () => {
         expect(format2da("").text).toBe("");
         expect(format2da("2DA V1.0\n****\n").text).toBe("2DA V1.0\n****\n");
@@ -114,10 +153,10 @@ describe("infinity-2da/format", () => {
     });
 
     it("strips leading BOM from the output", () => {
-        const input = "\uFEFF2DA V1.0\n****\n   Col1\nrow1 val1\n";
+        const input = `${BOM}2DA V1.0\n****\n   Col1\nrow1 val1\n`;
         const result = format2da(input);
         expect(result.warning).toBeUndefined();
         expect(result.text).not.toBe(input);
-        expect(result.text.startsWith("\uFEFF")).toBe(false);
+        expect(result.text.startsWith(BOM)).toBe(false);
     });
 });

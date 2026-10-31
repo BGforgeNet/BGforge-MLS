@@ -23,6 +23,10 @@ Notable changes to `@bgforge/format` (the library and the `fgfmt` CLI).
 - Every formatter is idempotent on comment shapes that used to change on a second pass, and TRA with an unclosed
   comment no longer gains a blank line per pass. SSL keeps both dimensions of `variable b[4, 2]`.
 - Formatting never takes time quadratic in a line's length.
+- `format2da` keeps GemRB's and WeiDU's reading of every line except for trimmed trailing spaces: a row's text past
+  GemRB's last column is kept as written, a row starting with a space keeps an empty name, blank lines up to
+  GemRB's column-names line keep their place, cells split on spaces and tabs only, and a lone `\r` ends a line.
+  It refuses an encrypted file (first two bytes 0xFF).
 
 ## 0.9.0
 
