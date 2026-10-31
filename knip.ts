@@ -41,6 +41,9 @@ const config: KnipConfig = {
                 "scripts/utils/src/generate-editor-queries.ts",
                 "scripts/utils/src/update-ssl-engine-arity.ts",
             ],
+            // tsdown's publish checks (`publint`, `attw` in the library tsdown configs) load these as optional
+            // peers at build time; no source imports them, so knip sees them as unused.
+            ignoreDependencies: ["@arethetypeswrong/core", "publint"],
         },
         client: {
             entry: [

@@ -4,6 +4,7 @@ Notable changes to the `actions/format` Action. CLI changes: `format/CHANGELOG.m
 
 ## Unreleased
 
+- `actions/setup-node` v7.1.0.
 - `version` defaults to `@bgforge/format` 0.9.0, the release this Action was tested with, instead of `latest`, so a
   pinned Action tag installs a known CLI. Set `version: latest` to keep the newest release on every run.
 

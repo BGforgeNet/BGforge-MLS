@@ -41,8 +41,9 @@ So, per bump:
 - The LSP triplet (`vscode-languageclient`, `vscode-languageserver`, `vscode-languageserver-protocol`) moves TOGETHER,
   never independently: each client/server release pins one protocol version, and bumping the protocol patch alone
   breaks the `client.sendRequest(ExecuteCommandRequest.type, ...)` overloads. `vscode-languageserver-textdocument`
-  (declared by `server/` alone) moves with them. A client major can raise the minimum supported VS Code, so on the
-  next LSP major move all three in lockstep and re-check the `engines.vscode` floor.
+  (declared by `server/` alone) sits beside them in the catalog and moves with them. A client major can raise the
+  minimum supported VS Code, so on the next LSP major move all three in lockstep and re-check the `engines.vscode`
+  floor.
 - The `overrides:` entries in `pnpm-workspace.yaml` exist for security-advisory reasons; the per-advisory rationale
   and the drop policy live in the comment block above them. Revisit only when the underlying advisories
   are closed.
@@ -72,9 +73,9 @@ So, per bump:
   `playwright install`, and a caret drift to a version whose browser revision is not cached would break the harness
   run until a re-download. Bump the pin and re-run `playwright install` together. A plain `pnpm install` never
   downloads a browser - the harness paths install Chromium explicitly.
-- `bits-ui` (client devDep, reached only through the primitive wrappers in `client/src/webview-ui/`) is exact-pinned
-  (no caret). Those primitives render user-visible chrome in every webview that uses them, so version moves are
-  deliberate: bump the pin and verify via the render harness drivers that exercise those primitives
+- `bits-ui` (client runtime dependency, bundled into the webviews; reached only through the primitive wrappers in
+  `client/src/webview-ui/`) is exact-pinned (no caret). Those primitives render user-visible chrome in every webview
+  that uses them, so version moves are deliberate: bump the pin and verify via the render harness drivers that exercise those primitives
   (`render-primitives.mts`, `render-resource-picker.mts`, `render-creature-palette.mts`) - never let a caret drift
   change webview rendering as a side effect of an unrelated install.
 - `esbuild-wasm` is caret-pinned, but bumps must re-verify the child-runtime workaround: esbuild-wasm's Node build
@@ -99,26 +100,46 @@ So, per bump:
   at a user's runtime. Raising the floor is one deliberate change touching all three declarations together:
   `engines.vscode` in the root and `client/package.json`, and the pin. `pnpm outdated` reports this dependency as
   permanently behind - that is the pin working. Guard: `scripts/utils/test/vscode-types-floor.test.ts`.
-- The `@stryker-mutator/*` triple (`core`, `typescript-checker`, `vitest-runner`) is held on the 9.x line. `10.0.0`
-  sets a Node 22 floor, harmless here (Stryker is dev-only, CI runs Node 24), but it also adds an
-  `empty-expression-mutator`, which changes the mutant population that the `break` threshold in `stryker.conf.json` is
-  calibrated against. Move once the 10.x line has matured (a patch or minor behind `10.0.0`), and re-run
-  `pnpm test:mutation` against that threshold in the same change.
+- The `@stryker-mutator/*` triple (`core`, `typescript-checker`, `vitest-runner`) moves together, on the 10.x line.
+  `10.0.0` sets a Node 22 floor, harmless here (Stryker is dev-only, CI runs Node 24), and adds an
+  `empty-expression-mutator`, which changed the mutant population that the `break` threshold in `stryker.conf.json` is
+  calibrated against. So a Stryker bump re-runs `pnpm test:mutation` against that threshold in the same change, and a
+  score below `break` is a finding to read, never a reason to lower the threshold.
 - `@vscode/codicons` is held at `^0.0.45` while the only newer publish is a `0.0.46` prerelease. Move when a stable
   `0.0.46` ships.
-- `zod` (runtime dep of `@bgforge/binary`) ships about 58 KB of locale data into the client bundle that nothing reads.
-  `zod/v4/classic/external.js` re-exports the locales as a namespace (`export * as locales`), and a namespace object
-  keeps every member live, so no bundler tree-shakes the other languages out. Both documented workarounds cost more
-  than 58 KB is worth: patching the package means editing a dozen files (js, `.d.cts`, `.d.ts` and src across
-  classic/mini/core) to keep runtime and types in step, and the alternative, moving the client off the esbuild CLI
-  onto the JS API so a plugin can rewrite the re-export, means reimplementing `scripts/build-base-client.sh`'s flags
-  including watch mode. Revisit if upstream splits the locales behind their own entry point.
-  One thing to re-check on any bump rather than assume: since 4.4.1 `zod/v4/package.json` declares
-  `"sideEffects": false`, which lets a bundler drop the `config(en())` call that registers English and silently
-  degrades every message to `"Invalid input"` (upstream issue 5953). It does NOT happen here - bundling under this
-  client's esbuild settings and running it against an unbundled control produced identical descriptive messages - and
-  the reason is the same namespace export above, which keeps the locale module alive. So a future fix for the size
-  problem could reintroduce the message bug; verify messages, not just bundle size.
+- `zod` (runtime dep of `@bgforge/binary`) ships its 64 locale modules into the client bundle although nothing reads
+  them: about 264 KB of the 1.76 MB minified `extension.js`, read off the metafile of an esbuild run with the client's
+  flags. `zod/v4/classic/external.js` re-exports the locales as a namespace (`export * as locales`), and a namespace
+  object keeps every member live, so no bundler tree-shakes the other languages out, whatever the package's
+  `sideEffects` list says. Both workarounds cost more than the payload is worth: patching the package means editing a
+  dozen files (js, `.d.cts`, `.d.ts` and src across classic/mini/core) to keep runtime and types in step, and moving
+  the client off the esbuild CLI onto the JS API so a plugin can rewrite the re-export means reimplementing
+  `scripts/build-base-client.sh`'s flags including watch mode. Nothing is patched today. Revisit if upstream splits the
+  locales behind their own entry point.
+  One thing to re-check on any bump rather than assume: the English default must survive tree-shaking, or every
+  message degrades to `"Invalid input"`. zod registers English on the first `ZodType` construction rather than in a
+  top-level call, so a bundler honouring `sideEffects` cannot drop it; a bare `safeParse` failure bundled with the
+  client's esbuild settings still reads `"Invalid input: expected number, received string"`. Verify messages, not just
+  bundle size, when the size problem is addressed.
+- `@xyflow/svelte` and `elkjs` (client) are the dialog editor's graph view and its layout engine: `@xyflow/svelte`
+  renders the node-and-edge canvas in `DialogGraph.svelte` (pan, zoom, minimap, edge reconnection), and `elkjs`
+  assigns node positions in `dialog-editor/webview/layout.ts`, in a Worker built from the bundled worker script. They
+  go if the graph view is dropped or moves to another canvas and layout library; replacing only one means the other's
+  node and edge model (`model-to-flow.ts`) still has to feed it.
+- `p-limit` (server) bounds concurrent file reads in the three workspace scans: `core/workspace-scanner.ts`, and the
+  translation loader and find-references in `translation/`. All three share `WORKSPACE_SCAN_CONCURRENCY`. It goes if
+  the scans move to a shared bounded-concurrency helper of our own or to a runtime primitive that provides the same
+  cap.
+- `typed-binary` (binary) is the codec engine the spec layer derives into: `spec/derive-typed-binary.ts` turns a
+  format's field specs into `typed-binary` schemas that read and write the on-disk bytes. It goes if the spec layer
+  derives its readers and writers by another route; every format's codec rests on it until then.
+- `publint` and `@arethetypeswrong/core` are tsdown's optional package checks. The tsdown config of each published
+  library sets `publint` and `attw` to `"ci-only"`, so a CI build checks the hand-written `exports` and `dts` against
+  how consumers resolve them, and a local build skips the check. tsdown finds them as peers, so both stay in the root
+  `devDependencies` and move within tsdown's declared peer ranges.
+- `@vscode/test-electron` (client) downloads a VS Code build and launches it for the E2E suite
+  (`client/src/test/runTest.ts`, driven by `scripts/test-e2e.sh`). It goes if the E2E suite stops running in a real
+  VS Code host.
 - `pnpm` itself is pinned by the root `packageManager` field. `pnpm outdated` never reports it, so it needs checking
   by hand when the npm deps are swept. `pnpm/action-setup` takes no `version:`, so CI follows this field, and the
   action has to be a release that can install the pinned pnpm (v6.1.0 or later for the current pin). The version is
@@ -127,8 +148,8 @@ So, per bump:
   other entries rely on. pnpm also records the pin in a first YAML document of `pnpm-lock.yaml`, so the lockfile
   changes on every bump, and a tool reading the lockfile must accept multi-document YAML.
 - `oxlint`, `@oxlint/plugins` and `oxfmt` are EXACT-pinned (no caret) - this is a reproducibility pin, not a hold: a
-  newer release is taken once it has aged past the adoption cooldown, in a change of its own. A caret on a linter
-  makes the set of enabled rules a property of whenever the lockfile was last refreshed, so the same commit lints
+  newer release is taken once it has aged past the adoption cooldown, in a change of its own, a 0.x minor included
+  (`oxfmt` reformats Markdown repo-wide, so review its diff). A caret on a linter makes the set of enabled rules a property of whenever the lockfile was last refreshed, so the same commit lints
   clean on one machine and red on another; `.oxlintrc.json` records rules that began firing on a minor bump, each
   needing a decision. `@oxlint/plugins` must move in the same change as `oxlint` and to the same version - it
   supplies the plugin API the plugins in `.oxlint/` are written against. Bumping means reading

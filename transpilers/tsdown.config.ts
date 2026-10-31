@@ -7,6 +7,9 @@ export default defineConfig({
     // internal.ts ships no .d.ts: getSharedProject returns a ts-morph Project, so its declarations would inline
     // ts-morph's whole type surface.
     dts: { entry: "src/index.ts" },
+    // Package lint (publint, are-the-types-wrong) runs only under CI, where the publish path is exercised.
+    publint: "ci-only",
+    attw: "ci-only",
     clean: true,
     sourcemap: false,
     platform: "node",

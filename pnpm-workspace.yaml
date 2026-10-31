@@ -23,6 +23,7 @@ catalog:
   vscode-languageclient: 10.1.2
   vscode-languageserver: 10.1.2
   vscode-languageserver-protocol: 3.18.4
+  vscode-languageserver-textdocument: ^1.0.15
   ts-morph: ^28.0.0
   typescript: ^6.0.3
   vitest: ^4.1.12
@@ -93,8 +94,9 @@ allowBuilds:
 #     2026-09-15: without it the resolution still keeps a 6.15.1 and all three return.
 #   - oxfmt's tinypool (GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr: prototype
 #     pollution to RCE via worker and run() options; fixed in 2.1.2). oxfmt 0.65.0 pins tinypool 2.1.0 exactly; the oxfmt
-#     release that moves it (0.73.0, tinypool 2.2.0) is a 0.x minor jump the bump
-#     policy defers, so the pin stays on tinypool's own 2.x line.
+#     release that moves it (0.73.0, tinypool 2.2.0) is a 0.x minor that is taken in a change of
+#     its own once aged, with the formatter diff reviewed; until then the pin stays on tinypool's
+#     own 2.x line.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. Overrides are dropped once their
 # upstreams resolve to a patched version on their own (verified by removing the pin,
@@ -126,6 +128,15 @@ allowBuilds:
 # fixed only in 7.1.0) is overridden across identity's declared ^6. vsce reaches identity only for
 # `publish --azure-credential`, which this repo never runs, and identity and vsce's auth module load
 # against 7.1.0 and `pnpm package` builds the VSIX. Drop the pin once an @azure/identity release admits 7.1.
+# @azure/identity 4.14.1 (2026-10-29) declares msal-node ^7.1.0 and vsce admits it, so a lockfile refresh after
+# the release age window (about 2026-11-05) makes the pin redundant; verify by removing it and re-auditing.
+# Two moderate advisories are accepted risks with no override, because no patched release is reachable in
+# range and both sit on developer-only paths: minimatch <11.0.1 (GHSA-g3hv-75wg-m249, quadratic pattern
+# amplification at a non-default optimization level) under ts-morph -> @ts-morph/common, which declares ^10
+# and only runs over this repository's own sources and globs; and glob 9.0.0-14.0.1 (GHSA-3g3m-2fjr-6pw4, an
+# aborted walk keeps reading) under remark-cli -> unified-engine, which declares ^10 and runs over the docs with
+# no abort signal. Re-check both when @ts-morph/common or unified-engine next release; an override would jump a
+# major on a library whose API the dependents pin.
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.1.3"

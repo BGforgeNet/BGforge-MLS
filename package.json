@@ -131,11 +131,12 @@
         "bench": "pnpm --filter @bgforge/mls-server bench && pnpm --filter @bgforge/tssl bench"
     },
     "devDependencies": {
+        "@arethetypeswrong/core": "^0.18.5",
         "@bgforge/shared": "workspace:*",
         "@oxlint/plugins": "1.88.0",
-        "@stryker-mutator/core": "^9.6.1",
-        "@stryker-mutator/typescript-checker": "^9.6.1",
-        "@stryker-mutator/vitest-runner": "^9.6.1",
+        "@stryker-mutator/core": "^10.1.1",
+        "@stryker-mutator/typescript-checker": "^10.1.1",
+        "@stryker-mutator/vitest-runner": "^10.1.1",
         "@types/mocha": "^10.0.10",
         "@types/node": "catalog:",
         "@vitest/coverage-v8": "catalog:",
@@ -150,6 +151,7 @@
         "oxlint": "1.88.0",
         "oxlint-tsgolint": "^7.0.2004",
         "playwright": "catalog:",
+        "publint": "^0.3.25",
         "remark-cli": "^12.0.1",
         "remark-validate-links": "^13.1.0",
         "scslre": "0.3.0",

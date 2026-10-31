@@ -5,6 +5,9 @@ export default defineConfig({
     format: ["esm"],
     // Both library entries ship .d.ts; the CLI is a bin, not an imported module.
     dts: { entry: ["src/index.ts", "src/archive/index.ts"] },
+    // Package lint (publint, are-the-types-wrong) runs only under CI, where the publish path is exercised.
+    publint: "ci-only",
+    attw: "ci-only",
     clean: true,
     sourcemap: false,
     platform: "node",
