@@ -50,7 +50,8 @@ repository:
             name: keyword.control.weidu-tra
           "3":
             name: keyword.control.weidu-tra
-        match: (\[)([^\]\n]+)(\])
+        # A sound resource name holds no `[`; excluding it keeps a run of `[` from rescanning the line per bracket.
+        match: (\[)([^\[\]\n]+)(\])
         name: entity.name.function.sound.weidu-tra
   strings:
     patterns:

@@ -319,6 +319,9 @@ importers:
       remark-validate-links:
         specifier: ^13.1.0
         version: 13.1.0(supports-color@8.1.1)
+      scslre:
+        specifier: 0.3.0
+        version: 0.3.0
       svelte:
         specifier: 'catalog:'
         version: 5.57.2

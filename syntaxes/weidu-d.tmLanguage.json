@@ -381,7 +381,7 @@
       ]
     },
     "condition-abbreviated": {
-      "begin": "\\s+(\\+)\\s*(~)(?!~~~~)",
+      "begin": "(?<!\\s)\\s+(\\+)\\s*(~)(?!~~~~)",
       "beginCaptures": {
         "1": {
           "name": "keyword.other.weidu-d"
@@ -596,7 +596,7 @@
       ]
     },
     "sound": {
-      "match": "\\[[^\\]]*\\]",
+      "match": "\\[[^\\[\\]]*\\]",
       "name": "string.other.sound.weidu-d"
     },
     "vars": {

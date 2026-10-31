@@ -165,8 +165,9 @@ repository:
       - include: source.weidu-baf#condition-body
 
   # this one should come later, when most of the text is taken
+  # Starts only at the first blank of a run: an attempt from inside the run rescans it, quadratic in its length.
   condition-abbreviated:
-    begin: '\s+(\+)\s*(~)(?!~~~~)'
+    begin: '(?<!\s)\s+(\+)\s*(~)(?!~~~~)'
     beginCaptures:
       "1":
         name: keyword.other.weidu-d
@@ -302,9 +303,10 @@ repository:
         patterns:
           - include: '#vars'
 
-  # A sound resource after a text: ~text~ [SND01].
+  # A sound resource after a text: ~text~ [SND01]. A resource name holds no `[`, and excluding it keeps a run of
+  # `[` from rescanning the line once per bracket.
   sound:
-    match: \[[^\]]*\]
+    match: \[[^\[\]]*\]
     name: string.other.sound.weidu-d
 
   vars:

@@ -308,7 +308,7 @@
     "set-sprint-constant-vars": {
       "patterns": [
         {
-          "match": "\\b(OUTER_SET)\\b\\s+(?:(EVALUATE_BUFFER)\\s+)?([A-Z][A-Z0-9]+(?:_\\w+)*)\\b",
+          "match": "\\b(OUTER_SET)\\b\\s+(?:(EVALUATE_BUFFER)\\s+)?([A-Z][A-Z0-9]+(?:_\\w+)?)\\b",
           "captures": {
             "1": {
               "name": "support.function.weidu-tp2.action"
@@ -333,7 +333,7 @@
           }
         },
         {
-          "match": "\\b(OUTER_TEXT_SPRINT|OUTER_SPRINT|OUTER_SNPRINT)\\b\\s+([A-Z][A-Z0-9]+(?:_\\w+)*)\\b",
+          "match": "\\b(OUTER_TEXT_SPRINT|OUTER_SPRINT|OUTER_SNPRINT)\\b\\s+([A-Z][A-Z0-9]+(?:_\\w+)?)\\b",
           "captures": {
             "1": {
               "name": "support.function.weidu-tp2.action"
@@ -352,7 +352,7 @@
           }
         },
         {
-          "match": "\\b(SET)\\b\\s+(?:(EVAL(?:UATE_BUFFER)?)\\s+)?([A-Z][A-Z0-9]+(?:_\\w+)*)\\b",
+          "match": "\\b(SET)\\b\\s+(?:(EVAL(?:UATE_BUFFER)?)\\s+)?([A-Z][A-Z0-9]+(?:_\\w+)?)\\b",
           "captures": {
             "1": {
               "name": "entity.name.function.weidu-tp2.patch"
@@ -377,7 +377,7 @@
           }
         },
         {
-          "match": "\\b(LOCAL_SET)\\b\\s+([A-Z][A-Z0-9]+(?:_\\w+)*)\\b",
+          "match": "\\b(LOCAL_SET)\\b\\s+([A-Z][A-Z0-9]+(?:_\\w+)?)\\b",
           "captures": {
             "1": {
               "name": "entity.name.function.weidu-tp2.patch"
@@ -396,7 +396,7 @@
           }
         },
         {
-          "match": "\\b(TEXT_SPRINT|SPRINT|SNPRINT|SPRINTF|LOCAL_TEXT_SPRINT|LOCAL_SPRINT)\\b\\s+([A-Z][A-Z0-9]+(?:_\\w+)*)\\b",
+          "match": "\\b(TEXT_SPRINT|SPRINT|SNPRINT|SPRINTF|LOCAL_TEXT_SPRINT|LOCAL_SPRINT)\\b\\s+([A-Z][A-Z0-9]+(?:_\\w+)?)\\b",
           "captures": {
             "1": {
               "name": "entity.name.function.weidu-tp2.patch"
@@ -2824,7 +2824,7 @@
       "name": "variable.complex.weidu-tp2",
       "patterns": [
         {
-          "match": "\\b([A-Z][A-Z0-9]+(?:_\\w+)*)\\s*(=)\\s*(EVAL\\s+)?",
+          "match": "\\b([A-Z][A-Z0-9]+(?:_\\w+)?)\\s*(=)\\s*(EVAL\\s+)?",
           "captures": {
             "1": {
               "name": "constant.language.weidu-tp2"

@@ -97,7 +97,7 @@
               "name": "keyword.control.weidu-tra"
             }
           },
-          "match": "(\\[)([^\\]\\n]+)(\\])",
+          "match": "(\\[)([^\\[\\]\\n]+)(\\])",
           "name": "entity.name.function.sound.weidu-tra"
         }
       ]

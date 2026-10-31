@@ -57,7 +57,7 @@ repository:
             name: keyword.control.fallout-worldmap-txt
           '3':
             patterns:
-              - match: (\w+)(:)(\d)
+              - match: \b(\w+)(:)(\d)
                 captures:
                   '1':
                     name: string.quoted.fallout-worldmap-txt

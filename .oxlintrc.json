@@ -297,7 +297,8 @@
         "no-irregular-whitespace": ["error", { "skipComments": true }],
 
         // oxlint has no ReDoS rule. The parsers and tokenizers here run regexes over untrusted mod
-        // files, where a super-linear pattern hangs the language server on one bad input.
+        // files, where a super-linear pattern hangs the language server on one bad input. The TextMate grammars'
+        // patterns get the same analysis in scripts/utils/test/syntaxes-backtracking.test.ts.
         "regexp/no-super-linear-backtracking": "error",
         "regexp/no-super-linear-move": "error"
     },

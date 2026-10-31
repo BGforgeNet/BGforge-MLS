@@ -464,7 +464,8 @@ repository:
       - match: \b(\w+)\s*(?=\()
         name: entity.name.function.fallout-ssl
 
-      - match: (?i)[[:blank:]]+(\w+)[[:blank:]]*(\(.*\))(;)
+      # Starts only at the first blank of a run: an attempt from inside the run rescans it, quadratic in its length.
+      - match: (?i)(?<![[:blank:]])[[:blank:]]+(\w+)[[:blank:]]*(\(.*\))(;)
         captures:
           '1':
             name: entity.name.function.fallout-ssl

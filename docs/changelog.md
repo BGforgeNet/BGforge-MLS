@@ -15,6 +15,8 @@
   milliseconds instead of seconds.
 - No single line can stall the language server any more: the text scans behind hover, completion, go to
   definition, doc comments, compiler output and transpiler output take time in proportion to their input.
+- Syntax highlighting no longer stalls on a long line of blanks, `[` or one long word in SSL, D, TRA and
+  `worldmap.txt` files.
 
 ### WeiDU
 

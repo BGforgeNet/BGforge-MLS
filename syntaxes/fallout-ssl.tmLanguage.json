@@ -1526,7 +1526,7 @@
           "name": "entity.name.function.fallout-ssl"
         },
         {
-          "match": "(?i)[[:blank:]]+(\\w+)[[:blank:]]*(\\(.*\\))(;)",
+          "match": "(?i)(?<![[:blank:]])[[:blank:]]+(\\w+)[[:blank:]]*(\\(.*\\))(;)",
           "captures": {
             "1": {
               "name": "entity.name.function.fallout-ssl",

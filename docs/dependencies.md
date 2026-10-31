@@ -98,6 +98,9 @@ So, per bump:
   the version last re-tested and the re-test procedure live at the top of `knip.ts`, beside the config the reports
   would otherwise be silenced in. The range is deliberately a tilde: under a caret the hold would rest on the lockfile
   alone and `pnpm update` would walk straight past it.
+- `scslre` moves with `eslint-plugin-regexp`: it is the analyser behind the plugin's two ReDoS rules, and
+  `scripts/utils/test/syntaxes-backtracking.test.ts` runs it over the TextMate grammars so the grammars and the
+  TypeScript regexes meet one bar. Keep it at the version the plugin resolves.
 - `@types/vscode` is tilde-pinned to the `engines.vscode` floor, never a caret. `engines.vscode` states the oldest VS
   Code the extension runs on; `@types/vscode` decides which API surface the compiler accepts. A caret floats the types
   to the newest published minor, so a call to an API absent from the floor VS Code type-checks cleanly and fails only

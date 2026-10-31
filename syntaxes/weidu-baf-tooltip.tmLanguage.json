@@ -14,7 +14,7 @@
     "function": {
       "patterns": [
         {
-          "match": "(\\w+)\\((.*)\\)",
+          "match": "\\b(\\w+)\\((.*)\\)",
           "captures": {
             "1": {
               "name": "support.function.weidu-baf-tooltip"
@@ -33,7 +33,7 @@
     "variables": {
       "patterns": [
         {
-          "match": "(\\w+)(:)(\\w+)",
+          "match": "\\b(\\w+)(:)(\\w+)",
           "captures": {
             "1": {
               "name": "support.function.weidu-baf-tooltip"

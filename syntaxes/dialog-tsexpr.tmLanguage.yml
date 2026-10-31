@@ -25,7 +25,7 @@ patterns:
 repository:
   comments:
     patterns:
-      - match: //.*$
+      - match: //.*
         name: comment.line.double-slash.dialog-tsexpr
       - begin: /\*
         end: \*/
