@@ -48,6 +48,11 @@
 - The compiler accepts a timed or conditional call to a string or variable, `call "p" in 5` and `call s when x`, as
   the reference compiler does.
 
+### Fallout MSG
+
+- A dialog editor save that adds text to a `.msg` with a field that never closes is refused with the line to fix.
+  Before, the new entry landed inside that field, and the game read it as part of the open text.
+
 ### Transpilers
 
 - TSSL, TBAF and TD substitute a name containing `$` correctly, and `$count` is no longer taken for `count`.

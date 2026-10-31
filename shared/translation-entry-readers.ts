@@ -78,6 +78,19 @@ function msgKey(field: string): string | undefined {
  * goes on from the next `{`, so one damaged entry does not hide the good ones around it.
  */
 export function readMsgEntries(text: string): RawEntry[] {
+    return readMsgFile(text).entries;
+}
+
+/**
+ * The entries of `readMsgEntries`, and the offset of the first `{` that no `}` follows: the game reads such a field to
+ * the end of the file, so it can only stand after the last `}`.
+ */
+export function readMsgFile(text: string): { entries: RawEntry[]; unclosedAt: number | undefined } {
+    const open = text.indexOf("{", text.lastIndexOf("}") + 1);
+    return { entries: scanMsgEntries(text), unclosedAt: open === -1 ? undefined : open };
+}
+
+function scanMsgEntries(text: string): RawEntry[] {
     const entries: RawEntry[] = [];
     let pos = 0;
     for (;;) {

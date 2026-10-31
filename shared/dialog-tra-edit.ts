@@ -13,7 +13,7 @@
  * as present, and a value of any string form is edited.
  */
 import * as path from "path";
-import { readMsgEntries, readTraEntries, readTraFile, type RawEntry } from "./translation-entry-readers";
+import { readMsgEntries, readMsgFile, readTraEntries, readTraFile, type RawEntry } from "./translation-entry-readers";
 
 /** A tra delimiter pair that does not occur in `text`, preferring the one the replaced value used. */
 function traLiteral(text: string, preferred: "~" | '"' | "%" | "~~~~~"): string {
@@ -76,9 +76,15 @@ export function rewriteMsgEntries(msgText: string, messages: Record<string, stri
  * order given. Ensures the file ends with a newline before appending so entries stay one-per-line.
  */
 export function appendMsgEntries(msgText: string, entries: Record<string, string>): string {
-    const present = new Set(readMsgEntries(msgText).map((entry) => entry.key));
+    const { entries: found, unclosedAt } = readMsgFile(msgText);
+    const present = new Set(found.map((entry) => entry.key));
     const additions = Object.entries(entries).filter(([id]) => !present.has(id));
     if (additions.length === 0) return msgText;
+    // The game reads the open field up to the next `}`, which would be inside the appended entry.
+    if (unclosedAt !== undefined) {
+        const line = msgText.slice(0, unclosedAt).split("\n").length;
+        throw new Error(`line ${line} opens a field that never closes; close it before adding entries`);
+    }
     const base = msgText.length > 0 && !msgText.endsWith("\n") ? msgText + "\n" : msgText;
     return base + additions.map(([id, text]) => `{${id}}{}{${text}}\n`).join("");
 }

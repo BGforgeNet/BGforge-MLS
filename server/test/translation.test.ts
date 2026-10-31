@@ -129,6 +129,20 @@ describe("Translation", () => {
             );
         });
 
+        it("refuses, naming the file and line, and leaves the .msg as it was when a field never closes", async () => {
+            const msgPath = path.join(tempDir, "open.msg");
+            const original = "{100}{}{Closed.}\n{101}{}{Never closed\n";
+            fs.writeFileSync(msgPath, original);
+            await translation.init();
+            const uri = `file://${tempDir}/test.tssl`;
+            const text = `/** @tra open.msg */\nconst x = mstr(102);`;
+
+            expect(() => translation.writeMessages(uri, text, "typescript", { "102": "New." })).toThrow(
+                `Cannot update ${msgPath}: line 2 opens a field that never closes; close it before adding entries`,
+            );
+            expect(fs.readFileSync(msgPath, "utf8")).toBe(original);
+        });
+
         it("appends a new .msg id while rewriting an existing one", async () => {
             await translation.init();
             const uri = `file://${tempDir}/test.tssl`;

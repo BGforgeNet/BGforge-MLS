@@ -16,4 +16,16 @@ describe("appendMsgEntries", () => {
     it("ensures a trailing newline before appending to a file that lacks one", () => {
         expect(appendMsgEntries(`{100}{}{hi}`, { "200": "x" })).toBe(`{100}{}{hi}\n{200}{}{x}\n`);
     });
+
+    // The game reads a field up to the next `}`, so an appended entry would become part of the open one.
+    it("refuses to append after a field that never closes, naming its line", () => {
+        expect(() => appendMsgEntries(`{100}{}{Closed.}\n{101}{}{Never closed\n`, { "102": "New." })).toThrow(
+            "line 2 opens a field that never closes; close it before adding entries",
+        );
+    });
+
+    it("leaves a file with an unclosed field as it is when there is nothing to append", () => {
+        const msg = `{100}{}{Closed.}\n{101}{}{Never closed\n`;
+        expect(appendMsgEntries(msg, { "100": "Closed." })).toBe(msg);
+    });
 });
