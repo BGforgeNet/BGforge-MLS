@@ -92,16 +92,13 @@ allowBuilds:
 #     when pinned - inside the usual maturity preference, taken because the
 #     alternative was leaving two open advisories on a dev-only path. Re-verified
 #     2026-09-15: without it the resolution still keeps a 6.15.1 and all three return.
-#   - oxfmt's tinypool (GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr: prototype
-#     pollution to RCE via worker and run() options; fixed in 2.1.2). oxfmt 0.65.0 pins tinypool 2.1.0 exactly; the oxfmt
-#     release that moves it (0.73.0, tinypool 2.2.0) is a 0.x minor that is taken in a change of
-#     its own once aged, with the formatter diff reviewed; until then the pin stays on tinypool's
-#     own 2.x line.
 # The top-level deps (@vscode/vsce, Stryker) are already at their latest versions,
 # so these are transitive pins, not direct bumps. Overrides are dropped once their
 # upstreams resolve to a patched version on their own (verified by removing the pin,
 # reinstalling, and confirming `pnpm audit` stays clean), leaving the pin redundant.
 # Dropped so far: the former brace-expansion pin (minimatch now resolves 5.0.6);
+# the oxfmt>tinypool pin (>=2.1.2 <3, GHSA-5gmw-xhrv-c9v3 / GHSA-85c8-ppgw-ccpr), since oxfmt 0.74.0 pins
+# tinypool 2.2.0 itself;
 # the tmp (>=0.2.6, GHSA-ph9p-34f9-6g65), esbuild (>=0.28.1,
 # GHSA-gv7w-rqvm-qjhr / GHSA-g7r4-m6w7-qqqr), and form-data (>=4.0.6,
 # GHSA-hmw2-7cc7-3qxx) pins, all dev/test/packaging-only and now resolving patched
@@ -140,7 +137,6 @@ allowBuilds:
 overrides:
   mocha>diff: ">=8.0.3"
   mocha>serialize-javascript: ">=7.1.3"
-  oxfmt>tinypool: ">=2.1.2 <3"
   "@azure/identity>@azure/msal-node": ">=7.1.0"
   qs: ">=6.16.0"
 

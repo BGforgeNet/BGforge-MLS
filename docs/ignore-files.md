@@ -47,6 +47,10 @@ would only be undone on the next regeneration. Generated source and data files c
 hand-edit` marker on their first line. The file is strict JSON and cannot carry comments, which is why its
 rationale lives here rather than beside the patterns.
 
+Code fences inside Markdown are also left as written (`embeddedLanguageFormatting: "off"` for `*.md`): the editor
+guides carry configuration the reader pastes into another tool, and that tool's parser, not this formatter, decides
+what is valid there (a TOML 1.0 reader rejects an inline table split across lines).
+
 Two guards keep the list honest:
 
 | Guard                                                   | Checks                                                              |

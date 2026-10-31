@@ -64,24 +64,28 @@ describe("ssl_compile timeout", () => {
         vi.clearAllMocks();
     });
 
-    it("resolves with returnCode 1 and timeout message when process hangs past timeoutMs", async () => {
-        const child = makeSuspendedChild();
-        mockFork.mockReturnValue(child);
+    it(
+        "resolves with returnCode 1 and timeout message when process hangs past timeoutMs",
+        async () => {
+            const child = makeSuspendedChild();
+            mockFork.mockReturnValue(child);
 
-        const result = await ssl_compile({
-            cwd: "/tmp",
-            inputFileName: "test.ssl",
-            outputFileName: "test.int",
-            options: "",
-            headersDir: "",
-            interactive: false,
-            timeoutMs: 50,
-        });
+            const result = await ssl_compile({
+                cwd: "/tmp",
+                inputFileName: "test.ssl",
+                outputFileName: "test.int",
+                options: "",
+                headersDir: "",
+                interactive: false,
+                timeoutMs: 50,
+            });
 
-        expect(result.returnCode).toBe(1);
-        expect(result.stderr).toMatch(/timed out/i);
-        expect(child.kill).toHaveBeenCalled();
-    }, 2000 /* wall-clock cap on the test itself */);
+            expect(result.returnCode).toBe(1);
+            expect(result.stderr).toMatch(/timed out/i);
+            expect(child.kill).toHaveBeenCalled();
+        },
+        2000 /* wall-clock cap on the test itself */,
+    );
 
     it("resolves normally when process finishes before timeout", async () => {
         const child = makeSuspendedChild();
