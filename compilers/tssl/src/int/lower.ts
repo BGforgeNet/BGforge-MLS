@@ -24,6 +24,7 @@ import { SyntaxKind, type FunctionDeclaration, type Node, type Project } from "t
 import {
     engineFunction,
     Expansions,
+    intLiteralProblem,
     type BinaryOp,
     type Declaration,
     type Desugarer,
@@ -969,9 +970,10 @@ class TsslLowering {
                 const text = node.getText();
                 const value = Number(text);
                 // The spelling decides the type, as it does in SSL: `100.0` is a float, `100` an integer.
-                return text.includes(".") || text.includes("e") || text.includes("E")
-                    ? { kind: "float", value }
-                    : { kind: "int", value };
+                if (text.includes(".") || text.includes("e") || text.includes("E")) return { kind: "float", value };
+                const problem = intLiteralProblem(text, value);
+                if (problem) throw refuseAt(node, problem);
+                return { kind: "int", value };
             }
             case SyntaxKind.StringLiteral: {
                 const value = node.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue();

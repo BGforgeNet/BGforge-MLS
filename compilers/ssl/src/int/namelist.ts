@@ -15,6 +15,7 @@
  */
 
 import { EmitError } from "./emit-error";
+import { TABLE_STRING_MAX } from "./limits";
 
 /**
  * A character the tables cannot store: each holds one byte per character, and `latin1` encoding keeps
@@ -46,6 +47,11 @@ export class NameTable {
             );
         }
         const text = Buffer.from(name, "latin1");
+        if (text.length > TABLE_STRING_MAX) {
+            throw new EmitError(
+                `a ${text.length}-byte string is too long for its table record, whose length field holds ${TABLE_STRING_MAX} at most`,
+            );
+        }
         const length = paddedLength(text.length);
         const record = new Uint8Array(2 + length);
         record[0] = (length >> 8) & 0xff;

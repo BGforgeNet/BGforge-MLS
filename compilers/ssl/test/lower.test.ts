@@ -355,6 +355,22 @@ describe.skipIf(!wasmPresent)("lowering refusals", () => {
         );
     });
 
+    // The engine reads an integer as one 32-bit operand. The reference keeps the low 32 bits of a longer literal,
+    // which is a different number from the one written; here it is refused at the literal, before `-O2` folding
+    // wraps it out of sight.
+    it.each(["4294967296", "0x100000000"])(
+        "refuses the integer literal %s, past 32 bits, at the literal",
+        (literal) => {
+            expect(refuse(`procedure start begin\n variable x;\n x := ${literal} + 1;\nend\n`)).toThrow(
+                new RegExp(`^3:7: integer literal ${literal} does not fit in 32 bits$`),
+            );
+        },
+    );
+
+    it.each(["4294967295", "0xFFFFFFFF", "2147483648"])("takes the 32-bit integer literal %s", (literal) => {
+        expect(refuse(`procedure start begin\n variable x;\n x := ${literal};\nend\n`)).not.toThrow();
+    });
+
     it("accepts break in a loop nested inside a conditional", () => {
         expect(refuse("procedure start begin\n while (1) do begin\n  if (1) then break;\n end\nend\n")).not.toThrow();
     });

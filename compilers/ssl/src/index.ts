@@ -39,6 +39,7 @@ export {
 /** The desugaring and engine-function table a second front end lowers through, for the same reason as the IR. */
 export { Expansions, type Desugarer, type Origin } from "./desugar";
 export { engineFunction } from "./int/engine-functions";
+export { intLiteralProblem } from "./int/limits";
 export { optimize, type OptimizeOptions } from "./optimize";
 export {
     preprocess,

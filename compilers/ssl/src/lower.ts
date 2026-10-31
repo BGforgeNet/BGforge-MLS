@@ -25,6 +25,7 @@ import {
     type VarExpr,
 } from "./desugar";
 import { engineFunction, type EngineFunction } from "./int/engine-functions";
+import { intLiteralProblem } from "./int/limits";
 import { Op } from "./int/opcodes";
 import type {
     AssignOp,
@@ -525,7 +526,10 @@ class Lowering {
                 const text = node.text;
                 if (text.includes(".")) return { kind: "float", value: Number.parseFloat(text) };
                 const radix = text.startsWith("0x") || text.startsWith("0X") ? 16 : 10;
-                return { kind: "int", value: Number.parseInt(text, radix) };
+                const value = Number.parseInt(text, radix);
+                const problem = intLiteralProblem(text, value);
+                if (problem) this.report(problem, node);
+                return { kind: "int", value };
             }
             case "string":
                 return { kind: "string", value: unquote(node.text) };

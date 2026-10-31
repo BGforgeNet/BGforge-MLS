@@ -51,6 +51,10 @@
   so renaming the parameter renames that use too.
 - The compiler accepts a timed or conditional call to a string or variable, `call "p" in 5` and `call s when x`, as
   the reference compiler does.
+- The compiler, and TSSL's, refuse a script that would fail in the game on an engine limit: an exported or
+  imported name over 31 characters, an integer past 32 bits, a procedure whose arguments and locals with the
+  script's globals need more than the engine's 682 stack values, and a string over 65533 bytes. The limits are
+  listed in the compiler's README.
 
 ### Fallout MSG
 

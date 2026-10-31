@@ -28,6 +28,7 @@ import {
 import { EngineOp } from "./opcodes-engine";
 import { EmitError } from "./emit-error";
 import { CompileError } from "../compile-error";
+import { EXTERNAL_NAME_MAX, VALUE_STACK_MAX } from "./limits";
 import { NameTable } from "./namelist";
 import { IntWriter } from "./writer";
 import {
@@ -138,6 +139,7 @@ class Emitter {
     }
 
     emit(): Uint8Array {
+        this.checkEngineLimits();
         this.internNames();
         this.internStrings();
         const entryPatch = this.writeStartupCode();
@@ -154,6 +156,44 @@ class Emitter {
         // is harmless rather than a crash. The reference warns here; the front end owns diagnostics.
         if (startOffset !== null) this.w.patchLong(startPatch, startOffset);
         return this.w.toBytes();
+    }
+
+    /**
+     * The limits a script is certain to break in the game, checked on the program as it will be written, so after
+     * the optimiser has dropped what it drops. The stack count is a floor: the globals and one procedure's own
+     * slots, before any caller's frame or expression temporaries.
+     */
+    private checkEngineLimits(): void {
+        const linked = [
+            ...this.externals.map((external) => external.name),
+            ...this.procedures.filter((p) => p.exported || p.imported).map((p) => p.name),
+        ];
+        for (const name of linked) {
+            if (name.length > EXTERNAL_NAME_MAX) {
+                throw new EmitError(
+                    `'${name}' is ${name.length} characters long; the engine keeps ${EXTERNAL_NAME_MAX} of an ` +
+                        `exported or imported name, so nothing would find it`,
+                );
+            }
+        }
+
+        const globals = this.globals.length;
+        if (globals > VALUE_STACK_MAX) {
+            throw new EmitError(
+                `${globals} globals need ${globals} values on the value stack, and the engine's holds ${VALUE_STACK_MAX}`,
+            );
+        }
+        // An imported procedure's frame is on the stack of the script that defines it.
+        for (const procedure of this.procedures) {
+            if (procedure.imported) continue;
+            const frame = procedure.args.length + procedure.locals.length - (procedure.reclaimedArgSlots ?? 0);
+            if (globals + frame > VALUE_STACK_MAX) {
+                throw new EmitError(
+                    `'${procedure.name}' needs ${globals + frame} values on the value stack - ${globals} globals ` +
+                        `and ${frame} arguments and locals - and the engine's holds ${VALUE_STACK_MAX}`,
+                );
+            }
+        }
     }
 
     /**

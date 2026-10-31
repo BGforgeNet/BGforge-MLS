@@ -100,6 +100,11 @@ describe("refusals", () => {
             /switch statement with no cases/,
         ],
         ["a for loop with no condition", "function start() {\n    for (;;) {}\n}\n", /for loop has no condition/],
+        [
+            "an integer literal past 32 bits",
+            "function start() {\n    let x = 0;\n    x = 4294967296 + 1;\n}\n",
+            /integer literal 4294967296 does not fit in 32 bits/,
+        ],
     ])("refuses %s rather than approximating it", (_name, source, message) => {
         expect(() => lower(source)).toThrow(message);
     });

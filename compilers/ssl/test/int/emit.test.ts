@@ -429,3 +429,92 @@ describe("INT emitter", () => {
         );
     });
 });
+
+// Each of these compiles under the reference and then fails in the game, so the emitter refuses it instead. The
+// numbers are the original engine's (sfall leaves them as they are); the README's limits table says where each
+// one comes from.
+describe("engine limits", () => {
+    const named = (length: number) => "n".repeat(length);
+    const withStart = (first: Program["declarations"][number]): Program => ({
+        declarations: [first, ...startProc([]).declarations],
+    });
+
+    it.each<[string, (name: string) => Program]>([
+        [
+            "an exported variable",
+            (name) => withStart({ kind: "external", variable: { name, initial: zero, exported: true } }),
+        ],
+        ["an imported variable", (name) => withStart({ kind: "external", variable: { name, initial: zero } })],
+        [
+            "an exported procedure",
+            (name) =>
+                withStart({ kind: "procedure", procedure: { name, args: [], locals: [], body: [], exported: true } }),
+        ],
+        [
+            "an imported procedure",
+            (name) =>
+                withStart({ kind: "procedure", procedure: { name, args: [], locals: [], body: [], imported: true } }),
+        ],
+    ])("refuses %s named past 31 characters, and takes one of exactly 31", (_what, build) => {
+        expect(() => emitInt(build(named(31)))).not.toThrow();
+        expect(() => emitInt(build(named(32)))).toThrow(
+            new EmitError(
+                `'${named(32)}' is 32 characters long; the engine keeps 31 of an exported or imported name, ` +
+                    `so nothing would find it`,
+            ),
+        );
+    });
+
+    const stackProgram = (globals: number, args: number, locals: number, reclaimed = 0): Program => ({
+        declarations: [
+            ...Array.from({ length: globals }, (_, i) => ({
+                kind: "global" as const,
+                variable: { name: `g${i}`, initial: zero },
+            })),
+            {
+                kind: "procedure",
+                procedure: {
+                    name: "start",
+                    args: Array.from({ length: args }, (_, i) => `a${i}`),
+                    locals: Array.from({ length: locals }, (_, i) => ({ name: `l${i}`, initial: zero })),
+                    body: [],
+                    ...(reclaimed > 0 ? { reclaimedArgSlots: reclaimed } : {}),
+                },
+            },
+        ],
+    });
+
+    it("refuses a procedure that, with the script's globals, outgrows the value stack, and takes one that fills it", () => {
+        expect(() => emitInt(stackProgram(600, 2, 80))).not.toThrow();
+        expect(() => emitInt(stackProgram(600, 2, 81))).toThrow(
+            new EmitError(
+                "'start' needs 683 values on the value stack - 600 globals and 83 arguments and locals - " +
+                    "and the engine's holds 682",
+            ),
+        );
+    });
+
+    it("counts a local the optimiser moved into an unused argument slot once", () => {
+        expect(() => emitInt(stackProgram(600, 2, 81, 1))).not.toThrow();
+    });
+
+    it("refuses globals that alone outgrow the value stack", () => {
+        expect(() => emitInt(stackProgram(683, 0, 0))).toThrow(
+            new EmitError("683 globals need 683 values on the value stack, and the engine's holds 682"),
+        );
+    });
+
+    const say = (length: number) =>
+        startProc([
+            { kind: "libStmt", opcode: EngineOp.DISPLAY_MSG, args: [{ kind: "string", value: "s".repeat(length) }] },
+        ]);
+
+    it("refuses a string longer than a table record holds, and takes the longest that fits", () => {
+        expect(() => emitInt(say(65_533))).not.toThrow();
+        expect(() => emitInt(say(65_534))).toThrow(
+            new EmitError(
+                "a 65534-byte string is too long for its table record, whose length field holds 65533 at most",
+            ),
+        );
+    });
+});
