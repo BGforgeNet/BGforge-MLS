@@ -969,8 +969,10 @@ class TsslLowering {
             case SyntaxKind.NumericLiteral: {
                 const text = node.getText();
                 const value = Number(text);
-                // The spelling decides the type, as it does in SSL: `100.0` is a float, `100` an integer.
-                if (text.includes(".") || text.includes("e") || text.includes("E")) return { kind: "float", value };
+                // The spelling decides the type, as it does in SSL: `100.0` is a float, `100` an integer. An `e` is an
+                // exponent only in a decimal spelling; in `0xFE` it is a digit.
+                const hex = /^0x/i.test(text);
+                if (text.includes(".") || (!hex && /e/i.test(text))) return { kind: "float", value };
                 const problem = intLiteralProblem(text, value);
                 if (problem) throw refuseAt(node, problem);
                 return { kind: "int", value };

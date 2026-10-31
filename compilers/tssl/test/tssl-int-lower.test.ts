@@ -47,6 +47,18 @@ describe("declarations", () => {
         expect(first.procedure.body).toEqual([]);
     });
 
+    // `e` is an exponent only in a decimal spelling; in hex it is a digit, and the value stays an integer.
+    it.each<[string, { kind: "int" | "float"; value: number }]>([
+        ["0xFE", { kind: "int", value: 254 }],
+        ["0xe", { kind: "int", value: 14 }],
+        ["1e3", { kind: "float", value: 1000 }],
+        ["2.5", { kind: "float", value: 2.5 }],
+    ])("types the literal %s by its spelling", (literal, initial) => {
+        const [first] = lower(`function start() {\n    let x = ${literal};\n}\n`).declarations;
+        if (first?.kind !== "procedure") throw new Error("expected a procedure");
+        expect(first.procedure.locals).toEqual([{ name: "x", initial }]);
+    });
+
     it("interns strings in written order, which is what fixes the string table", () => {
         const program = lower('function start() {\n    display_msg("first");\n    display_msg("second");\n}\n');
         expect(program.stringLiterals).toEqual(["first", "second"]);

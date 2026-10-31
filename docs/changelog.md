@@ -64,6 +64,8 @@
 ### Transpilers
 
 - TSSL, TBAF and TD substitute a name containing `$` correctly, and `$count` is no longer taken for `count`.
+- TSSL compiles a hex number with an `e` or `E` digit, such as `0xFE`, as an integer. Before, it was compiled as a
+  float.
 
 ### Binary editor
 
