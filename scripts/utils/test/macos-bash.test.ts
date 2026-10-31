@@ -18,7 +18,7 @@ const SCRIPTS = ["scripts/tool-download-lib.sh", "scripts/lint-workflows.sh", "s
 /** Constructs bash 3.2 lacks. */
 const UNPORTABLE: Record<string, RegExp> = {
     "associative array": /\b(declare|local|typeset)\s+-[a-zA-Z]*A/,
-    "nameref": /\b(declare|local|typeset)\s+-[a-zA-Z]*n\b/,
+    nameref: /\b(declare|local|typeset)\s+-[a-zA-Z]*n\b/,
     "mapfile/readarray": /\b(mapfile|readarray)\b/,
     "wait -n": /\bwait\s+-n\b/,
     "case conversion expansion": /\$\{[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?(,,?|\^\^?)\}/,
