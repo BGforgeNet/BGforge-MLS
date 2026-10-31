@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Fail-closed backstop for the .vscodeignore denylist, which ships anything new in the
-# working tree by default (see the .vscodeignore header). Green tests never open the
-# produced VSIX, so this inspects the real artifact after packaging and fails loud if an
-# unexpected top-level entry, a source/test file, or a size regression sneaked in - the
-# exact class that let ~34MB of gitignored-but-not-vscodeignored dev tooling ship.
+# Backstop for the root package.json `files` allowlist, whose broad entries (client/out/**,
+# server/out/**) take whatever the build left there. Green tests never open the produced
+# VSIX, so this inspects the real artifact after packaging and fails loud if an unexpected
+# top-level entry, a source/test file, or a size regression sneaked in - the class that once
+# let ~34MB of gitignored dev tooling ship.
 set -eu -o pipefail
 
 vsix="${1:?usage: verify-package-contents.sh <vsix>}"

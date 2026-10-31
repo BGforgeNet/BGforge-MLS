@@ -1,7 +1,7 @@
 # Ignore Files and Lint Policy
 
-Each ignore mechanism explains itself at the site: `.gitignore`, `.vscodeignore` and `.oxlintrc.json` carry a
-comment beside every non-obvious pattern, and those files are the authority on what is excluded. Read them first.
+Each ignore mechanism explains itself at the site: `.gitignore` and `.oxlintrc.json` carry a comment beside every
+non-obvious pattern, and those files are the authority on what is excluded. Read them first.
 
 This document holds only what no single file can state - facts that span two of them, behaviour of the tools that
 read them, and measurements someone would otherwise have to redo. Its last section is lint policy, which is not an
@@ -10,44 +10,34 @@ ignore mechanism but is decided in the same config.
 | Mechanism              | Controls                                                                                     |
 | ---------------------- | -------------------------------------------------------------------------------------------- |
 | `.gitignore`           | What git tracks (plus nested `.gitignore` files beside the build and test output they cover) |
-| `.vscodeignore`        | What ships in the VSIX                                                                       |
-| `package.json` `files` | What ships in each published npm tarball                                                     |
+| `package.json` `files` | What ships in the VSIX (root manifest) and in each published npm tarball                     |
 | `.editorconfig`        | Indent and line width; oxfmt reads it, so it is where the 120-column limit lives             |
 | `.oxfmtrc.json`        | Per-filetype indent, and the authoritative list of files excluded from formatting            |
 | `.oxlintrc.json`       | Lint categories, per-rule severity, and per-directory idiom exemptions                       |
 
 ## What ships in the VSIX
 
-`.vscodeignore` is a **denylist**: everything ships unless a pattern excludes it, so the interesting half - what
-ships - appears nowhere in that file. These are included because nothing excludes them:
+The root `package.json` `files` field is an **allowlist**: vsce packages what it names, plus `package.json` and
+`README.md`, and nothing else in the working tree. vsce does not read `.gitignore`, so under a denylist every
+gitignored build tree, cache or scratch file beside the sources would ship unless an entry excluded it.
+`scripts/utils/test/vsix-allowlist.test.ts` runs vsce's file collection over a tree holding such strays. vsce refuses
+a `.vscodeignore` beside a `files` field, so the repo has none.
 
-- `package.json`, `README.md`, `LICENSE.txt` - auto-included by vsce
-- `SECURITY.md` - the vulnerability-reporting policy
-- `client/package.json`, `client/out/` - extension entry point, webview bundles, codicons
-- `client/src/**/*.html`, `client/src/**/*.css` - webview HTML/CSS templates
-- `server/package.json`, `server/LICENSE.txt`, `server/out/` - LSP server bundle, data JSONs, WASM parsers,
-  td-runtime.d.ts, and the Fallout SSL compiler (WASM, loaded via `fork()`), which the build copies in
-- `server/node_modules/esbuild-wasm/` - esbuild WASM, used by transpilers (runtime files only: `esbuild.wasm`,
-  `bin/esbuild`, `lib/main.js`, `wasm_exec*.js`, `package.json`)
-- `language-configurations/*.json` - language bracket/comment rules
-- `snippets/*.json` - code snippets
-- `syntaxes/*.json` - TextMate grammars
-- `themes/bgforge-*.json`, `themes/seti.woff`, `themes/icons/` - BGforge themes
-- `resources/bgforge.png` - extension icon
+vsce cannot exclude inside an entry (a `!` pattern there re-includes everything else), so an entry such as
+`client/out/**` relies on `scripts/package.sh` emptying that directory and rebuilding it without source maps first.
 
-One more entry ships although `.vscodeignore` excludes root `node_modules/`: `node_modules/bgforge-tssl-plugin/` and
+Two more entries ship although `files` does not name them: `node_modules/bgforge-tssl-plugin/` and
 `node_modules/bgforge-td-plugin/`, which `scripts/package.sh` adds to the VSIX after vsce has packaged it. That
 script's header describes the steps it takes to make pnpm's layout packageable.
 
-A denylist fails open, so this list is orientation, not a guarantee: `scripts/verify-package-contents.sh` runs at
-the end of `package.sh` and fails the build when an unexpected path or size appears in the VSIX. That guard, not
-this list, is what actually holds.
+`scripts/verify-package-contents.sh` runs at the end of `package.sh` and fails the build when an unexpected path,
+a source or test file, or a size regression appears in the VSIX.
 
 ## What ships in the npm tarballs
 
 The published packages - `@bgforge/mls-server` and the libraries under _Releasing a library_ in
-[releasing.md](releasing.md) - take the opposite shape: each `package.json` `files` field is an **allowlist**, so a tarball carries
-only what that field names plus the files npm always includes. Neither `.gitignore` nor `.vscodeignore` affects them.
+[releasing.md](releasing.md) - take the same shape: each `package.json` `files` field is an allowlist, so a tarball
+carries only what that field names plus the files npm always includes.
 
 ## Formatting exclusions
 

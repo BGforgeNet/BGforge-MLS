@@ -7,8 +7,8 @@
 # 1. Run prepublish build (needs full pnpm deps)
 # 2. Strip pnpm artifacts from server/node_modules (symlinks crash vsce's zip writer)
 # 3. Package with SKIP_PREPUBLISH=1 to avoid rebuilding after strip
-# 4. Inject TS plugins into VSIX (vsce's .vscodeignore re-include patterns don't
-#    work for node_modules/ with --no-dependencies, so we add them post-packaging)
+# 4. Inject TS plugins into VSIX (vsce's file walk skips the root node_modules/
+#    with --no-dependencies, so `files` cannot name them; we add them post-packaging)
 # 5. Restore server/node_modules via pnpm install
 
 set -eu -o pipefail
@@ -104,9 +104,9 @@ version=${ARTIFACT_VERSION:-$(node -p "require('./package.json').version")}
 SKIP_PREPUBLISH=1 pnpm vsce package --no-dependencies --out "dist/${name}-${version}.vsix" "$@"
 
 # Step 4: Inject TS plugins into VSIX.
-# vsce excludes node_modules/ entirely with --no-dependencies; re-include
-# patterns (!node_modules/pkg/) don't work. Inject the built plugin bundles
-# into the VSIX post-packaging. tsserver requires plugins in node_modules/.
+# vsce skips the root node_modules/ entirely with --no-dependencies, so no `files`
+# entry reaches it. Inject the built plugin bundles into the VSIX post-packaging.
+# tsserver requires plugins in node_modules/.
 vsix_file="dist/${name}-${version}.vsix"
 
 if [ ! -f "$vsix_file" ]; then
@@ -148,8 +148,7 @@ cp node_modules/bgforge-td-plugin/package.json node_modules/bgforge-td-plugin/in
 rm -rf "$inject_dir"
 
 # Fail closed if the packaged VSIX regressed in size or shipped unexpected content.
-# The .vscodeignore denylist ships anything new by default, and no test opens the produced
-# bundle - this is the gate that does (see .vscodeignore header).
+# No test opens the produced bundle; this is the gate that does (docs/ignore-files.md).
 ./scripts/verify-package-contents.sh "$vsix_file"
 
 echo "Done"
