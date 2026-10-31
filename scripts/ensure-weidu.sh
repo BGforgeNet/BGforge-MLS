@@ -23,25 +23,6 @@ WEIDU_VERSION="251.00"
 # The asset names carry a shortened version ("251"), not the tag's "251.00".
 WEIDU_ASSET_VERSION="251"
 
-# Per-platform asset and its sha256, taken from the release itself. Linux and both macOS builds are
-# published; Windows is not wired because nothing in this repo's gates runs there.
-declare -A WEIDU_ASSETS=(
-    [linux_amd64]="WeiDU-Linux-${WEIDU_ASSET_VERSION}.zip"
-    [darwin_amd64]="WeiDU-Mac-${WEIDU_ASSET_VERSION}.zip"
-    [darwin_arm64]="WeiDU-Mac-ARM-${WEIDU_ASSET_VERSION}.zip"
-)
-declare -A WEIDU_SHA256=(
-    [linux_amd64]="3e1a34ec5d6e934b1d4a34541a1312d0170b120c6efe903a732415acde3bd3c0"
-    [darwin_amd64]="f387eae88aca0d48842708a6a255f6cf6dabe58fc7370cb4521f1661b3a7bc1e"
-    [darwin_arm64]="ba050f5a02f56865667adee7ec1c525a34313928182301081b5ec278c29096be"
-)
-# Both macOS archives nest under WeiDU-Mac/, the ARM one included.
-declare -A WEIDU_MEMBER=(
-    [linux_amd64]="WeiDU-Linux/weidu"
-    [darwin_amd64]="WeiDU-Mac/weidu"
-    [darwin_arm64]="WeiDU-Mac/weidu"
-)
-
 # A WeiDU already on the host wins: the devbox image bakes one, and a modder's machine has their own.
 if command -v weidu >/dev/null 2>&1; then
     command -v weidu
@@ -66,16 +47,36 @@ case "$(uname -m)" in
 esac
 platform="${os}_${arch}"
 
-if [[ -z "${WEIDU_ASSETS[$platform]:-}" ]]; then
-    echo "ensure-weidu.sh: no pinned WeiDU download for '$platform'; install weidu and put it on PATH" >&2
-    exit 1
-fi
+# Per-platform asset and its sha256, taken from the release itself. Linux and both macOS builds are
+# published; Windows is not wired because nothing in this repo's gates runs there. Both macOS archives
+# nest under WeiDU-Mac/, the ARM one included.
+case "$platform" in
+    linux_amd64)
+        weidu_asset="WeiDU-Linux-${WEIDU_ASSET_VERSION}.zip"
+        weidu_sha256="3e1a34ec5d6e934b1d4a34541a1312d0170b120c6efe903a732415acde3bd3c0"
+        weidu_member="WeiDU-Linux/weidu"
+        ;;
+    darwin_amd64)
+        weidu_asset="WeiDU-Mac-${WEIDU_ASSET_VERSION}.zip"
+        weidu_sha256="f387eae88aca0d48842708a6a255f6cf6dabe58fc7370cb4521f1661b3a7bc1e"
+        weidu_member="WeiDU-Mac/weidu"
+        ;;
+    darwin_arm64)
+        weidu_asset="WeiDU-Mac-ARM-${WEIDU_ASSET_VERSION}.zip"
+        weidu_sha256="ba050f5a02f56865667adee7ec1c525a34313928182301081b5ec278c29096be"
+        weidu_member="WeiDU-Mac/weidu"
+        ;;
+    *)
+        echo "ensure-weidu.sh: no pinned WeiDU download for '$platform'; install weidu and put it on PATH" >&2
+        exit 1
+        ;;
+esac
 
 # Beside the other downloaded tools, in the gitignored cache the packaging ignores already exclude.
 weidu_bin="$ROOT_DIR/.dev/weidu-${WEIDU_VERSION}/weidu"
 ensure_verified_tool "WeiDU v${WEIDU_VERSION}" \
-    "https://github.com/WeiDUorg/weidu/releases/download/v${WEIDU_VERSION}/${WEIDU_ASSETS[$platform]}" \
-    "${WEIDU_SHA256[$platform]}" "$weidu_bin" "${WEIDU_MEMBER[$platform]}"
+    "https://github.com/WeiDUorg/weidu/releases/download/v${WEIDU_VERSION}/${weidu_asset}" \
+    "$weidu_sha256" "$weidu_bin" "$weidu_member"
 
 # Run it once rather than trusting the unpack: a binary that unpacked but will not execute is
 # indistinguishable from "no WeiDU installed" to the suite, i.e. a green run that tested nothing.

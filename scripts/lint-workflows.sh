@@ -28,19 +28,7 @@ ZIZMOR_BIN="$ZIZMOR_CACHE_DIR/zizmor"
 # checksums.txt (https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_checksums.txt);
 # zizmor publishes no checksums manifest, so its hashes are pinned from the sha256 of the
 # immutable v${ZIZMOR_VERSION} release assets (a mismatch on re-download means the asset changed).
-declare -A ACTIONLINT_SHA256=(
-    [linux_amd64]="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
-    [linux_arm64]="325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6"
-    [darwin_amd64]="5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644"
-    [darwin_arm64]="aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f"
-)
-declare -A ZIZMOR_SHA256=(
-    # keys quoted so shfmt doesn't read the hyphens as arithmetic and reformat them
-    ["x86_64-unknown-linux-gnu"]="d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99"
-    ["aarch64-unknown-linux-gnu"]="37eebbd5762a44f262d94875431b14a6d2402991e90a685113ea97b8b41be833"
-    ["x86_64-apple-darwin"]="72ae63bb85b67229c06242f04195cb43927e9fab5f43803c6434dc701a517d61"
-    ["aarch64-apple-darwin"]="ad5aa633cd56215b11e6c51d51f90c7e6b22904a75047d1215abbd422f61d698"
-)
+# Each sits beside its platform in the case statements below.
 
 os="$(uname -s)"
 arch="$(uname -m)"
@@ -52,16 +40,29 @@ arch="$(uname -m)"
 # --- actionlint: GitHub Actions syntax/semantics (+ embedded shellcheck on `run:` steps) ---
 actionlint_cmd=(actionlint)
 al_arch=""
+al_sha256=""
 case "$os/$arch" in
-    Linux/x86_64) al_arch="linux_amd64" ;;
-    Linux/aarch64 | Linux/arm64) al_arch="linux_arm64" ;;
-    Darwin/x86_64) al_arch="darwin_amd64" ;;
-    Darwin/arm64) al_arch="darwin_arm64" ;;
+    Linux/x86_64)
+        al_arch="linux_amd64"
+        al_sha256="8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        ;;
+    Linux/aarch64 | Linux/arm64)
+        al_arch="linux_arm64"
+        al_sha256="325e971b6ba9bfa504672e29be93c24981eeb1c07576d730e9f7c8805afff0c6"
+        ;;
+    Darwin/x86_64)
+        al_arch="darwin_amd64"
+        al_sha256="5b44c3bc2255115c9b69e30efc0fecdf498fdb63c5d58e17084fd5f16324c644"
+        ;;
+    Darwin/arm64)
+        al_arch="darwin_arm64"
+        al_sha256="aba9ced2dee8d27fecca3dc7feb1a7f9a52caefa1eb46f3271ea66b6e0e6953f"
+        ;;
 esac
 if [[ -n "$al_arch" ]]; then
     ensure_verified_tool "actionlint v${ACTIONLINT_VERSION}" \
         "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_${al_arch}.tar.gz" \
-        "${ACTIONLINT_SHA256[$al_arch]}" "$ACTIONLINT_BIN" actionlint
+        "$al_sha256" "$ACTIONLINT_BIN" actionlint
     actionlint_cmd=("$ACTIONLINT_BIN")
 elif ! command -v actionlint >/dev/null 2>&1; then
     echo "lint-workflows.sh: no pinned actionlint build for ${os}/${arch}; install actionlint and put it on PATH" >&2
@@ -71,16 +72,29 @@ fi
 # --- zizmor: security-focused static analysis (a Rust tool shipped as per-arch binaries) ---
 zizmor_cmd=(zizmor)
 zz_arch=""
+zz_sha256=""
 case "$os/$arch" in
-    Linux/x86_64) zz_arch="x86_64-unknown-linux-gnu" ;;
-    Linux/aarch64 | Linux/arm64) zz_arch="aarch64-unknown-linux-gnu" ;;
-    Darwin/x86_64) zz_arch="x86_64-apple-darwin" ;;
-    Darwin/arm64) zz_arch="aarch64-apple-darwin" ;;
+    Linux/x86_64)
+        zz_arch="x86_64-unknown-linux-gnu"
+        zz_sha256="d185f726bdaf92df78273217dfdd24ebcd6b0ef48cf3ce776ff5762b6e138c99"
+        ;;
+    Linux/aarch64 | Linux/arm64)
+        zz_arch="aarch64-unknown-linux-gnu"
+        zz_sha256="37eebbd5762a44f262d94875431b14a6d2402991e90a685113ea97b8b41be833"
+        ;;
+    Darwin/x86_64)
+        zz_arch="x86_64-apple-darwin"
+        zz_sha256="72ae63bb85b67229c06242f04195cb43927e9fab5f43803c6434dc701a517d61"
+        ;;
+    Darwin/arm64)
+        zz_arch="aarch64-apple-darwin"
+        zz_sha256="ad5aa633cd56215b11e6c51d51f90c7e6b22904a75047d1215abbd422f61d698"
+        ;;
 esac
 if [[ -n "$zz_arch" ]]; then
     ensure_verified_tool "zizmor v${ZIZMOR_VERSION}" \
         "https://github.com/zizmorcore/zizmor/releases/download/v${ZIZMOR_VERSION}/zizmor-${zz_arch}.tar.gz" \
-        "${ZIZMOR_SHA256[$zz_arch]}" "$ZIZMOR_BIN" zizmor
+        "$zz_sha256" "$ZIZMOR_BIN" zizmor
     zizmor_cmd=("$ZIZMOR_BIN")
 elif ! command -v zizmor >/dev/null 2>&1; then
     echo "lint-workflows.sh: no pinned zizmor build for ${os}/${arch}; install zizmor and put it on PATH" >&2

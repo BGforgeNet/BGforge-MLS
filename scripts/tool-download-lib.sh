@@ -12,6 +12,19 @@
 # project's own scripts, and lint-workflows.sh through actionlint's `-shellcheck` on embedded
 # `run:` blocks. One home keeps them on the same version.
 
+# The sourcing scripts carry darwin pins, so this file and they stay within bash 3.2, which is
+# macOS's /bin/bash: no associative arrays (a `case` maps a platform to its values instead).
+# Guard: scripts/utils/test/macos-bash.test.ts.
+
+# sha256_of FILE - its hex sha256. macOS ships shasum but not coreutils' sha256sum.
+sha256_of() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | cut -d' ' -f1
+    else
+        shasum -a 256 "$1" | cut -d' ' -f1
+    fi
+}
+
 # ensure_verified_tool LABEL URL EXPECTED_SHA256 DEST_BIN [ARCHIVE_MEMBER]
 #
 # Install an executable at DEST_BIN if it is not already present. The download is verified
@@ -34,7 +47,7 @@ ensure_verified_tool() {
     curl -fsSL -o "$tmp_dir/download" "$url"
 
     local actual_sha256
-    actual_sha256="$(sha256sum "$tmp_dir/download" | cut -d' ' -f1)"
+    actual_sha256="$(sha256_of "$tmp_dir/download")"
     if [[ "$actual_sha256" != "$expected_sha256" ]]; then
         echo "tool-download: ${label} checksum mismatch (expected $expected_sha256, got $actual_sha256)" >&2
         rm -rf "$tmp_dir"
@@ -70,10 +83,6 @@ ensure_verified_tool() {
 # publishes no checksums manifest, so the hashes are pinned from the sha256 of the immutable
 # v0.11.0 release tarballs.
 SHELLCHECK_VERSION="0.11.0"
-declare -A SHELLCHECK_SHA256=(
-    ["linux.x86_64"]="b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6"
-    ["linux.aarch64"]="68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc"
-)
 
 # Set PINNED_SHELLCHECK to the repo-root-relative path of the pinned shellcheck, downloading it on
 # first use; on a platform with no pinned build leave it empty and return 1, so the caller can
@@ -81,11 +90,17 @@ declare -A SHELLCHECK_SHA256=(
 # because a command substitution would swallow the abort below into a subshell.
 export PINNED_SHELLCHECK=""
 ensure_pinned_shellcheck() {
-    local sc_arch=""
+    local sc_arch="" sc_sha256=""
     if [[ "$(uname -s)" == "Linux" ]]; then
         case "$(uname -m)" in
-            x86_64) sc_arch="linux.x86_64" ;;
-            aarch64 | arm64) sc_arch="linux.aarch64" ;;
+            x86_64)
+                sc_arch="linux.x86_64"
+                sc_sha256="b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6"
+                ;;
+            aarch64 | arm64)
+                sc_arch="linux.aarch64"
+                sc_sha256="68a8133197a50beb8803f8d42f9908d1af1c5540d4bb05fdfca8c1fa47decefc"
+                ;;
         esac
     fi
     [[ -n "$sc_arch" ]] || return 1
@@ -95,6 +110,6 @@ ensure_pinned_shellcheck() {
     # back to the host's shellcheck there would run a version the pin does not vouch for.
     ensure_verified_tool "shellcheck v${SHELLCHECK_VERSION}" \
         "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.${sc_arch}.tar.gz" \
-        "${SHELLCHECK_SHA256[$sc_arch]}" "$dest_bin" "shellcheck-v${SHELLCHECK_VERSION}/shellcheck" || exit 1
+        "$sc_sha256" "$dest_bin" "shellcheck-v${SHELLCHECK_VERSION}/shellcheck" || exit 1
     export PINNED_SHELLCHECK="$dest_bin"
 }
