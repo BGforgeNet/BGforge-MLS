@@ -141,4 +141,28 @@ describe("parser modules before init", () => {
 
         expect(uninitialised.parseWithCache(source(0))).toBeNull();
     });
+
+    it("ignores invalidation", () => {
+        const uninitialised = createCachedParserModule("tree-sitter-ssl.wasm", "SSL uninit");
+
+        expect(() => uninitialised.invalidateCache()).not.toThrow();
+        expect(() => uninitialised.invalidateCache("some text")).not.toThrow();
+    });
+});
+
+describe("createCachedParserModule default capacity", () => {
+    it("keeps an editor's worth of trees before evicting the oldest", async () => {
+        // An editor session holds many documents; the default must not regress to a handful of entries.
+        const editorWorkload = 32;
+        const module = createCachedParserModule("tree-sitter-ssl.wasm", "SSL default");
+        await module.init();
+
+        const first = module.parseWithCache(source(0));
+        for (let i = 1; i < editorWorkload; i++) {
+            module.parseWithCache(source(i));
+        }
+
+        expect(first).not.toBeNull();
+        expect(module.parseWithCache(source(0))).toBe(first);
+    });
 });

@@ -46,6 +46,10 @@ const page = await browser.newPage({ viewport: { width: 500, height: 850 } });
 const pageErrors: string[] = [];
 page.on("pageerror", (e) => pageErrors.push(e.stack ?? String(e)));
 
+/** Two painted frames: the reactive flush of a posted model has run by then. */
+const paintedFrames = () =>
+    page.evaluate("new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())))");
+
 await page.goto("file://" + appHtml);
 await page.evaluate(
     (m) => window.postMessage({ type: "model", model: m }, "*"),
@@ -67,14 +71,14 @@ for (const cut of [0.97, 0.9, 0.8, 0.65, 0.5, 0.35, 0.2, 0.08]) {
         (m) => window.postMessage({ type: "model", model: m }, "*"),
         (await model(full.slice(0, Math.floor(full.length * cut)))) as unknown as Record<string, unknown>,
     );
-    await new Promise((r) => setTimeout(r, 200));
+    await paintedFrames();
 }
 // The writer fixes the syntax and saves: the full, valid model is posted again.
 await page.evaluate(
     (m) => window.postMessage({ type: "model", model: m }, "*"),
     (await model(full)) as unknown as Record<string, unknown>,
 );
-await new Promise((r) => setTimeout(r, 400));
+await paintedFrames();
 const recoveredTreeitems = await page.locator('[role="treeitem"]').count();
 
 check(

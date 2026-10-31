@@ -20,8 +20,8 @@
 
 import { beforeAll, describe, expect, it } from "vitest";
 import { initParser } from "@bgforge/shared/parsers/weidu-d";
-import { parseDDialog } from "../src/weidu-d/dialog";
-import { parseTDSource } from "../src/td/dialog-source";
+import { parseDDialog } from "../../server/src/weidu-d/dialog";
+import { parseTDSource } from "../../server/src/td/dialog-source";
 import {
     modelFromD,
     type DialogChoice,
@@ -38,7 +38,7 @@ import {
     renameState,
     setChoiceTarget,
 } from "@bgforge/shared/dialog-edit-ops";
-import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
+import { computeDialogSourceEdit } from "../src/dialog-editor/dialog-source-edit";
 
 // --- Projection: the language-agnostic logical shape we assert parity on ---------------------------------------
 

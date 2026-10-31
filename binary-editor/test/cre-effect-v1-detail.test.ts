@@ -12,8 +12,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { effV2BodyRows, featureBlockBodyLabels, featureBlockBodyRows } from "@bgforge/binary";
-import { creParser } from "../../binary/src/cre/index";
+import { creParser, effV2BodyRows, featureBlockBodyLabels, featureBlockBodyRows } from "@bgforge/binary";
 import { getCreCanonicalDocument, rebuildCreCanonicalDocument } from "../../binary/src/cre/canonical-reader";
 import { serializeCreCanonicalDocument } from "../../binary/src/cre/canonical-writer";
 import { defaultCreEffectV1 } from "../../binary/src/cre/entity-ops";

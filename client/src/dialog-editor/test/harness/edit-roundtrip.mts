@@ -133,9 +133,9 @@ await pollUntil(() => editCount > emitsBeforeOverlay);
 check("an empty pending option does not splice a `++ ~~` husk", !host.doc.text.includes("~~ EXIT"), host.doc.text);
 // External same-file adopt while the draft is open (what a text-side edit does in production). The adopt
 // carries the identical model, so it yields no distinct DOM signal to poll for (the input is present before
-// AND after); a bounded settle lets the adopt effect run before we assert the draft survived it.
+// AND after); two painted frames let the adopt effect run before we assert the draft survived it.
 await page.evaluate((m) => window.postMessage({ type: "model", model: m }, "*"), currentModel(host, "roundtrip"));
-await new Promise((r) => setTimeout(r, 400));
+await page.evaluate("new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())))");
 check(
     "inline editor survives the adopt with its draft intact",
     (await page.locator("input.rtextedit").count()) === 1 &&
@@ -165,8 +165,9 @@ check(
 // count climbing: model post -> emit -> reparse -> emit -> ...).
 await host.core.drainEdits();
 const settledCount = editCount;
-await new Promise((r) => setTimeout(r, 900)); // > EMIT_DEBOUNCE_MS + flush debounce
-check("no echo loop: edit count stable after settling", editCount === settledCount, `edits=${editCount}`);
+// A bounded negative poll: no further edit may arrive within a window longer than EMIT_DEBOUNCE_MS + flush debounce.
+const echoed = await pollUntil(() => editCount !== settledCount, 900);
+check("no echo loop: edit count stable after settling", !echoed, `edits=${editCount}`);
 check("no host-side errors surfaced", host.errors.length === 0, host.errors.join(" | "));
 
 await browser.close();

@@ -29,7 +29,7 @@ import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
-import { creParser } from "../../../binary/src/cre/index";
+import { creParser } from "@bgforge/binary";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 

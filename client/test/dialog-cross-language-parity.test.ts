@@ -16,8 +16,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { parseDialog } from "../src/dialog";
-import { parseTSSLSource } from "../src/tssl/dialog-source";
+import { parseDialog } from "../../server/src/dialog";
+import { parseTSSLSource } from "../../server/src/tssl/dialog-source";
 import {
     modelFromSSL,
     type DialogChoice,
@@ -37,7 +37,7 @@ import {
     setChoiceReaction,
     setChoiceTarget,
 } from "@bgforge/shared/dialog-edit-ops";
-import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
+import { computeDialogSourceEdit } from "../src/dialog-editor/dialog-source-edit";
 import { serializeCond } from "@bgforge/shared/dialog-ssl-serialize";
 
 // --- Projection: the language-agnostic logical shape we assert parity on ---------------------------------------

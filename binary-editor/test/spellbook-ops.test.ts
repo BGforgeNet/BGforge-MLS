@@ -8,7 +8,7 @@ import { undo, structureOp } from "../src/structure-ops";
 import { editField } from "../src/edit";
 import { serializeSession } from "../src/serialize";
 import { childGroups, fieldsByKey, findGroup, normKey } from "../src/relationship/model-helpers";
-import { creParser } from "../../binary/src/cre/index";
+import { creParser } from "@bgforge/binary";
 
 const CRE_FIXTURE = path.resolve(__dirname, "../../external/infinity-engine/BGT-WeiDU/bgt/modify/cre/edwin6.cre");
 const present = fs.existsSync(CRE_FIXTURE);

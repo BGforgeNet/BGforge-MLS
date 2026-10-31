@@ -28,7 +28,7 @@ import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
-import { mapParser } from "../../../binary/src/map/index";
+import { mapParser } from "@bgforge/binary";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 

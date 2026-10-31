@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { parseDialog } from "../src/dialog";
+import { parseDialog } from "../../server/src/dialog";
 import { modelFromSSL, type DialogModel } from "@bgforge/shared/dialog-model";
-import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
+import { computeDialogSourceEdit } from "../src/dialog-editor/dialog-source-edit";
 import { addReply, addState, duplicateState, removeReply, setChoiceTarget } from "@bgforge/shared/dialog-edit-ops";
-import { writeText } from "../../client/src/dialog-editor/webview/inspector-edit";
+import { writeText } from "../src/dialog-editor/webview/inspector-edit";
 
 // End-to-end "what I see is what's saved" integrity guards for the dialogue editor: each scenario drives the
 // FULL production edit pipeline (real parse -> model -> edit op -> computeDialogSourceEdit -> writer -> reparse)
-// and asserts the on-disk source bytes agree with the intended view. These sit in the blocking gate (server
+// and asserts the on-disk source bytes agree with the intended view. These sit in the blocking gate (client
 // unit run) as the anti-regression net for the silent "view != disk" bug class the black-box pass surfaced.
 //
 // The webview holds a working copy, emits it to the host on each mutation, the host splices it into the source

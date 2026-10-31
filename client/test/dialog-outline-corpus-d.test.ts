@@ -13,22 +13,21 @@
  * contains no state reached twice in one tree - so it is pinned at the unit tier, on fixtures where it can
  * fail, rather than restated over a population that cannot produce a collision.
  *
- * Lives here rather than under client/test because that is where the repo keeps real-corpus sweeps and the
- * external-fixture gate; server tests already import client dialog-editor modules directly.
- *
- * Requires external repos (`pnpm test:integration`, which needs `pnpm test:external` first); skips if absent.
+ * Requires the external repos (`pnpm test:external` fetches them); skips if absent.
  */
 
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import * as fg from "fast-glob";
 import { beforeAll, describe, expect, it } from "vitest";
-import { buildConversationTree, type ConvState } from "../../../client/src/dialog-editor/webview/conversation-tree";
-import { ariaPositions, flattenRows, rowAriaLevel } from "../../../client/src/dialog-editor/webview/tree-rows";
+import { buildConversationTree, type ConvState } from "../src/dialog-editor/webview/conversation-tree";
+import { ariaPositions, flattenRows, rowAriaLevel } from "../src/dialog-editor/webview/tree-rows";
 import { modelFromD } from "@bgforge/shared/dialog-model";
 import { initParser, isInitialized } from "@bgforge/shared/parsers/weidu-d";
-import { parseDDialog } from "../../src/weidu-d/dialog";
-import { IE_FIXTURES } from "./test-helpers";
+import { parseDDialog } from "../../server/src/weidu-d/dialog";
+import { REPO_ROOT } from "./repo-root";
 
+const IE_FIXTURES = join(REPO_ROOT, "external/infinity-engine");
 const files = fg.sync("**/*.d", { cwd: IE_FIXTURES, absolute: true }).sort();
 
 /** One row's announced position, in the order the outline draws its treeitem rows. */

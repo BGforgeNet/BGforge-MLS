@@ -27,7 +27,7 @@ import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-ed
 import { collectClipViolations } from "./clip-gate";
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
-import { itmParser } from "../../../binary/src/itm/index";
+import { itmParser } from "@bgforge/binary";
 import { getItmCanonicalDocument, rebuildItmCanonicalDocument } from "../../../binary/src/itm/canonical-reader";
 import { serializeItmCanonicalDocument } from "../../../binary/src/itm/canonical-writer";
 import { defaultItmAbility, defaultItmEffect } from "../../../binary/src/itm/entity-ops";

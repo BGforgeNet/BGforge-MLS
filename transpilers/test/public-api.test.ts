@@ -16,11 +16,14 @@ const REQUIRED_VALUE_EXPORTS = [
     // Per-language transpilers
     "tbaf",
     "td",
+    // Source-map variant (consumers placing generated-file errors in the author's files)
+    "tbafWithSourceMap",
     // Dispatcher
     "transpile",
     // Output-path mapping (compile consumers that own file I/O)
     "outputPathFor",
-    // Error type
+    // Error types
+    "TranspileError",
     "UnknownTranspileExtensionError",
 ] as const;
 

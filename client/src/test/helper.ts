@@ -12,20 +12,11 @@ import * as vscode from "vscode";
 export async function activate(docUri: vscode.Uri) {
     // The extensionId is `publisher.name` from package.json
     const ext = vscode.extensions.getExtension("bgforge.bgforge-mls")!;
+    // Activation resolves once the language client has started, so the server is ready; the client sends the
+    // document's open notification before any later request, so the tests need no extra wait.
     await ext.activate();
-    try {
-        const doc = await vscode.workspace.openTextDocument(docUri);
-        await vscode.window.showTextDocument(doc);
-        await sleep(2000); // Wait for server activation
-    } catch (error) {
-        console.error(error);
-    }
-}
-
-async function sleep(ms: number) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
+    const doc = await vscode.workspace.openTextDocument(docUri);
+    await vscode.window.showTextDocument(doc);
 }
 
 const getDocPath = (p: string) => {

@@ -22,7 +22,7 @@ import { dispatch } from "../../src/index";
 import type { HostToWebview, WebviewToHost } from "../../../client/src/binary-editor/webview/messages";
 import { installPageGate } from "./page-gate";
 import { shotPath } from "./out-dir";
-import { splParser } from "../../../binary/src/spl/index";
+import { splParser } from "@bgforge/binary";
 import { getSplCanonicalDocument, rebuildSplCanonicalDocument } from "../../../binary/src/spl/canonical-reader";
 import { serializeSplCanonicalDocument } from "../../../binary/src/spl/canonical-writer";
 import { defaultSplAbility } from "../../../binary/src/spl/entity-ops";

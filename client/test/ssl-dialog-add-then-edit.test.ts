@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { parseDialog } from "../src/dialog";
+import { parseDialog } from "../../server/src/dialog";
 import { modelFromSSL, type DialogModel } from "@bgforge/shared/dialog-model";
-import { computeDialogSourceEdit } from "../../client/src/dialog-editor/dialog-source-edit";
+import { computeDialogSourceEdit } from "../src/dialog-editor/dialog-source-edit";
 import { addReply, addState, setChoiceTarget } from "@bgforge/shared/dialog-edit-ops";
 import { applySSLDialogEdits } from "@bgforge/shared/dialog-ssl-edit";
 
