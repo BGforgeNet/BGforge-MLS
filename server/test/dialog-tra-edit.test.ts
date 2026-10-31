@@ -1,11 +1,5 @@
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-    appendTraEntries,
-    rewriteMsgEntries,
-    rewriteTraEntries,
-    siblingTraCandidates,
-} from "@bgforge/shared/dialog-tra-edit";
+import { appendTraEntries, rewriteMsgEntries, rewriteTraEntries } from "@bgforge/shared/dialog-tra-edit";
 
 describe("rewriteTraEntries", () => {
     const TRA = `// Coran's lines
@@ -113,20 +107,5 @@ describe("appendTraEntries", () => {
     it("leaves a file with an unclosed string as it is when there is nothing to append", () => {
         const text = `@0 = ~Closed.~\n@1 = ~Never closed.\n`;
         expect(appendTraEntries(text, { "0": "Closed." })).toBe(text);
-    });
-});
-
-describe("siblingTraCandidates", () => {
-    it("lists the same-named .tra in other language dirs, excluding the active language", () => {
-        const active = path.join("/proj", "tra", "english", "setup.tra");
-        expect(siblingTraCandidates(active, ["english", "french", "german"])).toEqual([
-            path.join("/proj", "tra", "french", "setup.tra"),
-            path.join("/proj", "tra", "german", "setup.tra"),
-        ]);
-    });
-
-    it("returns [] when the active language is the only language dir", () => {
-        const active = path.join("/proj", "tra", "english", "setup.tra");
-        expect(siblingTraCandidates(active, ["english"])).toEqual([]);
     });
 });

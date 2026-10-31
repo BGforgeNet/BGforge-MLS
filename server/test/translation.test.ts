@@ -1123,6 +1123,27 @@ translation~`;
             );
             expect(fs.readFileSync(traPath, "utf8")).toBe(original);
         });
+
+        // Keeping the other languages in step is the translation platform's job, so a save reports only its
+        // own file, however many language directories sit beside it.
+        it("reports only whether the active file changed, with sibling language directories present", async () => {
+            const english = path.join(tempDir, "tra", "english");
+            const french = path.join(tempDir, "tra", "french");
+            fs.mkdirSync(english, { recursive: true });
+            fs.mkdirSync(french, { recursive: true });
+            fs.writeFileSync(path.join(english, "x.tra"), "@1 = ~Take the sword.~\n");
+            fs.writeFileSync(path.join(french, "x.tra"), "@1 = ~Prends l'epee.~\n");
+            fs.writeFileSync(path.join(tempDir, "x.td"), "");
+            const t = new Translation({ directory: english, auto_tra: true }, tempDir);
+            await t.init();
+
+            const result = t.writeMessages(`file://${tempDir}/x.td`, "const x = tra(1);", "typescript", {
+                "1": "Take the sword and the shield.",
+            });
+
+            expect(result).toEqual({ changed: true });
+            expect(fs.readFileSync(path.join(french, "x.tra"), "utf8")).toBe("@1 = ~Prends l'epee.~\n");
+        });
     });
 
     describe("writeMessages (atomic write-back)", () => {

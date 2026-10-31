@@ -1,6 +1,6 @@
 import { conlog } from "../logger";
 import { COMMAND_compile, compile } from "../compile";
-import { showInfo, showWarning } from "../user-messages";
+import { showInfo } from "../user-messages";
 import { parseDialog } from "../dialog";
 import { getSSLSideEffectFunctions } from "../fallout-ssl/side-effects";
 import { parseOnWorker } from "../transpile/transpile-worker-client";
@@ -136,14 +136,6 @@ export function register(ctx: HandlerContext): void {
                         translationLangId,
                         messages,
                     );
-                    // An @N edit rewrites only the active language's .tra. If sibling-language .tra
-                    // files exist, they now hold the old text - warn rather than diverge silently.
-                    if (result.staleSiblingLanguages.length > 0) {
-                        showWarning(
-                            `Saved @N translation edits to the active language only. These other language(s) ` +
-                                `still have the previous text and need updating: ${result.staleSiblingLanguages.join(", ")}.`,
-                        );
-                    }
                     return { changed: result.changed };
                 }
 

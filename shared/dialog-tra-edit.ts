@@ -12,7 +12,6 @@
  * installer would not read - commented out, or written inside a string - is neither edited nor counted
  * as present, and a value of any string form is edited.
  */
-import * as path from "path";
 import { readMsgEntries, readMsgFile, readTraEntries, readTraFile, type RawEntry } from "./translation-entry-readers";
 
 /** A tra delimiter pair that does not occur in `text`, preferring the one the replaced value used. */
@@ -110,22 +109,4 @@ export function appendTraEntries(traText: string, entries: Record<string, string
     }
     const base = traText.length > 0 && !traText.endsWith("\n") ? traText + "\n" : traText;
     return base + additions.map(([id, text]) => `@${id} = ${traLiteral(text, "~")}\n`).join("");
-}
-
-/**
- * Candidate sibling-language `.tra` paths for a WeiDU `tra/<language>/<file>.tra`
- * layout: the same base file under every OTHER language directory beside the active
- * one. Pure (path math only); the caller filters to those that actually exist on disk.
- *
- * Used by the save path to warn that an `@N` edit, which rewrites only the active
- * language's `.tra`, has left these sibling translations stale. With a flat (single-
- * language) `tra/` layout this returns paths that simply do not exist, so the caller's
- * existence filter yields no false warning.
- */
-export function siblingTraCandidates(activeTraPath: string, languageDirNames: string[]): string[] {
-    const dir = path.dirname(activeTraPath);
-    const activeLang = path.basename(dir);
-    const langParent = path.dirname(dir);
-    const base = path.basename(activeTraPath);
-    return languageDirNames.filter((lang) => lang !== activeLang).map((lang) => path.join(langParent, lang, base));
 }

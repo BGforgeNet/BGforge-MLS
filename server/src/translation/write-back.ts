@@ -10,7 +10,6 @@ import {
     appendTraEntries,
     rewriteMsgEntries,
     rewriteTraEntries,
-    siblingTraCandidates,
 } from "@bgforge/shared/dialog-tra-edit";
 import { errorMessage, getErrnoCode } from "../diagnostics";
 import { conlog } from "../logger";
@@ -33,43 +32,13 @@ const DEFAULT_SSL_DIALOG_DIR = "data/text/english/dialog";
 const DEFAULT_D_TRA_DIR = "tra";
 
 /**
- * Result of `writeMessages`: whether the active `.tra` changed, plus any sibling-language
- * `.tra` files (a `tra/<language>/` layout) that now hold stale, pre-edit text and need
- * updating. `staleSiblingLanguages` is the list of those sibling language directory names.
+ * Result of `writeMessages`: whether the active translation file changed. Other languages' copies are left
+ * alone and not reported on; keeping them in step is the translation platform's job.
  */
 export interface WriteMessagesResult {
     changed: boolean;
-    staleSiblingLanguages: string[];
 }
-export const NO_WRITE: WriteMessagesResult = { changed: false, staleSiblingLanguages: [] };
-
-/**
- * Sibling-language `.tra` files (a `tra/<language>/<file>.tra` layout) that exist on
- * disk beside the one just written - they still hold the pre-edit text, so the save
- * path can warn that they diverged. Returns the sibling language directory names.
- * Empty for a flat / single-language layout (no same-named file in a sibling dir).
- */
-function staleSiblingLanguages(absPath: string): string[] {
-    const langParent = path.dirname(path.dirname(absPath));
-    let subdirs: string[];
-    try {
-        subdirs = fs
-            .readdirSync(langParent, { withFileTypes: true })
-            .filter((d) => d.isDirectory())
-            .map((d) => d.name);
-    } catch (error) {
-        // A missing parent is the normal flat-layout case documented above. Anything else - an unreadable
-        // or permission-denied directory - would silently suppress the "other languages diverged" warning
-        // on every save, so it is reported rather than folded into "no siblings".
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-            conlog(`cannot scan ${langParent} for sibling translations: ${(error as Error).message}`);
-        }
-        return [];
-    }
-    return siblingTraCandidates(absPath, subdirs)
-        .filter((p) => fs.existsSync(p))
-        .map((p) => path.basename(path.dirname(p)));
-}
+export const NO_WRITE: WriteMessagesResult = { changed: false };
 
 /**
  * Persist edited message strings to the resolved .tra, rewriting only the
@@ -152,7 +121,7 @@ export function writeMessages(
     atomicWriteFileSync(absPath, encoded);
     // Refresh the cached entries that getMessages/inlay hints read for this file.
     state.data.set(fileKey, parseEntries(updated, ext));
-    return { changed: true, staleSiblingLanguages: staleSiblingLanguages(absPath) };
+    return { changed: true };
 }
 
 /**

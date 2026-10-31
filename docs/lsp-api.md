@@ -99,9 +99,7 @@ left as it was.
 }
 ```
 
-Only the active language's file is written. When the same file also exists under other language subdirectories
-(a `tra/<language>/` layout), those now carry the previous text, and the server says so with a `window/showMessage`
-warning naming the stale languages.
+Only the active language's file is written; other languages' copies are left as they are.
 
 ## Integration notes
 
