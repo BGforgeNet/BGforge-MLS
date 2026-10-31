@@ -19,6 +19,5 @@ references, [binary/INTERNALS.md](../INTERNALS.md) (External references). The re
 
 ## Intentional - do not "fix"
 
-Parallel-not-identical fragments (an ITM ability has panels a SPL ability lacks), a flag block boxed in one
-place and bare in another (share-vs-sole), category-grouped flags crossing wire byte boundaries, hex on
-type-encoded IDs but decimal on a plain index, and a PRO panel holding a single field.
+The list of patterns a review must not flag, each with its reason:
+[docs/binary-editor-ui.md](../../docs/binary-editor-ui.md) (Reviewing a rendered screenshot).

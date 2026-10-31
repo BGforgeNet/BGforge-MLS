@@ -121,18 +121,19 @@ real-corpus coverage belongs in a committed test, never a throwaway script.
 
 ## Public surfaces
 
-Four libraries publish to npm, plus the server package. What holds each contract:
+Five libraries publish to npm, plus the server package. What holds each contract:
 
-| Surface                                                     | Held by                                                                |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `@bgforge/binary` API                                       | `binary/test/public-api.test.ts`                                       |
-| `@bgforge/format` API                                       | `format/test/public-api.test.ts`                                       |
-| `@bgforge/transpile` API                                    | `transpilers/test/public-api.test.ts` + `transpilers/test/api.test.ts` |
-| `@bgforge/tssl` API                                         | nothing - no test pins it                                              |
-| `@bgforge/mls-server` protocol                              | [lsp-api.md](lsp-api.md), by convention                                |
-| CLI flags and exit codes (`fgbin`, `fgfmt`, `fgtp`, `tssl`) | `pnpm test:cli`                                                        |
-| `*.pro.json` snapshot shape                                 | the committed snapshots under `client/testFixture/proto/`              |
-| `*.{map,itm,spl,eff,cre,dlg}.json` snapshot shape           | nothing - no committed snapshot pins it                                |
+| Surface                                                            | Held by                                                                |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `@bgforge/binary` API                                              | `binary/test/public-api.test.ts`                                       |
+| `@bgforge/format` API                                              | `format/test/public-api.test.ts`                                       |
+| `@bgforge/transpile` API                                           | `transpilers/test/public-api.test.ts` + `transpilers/test/api.test.ts` |
+| `@bgforge/ssl` API                                                 | nothing - no test pins it                                              |
+| `@bgforge/tssl` API                                                | nothing - no test pins it                                              |
+| `@bgforge/mls-server` protocol                                     | [lsp-api.md](lsp-api.md), by convention                                |
+| CLI flags and exit codes (`fgbin`, `fgfmt`, `fgtp`, `ssl`, `tssl`) | `pnpm test:cli`                                                        |
+| `*.pro.json` snapshot shape                                        | the committed snapshots under `client/testFixture/proto/`              |
+| `*.{map,itm,spl,eff,cre,dlg}.json` snapshot shape                  | nothing - no committed snapshot pins it                                |
 
 Where a test pins the surface, adding a public export means extending its list, and removing one fails before
 downstream consumers see the break. Each CLI ships from its library's package and shares its version. The JSON

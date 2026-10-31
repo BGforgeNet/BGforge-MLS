@@ -406,5 +406,20 @@ per-layer rules above. Two checks catch what reading the code does not:
   not chrome.
 - Scan the WHOLE surface (every panel / tab / variant), not just the area changed.
 
-The intentional patterns that must not be flagged are listed in `binary-editor/AGENTS.md`, each with its reason
-in the sections above; what the harness itself leaves in a screenshot is in the harness README.
+Do not flag the intentional patterns, each explained in the section named:
+
+- A roomy dropdown beside a short value, and a control narrower than its column track (Field width; Column
+  alignment).
+- A grid showing fewer columns than its schema declares, and labels above their controls in a narrow editor
+  (Grids).
+- A list above its detail in a narrow editor (Narrow editors).
+- A flag block boxed in one place and bare in another, and category-grouped flags crossing wire byte boundaries
+  (Flag boxing).
+- A folded Dice / Probability cell, and fragments that are parallel but not identical (One shared fragment per
+  record; Effect layout).
+- An effect with no semantic panel titles (Effect layout).
+- Hex on type-encoded IDs but decimal on a plain index (Hex display for type-encoded IDs).
+- Mojibake in a raw-byte field, a generic "Proficiency N" slot label, and a PRO panel holding a single field
+  (Faithful raw bytes; faithful labels).
+
+What the harness itself leaves in a screenshot is in the harness README.

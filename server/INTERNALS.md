@@ -318,14 +318,14 @@ in [grammars/README.md](../grammars/README.md) (Type Generation). Parsed trees a
 | weidu-tp2    |     Y      |   Y   |           |     Y      |     Y      |       Y        |   Y    |    Y    |         Y         |   Y    |     .tra     |    Y    |        Y        |      Y      |      Y      |   Y   |        Y        |
 | weidu-log    |    n/a     |  n/a  |    n/a    |     Y      |    n/a     |      n/a       |  n/a   |   n/a   |        n/a        |  n/a   |     n/a      |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
 | worldmap     |     Y      |   Y   |    n/a    |    n/a     |    n/a     |      n/a       |  n/a   |   n/a   |        n/a        |  n/a   |     n/a      |   n/a   |       n/a       |     n/a     |     n/a     |  n/a  |       n/a       |
-| weidu-tra    |            |   Y   |           |     Y      |     Y      |                |   Y    |    Y    |                   |        |              |    Y    |                 |      Y      |             |       |                 |
-| fallout-msg  |            |   Y   |           |     Y      |     Y      |                |   Y    |    Y    |                   |        |              |    Y    |                 |      Y      |             |       |                 |
+| weidu-tra    |            |       |           |            |     Y      |                |   Y    |    Y    |                   |        |              |    Y    |                 |      Y      |             |       |                 |
+| fallout-msg  |            |       |           |            |     Y      |                |   Y    |    Y    |                   |        |              |    Y    |                 |      Y      |             |       |                 |
 | infinity-2da |            |       |           |            |            |                |   Y    |         |                   |        |              |         |                 |             |             |       |        Y        |
 | scripts-lst  |            |       |           |            |            |                |   Y    |         |                   |        |              |         |                 |             |             |       |                 |
 
-`Y` is implemented, `n/a` does not apply, blank is not implemented. Hover, definition and references on
-`weidu-tra`/`fallout-msg` come from the translation service; their diagnostics from the syntax pass. `strref` in
-the Inlay column means TLK string references, which also get a hover.
+`Y` is implemented, `n/a` does not apply, blank is not implemented. References on `weidu-tra`/`fallout-msg` come from the
+translation service; their diagnostics from the syntax pass. `strref` in the Inlay column means TLK string references,
+which also get a hover.
 
 ### Deliberate N/A
 

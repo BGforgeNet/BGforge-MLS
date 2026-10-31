@@ -12,6 +12,7 @@ TypeScript Language Service Plugin for `.tssl` (TypeScript-to-SSL transpiler) fi
 Intercepts tsserver via a `Proxy` on `LanguageService`:
 
 - `getSemanticDiagnostics` - filters out TS6133 for names in `fallout-ssl-engine-procedures.json`
+- `getSuggestionDiagnostics` - applies the same filter to the editor's suggestion-level diagnostics
 - `getQuickInfoAtPosition` - appends engine procedure docs from `fallout-ssl-engine-proc-docs.json`
 
 Only active for `.tssl` files; passes through unchanged for other file types.
@@ -36,5 +37,5 @@ Build dependency: `fallout-ssl-engine-procedures.json` and `fallout-ssl-engine-p
 ## Tests
 
 ```bash
-cd plugins/tssl-plugin && pnpm exec vitest run
+pnpm test:project tssl-plugin
 ```

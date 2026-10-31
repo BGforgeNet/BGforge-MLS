@@ -8,6 +8,8 @@
  * Matrices"), and nothing enforced that until this test: for every feature and
  * language BOTH tables carry, the supported/unsupported verdicts must agree.
  *
+ * README's "Other formats" table is guarded the same way, with formats as rows.
+ *
  * Rows/columns only one table carries (README "Extensions"/"Dialog editor",
  * INTERNALS "Selection Range" and the internals-only providers) are out of the
  * shared surface and deliberately not compared.
@@ -119,4 +121,67 @@ describe("README and INTERNALS feature matrices agree on the shared surface", ()
                 `INTERNALS "${provider}"/"${column}" (${JSON.stringify(internalsCell)})`,
         ).toBe(internalsSupported(internalsCell));
     });
+});
+
+// README "Other formats": formats as rows, features as columns - the same orientation as INTERNALS.
+// "Highlighting" is a grammar concern with no INTERNALS column, so it is not compared.
+const otherFormatsTable = tableAfterHeading("README.md", "## Other formats");
+
+const FORMAT_TO_PROVIDER: Record<string, string> = {
+    "Fallout worldmap.txt": "worldmap",
+    "Fallout MSG": "fallout-msg",
+    "Fallout scripts.lst": "scripts-lst",
+    "WeiDU TRA": "weidu-tra",
+    "WeiDU.log": "weidu-log",
+    "Infinity 2DA": "infinity-2da",
+};
+
+// README "Other formats" column label -> INTERNALS column label.
+const OTHER_FORMATS_FEATURE_TO_COLUMN: Record<string, string> = {
+    Completion: "Completion",
+    Hover: "Hover",
+    GoTo: "Definition",
+    References: "References",
+    Formatting: "Format",
+};
+
+const otherFormatsHeader = otherFormatsTable[0] ?? [];
+
+const otherFormatsCases = Object.entries(OTHER_FORMATS_FEATURE_TO_COLUMN).flatMap(([feature, column]) =>
+    Object.entries(FORMAT_TO_PROVIDER).map(([format, provider]) => ({ feature, column, format, provider })),
+);
+
+describe("README 'Other formats' and INTERNALS feature matrices agree on the shared surface", () => {
+    it("finds every format row and feature column in README", () => {
+        for (const format of Object.keys(FORMAT_TO_PROVIDER)) {
+            expect(otherFormatsTable.map((r) => r[0])).toContain(format);
+        }
+        for (const feature of Object.keys(OTHER_FORMATS_FEATURE_TO_COLUMN)) {
+            expect(otherFormatsHeader).toContain(feature);
+        }
+    });
+
+    it("finds every format provider row and feature column in INTERNALS", () => {
+        for (const provider of Object.values(FORMAT_TO_PROVIDER)) {
+            expect(internalsTable.map((r) => r[0])).toContain(provider);
+        }
+        for (const column of Object.values(OTHER_FORMATS_FEATURE_TO_COLUMN)) {
+            expect(internalsHeader).toContain(column);
+        }
+    });
+
+    it.each(otherFormatsCases)(
+        "$feature / $format matches provider $provider",
+        ({ feature, column, format, provider }) => {
+            const readmeRow = otherFormatsTable.find((r) => r[0] === format);
+            const internalsRow = internalsTable.find((r) => r[0] === provider);
+            const readmeCell = readmeRow?.[otherFormatsHeader.indexOf(feature)] ?? "";
+            const internalsCell = internalsRow?.[internalsHeader.indexOf(column)] ?? "";
+            expect(
+                readmeSupported(readmeCell),
+                `README "${format}"/"${feature}" (${JSON.stringify(readmeCell)}) vs ` +
+                    `INTERNALS "${provider}"/"${column}" (${JSON.stringify(internalsCell)})`,
+            ).toBe(internalsSupported(internalsCell));
+        },
+    );
 });

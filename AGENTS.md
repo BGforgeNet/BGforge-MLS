@@ -35,9 +35,9 @@ Pick the cheapest tool that answers the actual question.
 - **"Run one package's tests"** -> `pnpm test:project <name> [file filter]` from the repo root. Never
   `--config <pkg>/vitest.config...`: the extension varies per package (`.mts` under `client/`, `server/` and
   `plugins/*`, `.ts` everywhere else) and a wrong guess fails as an unresolved-entry error that reads like a broken
-  config. The root `vitest.config.ts` names every project, so `--project` cannot be spelled wrong without saying so.
-  Project names are in each package's own config (`rg -n '^\s+name: "' -g 'vitest*.config.*'`), and they carry a
-  suffix the directory does not -
+  config. The root `vitest.config.ts` names every project but the Stryker mutation configs and the SSL corpus sweep,
+  which `pnpm -C compilers/ssl test:integration` runs. Project names are in each package's own config
+  (`rg -n '^\s+name: "' -g 'vitest*.config.*'`), and they carry a suffix the directory does not -
   `animation-lib`, not `animation`. **Pass the file filter while iterating**: a package's whole suite over a real
   install runs for minutes, and one file answers in seconds - keep the unfiltered run for close-out.
 - **Any visual/CSS/layout change to the binary editor** -> render it, do not reason about the cascade blind. Run

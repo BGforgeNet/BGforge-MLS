@@ -286,9 +286,9 @@ JSON at build time - see [syntaxes/README.md](../syntaxes/README.md).
 
 ### Engine data
 
-Engine definitions flow from YAML in `server/data/` to JSON in `server/out/` at build time, which the server loads
-at startup, and to the engine-procedure JSON in `shared/data/`, which the TSSL compiler and plugin import. See
-[data-pipeline.md](data-pipeline.md).
+Engine definitions flow from YAML in `server/data/` to JSON in `server/out/`, which the server loads at startup, and to
+the engine-procedure JSON in `shared/data/`, which the TSSL compiler and plugin import. `pnpm generate-data` produces
+the JSON and the outputs are committed, not built. See [data-pipeline.md](data-pipeline.md).
 
 ## Build
 

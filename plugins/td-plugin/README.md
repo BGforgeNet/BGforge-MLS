@@ -37,5 +37,5 @@ Bundled by esbuild as a standalone CJS module. Two outputs:
 ## Tests
 
 ```bash
-cd plugins/td-plugin && pnpm exec vitest run
+pnpm test:project td-plugin
 ```
