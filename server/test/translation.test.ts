@@ -1094,6 +1094,23 @@ translation~`;
         });
     });
 
+    describe("writeMessages (.tra format)", () => {
+        it("refuses, naming the file and line, and leaves the .tra as it was when a string never closes", async () => {
+            const traPath = path.join(tempDir, "open.tra");
+            const original = "@100 = ~Closed.~\n@101 = ~Never closed.\n";
+            fs.writeFileSync(traPath, original);
+            await translation.init();
+            const uri = `file://${tempDir}/test.td`;
+            const text = `/** @tra open.tra */\nconst x = tra(101);`;
+
+            expect(() => translation.writeMessages(uri, text, "typescript", { "101": "Edited." })).toThrow(
+                `Cannot update ${traPath}: line 2 opens a string or comment that never closes; ` +
+                    `close it before adding entries`,
+            );
+            expect(fs.readFileSync(traPath, "utf8")).toBe(original);
+        });
+    });
+
     describe("writeMessages (atomic write-back)", () => {
         it("writes via a same-directory temp file + rename, leaving no temp file behind", async () => {
             await translation.init();

@@ -172,8 +172,8 @@ function readStringPiece(text: string, at: number): Piece | undefined {
     return undefined;
 }
 
-/** The offset just past a block comment whose `/*` is at `open`. Block comments nest. */
-function skipBlockComment(text: string, open: number): number {
+/** The end of a block comment whose `/*` is at `open`, and whether it closes. Block comments nest. */
+function skipBlockComment(text: string, open: number): { end: number; closed: boolean } {
     let depth = 1;
     let i = open + 2;
     while (i < text.length) {
@@ -183,12 +183,12 @@ function skipBlockComment(text: string, open: number): number {
         } else if (text.startsWith("*/", i)) {
             depth--;
             i += 2;
-            if (depth === 0) return i;
+            if (depth === 0) return { end: i, closed: true };
         } else {
             i++;
         }
     }
-    return unclosedEnd(text, open + 2);
+    return { end: unclosedEnd(text, open + 2), closed: false };
 }
 
 /** The offset of the next token after `from`: whitespace and comments skipped. */
@@ -201,7 +201,7 @@ function skipTrivia(text: string, from: number): number {
             const newline = text.indexOf("\n", i);
             i = newline === -1 ? text.length : newline;
         } else if (text.startsWith("/*", i)) {
-            i = skipBlockComment(text, i);
+            i = skipBlockComment(text, i).end;
         } else {
             return i;
         }
@@ -286,14 +286,29 @@ const MAX_REFERENCE_HOPS = 16;
  * comment is never an entry, and an entry with no value yet is left out without hiding the one below it.
  */
 export function readTraEntries(text: string): RawEntry[] {
+    return readTraFile(text).entries;
+}
+
+/**
+ * The entries of `readTraEntries`, and the offset of the first string or block comment that never closes. Every
+ * unclosed one is met by the scan's own loop: an entry whose value holds one is skipped, and the scan walks on
+ * through that value.
+ */
+export function readTraFile(text: string): { entries: RawEntry[]; unclosedAt: number | undefined } {
     const entries: RawEntry[] = [];
+    let unclosedAt: number | undefined;
     let i = 0;
     while (i < text.length) {
         const char = text[i] ?? "";
         if (isWhitespace(char)) {
             i++;
-        } else if (text.startsWith("//", i) || text.startsWith("/*", i)) {
-            i = skipTrivia(text, i);
+        } else if (text.startsWith("//", i)) {
+            const newline = text.indexOf("\n", i);
+            i = newline === -1 ? text.length : newline;
+        } else if (text.startsWith("/*", i)) {
+            const comment = skipBlockComment(text, i);
+            if (!comment.closed) unclosedAt ??= i;
+            i = comment.end;
         } else if (char === "@") {
             const number = readEntryNumber(text, i, true);
             const equals = number === undefined ? -1 : skipTrivia(text, number.end);
@@ -319,10 +334,12 @@ export function readTraEntries(text: string): RawEntry[] {
             const newline = text.indexOf("\n", i + 1);
             i = close !== -1 && (newline === -1 || close < newline) ? close + 1 : i + 1;
         } else {
-            i = readStringPiece(text, i)?.end ?? i + 1;
+            const piece = readStringPiece(text, i);
+            if (piece?.closed === false) unclosedAt ??= i;
+            i = piece?.end ?? i + 1;
         }
     }
-    return resolveReferences(entries);
+    return { entries: resolveReferences(entries), unclosedAt };
 }
 
 /** An entry whose value is `@N` takes the text of entry N when the file has it, and keeps the reference if not. */

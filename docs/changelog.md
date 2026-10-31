@@ -25,6 +25,8 @@
 - TP2: `%MOD_FOLDER%` paths read the tp2's `BACKUP` directive itself, not `BACKUP` text inside a string or comment.
 - TP2 formatting indents an `ELSE INNER_ACTION` block like any other block.
 - TRA: formatting a file with an unclosed comment no longer adds a blank line each time.
+- TRA: a dialog editor save that adds text to a `.tra` holding a string or comment that never closes is refused
+  with the line to fix. Before, the new entry landed inside it, so WeiDU read neither entry as written.
 - 2DA formatting no longer changes what GemRB or WeiDU read, apart from trimming trailing spaces: text past a
   row's last column stays as written, a row that starts with a space keeps its empty name, blank lines above the
   column names stay, and only spaces and tabs separate cells. An encrypted 2DA is left alone.

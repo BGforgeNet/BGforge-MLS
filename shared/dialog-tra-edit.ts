@@ -13,7 +13,7 @@
  * as present, and a value of any string form is edited.
  */
 import * as path from "path";
-import { readMsgEntries, readTraEntries, type RawEntry } from "./translation-entry-readers";
+import { readMsgEntries, readTraEntries, readTraFile, type RawEntry } from "./translation-entry-readers";
 
 /** A tra delimiter pair that does not occur in `text`, preferring the one the replaced value used. */
 function traLiteral(text: string, preferred: "~" | '"' | "%" | "~~~~~"): string {
@@ -92,9 +92,16 @@ export function appendMsgEntries(msgText: string, entries: Record<string, string
  * so entries stay one-per-line.
  */
 export function appendTraEntries(traText: string, entries: Record<string, string>): string {
-    const present = new Set(readTraEntries(traText).map((entry) => entry.key));
+    const { entries: found, unclosedAt } = readTraFile(traText);
+    const present = new Set(found.map((entry) => entry.key));
     const additions = Object.entries(entries).filter(([id]) => !present.has(id));
     if (additions.length === 0) return traText;
+    // An appended entry would land inside the unclosed string or comment: WeiDU would read neither it nor the
+    // entry above as written.
+    if (unclosedAt !== undefined) {
+        const line = traText.slice(0, unclosedAt).split("\n").length;
+        throw new Error(`line ${line} opens a string or comment that never closes; close it before adding entries`);
+    }
     const base = traText.length > 0 && !traText.endsWith("\n") ? traText + "\n" : traText;
     return base + additions.map(([id, text]) => `@${id} = ${traLiteral(text, "~")}\n`).join("");
 }

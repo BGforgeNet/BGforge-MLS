@@ -133,10 +133,15 @@ export function writeMessages(
     // Both rewrite existing entries then append brand-new ones: a newly-added option's or state's text
     // has no entry yet (the D-family allocator mints its `@N` at save time, like the SSL allocator does
     // for `.msg` ids), and a rewrite-only path silently drops that text from the translation file.
-    const updated =
-        ext === "msg"
-            ? appendMsgEntries(rewriteMsgEntries(original, messages), messages)
-            : appendTraEntries(rewriteTraEntries(original, messages), messages);
+    let updated: string;
+    try {
+        updated =
+            ext === "msg"
+                ? appendMsgEntries(rewriteMsgEntries(original, messages), messages)
+                : appendTraEntries(rewriteTraEntries(original, messages), messages);
+    } catch (error) {
+        throw new Error(`Cannot update ${absPath}: ${errorMessage(error)}`, { cause: error });
+    }
     if (updated === original) return NO_WRITE;
     // Re-encode to the encoding the file was read as (sourceEncoding, above) so untouched
     // entries round-trip byte-identically; encodeToResolvedEncoding throws rather than

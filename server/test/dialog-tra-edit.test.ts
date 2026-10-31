@@ -95,6 +95,25 @@ describe("appendTraEntries", () => {
     it("appends to an empty file without a leading blank line", () => {
         expect(appendTraEntries("", { "1": "first" })).toBe(`@1 = ~first~\n`);
     });
+
+    // An appended entry would land inside the unclosed string or comment, so neither it nor the entry above
+    // would read as written.
+    it("refuses to append after a string that never closes, naming its line", () => {
+        expect(() => appendTraEntries(`@0 = ~Closed.~\n@1 = ~Never closed.\n`, { "1": "Edited." })).toThrow(
+            "line 2 opens a string or comment that never closes; close it before adding entries",
+        );
+    });
+
+    it("refuses to append after a comment that never closes, also one below a line comment", () => {
+        expect(() => appendTraEntries(`@0 = ~Closed.~\n// note\n/* never closed\n`, { "1": "added" })).toThrow(
+            "line 3 opens a string or comment that never closes; close it before adding entries",
+        );
+    });
+
+    it("leaves a file with an unclosed string as it is when there is nothing to append", () => {
+        const text = `@0 = ~Closed.~\n@1 = ~Never closed.\n`;
+        expect(appendTraEntries(text, { "0": "Closed." })).toBe(text);
+    });
 });
 
 describe("siblingTraCandidates", () => {
