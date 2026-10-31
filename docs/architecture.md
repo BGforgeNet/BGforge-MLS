@@ -145,32 +145,31 @@ Shared webview components and stylesheets are in `client/src/webview-ui/`; the e
 ```
 client ------> binary-editor ---> binary
    |---------> binary, image, animation ---> image
-   |---------> compilers/ssl                             (tsconfig paths)
-   |---------> compilers/bcs                             (relative source imports)
+   |---------> compilers/ssl, compilers/bcs              (tsconfig paths)
 
-server ------> format, binary/archive, compilers/ssl     (tsconfig paths)
-   |---------> compilers/tssl, compilers/bcs,
-   |           transpilers                               (relative source imports)
+server ------> format, binary/archive, compilers/ssl,
+   |           compilers/tssl, compilers/bcs,
+   |           transpilers                               (tsconfig paths)
 
-compilers/tssl --> compilers/ssl                         (tsconfig paths)
-   |-----------> transpilers/common                      (relative source imports)
-transpilers ----> transpilers/tbaf, transpilers/td, transpilers/common
+compilers/tssl --> compilers/ssl, transpilers            (tsconfig paths)
+compilers/bcs ---> binary/archive                        (tsconfig paths)
 plugins/td-plugin ....> server/out/td-runtime.d.ts       (read at run time)
 
 nearly every package --> shared                          (workspace dependency)
 ```
 
-Packages reach each other three ways, and none of them goes through another package's bundle:
+Packages reach each other two ways, and neither goes through another package's bundle:
 
-- **tsconfig `paths` to the sibling's `src/`**, which esbuild honours: `client/tsconfig.json` maps `@bgforge/binary`,
-  `@bgforge/image`, `@bgforge/animation` and `@bgforge/ssl`; `server/tsconfig.json` maps `@bgforge/format`,
-  `@bgforge/binary/archive` and `@bgforge/ssl`; `compilers/tssl/tsconfig.json` maps `@bgforge/ssl`. Each consumer's
-  vitest config aliases the same packages, and tsx reads only the tsconfig it is given, so the root scripts that run
-  TSSL source pass `--tsconfig compilers/tssl/tsconfig.json`. `@bgforge/binary-editor` and `@bgforge/shared` are
-  workspace dependencies whose entry points are their source, so they need no `paths` entry.
-- **Relative source imports** across the tree, whether or not the target package has an entry of its own - the
-  server reaching `transpilers/src/`, `compilers/tssl/src/` and `compilers/bcs/src/`, the client reaching
-  `compilers/bcs/src/`.
+- **tsconfig `paths` to the sibling's `src/`**, which esbuild honours. Every cross-package import names a declared
+  `@bgforge/*` entry; a package that has to expose more than its published surface to its siblings does so through an
+  `./internal` subpath (`@bgforge/format/internal`, `@bgforge/transpile/internal`, `@bgforge/tssl/internal`), which
+  ships no type declarations and is mapped to source like the main entry. Each consumer's tsconfig maps the entries
+  it imports (the maps are in `client/tsconfig.json`, `server/tsconfig.json`, `compilers/tssl/tsconfig.json` and
+  `compilers/bcs/tsconfig.json`), each consumer's vitest config aliases the same packages, and tsx reads only the
+  tsconfig it is given, so the root scripts that run TSSL source pass `--tsconfig compilers/tssl/tsconfig.json`.
+  `@bgforge/binary-editor` and `@bgforge/shared` are workspace dependencies whose entry points are their source, so
+  they need no `paths` entry. A relative import that leaves its own package fails
+  `scripts/utils/test/no-package-self-import.test.ts`.
 - **A build output as an input**: `td-plugin` finds `td-runtime.d.ts`, which the server build copies into
   `server/out/`, by path at run time.
 
@@ -235,11 +234,12 @@ the reference `sslc`), `tssl` (a TypeScript subset compiled straight to INT thro
 compiler, not a transpiler) and `bcs` (Infinity Engine compiled scripts to and from BAF).
 [transpilers/README.md](../transpilers/README.md) covers the TypeScript-to-source transpilers, TBAF and TD.
 
-The internal packages under `transpilers/` stay private; the `@bgforge/transpile` library at the `transpilers/`
-root bundles them via tsdown, and TSSL ships separately as `@bgforge/tssl`. The server imports the library's root
-entry (`server/src/transpile/transpile-worker.ts`), on a worker thread, and reaches `compilers/tssl` and
-`compilers/ssl` by source path. Among the library's runtime dependencies, `esbuild-wasm` is the one that must
-stay external: it detects bundling at load time.
+`transpilers/` is one package: `@bgforge/transpile` at its root bundles the `common/`, `tbaf/` and `td/` directories
+via tsdown, and TSSL ships separately as `@bgforge/tssl`. The server imports the library's root entry
+(`server/src/transpile/transpile-worker.ts`), on a worker thread, and reaches the pieces the library does not
+publish through `@bgforge/transpile/internal`; it reaches TSSL through `@bgforge/tssl` and `@bgforge/tssl/internal`.
+Among the library's runtime dependencies, `esbuild-wasm` is the one that must stay external: it detects bundling at
+load time.
 
 The dialog editor's server-side parses live in the server rather than a compiler or transpiler package: the SSL and
 D parses (`server/src/dialog.ts`, `server/src/weidu-d/dialog.ts`) run on the server's tree-sitter parsers, and the

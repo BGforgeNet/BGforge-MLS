@@ -63,8 +63,10 @@ gate and the sibling to copy: `docs/development.md`.
   `server/`, from `@bgforge/shared/syntax-types/<grammar>` in `@bgforge/format` (the canonical home). Generated - see
   `grammars/README.md` (Type Generation). Enforced by the `bgforge-syntax/no-node-type-literal` oxlint rule, which is
   silent on a string no generated enum spells (an anonymous keyword token).
-- **A package's `src/` never imports its own name.** Inside `format/src/`, reach `format-utils` by relative path, not
-  as `@bgforge/format`. `test/` is exempt. Guard: `scripts/utils/test/no-package-self-import.test.ts`.
+- **A package's `src/` never imports its own name, and never another package's `src/` by relative path.** Inside
+  `format/src/`, reach `format-utils` by relative path, not as `@bgforge/format`; reach another package through its
+  `@bgforge/*` entry (an `./internal` subpath where one exists), declared in the manifest and mapped in the tsconfig
+  `paths`. `test/` is exempt. Guard: `scripts/utils/test/no-package-self-import.test.ts`.
 - **Libraries imported by transpiler sources** (iets, folib) use named re-exports (`export { X } from './module'`),
   never `export *`. Ambient `declare` belongs in `.d.ts`, never `.ts`. Reference pattern: folib's `src/index.ts`.
 - **URIs entering the provider system** are normalized by `normalizeUri()` (`core/normalized-uri.ts`);

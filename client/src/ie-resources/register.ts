@@ -171,9 +171,21 @@ export function registerIeResources(context: vscode.ExtensionContext): {
 
     // Built here rather than per consumer: the gallery and the animation editor both browse the declared
     // animations, and the resolver caches one index per install.
-    const animationIndex = createAnimationIndexResolver(currentGame, (dir, error) => {
-        conlog(`ieResources: cannot list the animations of ${dir}: ${errorText(error)}`, "error");
-    });
+    const animationIndex = createAnimationIndexResolver(
+        currentGame,
+        (dir, error) => {
+            conlog(`ieResources: cannot list the animations of ${dir}: ${errorText(error)}`, "error");
+        },
+        (dir, skipped) => {
+            // One line per index build, naming each unreadable resource: a skipped resource otherwise reads as a
+            // missing animation with no trace of why.
+            const listed = skipped.map((entry) => `${entry.resource} (${entry.reason})`).join(", ");
+            conlog(
+                `ieResources: ${dir}: skipped ${skipped.length} unreadable animation resource(s): ${listed}`,
+                "warn",
+            );
+        },
+    );
 
     /**
      * The game a plain `file:` record (a mod's own file) resolves against: the configured
