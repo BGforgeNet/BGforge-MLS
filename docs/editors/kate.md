@@ -87,7 +87,7 @@ Restart Kate. Notes:
 
 - `.ssl` and other common extensions can collide with MIME types other applications define. If the wrong type wins, raise the glob priority in `bgforge-mls.mime.xml` (`<glob pattern="*.ssl" weight="60"/>`) and re-run `update-mime-database`.
 - `.h` and `.d` are intentionally excluded (they collide with C headers and the D language).
-- WeiDU BAF (`.baf`) and TP2 (`.tp2`) ship no scalable icon (their assets are raster-only) and keep the generic file icon.
+- WeiDU BAF (`.baf`), TP2 (`.tp2`), SLB (`.slb`) and `weidu.log` ship no scalable icon (their assets are raster-only) and keep the generic file icon.
 
 ## TypeScript plugins (TSSL/TD)
 

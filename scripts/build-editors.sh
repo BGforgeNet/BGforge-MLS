@@ -82,11 +82,13 @@ build_kate() {
 
     # File icons: shared-mime-info definitions plus matching icons, installed into the
     # XDG MIME database and icon theme (see docs/editors/kate.md). Icons reuse the shared
-    # theme assets (single source: themes/icons). BAF/TP2 are raster-only upstream, so they
-    # ship no scalable icon here and fall back to the generic file icon.
+    # theme assets (single source: themes/icons). BAF, TP2, SLB and weidu.log have raster-only
+    # icons upstream, so they ship no scalable icon here and fall back to the generic file icon.
     mkdir -p "$dir/mimetypes"
     cp editors/kate/bgforge-mls.mime.xml "$dir/mimetypes/"
     cp themes/icons/fallout-ssl.svg "$dir/mimetypes/application-x-fallout-ssl.svg"
+    cp themes/icons/fallout-ssl.svg "$dir/mimetypes/application-x-fallout-scripts-lst.svg"
+    cp themes/icons/fallout-worldmap-txt.svg "$dir/mimetypes/application-x-fallout-worldmap-txt.svg"
     cp themes/icons/seti-msg-tra.svg "$dir/mimetypes/application-x-weidu-tra.svg"
     cp themes/icons/seti-msg-tra.svg "$dir/mimetypes/application-x-fallout-msg.svg"
     cp themes/icons/infinity-2da.svg "$dir/mimetypes/application-x-infinity-2da.svg"

@@ -64,6 +64,11 @@
 - CRE: memorizing a spell into a level with none memorized works after spells at other levels were duplicated
   and removed. Before, it could fail with an inconsistent-partition error.
 
+### Editors
+
+- The Kate bundle's file types cover `scripts.lst`, `worldmap.txt`, `weidu.log` and `.slb`, and `scripts.lst` and
+  `worldmap.txt` get their icons in Kate and Dolphin.
+
 ## 3.18.0
 
 ### Fallout SSL

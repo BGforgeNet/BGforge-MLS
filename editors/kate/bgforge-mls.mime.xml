@@ -4,6 +4,14 @@
     <comment>Fallout SSL script</comment>
     <glob pattern="*.ssl"/>
   </mime-type>
+  <mime-type type="application/x-fallout-scripts-lst">
+    <comment>Fallout scripts list</comment>
+    <glob pattern="scripts.lst"/>
+  </mime-type>
+  <mime-type type="application/x-fallout-worldmap-txt">
+    <comment>Fallout worldmap</comment>
+    <glob pattern="worldmap.txt"/>
+  </mime-type>
   <mime-type type="application/x-weidu-baf">
     <comment>WeiDU BAF script</comment>
     <glob pattern="*.baf"/>
@@ -18,6 +26,14 @@
   <mime-type type="application/x-weidu-tra">
     <comment>WeiDU translation</comment>
     <glob pattern="*.tra"/>
+  </mime-type>
+  <mime-type type="application/x-weidu-slb">
+    <comment>WeiDU Stratagems library</comment>
+    <glob pattern="*.slb"/>
+  </mime-type>
+  <mime-type type="application/x-weidu-log">
+    <comment>WeiDU log</comment>
+    <glob pattern="weidu.log"/>
   </mime-type>
   <mime-type type="application/x-fallout-msg">
     <comment>Fallout message file</comment>
