@@ -35,8 +35,7 @@ We use `web-tree-sitter` (WASM) instead of native `tree-sitter` bindings because
 
 1. **Portability** -- WASM works on all platforms without recompilation
 2. **No native dependencies** -- Users don't need node-gyp, Python, or C++ build tools
-3. **Node.js compatibility** -- Native tree-sitter lacks prebuilds for newer Node versions
-4. **Simpler distribution** -- Just ship the `.wasm` file, no platform-specific binaries
+3. **Simpler distribution** -- Just ship the `.wasm` file, no platform-specific binaries
 
 ## Deployment
 

@@ -109,7 +109,7 @@ bool tree_sitter_baf_external_scanner_scan(void *payload, TSLexer *lexer, const 
   /* Past the fallback end: the highest depth so far, and the most it has fallen from such a high. */
   uint32_t peak = 0;
   uint32_t fall = 0;
-  while (lexer->lookahead != 0) {
+  while (!lexer->eof(lexer)) {
     bool hopeless = scanner->fall_bounded && depth > scanner->max_fall;
     if (hopeless && fallback) {
       lexer->result_symbol = COMMENT_OPEN;

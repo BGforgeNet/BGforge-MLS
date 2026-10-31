@@ -38,6 +38,7 @@ export interface SetManifestV1 {
     members: SetManifestMember[];
 }
 
+// Local because this package depends only on the image package, and a three-line guard does not earn another.
 function isRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === "object" && v !== null;
 }

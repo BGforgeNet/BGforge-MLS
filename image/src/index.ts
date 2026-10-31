@@ -1,9 +1,11 @@
 // Curated public surface: only what a consumer outside this package reaches, pinned by
 // test/public-api.test.ts. The palette-remap step, the manifest wire format and the byte-level
 // structure and options types are implementation details of the io/convert layers - import them by
-// module path in-package. The PNG codec is public: turning a decoded frame into a displayable image
+// module path in-package. The single-image PNG codec (encodeIndexedPng, encodeTruecolourPng,
+// decodeIndexedPng, decodeTruecolourPng) is public: turning a decoded frame into a displayable image
 // is what a consumer holding an Animation wants, and the encoder has a second caller outside the
-// io/ layer (the binary editor's resref thumbnails).
+// io/ layer (the binary editor's resref thumbnails). The APNG encoders stay io/-internal behind
+// exportApngPerDirection.
 
 // Shared model.
 export {
@@ -79,8 +81,6 @@ export {
 } from "./convert/index.ts";
 
 // Import/export codecs (PNG directory with manifest, APNG preview). The manifest wire-format
-// internals (readManifest/writeManifest and friends) stay io/-internal, like the PNG codec.
+// internals (readManifest/writeManifest and friends) stay io/-internal. APNG is export-only.
 export { exportPngDirectory, importPngDirectory } from "./io/png-directory.ts";
-// `importApng` stays io/-internal: no consumer outside this package decodes an APNG, and its round-trip
-// test reaches it by module path.
 export { exportApngPerDirection } from "./io/apng-io.ts";

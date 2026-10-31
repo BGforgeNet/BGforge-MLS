@@ -22,6 +22,7 @@ export {
 } from "./animation-index";
 export { type GameHandle, type GameSource } from "./game-handle";
 export { readIdsCodes } from "./ids-tables";
+export { type SkippedResource } from "./skipped";
 
 // Schemes: how an animation's files are named, and how their cycles band.
 export { type ActionScheme } from "./animation-schemes/actions";

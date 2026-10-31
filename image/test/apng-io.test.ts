@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type IndexedAnimation, type Frame, emptyPalette, exportApngPerDirection } from "@bgforge/image";
-import { importApng } from "../src/io/apng-io.ts";
+import { readApngFrames } from "./apng-frames.ts";
 
 // Two sequences with distinct frame counts and pixel content, so the per-sequence
 // split can be distinguished from a mixed-up one.
@@ -44,13 +44,13 @@ describe("exportApngPerDirection", () => {
     });
 });
 
-describe("importApng(exportApngPerDirection(anim).get(id))", () => {
+describe("exportApngPerDirection(anim).get(id)", () => {
     it("returns that sequence's frames with exact pixels and the animation's fps", () => {
         const anim = makeAnimation();
         const files = exportApngPerDirection(anim);
         const bytes = files.get("NE.png");
         if (!bytes) throw new Error("expected NE.png to be exported");
-        const imported = importApng(bytes);
+        const imported = readApngFrames(bytes);
 
         expect(imported.fps).toBe(anim.meta.fps);
         const seq = anim.sequences[0];
@@ -83,7 +83,7 @@ describe("importApng(exportApngPerDirection(anim).get(id))", () => {
         };
         const bytes = exportApngPerDirection(anim).get("00.png");
         if (!bytes) throw new Error("expected 00.png");
-        const imported = importApng(bytes);
+        const imported = readApngFrames(bytes);
         expect(imported.frames.map((f) => [f.width, f.height])).toEqual([
             [4, 1],
             [4, 1],

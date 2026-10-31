@@ -305,8 +305,8 @@ export type WebviewToHost =
     | { type: "saveAs"; target: SaveAsTarget; paletteMode?: "sidecar" | "nearest" }
     // Design choice: PNG-directory is the only import path. APNG stays export/preview-only - it round-trips
     // poorly (a single flat sequence, no offsets/facings, palette re-quantized), and ingesting an
-    // externally-authored single APNG is out of scope for now. Re-add a `kind` field here to restore it;
-    // the library decoder (importApng in image/src/io/apng-io.ts, not on the package barrel) is still present.
+    // externally-authored single APNG is out of scope for now. Restoring it needs a `kind` field here and an
+    // APNG decoder in the image library.
     // A folder carrying a set manifest imports across every member it names; one of that folder's own
     // member directories is an ordinary PNG directory and imports as the single animation it is.
     | { type: "import"; mode: "replace" | "append" }

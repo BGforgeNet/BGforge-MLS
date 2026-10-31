@@ -1,21 +1,11 @@
-import zlib from "node:zlib";
 import { type Rgba } from "../model/animation.ts";
-import { MAX_FRAME_PIXELS } from "../limits.ts";
-import { PNG_SIGNATURE, readChunks, writeChunk } from "./chunk.ts";
+import { PNG_SIGNATURE, writeChunk } from "./chunk.ts";
 import { buildIhdr, buildPlte, buildTrns, deflateScanlines } from "./encode.ts";
-import { parseHeaderAndPalette, unfilterScanlines } from "./decode.ts";
 
 export interface ApngFrame {
     width: number;
     height: number;
     pixels: Uint8Array;
-}
-
-export interface DecodedApng {
-    palette: Rgba[];
-    transparentIndex: number;
-    fps: number;
-    frames: ApngFrame[];
 }
 
 function buildAcTl(numFrames: number): Uint8Array {
@@ -157,76 +147,4 @@ export function encodeTruecolourApng(frames: ApngFrame[], fps: number): Uint8Arr
         colourChunks: [],
         padPixel: [0, 0, 0, 0],
     });
-}
-
-// fdAT payloads are prefixed with a 4-byte big-endian sequence number (APNG
-// spec) that IDAT payloads lack; strip it so both feed the same inflate path.
-function stripFdatSequenceNumber(data: Uint8Array): Uint8Array {
-    return data.subarray(4);
-}
-
-/**
- * Hand-rolled colour-type-3 (indexed) APNG decoder: inverse of `encodeApng`.
- * Each fcTL starts a frame and carries that frame's width/height, plus - on
- * the first fcTL only - the delay used for fps; the frame's pixel data is the
- * next IDAT (frame 0) or fdAT (later frames) chunk that follows it.
- * Assumes one IDAT/fdAT per frame and that the first fcTL's data chunk is the
- * default image - both guaranteed by our own `encodeApng`; a foreign APNG that
- * splits a frame's data across multiple fdAT chunks is unsupported.
- */
-export function decodeApng(bytes: Uint8Array): DecodedApng {
-    const chunks = readChunks(bytes);
-    const { palette, transparentIndex } = parseHeaderAndPalette(chunks, "decodeApng");
-
-    const acTl = chunks.find((c) => c.type === "acTL");
-    const declaredFrameCount = acTl
-        ? new DataView(acTl.data.buffer, acTl.data.byteOffset, acTl.data.byteLength).getUint32(0, false)
-        : undefined;
-
-    let fps = 10;
-    let sawFirstFcTl = false;
-    const frames: ApngFrame[] = [];
-
-    for (const [i, chunk] of chunks.entries()) {
-        if (chunk.type !== "fcTL") continue;
-        const view = new DataView(chunk.data.buffer, chunk.data.byteOffset, chunk.data.byteLength);
-        const width = view.getUint32(4, false);
-        const height = view.getUint32(8, false);
-        if (width === 0 || height === 0 || width * height > MAX_FRAME_PIXELS) {
-            throw new Error(`decodeApng: implausible frame dimensions ${width}x${height}`);
-        }
-        if (!sawFirstFcTl) {
-            sawFirstFcTl = true;
-            const delayNum = view.getUint16(20, false);
-            const delayDen = view.getUint16(22, false);
-            fps = delayNum > 0 ? delayDen / delayNum : 10;
-        }
-
-        const isFirstFrame = frames.length === 0;
-        const dataChunk = chunks.slice(i + 1).find((c) => c.type === "IDAT" || c.type === "fdAT");
-        if (!dataChunk) {
-            throw new Error("decodeApng: fcTL chunk has no following IDAT/fdAT data");
-        }
-        const compressed = isFirstFrame ? dataChunk.data : stripFdatSequenceNumber(dataChunk.data);
-        // Same inflate cap as decodeIndexedPng: exact raw size for 8-bit indexed, stops zlib bombs.
-        let raw: Uint8Array;
-        try {
-            raw = new Uint8Array(zlib.inflateSync(Buffer.from(compressed), { maxOutputLength: height * (width + 1) }));
-        } catch (error) {
-            throw new Error(
-                `decodeApng: frame decompression failed: ${error instanceof Error ? error.message : String(error)}`,
-                {
-                    cause: error,
-                },
-            );
-        }
-        const pixels = unfilterScanlines(raw, width, height);
-        frames.push({ width, height, pixels });
-    }
-
-    if (declaredFrameCount !== undefined && declaredFrameCount !== frames.length) {
-        throw new Error(`decodeApng: acTL declared ${declaredFrameCount} frames but found ${frames.length}`);
-    }
-
-    return { palette, transparentIndex, fps, frames };
 }

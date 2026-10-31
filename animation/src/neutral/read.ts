@@ -11,6 +11,7 @@ import { type IeDirectionSlot } from "@bgforge/image/ie-direction";
 import { type AnimationSet, armourLevels } from "../animation-index";
 import { type BandConfidence } from "../animation-schemes/bands";
 import { isPaperdoll, setMembers, setStances, type StanceIo } from "../set-stances";
+import { isMalformedResource, noteSkipped, resourceName } from "../skipped";
 import { type NeutralAction, type NeutralCycles, type NeutralSet, type NeutralVariant } from "./model";
 
 export interface NeutralReadOptions {
@@ -22,15 +23,18 @@ export interface NeutralReadOptions {
  * Parse one member file, or undefined where it cannot be read.
  *
  * A file that will not parse is a lost part rather than a dead set, which is the posture every layer below
- * this one already takes. BAM v2 is not reachable here: its frames live in separate PVRZ pages that only a
- * caller holding the archive can resolve, so `loadImage` refuses it by design and it lands in this catch.
+ * this one already takes; it is recorded in `io.skipped`. BAM v2 is not reachable here: its frames live in
+ * separate PVRZ pages that only a caller holding the archive can resolve, so `loadImage` refuses it by design
+ * and it lands in this catch. An error that is not a malformed resource is a defect and propagates.
  */
 function parseMember(resref: string, io: StanceIo): Animation | undefined {
     const bytes = io.read(resref);
     if (bytes === undefined) return undefined;
     try {
         return loadImage(bytes, `${resref}.BAM`);
-    } catch {
+    } catch (error) {
+        if (!isMalformedResource(error)) throw error;
+        noteSkipped(io.skipped, resourceName(resref, "bam"), error);
         return undefined;
     }
 }

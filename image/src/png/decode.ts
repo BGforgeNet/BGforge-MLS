@@ -75,7 +75,7 @@ function inflateIdat(
  * transparency is carried as a single `transparentIndex` - the first tRNS byte that is
  * 0 (default 0 if no tRNS) - never written onto a palette entry's alpha.
  */
-export function parseHeaderAndPalette(
+function parseHeaderAndPalette(
     chunks: PngChunk[],
     errorPrefix: string,
 ): { width: number; height: number; palette: Rgba[]; transparentIndex: number } {

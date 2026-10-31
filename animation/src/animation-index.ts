@@ -20,6 +20,7 @@ import { layerPrefixes } from "./animation-schemes/layers";
 import { coarseBands, declaredStride } from "./animation-schemes/bands";
 import type { GameHandle, GameSource } from "./game-handle";
 import { readIdsCodes } from "./ids-tables";
+import { type SkippedResource, noteSkipped, resourceName } from "./skipped";
 
 /** Which of three ways this animation's files are named, so a tile can say what it cannot show. */
 export type AnimationScheme =
@@ -228,14 +229,19 @@ export function firstArmour(set: AnimationSet): number | undefined {
  * without it every id lists as undrawable. A shipped declaration always wins: the table is consulted only
  * where the install is silent, never to correct it.
  */
-export function buildAnimationIndex(game: GameHandle, table?: AnimationTable): AnimationSet[] {
+export function buildAnimationIndex(
+    game: GameHandle,
+    table?: AnimationTable,
+    skipped?: SkippedResource[],
+): AnimationSet[] {
     const read = (resref: string, type: string): Uint8Array | undefined => {
         if (!game.canRead(resref, type)) return undefined;
         try {
             return game.read(resref, type);
-        } catch {
+        } catch (error) {
             // One unreadable resource is not worth losing the index over, the posture the creature index
-            // takes for the same reason.
+            // takes for the same reason. The caller's list says which one was lost.
+            noteSkipped(skipped, resourceName(resref, type), error);
             return undefined;
         }
     };
@@ -297,6 +303,9 @@ export type AnimationIndexResolver = (gameDir: string) => readonly AnimationSet[
  */
 type AnimationIndexFailureReporter = (gameDir: string, error: unknown) => void;
 
+/** Told which resources an install's index passed over, once per build and only when there were any. */
+type AnimationIndexSkipReporter = (gameDir: string, skipped: readonly SkippedResource[]) => void;
+
 /**
  * How many installs' indices stay resident. The resolver lives as long as the editor host and each entry
  * holds a whole install's animation index, so an unbounded map keeps every install a session ever opened.
@@ -308,6 +317,7 @@ const MAX_CACHED_INSTALLS = 4;
 export function createAnimationIndexResolver(
     currentGame: GameSource,
     reportFailure?: AnimationIndexFailureReporter,
+    reportSkipped?: AnimationIndexSkipReporter,
 ): AnimationIndexResolver {
     const cache = new Map<string, readonly AnimationSet[] | null>();
     return (gameDir) => {
@@ -316,7 +326,11 @@ export function createAnimationIndexResolver(
         let index: readonly AnimationSet[] | null = null;
         try {
             const game = currentGame.gameAt(gameDir);
-            if (game !== undefined) index = buildAnimationIndex(game, tableForFlavour(game.identity.flavour));
+            if (game !== undefined) {
+                const skipped: SkippedResource[] = [];
+                index = buildAnimationIndex(game, tableForFlavour(game.identity.flavour), skipped);
+                if (skipped.length > 0) reportSkipped?.(gameDir, skipped);
+            }
         } catch (error) {
             // A throw here is the whole install failing to open, not the per-resource case buildAnimationIndex
             // swallows. Report it and return WITHOUT caching, so a transient read failure retries instead of

@@ -50,6 +50,7 @@ const FACINGS = new Set<string>(ALL_FACINGS);
 const SOURCE_FORMATS = new Set<string>(["frm", "bam", "bamc", "bamv2"] satisfies SourceFormat[]);
 const DIRECTION_LAYOUTS = new Set<string>(ALL_DIRECTION_LAYOUTS);
 
+// Local because this package carries no dependency, and a three-line guard does not earn one.
 function isRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === "object" && v !== null;
 }

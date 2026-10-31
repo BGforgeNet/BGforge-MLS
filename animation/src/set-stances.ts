@@ -32,24 +32,32 @@ import { layerLabel } from "./animation-schemes/layers";
 import { type SchemeMember, schemeMembers } from "./animation-schemes/members";
 import { actionLabel } from "./facet-labels";
 import type { GameHandle } from "./game-handle";
+import { type SkippedResource, noteSkipped, resourceName } from "./skipped";
 
 export interface StanceIo {
     exists(resref: string): boolean;
     read(resref: string): Uint8Array | undefined;
+    /**
+     * Where the readers built on this io record each member they passed over, and why. Absent on an io that
+     * tracks nothing; `stanceIo` supplies one that fills as the members are read.
+     */
+    skipped?: SkippedResource[];
 }
 
 /** Reads a set's members out of an open game, treating an unreadable member as a missing one. */
-export function stanceIo(game: Pick<GameHandle, "canRead" | "read">): StanceIo {
+export function stanceIo(game: Pick<GameHandle, "canRead" | "read">): StanceIo & { skipped: SkippedResource[] } {
+    const skipped: SkippedResource[] = [];
     const read = (resref: string): Uint8Array | undefined => {
         if (!game.canRead(resref, "bam")) return undefined;
         try {
             return game.read(resref, "bam");
-        } catch {
+        } catch (error) {
             // One unreadable member is a missing row, not a dead page - the posture the index takes too.
+            noteSkipped(skipped, resourceName(resref, "bam"), error);
             return undefined;
         }
     };
-    return { exists: (resref) => game.canRead(resref, "bam"), read };
+    return { exists: (resref) => game.canRead(resref, "bam"), read, skipped };
 }
 
 /**
@@ -139,18 +147,21 @@ function wholeFileBand(merged: MergedTables): FileBands {
  * which is what a lone file offers and what the image editor has always done.
  */
 function bandsOf(
-    parts: readonly (Uint8Array | undefined)[],
+    parts: readonly string[],
+    io: StanceIo,
     stride: number | undefined,
     coarse: boolean,
     overlaying?: FileBands,
 ): FileBands | undefined {
     const tables: PartTables[] = [];
-    for (const bytes of parts) {
+    for (const resref of parts) {
+        const bytes = io.read(resref);
         if (bytes === undefined) continue;
         try {
             tables.push(readBamV1Tables(bytes));
-        } catch {
+        } catch (error) {
             // One unreadable part is a lost piece, not a dead row - the posture the index takes too.
+            noteSkipped(io.skipped, resourceName(resref, "bam"), error);
         }
     }
     const merged = mergeParts(tables);
@@ -220,13 +231,7 @@ export function setStances(set: AnimationSet, armour: number, io: StanceIo): Set
     const members = setMembers(set, armour, io.exists).filter((member) => !isPaperdoll(member));
     return stancesOfMembers(
         members,
-        (member, overlaying) =>
-            bandsOf(
-                member.parts.map((resref) => io.read(resref)),
-                set.bandStride,
-                set.coarseBands === true,
-                overlaying,
-            ),
+        (member, overlaying) => bandsOf(member.parts, io, set.bandStride, set.coarseBands === true, overlaying),
         set.section,
     );
 }
@@ -252,11 +257,7 @@ export function overlaidStride(
     if (member.overlays === undefined) return undefined;
     const base = setMembers(set, armour, io.exists).find((row) => row.resref === member.overlays);
     if (base === undefined) return undefined;
-    const bands = bandsOf(
-        base.parts.map((resref) => io.read(resref)),
-        set.bandStride,
-        set.coarseBands === true,
-    );
+    const bands = bandsOf(base.parts, io, set.bandStride, set.coarseBands === true);
     const stride = bands?.bands[0]?.length;
     if (bands === undefined || stride === undefined) return undefined;
     if (!bands.bands.every((slots) => slots.length === stride)) return undefined;

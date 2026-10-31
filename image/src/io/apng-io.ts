@@ -17,7 +17,7 @@ import {
 } from "../model/animation.ts";
 import { type AnchorBox, blitRgbaToBox, blitToBox, unionAnchorBox } from "../model/anchor-align.ts";
 import { offsetToAnchor } from "../model/frame-anchor.ts";
-import { type ApngFrame, decodeApng, encodeApng, encodeTruecolourApng } from "../png/apng.ts";
+import { type ApngFrame, encodeApng, encodeTruecolourApng } from "../png/apng.ts";
 import { sequenceDirId } from "./manifest.ts";
 
 /**
@@ -69,12 +69,4 @@ export function exportApngPerDirection(anim: Animation): Map<string, Uint8Array>
         (placed, box) => blitToBox(placed, box, transparentIndex),
         (frames) => encodeApng(frames, anim.palette, transparentIndex, fps),
     );
-}
-
-export function importApng(bytes: Uint8Array): {
-    fps: number;
-    frames: { width: number; height: number; pixels: Uint8Array }[];
-} {
-    const decoded = decodeApng(bytes);
-    return { fps: decoded.fps, frames: decoded.frames };
 }

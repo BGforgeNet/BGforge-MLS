@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { emptyPalette } from "@bgforge/image";
-import { decodeApng, encodeApng, encodeTruecolourApng } from "../src/png/apng.ts";
+import { encodeApng, encodeTruecolourApng } from "../src/png/apng.ts";
 import { readChunks } from "../src/png/chunk.ts";
+import { readApngFrames } from "./apng-frames.ts";
 
 describe("encodeApng", () => {
     it("throws when given no frames", () => {
@@ -17,7 +18,7 @@ describe("encodeApng", () => {
     it("falls back to a delay denominator of 10 when fps is 0", () => {
         const frames = [{ width: 1, height: 1, pixels: new Uint8Array([0]) }];
         const png = encodeApng(frames, emptyPalette(), 0, 0);
-        expect(decodeApng(png).fps).toBe(10);
+        expect(readApngFrames(png).fps).toBe(10);
     });
 
     it("writes acTL/fcTL/IDAT/fdAT chunks with sequential sequence numbers", () => {
@@ -77,7 +78,7 @@ describe("encodeApng", () => {
         }
 
         // Round-trip: decoded frames come back at the canvas size, with the small frame centred.
-        const decoded = decodeApng(png);
+        const decoded = readApngFrames(png);
         expect(decoded.frames.map((f) => [f.width, f.height])).toEqual([
             [4, 3],
             [4, 3],
@@ -99,7 +100,7 @@ describe("encodeApng", () => {
         const png = encodeApng(frames, pal, 5, 10);
 
         // Centred at dx=1, dy=0 on the 4x3 canvas: the frame's four pixels sit in the top two rows.
-        const decoded = decodeApng(png);
+        const decoded = readApngFrames(png);
         expect([...(decoded.frames[0]?.pixels ?? [])]).toEqual([5, 1, 1, 5, 5, 1, 1, 5, 5, 5, 5, 5]);
     });
 });
