@@ -17,6 +17,18 @@
   definition, doc comments, compiler output and transpiler output take time in proportion to their input.
 - Syntax highlighting no longer stalls on a long line of blanks, `[` or one long word in SSL, D, TRA and
   `worldmap.txt` files.
+- Formatting honours `.editorconfig` sections for one extension (`[*.ssl]`) or a list (`[*.{d,tp2}]`), and a nearer
+  `.editorconfig` takes precedence over one in a parent directory. An unreadable or malformed `.editorconfig` is
+  reported in the output channel instead of being ignored.
+- Workspace indexing and file-watcher reloads decode a legacy windows-1252 header correctly, so an accented name no
+  longer indexes as a replacement character.
+- A failure inside the SSL compile or transpile worker is reported at once instead of after a 60-second timeout, and
+  a failed request no longer blocks the ones after it.
+- The "BGforge MLS" output channel warns once when the symbol index passes its file cap and starts dropping files
+  from cross-file results, and names a built-in data file that is missing or unreadable. A missing `.bgforge.yml` is
+  no longer logged as a warning at every start.
+- `Ctrl+R` runs the compile command only in the languages it serves (SSL, BAF, D, TP2 and the TSSL, TBAF and TD
+  files); elsewhere it keeps its VS Code meaning. Running the command with no arguments no longer throws.
 
 ### WeiDU
 
@@ -36,6 +48,9 @@
   percent-encoded (`a b.tpa`, not `a%20b.tpa`).
 - BAF: an object or rectangle in brackets that holds a hex number, such as `[ENEMY.0x10]`, is highlighted like any
   other.
+- BAF: a NUL byte inside a block comment no longer ends the comment early.
+- Dialog editor: an error that arrives while a dialog is open, such as a refused `.dlg` save or a failed re-read
+  after the file changed on disk, is shown in a banner above the dialog. Before, it was dropped without a word.
 
 ### Fallout SSL
 
@@ -55,6 +70,9 @@
   imported name over 31 characters, an integer past 32 bits, a procedure whose arguments and locals with the
   script's globals need more than the engine's 682 stack values, and a string over 65533 bytes. The limits are
   listed in the compiler's README.
+- The WebAssembly compiler honours tab- or newline-separated `compileOptions`, as the other compilers already did.
+- At `-O2`, a hex literal past `0x7FFFFFFF` folds as its 32-bit pattern, as the reference compiler does:
+  `0xFFFFFFFF == -1` now folds to 1.
 
 ### Fallout MSG
 
@@ -66,11 +84,25 @@
 - TSSL, TBAF and TD substitute a name containing `$` correctly, and `$count` is no longer taken for `count`.
 - TSSL compiles a hex number with an `e` or `E` digit, such as `0xFE`, as an integer. Before, it was compiled as a
   float.
+- TSSL: a numeric literal with `_` separators, such as `1_000`, compiles to its value instead of 0, and the generated
+  `.ssl` no longer keeps the separator.
 
 ### Binary editor
 
 - CRE: memorizing a spell into a level with none memorized works after spells at other levels were duplicated
   and removed. Before, it could fail with an inconsistent-partition error.
+- Records that repeat a field named by a game table, such as a creature's items or spells, fill in their names
+  faster when opened from a game.
+
+### Infinity Engine resources
+
+- When an install cannot be read, the output channel says why, once per install and lookup. Before, every editor
+  behaved as if no game were open, with no trace. Animation resources the gallery index skips because they cannot be
+  read are listed there too.
+- Image gallery: a crashed thumbnail worker is restarted once and finishes the tiles it was drawing; a second crash
+  turns thumbnails off with a message instead of leaving tiles loading forever. Opening another game, or switching
+  between the game and workspace gallery, starts from a fresh worker, so a thumbnail is never drawn from another
+  install's pages of the same name.
 
 ### Editors
 
