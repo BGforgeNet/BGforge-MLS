@@ -90,6 +90,7 @@ export default grammar({
         // Not the closed/open comment pair of the BAF and TP2 grammars: here any non-terminal extra moves error
         // recovery in source that already fails to parse.
         $._unclosed_comment,
+        $._stringify, // The `#` of a stringify in a function-like macro's body (see scanner.c)
     ],
 
     extras: ($) => [
@@ -648,6 +649,7 @@ export default grammar({
                 $.map_expr,
                 $.proc_ref,
                 $.token_paste_identifier, // ## token-pasting (macro bodies only)
+                $.stringify_expr, // # stringify (function-like macro bodies only)
                 $.identifier,
                 alias($._keyword_param_ref, $.identifier), // macro bodies only, see _macro_param
                 $.number,
@@ -670,6 +672,9 @@ export default grammar({
 
         // Procedure reference: @procedure_name
         proc_ref: ($) => seq("@", $.identifier),
+
+        // `#a` in a function-like macro's body: the preprocessor turns the argument into a string.
+        stringify_expr: ($) => seq(alias($._stringify, "#"), field("name", $.identifier)),
 
         // Array/map subscript access: arr[index]
         subscript_expr: ($) =>

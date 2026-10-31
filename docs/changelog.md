@@ -43,6 +43,8 @@
   as returning nothing, as the engine does.
 - A macro parameter named after a keyword, as in `#define C(proc, when)`, is no longer read as that keyword
   anywhere in the macro's body, so a body like `call proc when when` is reported as the compiler reports it.
+- `#a` in a macro body reads as a stringify of the parameter `a`, not as a directive that took the rest of the line,
+  so renaming the parameter renames that use too.
 - The compiler accepts a timed or conditional call to a string or variable, `call "p" in 5` and `call s when x`, as
   the reference compiler does.
 

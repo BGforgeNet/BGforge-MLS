@@ -751,6 +751,21 @@ procedure helper begin end
             }
         });
 
+        it("renames a macro parameter where the body stringifies it", () => {
+            const text = `
+#define NAMED(the_obj) "x" + #the_obj + "y"
+`;
+            const uri = "file:///test.ssl";
+            const result = renameSymbol(text, { line: 1, character: 15 }, "target_obj", uri);
+
+            const edits = result!.changes![uri]!;
+            // The parameter, then its use after `#`.
+            expect(edits.map((edit) => edit.range.start)).toEqual([
+                { line: 1, character: 14 },
+                { line: 1, character: 30 },
+            ]);
+        });
+
         it("renames macro parameter without affecting same-named param in another macro", () => {
             const text = `
 #define ADD(a, b) ((a) + (b))

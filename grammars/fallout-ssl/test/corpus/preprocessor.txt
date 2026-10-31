@@ -497,6 +497,64 @@ Include with bare identifier macro
     (endif)))
 
 ==================
+Stringify # in macro body
+==================
+
+#define CAT(a) "x" + #a + "y"
+#define S(a) # a
+
+---
+
+(source_file
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier))
+      body: (macro_body
+        (expression_stmt
+          (binary_expr
+            left: (binary_expr
+              left: (string)
+              right: (stringify_expr
+                name: (identifier)))
+            right: (string))))))
+  (preprocessor
+    (define
+      name: (identifier)
+      params: (macro_params
+        (identifier))
+      body: (macro_body
+        (expression_stmt
+          (stringify_expr
+            name: (identifier)))))))
+
+==================
+A directive inside a procedure is not a stringify
+==================
+
+procedure start begin
+#ifdef X
+  display_msg("a");
+#endif
+end
+
+---
+
+(source_file
+  (procedure
+    name: (identifier)
+    body: (preprocessor
+      (ifdef
+        name: (identifier)))
+    body: (expression_stmt
+      (call_expr
+        func: (identifier)
+        args: (string)))
+    body: (preprocessor
+      (endif))))
+
+==================
 Token concatenation ## in macro body
 ==================
 

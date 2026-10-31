@@ -53,6 +53,7 @@ export enum SyntaxType {
   ProcessStmt = "process_stmt",
   ReturnStmt = "return_stmt",
   SourceFile = "source_file",
+  StringifyExpr = "stringify_expr",
   SubscriptExpr = "subscript_expr",
   SwitchStmt = "switch_stmt",
   TernaryExpr = "ternary_expr",

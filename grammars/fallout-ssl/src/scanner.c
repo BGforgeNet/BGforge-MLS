@@ -1,8 +1,8 @@
 /**
  * External scanner for Fallout SSL grammar.
  *
- * Handles seven tokens (KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END and UNCLOSED_COMMENT are described beside
- * their code below):
+ * Handles the tokens of TokenType (KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END, UNCLOSED_COMMENT and STRINGIFY are
+ * described beside their code below):
  *
  * NEWLINE / LINE_END: In normal code, newlines are whitespace (NEWLINE extra).
  * Inside #define directives, a bare newline terminates the macro body (LINE_END).
@@ -30,7 +30,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum TokenType { NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END, UNCLOSED_COMMENT };
+enum TokenType {
+    NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_REF, IMPLICIT_END, UNCLOSED_COMMENT, STRINGIFY
+};
 
 /*
  * KEYWORD_PARAM / KEYWORD_PARAM_REF: a macro parameter spelled like a reserved word, and its uses in the
@@ -38,7 +40,8 @@ enum TokenType { NEWLINE, LINE_END, TOKEN_PASTE, KEYWORD_PARAM, KEYWORD_PARAM_RE
  * `#define season_morning(when) ((when) + 1)` is valid. The scanner reads such a parameter (KEYWORD_PARAM),
  * remembers its exact spelling (the preprocessor is case-sensitive) until the #define ends at LINE_END, and
  * returns the same word as KEYWORD_PARAM_REF anywhere in the body: a name where the grammar lets an expression
- * start, and an error elsewhere. Any other parameter is an ordinary identifier, lexed by the internal lexer.
+ * start, and an error elsewhere. Every other parameter is returned as KEYWORD_PARAM too, without being remembered,
+ * so the state records that a function-like macro is open.
  *
  * This list is a copy of RESERVED_WORDS in grammar.js, which the scanner cannot read;
  * server/test/fallout-ssl/scanner-reserved-words.test.ts keeps the two equal.
@@ -62,23 +65,26 @@ typedef struct {
     char names[MAX_PARAM_BYTES];
     /* No comment closer follows: set by an UNCLOSED_COMMENT scan that read to the end of the input. */
     bool no_closer_below;
+    /* Inside a function-like #define, from its first parameter to LINE_END: where a `#` stringifies. */
+    bool in_macro;
 } Scanner;
 
 void *tree_sitter_ssl_external_scanner_create(void) { return calloc(1, sizeof(Scanner)); }
 void tree_sitter_ssl_external_scanner_destroy(void *payload) { free(payload); }
 
-/* The flag byte, then the names. An empty state is no bytes. */
+/* The flag byte (bit 0 no_closer_below, bit 1 in_macro), then the names. An empty state is no bytes. */
 unsigned tree_sitter_ssl_external_scanner_serialize(void *payload, char *buffer) {
     Scanner *scanner = (Scanner *)payload;
-    if (!scanner->no_closer_below && scanner->length == 0) return 0;
-    buffer[0] = (char)scanner->no_closer_below;
+    if (!scanner->no_closer_below && !scanner->in_macro && scanner->length == 0) return 0;
+    buffer[0] = (char)(scanner->no_closer_below | (scanner->in_macro << 1));
     memcpy(buffer + 1, scanner->names, scanner->length);
     return scanner->length + 1;
 }
 
 void tree_sitter_ssl_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
     Scanner *scanner = (Scanner *)payload;
-    scanner->no_closer_below = length > 0 && buffer[0];
+    scanner->no_closer_below = length > 0 && (buffer[0] & 1);
+    scanner->in_macro = length > 0 && (buffer[0] & 2);
     unsigned names = length > 0 ? length - 1 : 0;
     scanner->length = names <= MAX_PARAM_BYTES ? names : 0;
     if (scanner->length > 0) memcpy(scanner->names, buffer + 1, scanner->length);
@@ -122,6 +128,12 @@ static void remember(Scanner *scanner, const char *word) {
     if (scanner->length + size > MAX_PARAM_BYTES) return;
     memcpy(scanner->names + scanner->length, word, size);
     scanner->length += size;
+}
+
+/* LINE_END ends the #define, and with it what the scanner remembered about it. */
+static void end_define(Scanner *scanner) {
+    scanner->length = 0;
+    scanner->in_macro = false;
 }
 
 static void skip_horizontal_space(TSLexer *lexer) {
@@ -185,7 +197,7 @@ bool tree_sitter_ssl_external_scanner_scan(
 
     /* At EOF, emit LINE_END to terminate any open #define */
     if (lexer->eof(lexer) && valid_symbols[LINE_END]) {
-        scanner->length = 0;
+        end_define(scanner);
         lexer->result_symbol = LINE_END;
         lexer->mark_end(lexer);
         return true;
@@ -205,8 +217,10 @@ bool tree_sitter_ssl_external_scanner_scan(
             /* Returning false leaves the word to the internal lexer, from where the scan started. */
             if (!read_word(lexer, word)) return false;
             if (valid_symbols[KEYWORD_PARAM]) {
-                if (!is_reserved(word)) return false;
-                remember(scanner, word);
+                /* Every parameter is returned, aliased to the identifier it would lex as, so the state it
+                 * carries records the function-like macro; only a reserved word needs remembering. */
+                if (is_reserved(word)) remember(scanner, word);
+                scanner->in_macro = true;
                 lexer->mark_end(lexer);
                 lexer->result_symbol = KEYWORD_PARAM;
                 return true;
@@ -239,10 +253,18 @@ bool tree_sitter_ssl_external_scanner_scan(
     /* TOKEN_PASTE: ## inside a macro body.
      * Only emitted when LINE_END is valid (we are inside a #define body) and
      * TOKEN_PASTE is valid (grammar expects it as part of a token_paste_identifier).
-     * Uses mark_end to peek at the second # without committing if it is absent. */
-    if (lexer->lookahead == '#' && valid_symbols[TOKEN_PASTE] && valid_symbols[LINE_END]) {
+     * Uses mark_end to peek at the second # without committing if it is absent.
+     *
+     * STRINGIFY: a lone # before a word where an expression may start in a function-like macro's body. Elsewhere a
+     * # starts a directive, which the internal lexer reads; in a body the catch-all directive token would take the
+     * rest of the line. */
+    bool paste = valid_symbols[TOKEN_PASTE] && valid_symbols[LINE_END];
+    bool stringify = !recovering && valid_symbols[STRINGIFY] && scanner->in_macro;
+    if (stringify) skip_horizontal_space(lexer);
+    if (lexer->lookahead == '#' && (paste || stringify)) {
         lexer->advance(lexer, false);
         if (lexer->lookahead == '#') {
+            if (!paste) return false;
             lexer->advance(lexer, false);
             lexer->mark_end(lexer);
             lexer->result_symbol = TOKEN_PASTE;
@@ -251,7 +273,12 @@ bool tree_sitter_ssl_external_scanner_scan(
         /* Only one # - not a token-paste operator.
          * mark_end was not called after advancing past the first #, so tree-sitter
          * resets the lexer to the position of the # and re-lexes it normally. */
-        return false;
+        if (!stringify) return false;
+        lexer->mark_end(lexer);
+        skip_horizontal_space(lexer);
+        if (!is_word_start(lexer->lookahead)) return false;
+        lexer->result_symbol = STRINGIFY;
+        return true;
     }
 
     /* Line continuation + blank line (GCC preprocessor behavior).
@@ -292,7 +319,7 @@ bool tree_sitter_ssl_external_scanner_scan(
                 if (lexer->lookahead == '\r') lexer->advance(lexer, false);
                 if (lexer->lookahead == '\n') lexer->advance(lexer, false);
                 lexer->mark_end(lexer);
-                scanner->length = 0;
+                end_define(scanner);
                 lexer->result_symbol = LINE_END;
                 return true;
             }
@@ -332,7 +359,7 @@ bool tree_sitter_ssl_external_scanner_scan(
     /* Inside a #define: newline is a line terminator (terminal token).
      * Elsewhere: newline is whitespace (extra token). */
     if (valid_symbols[LINE_END]) {
-        scanner->length = 0;
+        end_define(scanner);
         lexer->result_symbol = LINE_END;
     } else {
         lexer->result_symbol = NEWLINE;
