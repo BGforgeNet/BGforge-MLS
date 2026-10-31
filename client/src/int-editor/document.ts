@@ -19,6 +19,7 @@
 import * as vscode from "vscode";
 import { decompileToProgram, formatDisassembly, printProgram, readInt } from "@bgforge/ssl";
 import { conlog } from "../logging";
+import { errorText } from "@bgforge/shared/error-text";
 
 /** Marks a rendering that is a listing rather than source, so a save can be refused with the reason. */
 export const LISTING_MARKER = "// This is a disassembly listing, not source, and cannot be saved back.";
@@ -29,7 +30,7 @@ export async function render(source: vscode.Uri): Promise<string> {
     try {
         return printProgram(decompileToProgram(bytes), { origin: source.fsPath });
     } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
+        const reason = errorText(error);
         conlog(`decompiling ${source.fsPath} fell back to a listing: ${reason}`, "debug");
         const listing = formatDisassembly(readInt(bytes))
             .split("\n")

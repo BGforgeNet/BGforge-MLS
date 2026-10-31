@@ -8,15 +8,11 @@
  */
 
 import { modelFromD, modelFromSSL, type DialogMessages, type DialogModel } from "@bgforge/shared/dialog-model";
+import { errorText } from "@bgforge/shared/error-text";
 import type { DDialogData, SSLDialogData } from "@bgforge/shared/dialog-types";
 import { computeDialogSourceEdit } from "./dialog-source-edit";
 import { EchoGuard } from "./edit-origin";
 import { SerialQueue } from "./serial-queue";
-
-/** The message of a caught unknown - `Error.message`, else its string form. */
-export function errorMessage(error: unknown): string {
-    return error instanceof Error ? error.message : String(error);
-}
 
 /** Discriminate the parse payload by shape (D has `blocks`, SSL has `nodes`). */
 function toModel(data: unknown): DialogModel | null {
@@ -76,7 +72,7 @@ export class DialogHostCore {
         this.edits.enqueue(
             () => this.applyEdit(model, seq),
             (error) => {
-                this.io.showError(`Dialog edit failed: ${errorMessage(error)}`);
+                this.io.showError(`Dialog edit failed: ${errorText(error)}`);
             },
         );
     }
@@ -277,7 +273,7 @@ export class DialogHostCore {
         try {
             await this.io.saveMessages(messages);
         } catch (error) {
-            this.io.showError(`Saving dialog message text failed: ${errorMessage(error)}`);
+            this.io.showError(`Saving dialog message text failed: ${errorText(error)}`);
         }
     }
 }

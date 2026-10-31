@@ -21,6 +21,7 @@
 import { INITIAL, Registry, type IGrammar, type IRawGrammar } from "vscode-textmate";
 import { loadWASM, OnigScanner, OnigString } from "vscode-oniguruma";
 import type { HighlightRole, Span } from "./types";
+import { errorText } from "@bgforge/shared/error-text";
 
 /** The three condition/action grammars, tagged by the tokenizer's public lang id. */
 export type TmLang = "baf" | "ssl" | "ts";
@@ -98,7 +99,7 @@ export function startTextmate(
     onFailure: (reason: string) => void,
 ): void {
     initTextmate(onigWasm, sources, roots).catch((error: unknown) => {
-        onFailure(error instanceof Error ? error.message : String(error));
+        onFailure(errorText(error));
     });
 }
 

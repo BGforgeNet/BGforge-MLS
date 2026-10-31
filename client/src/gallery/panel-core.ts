@@ -5,6 +5,7 @@
  * the reply on. It reads no bytes and decodes nothing - that is the point of the worker - so everything here
  * is bookkeeping, and bookkeeping is exactly what silently does too much work if nobody tests it.
  */
+import { QuickLRU } from "@bgforge/shared/quick-lru";
 import { type GalleryRequest, type GalleryResponse } from "./worker-core";
 import { type GallerySource, type Locator } from "./source";
 import { type HostToWebview } from "./webview/messages";
@@ -36,6 +37,13 @@ const MAX_IN_FLIGHT = 4;
  */
 const MAX_UNSEEN = 8;
 
+/**
+ * Answers kept for a re-scroll, each a whole PNG data URI; quick-lru holds up to twice this across its two
+ * generations. A few thousand tiles is many screens of the densest grid, so scrolling back over recent rows
+ * stays free, while a whole install's tens of thousands of tiles no longer stay resident for the panel's life.
+ */
+export const MAX_CACHED_ANSWERS = 2000;
+
 interface Job {
     item: string;
     key: string;
@@ -44,7 +52,7 @@ interface Job {
 }
 
 /**
- * Dispatches thumbnail work and routes replies back, at most once per (item, stamp, size).
+ * Dispatches thumbnail work and routes replies back, once per (item, stamp, size) while its answer is cached.
  *
  * The cache is keyed on the source's stamp rather than the bytes: a stamp costs no read, so a re-scroll over
  * a decoded tile costs nothing at all, and an edited workspace file still redraws because its stamp moved.
@@ -56,9 +64,9 @@ interface Job {
 export class ThumbnailPump {
     private readonly io: PumpIo;
     private nextId = 1;
-    /** Answered items, by cache key. Holds an EMPTY answer for one that could not be drawn, so it is not
-     *  retried - hence a key check rather than a truthiness one at every read. */
-    private readonly done = new Map<string, Answer>();
+    /** Answered items, by cache key, newest kept. Holds an EMPTY answer for one that could not be drawn, so it
+     *  is not retried - hence a key check rather than a truthiness one at every read. */
+    private readonly done = new QuickLRU<string, Answer>({ maxSize: MAX_CACHED_ANSWERS });
     /** At the worker and unanswered, by request id. */
     private readonly inFlight = new Map<number, Job>();
     /** Waiting for a worker slot, one batch per request, oldest first; served from the newest. */
@@ -67,6 +75,8 @@ export class ThumbnailPump {
     private readonly pending = new Set<string>();
     /** Answers posted and not yet confirmed by the webview. */
     private unseen = 0;
+    /** Set once no worker will answer again; every request is then answered as undrawable on the spot. */
+    private stopped = false;
 
     constructor(io: PumpIo) {
         this.io = io;
@@ -79,6 +89,10 @@ export class ThumbnailPump {
 
     /** Ask for these items at this size. Already-answered and already-pending items cost nothing. */
     request(items: readonly string[], size: number): void {
+        if (this.stopped) {
+            for (const item of items) this.answer(item, {});
+            return;
+        }
         const batch: Job[] = [];
         for (const item of items) {
             const key = this.keyFor(item, size);
@@ -174,6 +188,30 @@ export class ThumbnailPump {
         // Floored: a pump that replaced another on a game change also hears about its predecessor's answers.
         this.unseen = Math.max(0, this.unseen - 1);
         this.dispatch();
+    }
+
+    /**
+     * The worker died and a replacement took its place: what the dead one held unanswered goes to the new one,
+     * ahead of the backlog. New ids, so a late reply from the dead worker matches nothing.
+     */
+    resend(): void {
+        const lost = [...this.inFlight.values()];
+        this.inFlight.clear();
+        if (lost.length > 0) this.queued.push(lost);
+        this.dispatch();
+    }
+
+    /**
+     * No worker will answer again: every pending tile is answered as undrawable, and so is every later request.
+     * Not cached, so a pump built over a working worker draws them.
+     */
+    stop(): void {
+        this.stopped = true;
+        const abandoned = [...this.inFlight.values(), ...this.queued.flat()];
+        this.inFlight.clear();
+        this.queued.length = 0;
+        this.pending.clear();
+        for (const job of abandoned) this.answer(job.item, {});
     }
 
     /** The webview (re)loaded, so nothing posted to the one before it will be confirmed. */

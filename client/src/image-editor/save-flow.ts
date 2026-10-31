@@ -63,6 +63,7 @@ import { type ConversionRequest, convertOpenSet, defaultPrefix } from "./convers
 import { parseAnimationSetUri } from "../ie-resources/uri";
 import { ieGroupOptionText, offeredGroups } from "./webview/render/cycle-grouping";
 import { type SavePlanView, type SaveRequestView, type SaveAsTarget, saveRequestKey } from "./webview/messages";
+import { errorText } from "@bgforge/shared/error-text";
 
 /**
  * The creature whose colours a document is currently shown in. A VIEW state, deliberately not a document
@@ -245,7 +246,7 @@ export async function handleSaveAs(
     } catch (error) {
         // A save-as failure is a transient action error - surface it as a notification, NOT the
         // webview's fatal "Could not open file" state, which would wrongly blow away a working editor.
-        void vscode.window.showErrorMessage(`Save failed: ${error instanceof Error ? error.message : String(error)}`);
+        void vscode.window.showErrorMessage(`Save failed: ${errorText(error)}`);
     }
 }
 
@@ -805,7 +806,7 @@ async function runRetarget(
 
     const written: string[] = [];
     const stopped = (name: string, error: unknown): Error => {
-        const cause = error instanceof Error ? error.message : String(error);
+        const cause = errorText(error);
         const listed = written.length === 0 ? "" : ` (${written.join(", ")})`;
         const rest = written.length === total ? "" : "; the rest were not written";
         return new Error(
@@ -889,7 +890,7 @@ export async function handleImport(document: ImageEditorDocument, mode: "replace
         if (!(await ensureBasePage(document, isRgbaAnimation(document.animation)))) return;
         document.replaceSequences(adapted.animation, mode);
     } catch (error) {
-        void vscode.window.showErrorMessage(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
+        void vscode.window.showErrorMessage(`Import failed: ${errorText(error)}`);
     }
 }
 

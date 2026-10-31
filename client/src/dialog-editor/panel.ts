@@ -23,7 +23,8 @@ import { LANG_FALLOUT_SSL, LANG_TYPESCRIPT, LANG_WEIDU_D } from "@bgforge/shared
 import { LSP_COMMAND_PARSE_DIALOG, LSP_COMMAND_SAVE_TRA } from "@bgforge/shared/protocol";
 import type { DialogMessages } from "@bgforge/shared/dialog-model";
 import { buildDialogHostHtml, postDialogAssets } from "./webview-host-html";
-import { DialogHostCore, errorMessage, type DialogHostIO } from "./host-core";
+import { DialogHostCore, type DialogHostIO } from "./host-core";
+import { errorText } from "@bgforge/shared/error-text";
 import { handleSharedDialogMessage } from "./shared-host-messages";
 import { reportUnrecognizedMessage } from "../webview-error";
 import { isWebviewToHost } from "./webview/messages";
@@ -168,7 +169,7 @@ export class DialogEditorProvider implements vscode.CustomTextEditorProvider {
         try {
             return { data: await this.client.sendRequest(ExecuteCommandRequest.type, params) };
         } catch (error) {
-            return { error: errorMessage(error) };
+            return { error: errorText(error) };
         }
     }
 }

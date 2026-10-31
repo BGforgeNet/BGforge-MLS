@@ -23,6 +23,7 @@ import { planSave } from "./save";
 import { withGameContext } from "./game-rows";
 import { type WorkerPool, createWorkerPool } from "./worker-pool";
 import { type HostToWebview, type WebviewToHost, isWebviewToHost } from "./webview/messages";
+import { errorText } from "@bgforge/shared/error-text";
 
 /** The game-backed lookups the editor is handed; it never reaches for a `Game` itself. */
 export interface GameResolvers {
@@ -192,7 +193,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
                 this.post(panel, {
                     type: "error",
                     ...(requestId === undefined ? {} : { requestId }),
-                    message: error instanceof Error ? error.message : String(error),
+                    message: errorText(error),
                 });
             }
         });
@@ -438,7 +439,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
 
     private post(panel: vscode.WebviewPanel, message: HostToWebview): void {
         // Every host-to-webview message funnels through here, so strref resolution lands once instead of at
-        // each of the six sites that can carry rows. The document comes from the panel map rather than the
+        // each site that can carry rows. The document comes from the panel map rather than the
         // call sites: only the document's URI says which game (if any) the record was opened from.
         //
         // Gated on the document actually being game-backed, not just on having a URI: every resolver answers
@@ -512,7 +513,7 @@ export class BinaryEditorProvider implements vscode.CustomEditorProvider<BinaryE
             if (r.type === "structure") this.post(panel, { type: "changeSet", changeSet: r.result.changeSet });
         } catch (error) {
             // The alternative is a panel labelled by the game that is no longer open, with nothing said.
-            this.post(panel, { type: "error", message: error instanceof Error ? error.message : String(error) });
+            this.post(panel, { type: "error", message: errorText(error) });
         }
     }
 

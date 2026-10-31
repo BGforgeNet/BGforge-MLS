@@ -23,6 +23,7 @@ import {
     scriptFormatForPath,
     type ScriptFormatKind,
 } from "./formats";
+import { errorText } from "@bgforge/shared/error-text";
 
 /** Opens the file as source, then disposes itself so no empty custom-editor tab is left behind. */
 class ScriptEditorProvider implements vscode.CustomReadonlyEditorProvider {
@@ -48,7 +49,7 @@ class ScriptEditorProvider implements vscode.CustomReadonlyEditorProvider {
             // away first fails the open with "OverlayWebview has been disposed".
             await vscode.window.showTextDocument(text, { preview: false, viewColumn: panel.viewColumn });
         } catch (error) {
-            const reason = error instanceof Error ? error.message : String(error);
+            const reason = errorText(error);
             void vscode.window.showErrorMessage(`Could not open ${document.uri.fsPath}: ${reason}`);
         }
         panel.dispose();

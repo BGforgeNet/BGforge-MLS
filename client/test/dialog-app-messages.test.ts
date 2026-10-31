@@ -31,6 +31,16 @@ describe("reduceDialogView", () => {
         expect(afterModel).toEqual({ model: MODEL, error: null });
     });
 
+    test("an error after a model is kept beside the model until the next model clears it", () => {
+        // App renders this as a banner over the graph, so the model must survive the error and the error must
+        // not outlive the next successful parse.
+        const afterModel = reduceDialogView(EMPTY, { type: "model", model: MODEL });
+        const afterErr = reduceDialogView(afterModel, { type: "error", message: "write refused" });
+        expect(afterErr).toEqual({ model: MODEL, error: "write refused" });
+        const other = { sourceLang: "d", editable: true, roots: [] } as DialogModel;
+        expect(reduceDialogView(afterErr, { type: "model", model: other })).toEqual({ model: other, error: null });
+    });
+
     test("a self-edit re-parse post (reparse:true) is left for DialogGraph, not routed through the prop", () => {
         // The host tags a self-edit's faithful parse `reparse:true`; the root must ignore it so it does not
         // reset the view - DialogGraph adopts it directly, preserving selection / an in-progress inline edit.

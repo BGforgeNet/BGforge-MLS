@@ -12,6 +12,7 @@ import {
     type WebviewToHost as AnimationWebviewToHost,
     isWebviewToHost as isAnimationWebviewToHost,
 } from "../../image-editor/webview/messages";
+import { isRecord } from "../../is-record";
 
 export interface GalleryTile {
     id: string;
@@ -100,10 +101,6 @@ export type WebviewToHost =
     | { type: "viewer"; message: AnimationWebviewToHost }
     /** Posted by `installFatalErrorHandler` (webview-utils.ts) so a throw in the panel is not a blank window. */
     | { type: "runtimeError"; message: string; stack?: string };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === "object" && value !== null;
-}
 
 /**
  * Runtime narrow of an incoming webview message before the panel acts on it. A same-origin webview channel is

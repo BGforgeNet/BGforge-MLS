@@ -13,6 +13,7 @@ import bafGrammarJson from "../../../../syntaxes/weidu-baf.tmLanguage.json";
 import sslGrammarJson from "../../../../syntaxes/fallout-ssl.tmLanguage.json";
 import docstringGrammarJson from "../../../../syntaxes/bgforge-mls-docstring.tmLanguage.json";
 import tsExprGrammarJson from "../../../../syntaxes/dialog-tsexpr.tmLanguage.json";
+import { errorText } from "@bgforge/shared/error-text";
 
 const target = document.getElementById("app");
 
@@ -64,7 +65,7 @@ if (target) {
         try {
             ({ onigWasm } = await assets);
         } catch (error) {
-            warn(error instanceof Error ? error.message : String(error));
+            warn(errorText(error));
             return;
         }
         whenIdle(() => {

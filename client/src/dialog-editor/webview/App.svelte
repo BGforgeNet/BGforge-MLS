@@ -45,7 +45,16 @@
 </script>
 
 {#if model}
-    <DialogGraph {model} />
+    <div class="shell">
+        {#if error}
+            <!-- An error after a model loads (a refused write, a failed re-parse after an external edit) must not
+                 replace the graph being edited; the next successful model clears it. -->
+            <div class="hosterr" role="alert">{error}</div>
+        {/if}
+        <div class="graph">
+            <DialogGraph {model} />
+        </div>
+    </div>
 {:else if error}
     <div class="empty err">{error}</div>
 {:else if timedOut}
@@ -61,6 +70,25 @@
 {/if}
 
 <style>
+    .shell {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    .graph {
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+    .hosterr {
+        flex: 0 0 auto;
+        background: var(--vscode-inputValidation-errorBackground, rgba(255, 0, 0, 0.1));
+        border-bottom: 1px solid var(--vscode-inputValidation-errorBorder, var(--vscode-editorError-foreground));
+        color: var(--vscode-inputValidation-errorForeground, var(--vscode-foreground));
+        font-size: 11px;
+        line-height: 1.4;
+        padding: 5px 9px;
+        white-space: pre-wrap;
+    }
     .empty {
         color: var(--vscode-descriptionForeground);
         font-size: 12px;

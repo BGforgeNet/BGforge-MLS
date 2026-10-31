@@ -15,7 +15,7 @@ import { build } from "esbuild";
 import esbuildSvelte from "esbuild-svelte";
 import fs from "fs";
 import path from "path";
-import { stubNodeOnlyImports, webTreeSitterLoaders } from "../../scripts/esbuild-web-tree-sitter.mjs";
+import { webTreeSitterLoaders } from "../../scripts/esbuild-web-tree-sitter.mjs";
 import { elkWorkerAsText } from "../../scripts/esbuild-elk-worker.mjs";
 import { dropThirdPartyWarnings } from "../../scripts/esbuild-svelte-warnings.mjs";
 import { DIALOG_ASSET_DIR, DIALOG_ASSET_FILES } from "../src/dialog-editor/dialog-asset-files";
@@ -35,7 +35,6 @@ async function dialogBundleInputs(): Promise<string[]> {
         loader: webTreeSitterLoaders,
         plugins: [
             esbuildSvelte({ compilerOptions: { dev: false }, filterWarnings: dropThirdPartyWarnings }),
-            stubNodeOnlyImports,
             elkWorkerAsText,
         ],
     });

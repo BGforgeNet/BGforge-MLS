@@ -11,6 +11,7 @@
 import { type ResourceLocation } from "@bgforge/binary";
 import { pvrzResourceName, type PvrzPageCache, type PvrzResolver } from "@bgforge/image";
 import { requiredPvrzPages, type Thumbnail, thumbnailOf } from "../ie-resources/thumbnails";
+import { errorText } from "@bgforge/shared/error-text";
 
 /** What a tile needs drawn. `item` is the gallery's own id, echoed back so a reply routes without the view
  *  tracking request ids itself. */
@@ -76,7 +77,7 @@ export function runJob(request: GalleryRequest, io: GalleryIo): GalleryResponse 
             ...drawn(thumbnailOf(bytes, request.ext, request.size, resolve, io.pageCache)),
         };
     } catch (error) {
-        return { id, kind: "error", item, message: error instanceof Error ? error.message : String(error) };
+        return { id, kind: "error", item, message: errorText(error) };
     }
 }
 

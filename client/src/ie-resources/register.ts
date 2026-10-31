@@ -39,6 +39,7 @@ import { GAME_RESOURCE_SCHEME, parseResourceUri, resourceUri } from "./uri";
 import { resourceTypeCode, type Game } from "@bgforge/binary";
 import { type AnimationIndexResolver, createAnimationIndexResolver } from "@bgforge/animation";
 import { DlgReferenceIndex, type DlgSource, type InboundRef } from "../dialog-editor/dlg-references";
+import { errorText } from "@bgforge/shared/error-text";
 
 const HAS_GAME_CONTEXT = "bgforge.ieResources.hasGame";
 
@@ -171,10 +172,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
     // Built here rather than per consumer: the gallery and the animation editor both browse the declared
     // animations, and the resolver caches one index per install.
     const animationIndex = createAnimationIndexResolver(currentGame, (dir, error) => {
-        conlog(
-            `ieResources: cannot list the animations of ${dir}: ${error instanceof Error ? error.message : String(error)}`,
-            "error",
-        );
+        conlog(`ieResources: cannot list the animations of ${dir}: ${errorText(error)}`, "error");
     });
 
     /**
@@ -186,11 +184,22 @@ export function registerIeResources(context: vscode.ExtensionContext): {
      * Validity is memoized per setting value: the check runs once per lookup batch of hundreds of rows,
      * and a game does not appear at a path mid-session often enough to justify a stat per row. A
      * `chitin.key` created at the same path later is picked up after a settings touch or reload.
+     *
+     * The setting itself is read once and re-read on change, not per lookup: every row of a record asks.
+     * Its listener is registered here, ahead of the one below that acts on the change, so that one reads
+     * the new value.
      */
+    const readGamePath = (): string => vscode.workspace.getConfiguration("bgforge").get<string>("weidu.gamePath", "");
+    let gamePath = readGamePath();
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((event) => {
+            if (event.affectsConfiguration("bgforge.weidu.gamePath")) gamePath = readGamePath();
+        }),
+    );
     let checkedPath: string | undefined;
     let checkedValid = false;
     const configuredGameDir = (): string | undefined => {
-        const dir = vscode.workspace.getConfiguration("bgforge").get<string>("weidu.gamePath", "");
+        const dir = gamePath;
         if (dir === "") return undefined;
         if (dir !== checkedPath) {
             checkedPath = dir;
@@ -244,7 +253,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             // opened straight from the explorer reaches it through the configured path rather than the view.
             game = currentGame.gameAt(dir);
         } catch (error) {
-            conlog(`ieResources: no game to scan at ${dir}: ${error instanceof Error ? error.message : String(error)}`);
+            conlog(`ieResources: no game to scan at ${dir}: ${errorText(error)}`);
             return;
         }
         // Undefined means another install is open, so this dir is not what anything resolves against - the
@@ -261,7 +270,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
             // undefined, and every detach prompt reports "the reference scan is still building" for the rest
             // of the session - a scan that will never run again described as one about to finish.
             if (scannedDir === dir) scannedDir = undefined;
-            const reason = error instanceof Error ? error.message : String(error);
+            const reason = errorText(error);
             conlog(`ieResources: dialog reference scan failed: ${reason}`);
             // Said out loud, not only logged: the editor keeps working, but every detach prompt is now
             // reporting an unknown rather than a checked "nothing else reaches this state", and that
@@ -292,9 +301,7 @@ export function registerIeResources(context: vscode.ExtensionContext): {
         try {
             currentGame.open(dir);
         } catch (error) {
-            conlog(
-                `ieResources: openGame failed for ${dir}: ${error instanceof Error ? error.message : String(error)}`,
-            );
+            conlog(`ieResources: openGame failed for ${dir}: ${errorText(error)}`);
             void vscode.window.showErrorMessage(`Not an Infinity Engine game folder (no chitin.key): ${dir}`);
             return;
         }
@@ -309,6 +316,8 @@ export function registerIeResources(context: vscode.ExtensionContext): {
                 ? vscode.ConfigurationTarget.Workspace
                 : vscode.ConfigurationTarget.Global;
             await config.update("weidu.gamePath", dir, target);
+            // Re-read here too: the lookups below must not wait on the change event to see the game just opened.
+            gamePath = readGamePath();
         }
         fsProvider.clearCache(); // a reopened dir must re-read, not serve a prior game's bytes
         // The replaced install is closed, so its resources are no longer readable and any tab still showing one

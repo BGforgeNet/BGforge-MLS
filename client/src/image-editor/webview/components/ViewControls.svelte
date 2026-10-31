@@ -1,6 +1,7 @@
 <script lang="ts">
     import Checkbox from "../../../webview-ui/Checkbox.svelte";
     import type { Background } from "../render/indexed-to-rgba";
+    import { isRecord } from "../../../is-record";
     // Continuous fractional zoom. The ladder lives beside the auto-zoom that has to respect it, so the
     // control and the automatic choice cannot disagree about the range - see render/tile.ts.
     import { ZOOM_MAX, ZOOM_MIN, ZOOM_PRESETS, ZOOM_STEP } from "../render/tile";
@@ -49,10 +50,6 @@
     /** What Auto would choose - already capped to this control's own range (tile.autoZoom). */
     const fill = $derived(clampZoom(fillZoom));
     const isAuto = $derived(Math.abs(zoom - fill) < 0.001);
-
-    function isRecord(v: unknown): v is Record<string, unknown> {
-        return typeof v === "object" && v !== null;
-    }
 
     function isBackground(v: unknown): v is Background {
         return v === "transparent" || v === "checkered" || v === "green";

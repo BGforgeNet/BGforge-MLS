@@ -1,5 +1,6 @@
 import { parentPort } from "node:worker_threads";
 import { createWorkerHandler, type WorkerRequest } from "./worker-core";
+import { errorText } from "@bgforge/shared/error-text";
 
 if (!parentPort) throw new Error("binary-editor worker must be spawned with a parentPort");
 const port = parentPort;
@@ -10,7 +11,7 @@ port.on("message", (msg: WorkerRequest) => {
     try {
         response = handle(msg.request);
     } catch (error) {
-        response = { type: "error" as const, message: error instanceof Error ? error.message : String(error) };
+        response = { type: "error" as const, message: errorText(error) };
     }
     port.postMessage({ id: msg.id, response });
 });

@@ -51,9 +51,9 @@ export function getCachedBase64Asset(cacheKey: string, extensionPath: string, re
 }
 
 /**
- * Generate a base64 nonce for a webview's CSP. The webviews lock their inline
- * <style>/<script> to a fresh per-load nonce; 16 random bytes is the standard
- * width.
+ * Generate a base64 nonce for a webview's CSP. The webviews lock their scripts
+ * to a fresh per-load nonce; stylesheets load as `cspSource` links instead (see
+ * `webview-html.ts`). 16 random bytes is the standard width.
  */
 export function generateNonce(): string {
     return randomBytes(16).toString("base64");

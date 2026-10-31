@@ -96,11 +96,11 @@ export function createCachedParserModule(
     // justified by the saving. If large-file
     // keystroke latency is ever a concern, debouncing the tree-sitter validation is
     // the cheaper mitigation than incremental reparsing.
-    // A Tree owns a wasm allocation that web-tree-sitter frees only on an explicit delete() - it
-    // registers no FinalizationRegistry, so dropping the JS reference reclaims nothing. Every path that
-    // removes a tree from this cache therefore deletes it, or the process leaks one tree per distinct
-    // text it ever parsed: measured as unreclaimable memory growing linearly with every workspace scan
-    // and every edit of a single document, with no plateau.
+    // A Tree owns a wasm allocation. web-tree-sitter registers each Tree with a FinalizationRegistry, but
+    // that frees the allocation only once the garbage collector happens to collect the small JS wrapper,
+    // and growth of the wasm heap does not prompt a collection. Every path that removes a tree from this
+    // cache therefore deletes it explicitly, or memory grows with each distinct text parsed: measured as
+    // growth linear in every workspace scan and every edit of a single document, with no plateau.
     //
     // Safe because no caller holds a tree across a yield: parseWithCache's result is consumed
     // synchronously at every call site, so a tree cannot be evicted while still in use. A caller that

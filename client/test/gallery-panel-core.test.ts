@@ -6,7 +6,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { type GalleryRequest, type GalleryResponse } from "../src/gallery/worker-core";
 import { type GallerySource, type Locator } from "../src/gallery/source";
-import { ThumbnailPump } from "../src/gallery/panel-core";
+import { MAX_CACHED_ANSWERS, ThumbnailPump } from "../src/gallery/panel-core";
 import { type HostToWebview } from "../src/gallery/webview/messages";
 
 const AT: Locator = { kind: "bif", archivePath: "/game/data/gui.bif", entry: 1, tileset: false };
@@ -262,5 +262,59 @@ describe("ThumbnailPump", () => {
         const { pump, posted } = harness();
         pump.handle({ id: 99, kind: "thumbnail", item: "GHOST.bam", dataUri: "x" } satisfies GalleryResponse);
         expect(posted).toEqual([]);
+    });
+});
+
+describe("ThumbnailPump across a worker's death", () => {
+    it("resends what a dead worker held, and settles it from the replacement's reply alone", () => {
+        const { pump, sent, posted } = harness();
+        pump.request(["ICON.bam"], 64);
+        const before = sent.length;
+
+        pump.resend();
+
+        expect(sent.slice(before)).toEqual([
+            { id: 2, kind: "thumbnail", item: "ICON.bam", at: AT, ext: "bam", size: 64 },
+        ]);
+        // The dead worker's late reply, under the old id, settles nothing.
+        pump.handle({ id: 1, kind: "thumbnail", item: "ICON.bam", dataUri: "stale" });
+        expect(posted).toEqual([]);
+        pump.handle({ id: 2, kind: "thumbnail", item: "ICON.bam", dataUri: "fresh" });
+        expect(posted).toEqual([{ type: "thumbnail", id: "ICON.bam", dataUri: "fresh" }]);
+    });
+
+    it("answers every pending tile as undrawable once stopped, and sends nothing after", () => {
+        const { pump, sent, posted } = harness();
+        pump.request(["ICON.bam", "OTHER.bam"], 64);
+        const sentBefore = sent.length;
+
+        pump.stop();
+        expect(posted).toEqual([
+            { type: "thumbnail", id: "ICON.bam" },
+            { type: "thumbnail", id: "OTHER.bam" },
+        ]);
+
+        pump.request(["ICON.bam"], 128);
+        expect(sent).toHaveLength(sentBefore);
+        expect(posted.at(-1)).toEqual({ type: "thumbnail", id: "ICON.bam" });
+    });
+});
+
+describe("ThumbnailPump answer cache", () => {
+    it("forgets the oldest answers past its bound rather than holding every tile for the panel's life", () => {
+        // quick-lru keeps two generations of up to maxSize each, so only past twice the bound is the oldest gone.
+        const items = Array.from({ length: 2 * MAX_CACHED_ANSWERS + 1 }, (_, i) => `I${i}.bam`);
+        const { pump, sent } = harness({ stamp: (id: string) => `s:${id}` });
+        for (const item of items) {
+            pump.request([item], 64);
+            pump.handle({ id: sent.at(-1)!.id, kind: "thumbnail", item, dataUri: `d:${item}` });
+            pump.seen();
+        }
+        const dispatched = sent.length;
+
+        pump.request([items.at(-1)!], 64);
+        expect(sent, "the newest answer was dropped").toHaveLength(dispatched);
+        pump.request([items[0]!], 64);
+        expect(sent, "the oldest answer was kept past the bound").toHaveLength(dispatched + 1);
     });
 });

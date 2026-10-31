@@ -5,6 +5,7 @@ import { warnBackupUnreadable } from "../hot-exit-backup";
 import { snapshotJsonFrom } from "./save";
 import { WorkerBridge, workerPort } from "./worker-bridge";
 import type { WorkerPool } from "./worker-pool";
+import { errorText } from "@bgforge/shared/error-text";
 
 /**
  * Bytes to parse: the hot-exit backup when one is readable, otherwise the file itself. The unreadable-backup
@@ -105,7 +106,7 @@ export class BinaryEditorDocument implements vscode.CustomDocument {
                 );
             }
         } catch (error) {
-            this.openResult = failedOpenResult(error instanceof Error ? error.message : String(error));
+            this.openResult = failedOpenResult(errorText(error));
         }
     }
 

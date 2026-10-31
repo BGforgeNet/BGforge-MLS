@@ -156,6 +156,41 @@ describe("withGameContext", () => {
 
     // An IDS-backed enum: the vendored table is a small baseline, the install's own is richer and mod-extended.
     // Game wins per value, vendored fills the gaps - so neither table alone decides the option list.
+    /**
+     * A spell list or an inventory repeats one field per entry, each naming the same whole IDS table: merged once
+     * per message and shared, not rebuilt per row.
+     */
+    it("builds one option list per table set and row shape, shared by every row of that shape", () => {
+        const race = (id: string, extra: object = {}) => ({
+            id,
+            kind: "field",
+            name: "Race",
+            valueType: "enum",
+            ref: { kind: "ids", tables: ["RACE"] },
+            rawValue: 1,
+            size: 1,
+            enumOptions: { "1": "Human", "2": "Elf" },
+            ...extra,
+        });
+        const rows = [
+            race("a"),
+            race("b"),
+            race("other-vendored", { enumOptions: { "3": "Dwarf" } }),
+            race("shifted", { ref: { kind: "ids", tables: ["RACE"], keyEncoding: { RACE: "keyPlusOne" } } }),
+            // Two bits wide, which puts GNOME's 6 out of range: only the width differs from row "a".
+            race("narrow", { size: 0.25 }),
+        ];
+
+        const out = withGameContext({ rows }, withRaceIds);
+
+        expect(out.rows[1]?.enumOptions).toBe(out.rows[0]?.enumOptions);
+        expect(out.rows[0]?.enumOptions).toEqual({ "1": "HUMAN", "2": "Elf", "6": "GNOME" });
+        // A different vendored table, key encoding or width is a different list, never the shared one.
+        expect(out.rows[2]?.enumOptions).toEqual({ "1": "HUMAN", "3": "Dwarf", "6": "GNOME" });
+        expect(out.rows[3]?.enumOptions).toEqual({ "1": "Human", "2": "HUMAN", "7": "GNOME" });
+        expect(out.rows[4]?.enumOptions).toEqual({ "1": "HUMAN", "2": "Elf" });
+    });
+
     it("merges the game's IDS table over the vendored enum, keeping vendored gaps", () => {
         const race = {
             id: "r1",

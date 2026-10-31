@@ -15,6 +15,8 @@ import { type GallerySource } from "./source";
 import { galleryWorkerPort, type GalleryPort } from "./worker-port";
 import { type AnimationStageHost, createAnimationStage } from "./stage";
 import { type HostToWebview, type SetTile, isWebviewToHost } from "./webview/messages";
+import { errorText } from "@bgforge/shared/error-text";
+import { conlog } from "../logging";
 
 const WEBVIEW_DIR = path.join("client", "src", "gallery", "webview");
 const WEBVIEW_HTML = path.join(WEBVIEW_DIR, "index.html");
@@ -104,13 +106,12 @@ function defaultPort(extensionUri: vscode.Uri): GalleryPort {
     return galleryWorkerPort(new Worker(vscode.Uri.joinPath(extensionUri, WORKER_JS).fsPath));
 }
 
-/** The `type` of a message the panel refused, for the error text; the message itself may be any shape. */
 /**
  * Wire one panel: mount the webview, start a worker, and pump thumbnails between them until it closes.
  *
- * Each panel gets its own worker. They are cheap next to what they hold - an archive-handle cache and a
- * decoded-page cache, both of which are per-corpus - and a shared one would keep those alive after the last
- * gallery closed.
+ * Each panel gets its own worker, and a fresh one for every reading of the corpus. They are cheap next to
+ * what they hold - an archive-handle cache and a decoded-page cache keyed by page name, both per-corpus - and
+ * a worker kept across readings would serve the previous install's pages under the same names.
  */
 export function wireGalleryPanel(
     panel: vscode.WebviewPanel,
@@ -129,7 +130,11 @@ export function wireGalleryPanel(
     };
     panel.webview.html = buildGalleryHtml(panel.webview, context.extensionUri);
 
-    const port = (deps.makePort ?? defaultPort)(context.extensionUri);
+    const makePort = deps.makePort ?? defaultPort;
+    /** The live worker. Replaced on every reading and once after a death; see `startWorker`. */
+    let port: GalleryPort | undefined;
+    /** Restarts the current reading may still spend on a dying worker before thumbnails are turned off. */
+    let restartsLeft = 0;
 
     // Nothing to browse is a legitimate state, not a failure - and the panel must say WHICH state, because
     // "no pictures here" and "you have not opened a game" send the reader in opposite directions.
@@ -177,7 +182,7 @@ export function wireGalleryPanel(
     /** A pick that failed to open is said, naming what was picked: silence reads as a click that missed. */
     const opening = (what: string | number, done: Promise<void>): void => {
         done.catch((error: unknown) => {
-            const reason = error instanceof Error ? error.message : String(error);
+            const reason = errorText(error);
             void vscode.window.showErrorMessage(`Image gallery could not open ${what}: ${reason}`);
         });
     };
@@ -195,9 +200,12 @@ export function wireGalleryPanel(
      * Take a reading of the corpus this panel browses.
      *
      * Re-run whenever the game changes, so everything downstream is rebuilt against the new install rather
-     * than left pointing at the old one: the pump's thumbnail cache is keyed per item, not per game.
+     * than left pointing at the old one: the pump's thumbnail cache is keyed per item, not per game, and the
+     * worker's page cache per page name.
      */
     const mount = (): void => {
+        startWorker();
+        restartsLeft = 1;
         mounted = (async () => {
             try {
                 source = await deps.sourceFor(state.source);
@@ -207,7 +215,7 @@ export function wireGalleryPanel(
                 // would leave a blank grid that never explains itself, and rethrowing would strand `postInit`
                 // on a rejected promise, which is the same blank grid plus an unhandled rejection.
                 void vscode.window.showErrorMessage(
-                    `Image gallery could not read the ${state.source}: ${error instanceof Error ? error.message : String(error)}`,
+                    `Image gallery could not read the ${state.source}: ${errorText(error)}`,
                 );
                 source = undefined;
             }
@@ -216,7 +224,7 @@ export function wireGalleryPanel(
                 new ThumbnailPump({
                     source,
                     post: (message: HostToWebview) => void panel.webview.postMessage(message),
-                    send: (request) => port.postMessage(request),
+                    send: (request) => port?.postMessage(request),
                 });
         })();
     };
@@ -242,14 +250,41 @@ export function wireGalleryPanel(
         void panel.webview.postMessage({ type: "showing", ...showing } satisfies HostToWebview);
     };
 
-    mount();
+    /** Replace the worker with a fresh one. Only the live port is listened to, so a replaced one is mute. */
+    function startWorker(): void {
+        port?.dispose();
+        const started = makePort(context.extensionUri);
+        port = started;
+        started.onMessage((response) => {
+            if (port === started) pump?.handle(response);
+        });
+        started.onError((err) => {
+            if (port === started) workerDied(err);
+        });
+    }
 
-    port.onMessage((response) => pump?.handle(response));
-    port.onError((err) => {
-        // A dead worker cannot answer anything still in flight, so say so once rather than leaving every
-        // pending tile spinning with no explanation.
-        void vscode.window.showErrorMessage(`Image gallery worker stopped: ${err.message}`);
-    });
+    /**
+     * A dead worker answers nothing still in flight. Restarted once, since one bad moment should not cost the
+     * panel its grid; a second death is likely the same input killing it again, so thumbnails stop there and
+     * every pending tile is answered rather than left spinning.
+     */
+    function workerDied(err: Error): void {
+        if (restartsLeft > 0) {
+            restartsLeft--;
+            conlog(`Image gallery worker stopped, restarting it: ${err.message}`, "warn");
+            startWorker();
+            pump?.resend();
+            return;
+        }
+        port?.dispose();
+        port = undefined;
+        pump?.stop();
+        void vscode.window.showErrorMessage(
+            `Image gallery worker stopped again, so this gallery draws no more thumbnails until it reloads: ${err.message}`,
+        );
+    }
+
+    mount();
 
     panel.webview.onDidReceiveMessage((message: unknown) => {
         if (!isWebviewToHost(message)) {
@@ -318,7 +353,7 @@ export function wireGalleryPanel(
 
     panel.onDidDispose(() => {
         gameChanged.dispose();
-        port.dispose();
+        port?.dispose();
         stage?.dispose();
     });
 

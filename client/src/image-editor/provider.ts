@@ -34,6 +34,7 @@ import {
     isWebviewToHost,
     packFramePixels,
 } from "./webview/messages";
+import { errorText } from "@bgforge/shared/error-text";
 
 /**
  * The hot-exit backup for `backupId`, or undefined when there is none or it cannot be used.
@@ -274,7 +275,7 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
             try {
                 await this.handleWebviewMessage(document, channel, message, surface);
             } catch (error) {
-                const reason = error instanceof Error ? error.message : String(error);
+                const reason = errorText(error);
                 // The webview's `error` replaces the whole view with the could-not-open screen, so it answers
                 // only the request that opens the file. Anything later failed under a view that is still
                 // right, and is reported by the host as the other editors' failures are.
@@ -300,16 +301,14 @@ export class ImageEditorProvider implements vscode.CustomEditorProvider<ImageEdi
     }
 
     /**
-     * The creatures offered for this document, the ones actually using its animation first.
+     * The creatures to offer, the ones actually using this document's animation first, and whether a game
+     * answered at all.
      *
-     * Both halves are listed rather than only the matching ones: an install shares one animation between
-     * hundreds of creatures, so the matching set is a useful default and not a small one, and borrowing a
-     * palette from an unrelated creature is a legitimate thing to want.
-     */
-    /**
-     * The creatures to offer, and whether a game answered at all.
+     * Both halves of the list are offered rather than only the matching ones: an install shares one animation
+     * between hundreds of creatures, so the matching set is a useful default and not a small one, and borrowing
+     * a palette from an unrelated creature is a legitimate thing to want.
      *
-     * Both, because an empty list means two different things and the webview branches on which: the
+     * The list and the answer both, because an empty list means two different things and the webview branches on which: the
      * resolver returns undefined where no install could be resolved and an empty array for an install that
      * lists no creatures. Collapsing the two here is what made the picker's note tell a reader with a game
      * open to go and open one.

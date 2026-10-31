@@ -3,6 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 // The resolver only reads uri.scheme/query, so mock vscode.Uri as the parts holder (same shape as the
 // ie-resources-uri test) rather than pulling in vscode.Uri internals.
 vi.mock("vscode", () => ({ Uri: { from: (parts: unknown) => parts } }));
+// The unreadable-game cases warn; what they warn is pinned in ie-resources-game-lookups-warn.test.ts.
+vi.mock("../src/logging", () => ({ conlog: () => {} }));
 
 // Imported after vi.mock so the mocked vscode is in place.
 import type { IeScriptStyle, TwoDaTable } from "@bgforge/binary";

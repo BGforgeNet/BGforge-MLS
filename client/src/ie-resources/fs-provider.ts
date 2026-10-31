@@ -4,6 +4,7 @@ import { resourceTypeCode, type Game } from "@bgforge/binary";
 import { conlog } from "../logging";
 import { type CurrentGame } from "./current-game";
 import { parseAnimationSetUri, parseResourceUri } from "./uri";
+import { errorText } from "@bgforge/shared/error-text";
 
 /**
  * How many resources' bytes stay cached. `stat` reads a resource whole just to report its size, so browsing a
@@ -20,7 +21,7 @@ function logResourceFailure(uri: vscode.Uri, error: unknown): void {
     // A FileSystemError is our own FileNotFound rethrown from an inner layer - already the honest answer, and
     // logging it would just add noise for every miss.
     if (error instanceof vscode.FileSystemError) return;
-    conlog(`ieResources: ${uri.toString()} failed: ${error instanceof Error ? error.message : String(error)}`);
+    conlog(`ieResources: ${uri.toString()} failed: ${errorText(error)}`);
 }
 
 /**

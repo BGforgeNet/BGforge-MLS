@@ -9,6 +9,7 @@
 
 import type { Parser, Tree } from "web-tree-sitter";
 import { createCachedParserModule } from "./parser-factory";
+import { errorText } from "../error-text";
 
 /**
  * Logger surface the manager uses to report per-parser init failures and
@@ -94,9 +95,7 @@ class ParserManager {
                 // oxlint-disable-next-line no-await-in-loop
                 await parser.module.init();
             } catch (error) {
-                logger.error(
-                    `Failed to initialize ${parser.name} parser: ${error instanceof Error ? error.message : String(error)}`,
-                );
+                logger.error(`Failed to initialize ${parser.name} parser: ${errorText(error)}`);
             }
         }
         logger.info(`ParserManager: initialized ${this.parsers.size} parsers`);
@@ -120,7 +119,7 @@ class ParserManager {
      * Get the raw Parser instance for a language.
      * Throws if the parser is not registered or not initialized.
      * Prefer parseWithCache() for normal usage - this is for cases that need
-     * direct parser access (e.g., incremental parsing).
+     * the parser itself, such as a compiler that drives its own parse.
      */
     getParser(langId: string): Parser {
         const parser = this.parsers.get(langId);

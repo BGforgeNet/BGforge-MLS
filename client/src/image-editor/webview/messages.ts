@@ -521,9 +521,8 @@ export type HostToWebview =
     | { type: "init"; view: AnimationView }
     // Answer to `requestFrames`: `frames[i]` is the frame at `indices[i]`, spanning `pixels`.
     | { type: "frames"; indices: number[]; frames: FrameView[]; pixels: ArrayBuffer }
-    /** Creatures the open game holds, the ones using this animation first. Empty outside a game. */
     /**
-     * The install's creatures, and whether an install answered.
+     * The install's creatures, the ones using this animation first, and whether an install answered.
      *
      * `gameOpen` is stated rather than read off `entries.length`: no game and an install that lists no
      * creatures both arrive as an empty list, and only the first of them is fixed by opening a game.

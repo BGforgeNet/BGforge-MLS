@@ -64,6 +64,7 @@ function fakePanel() {
 const created: ReturnType<typeof fakePanel>[] = [];
 const commands = new Map<string, (...args: unknown[]) => unknown>();
 let serializer: { deserializeWebviewPanel(panel: unknown, state: unknown): Promise<void> } | undefined;
+const { watchers } = vi.hoisted(() => ({ watchers: [] as { disposed: boolean }[] }));
 
 vi.mock("vscode", () => ({
     Uri: { joinPath: (...parts: unknown[]) => ({ fsPath: parts.join("/"), toString: () => parts.join("/") }) },
@@ -89,14 +90,20 @@ vi.mock("vscode", () => ({
     },
     workspace: {
         workspaceFolders: [],
-        // The gallery keeps one watcher for the extension's lifetime to move workspace stamps. Nothing here
-        // browses a workspace, so it need only exist and be disposable.
-        createFileSystemWatcher: () => ({
-            onDidCreate: () => ({ dispose: () => {} }),
-            onDidChange: () => ({ dispose: () => {} }),
-            onDidDelete: () => ({ dispose: () => {} }),
-            dispose: () => {},
-        }),
+        // The gallery keeps one watcher while a panel is open to move workspace stamps. Nothing here browses a
+        // workspace, so it need only exist and say when it is disposed.
+        createFileSystemWatcher: () => {
+            const watcher = { disposed: false };
+            watchers.push(watcher);
+            return {
+                onDidCreate: () => ({ dispose: () => {} }),
+                onDidChange: () => ({ dispose: () => {} }),
+                onDidDelete: () => ({ dispose: () => {} }),
+                dispose: () => {
+                    watcher.disposed = true;
+                },
+            };
+        },
         findFiles: () => Promise.resolve([]),
     },
 }));
@@ -139,9 +146,39 @@ const showWorkspace = (): void => void commands.get("bgforge.gallery.showWorkspa
 
 beforeEach(() => {
     created.length = 0;
+    watchers.length = 0;
     commands.clear();
     serializer = undefined;
     register();
+});
+
+/** A `**\/*` watcher costs the editor a recursive watch of every folder, so it exists only while it has a reader. */
+describe("the workspace watcher lives with the gallery panel", () => {
+    it("is not created until a gallery opens", () => {
+        expect(watchers).toHaveLength(0);
+        showGame();
+        expect(watchers).toHaveLength(1);
+    });
+
+    it("is shared by a retargeted panel rather than created again", () => {
+        showGame();
+        showWorkspace();
+        expect(watchers).toHaveLength(1);
+    });
+
+    it("is disposed with the last panel, and made again for the next one", () => {
+        showGame();
+        created[0]?.panel.dispose();
+        expect(watchers.map((watcher) => watcher.disposed)).toEqual([true]);
+
+        showGame();
+        expect(watchers.map((watcher) => watcher.disposed)).toEqual([true, false]);
+    });
+
+    it("is created for a panel the window restores", async () => {
+        await serializer?.deserializeWebviewPanel(fakePanel().panel, { source: "workspace" });
+        expect(watchers).toHaveLength(1);
+    });
 });
 
 describe("the gallery opens at most one panel", () => {

@@ -31,9 +31,10 @@ function readRaw(at: ResourceLocation): Uint8Array {
 /**
  * Where each PVRZ page lives, learned from the host as requests arrive.
  *
- * A page name resolves to one location for the life of a game session, so remembering it lets the cache key
- * on the name alone - which is the point: a real install's v2 BAMs share far fewer pages than they have
- * files, so a per-item read would decode the same page over and over.
+ * A page name resolves to one location for the life of this worker, which the panel replaces whenever it
+ * re-reads the corpus, so remembering it lets the cache key on the name alone - which is the point: a real
+ * install's v2 BAMs share far fewer pages than they have files, so a per-item read would decode the same page
+ * over and over.
  */
 const pageLocations = new Map<string, ResourceLocation>();
 const pageBytes = makePageCache((name: string): Uint8Array | undefined => {

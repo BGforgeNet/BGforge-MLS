@@ -157,6 +157,34 @@ check(
     `selected ${beforeRepost} -> ${afterRepost}`,
 );
 
+// A host error after a model loads (a refused write, a failed re-parse) shows as a banner over the graph, which
+// stays rendered; the next model clears the banner.
+await fresh();
+const HOST_ERROR = "EDIT BEHAVIOR HOST ERROR";
+await page.evaluate((m) => window.postMessage({ type: "error", message: m }, "*"), HOST_ERROR);
+await page
+    .waitForFunction((m) => document.querySelector(".hosterr")?.textContent?.includes(m) ?? false, HOST_ERROR, {
+        timeout: 5000,
+    })
+    .catch(() => undefined);
+const banner = await page.evaluate(() => ({
+    text: document.querySelector(".hosterr")?.textContent ?? null,
+    nodes: document.querySelectorAll(".st[data-sid]").length,
+}));
+check(
+    "a host error after a model shows the error banner and keeps the graph",
+    banner.text?.includes(HOST_ERROR) === true && banner.nodes > 0,
+    `banner=${banner.text} nodes=${banner.nodes}`,
+);
+await page.evaluate((m) => window.postMessage({ type: "model", model: m }, "*"), REAL_MODEL);
+await page
+    .waitForFunction(() => document.querySelector(".hosterr") === null, undefined, { timeout: 5000 })
+    .catch(() => undefined);
+check(
+    "the next model clears the host error banner",
+    await page.evaluate(() => document.querySelector(".hosterr") === null),
+);
+
 await browser.close();
 
 finish(errs);

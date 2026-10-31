@@ -1,5 +1,6 @@
 <script lang="ts">
     import { tick as svelteTick, untrack } from "svelte";
+    import { SvelteMap } from "svelte/reactivity";
     import type { Bridge } from "../state/bridge";
     import {
         framePixels,
@@ -127,8 +128,8 @@
     // via installInitTimeout (webview-utils.ts).
     let initTimedOut = $state(false);
     let initWait: InitWait | undefined;
-    /** Pixels delivered so far, by frame index. Replaced wholesale per batch (see the message handler). */
-    let loadedPixels = $state(new Map<number, Uint8Array>());
+    /** Pixels delivered so far, by frame index. Reactive per key, so a batch adds its frames in place. */
+    const loadedPixels = new SvelteMap<number, Uint8Array>();
     /**
      * Frame indices already asked for, so a re-render never re-requests one in flight.
      *
@@ -291,19 +292,16 @@
             if (m.type === "init") {
                 view = m.view;
                 // A refresh replaces the document's frames, so anything cached is stale.
-                loadedPixels = seedLoadedPixels(m.view);
+                loadedPixels.clear();
+                for (const [index, bytes] of seedLoadedPixels(m.view)) loadedPixels.set(index, bytes);
                 requestedFrames = new Set(loadedPixels.keys());
                 errorMessage = undefined;
             } else if (m.type === "frames") {
-                const next = new Map(loadedPixels);
                 for (const [at, index] of m.indices.entries()) {
                     const frame = m.frames[at];
                     const bytes = frame && framePixels(m.pixels, frame);
-                    if (bytes) next.set(index, bytes);
+                    if (bytes) loadedPixels.set(index, bytes);
                 }
-                // One reassignment per batch, never per frame: $state does not proxy a Map, so the
-                // view only re-renders on the replacement.
-                loadedPixels = next;
             } else if (m.type === "creatures") {
                 creatures = m.entries;
                 creaturesGameOpen = m.gameOpen;

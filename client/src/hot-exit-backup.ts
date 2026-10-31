@@ -2,7 +2,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 
 /**
- * Hot-exit backup handling shared by the custom editors (binary, image). Each one decides what a backup
+ * Hot-exit backup handling shared by the custom editors. Each one decides what a backup
  * CONTAINS - raw bytes, a versioned container - but the failure policy and the wording the user sees are one
  * decision, so they live here rather than being restated per editor.
  */

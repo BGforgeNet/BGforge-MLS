@@ -2,8 +2,9 @@ import type { DialogModel } from "@bgforge/shared/dialog-model";
 import { isRecord } from "../../is-record";
 
 /**
- * Messages the dialog webview posts up to the host. Senders: main.ts ("ready", plus "runtimeError" via
- * installFatalErrorHandler) and DialogGraph.svelte (all the rest).
+ * Messages the dialog webview posts up to the host. Senders: main.ts ("ready", "slowFrame", a "notify" when
+ * highlighting fails, and "runtimeError" via installFatalErrorHandler) and DialogGraph.svelte (the rest, and
+ * "notify" too).
  *
  * ONE union for both hosts, because there is one webview: `panel.ts` (dialog source) and `dlg-panel.ts`
  * (compiled dialog) load the same bundle, so a message either host can receive belongs here. While the

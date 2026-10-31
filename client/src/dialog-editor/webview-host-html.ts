@@ -1,7 +1,7 @@
 /**
  * Binds the dialog webview's HTML to a live `vscode.Webview`.
  *
- * Extracted when the read-only `.dlg` viewer became a second host for the same webview: both providers must
+ * Extracted when the `.dlg` editor became a second host for the same webview: both providers must
  * produce byte-identical chrome (same CSP, same bundle, same stylesheet), and a copy would drift the moment
  * one of them changed. The pure assembly stays in `buildDialogWebviewHtml`, which is unit-tested without the
  * vscode runtime; this is only the resolution of the webview-bound inputs.

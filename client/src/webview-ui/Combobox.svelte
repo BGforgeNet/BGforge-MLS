@@ -59,12 +59,8 @@
         onopen?: () => void;
     } = $props();
 
-    // bits-ui owns the selection; mirror the prop into it. Initialized to a literal so $state init does not
-    // reference a reactive prop; the $effect below populates it on mount before first paint.
-    let selected = $state("");
-    $effect(() => {
-        selected = value;
-    });
+    // bits-ui owns the selection; it follows the prop, and bits-ui's writes override it until the prop changes.
+    let selected = $derived(value);
 
     const selectedLabel = $derived(options.find((o) => o.value === value)?.label ?? (allowCustom ? value : ""));
 

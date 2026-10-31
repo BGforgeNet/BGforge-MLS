@@ -1,5 +1,5 @@
 /**
- * Shared helpers for the in-webview bundles (binary, dialog, and animation editors):
+ * Shared helpers for the in-webview bundles:
  * `installFatalErrorHandler` (global error/rejection reporting),
  * `installInitTimeout` + `DEFAULT_INIT_TIMEOUT_MS` (bounded host-reply wait),
  * `isBenignWebviewError` (ResizeObserver-notice filtering, also used
@@ -8,6 +8,8 @@
  * module must stay free of Node and vscode-host APIs; esbuild inlines it
  * into each webview bundle.
  */
+
+import { errorText } from "@bgforge/shared/error-text";
 
 /** The handle VS Code injects into a webview. `acquireVsCodeApi()` may be called only once per webview. */
 export interface VsCodeApi {
@@ -92,7 +94,7 @@ export function installFatalErrorHandler(options: FatalErrorHandlerOptions): voi
 
     globalThis.addEventListener("unhandledrejection", (event) => {
         const reason = event.reason;
-        const message = reason instanceof Error ? reason.message : String(reason);
+        const message = errorText(reason);
         showFatalError(message || `Unhandled ${lower} promise rejection`, reason);
     });
 }
@@ -167,7 +169,7 @@ export const SLOW_FRAME_MS = 150;
  * layout or render that froze the panel left no trace anywhere a log could reach. The browser already
  * measures this ("longtask"), so this subscribes rather than measures.
  *
- * `ctor` is the seam: Node has no long-task entry type, so tests drive a stand-in. Missing or refusing the
+ * `Observer` is the seam: Node has no long-task entry type, so tests drive a stand-in. Missing or refusing the
  * entry type yields a no-op and a cleanup that does nothing - the observer is diagnostics and must never
  * be why a panel fails to come up.
  */

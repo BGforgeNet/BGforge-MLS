@@ -265,7 +265,32 @@ function resourceNamedByValue(
 function namedByGame(
     row: ValueRefRow,
     tables: readonly NamedTable[],
+    merges: MergeCache,
 ): { enumOptions: Record<string, string>; valueType: string; enumOpen: true } {
+    // Everything the merge reads, so rows that agree on all of it share one list: a repeated field (a spell
+    // list, an inventory) names the same whole table per entry. Vendored lists are short; the game's are not.
+    const key = JSON.stringify([
+        row.ref.kind,
+        tables.map((t) => t.table),
+        row.size ?? null,
+        row.ref.keyEncoding ?? null,
+        row.enumOptions ?? null,
+    ]);
+    let merged = merges.get(key);
+    if (merged === undefined) {
+        merged = mergeOptions(row, tables);
+        merges.set(key, merged);
+    }
+    return { enumOptions: merged, valueType: "enum", enumOpen: true };
+}
+
+/**
+ * Merged option lists already built in one message, keyed by everything a merge reads. Per message, since the
+ * install a table comes from can change between two.
+ */
+type MergeCache = Map<string, Record<string, string>>;
+
+function mergeOptions(row: ValueRefRow, tables: readonly NamedTable[]): Record<string, string> {
     const merged: Record<string, string> = { ...row.enumOptions };
     // A table may be keyed in a different space than the field stores (a CRE kit holds the KIT.IDS key in the
     // other half of its dword), so convert first - then drop anything that does not fit the field, since an
@@ -280,14 +305,18 @@ function namedByGame(
             if (stored >= 0 && stored < limit) merged[String(stored)] = name;
         }
     }
-    return { enumOptions: merged, valueType: "enum", enumOpen: true };
+    return merged;
 }
 
 export function withGameContext<T>(value: T, lookups: GameLookups): T {
+    return resolveRows(value, lookups, new Map());
+}
+
+function resolveRows<T>(value: T, lookups: GameLookups, merges: MergeCache): T {
     if (Array.isArray(value)) {
         let changed = false;
         const next = value.map((entry) => {
-            const resolved = withGameContext(entry, lookups);
+            const resolved = resolveRows(entry, lookups, merges);
             if (resolved !== entry) changed = true;
             return resolved;
         });
@@ -318,7 +347,7 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
             // table covers still identifies an animation, and the browser is where that gets said.
             const animation =
                 row.ref.kind === "ids" && row.ref.animationIds === true ? { id: row.rawValue } : undefined;
-            row = { ...row, ...namedByGame(row, tables) };
+            row = { ...row, ...namedByGame(row, tables, merges) };
             if (offers !== undefined) row = { ...row, ...offers };
             if (animation !== undefined) row = { ...row, animationTarget: animation };
         }
@@ -371,7 +400,7 @@ export function withGameContext<T>(value: T, lookups: GameLookups): T {
     let changed = false;
     const next: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-        const resolved = withGameContext(entry, lookups);
+        const resolved = resolveRows(entry, lookups, merges);
         if (resolved !== entry) changed = true;
         next[key] = resolved;
     }

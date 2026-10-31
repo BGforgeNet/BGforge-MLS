@@ -31,6 +31,9 @@ vi.mock("../src/webview-html", () => ({
     sharedWebviewRoots: () => [],
 }));
 
+// A restarted worker is logged; the output channel is not what these tests drive.
+vi.mock("../src/logging", () => ({ conlog: () => {} }));
+
 const { wireGalleryPanel } = await import("../src/gallery/panel");
 
 const ITEM: GalleryItem = { id: "MOGHG1.bam", label: "MOGHG1", ext: "bam" };
@@ -288,14 +291,19 @@ describe("wireGalleryPanel message routing", () => {
         staged = [];
     });
 
-    it("surfaces a dead or crashed worker as a toast naming the failure", () => {
+    it("surfaces a worker that dies again after its restart as a toast naming the failure", () => {
         const { panel } = fakePanel();
         wireGalleryPanel(panel, { source: "game" }, context, deps);
 
         expect(errorCb, "the panel never subscribed to the port's error channel").toBeDefined();
         errorCb?.(new Error("worker crashed"));
+        expect(showErrorMessageMock, "a first death is recovered from, not reported").not.toHaveBeenCalled();
+        errorCb?.(new Error("worker crashed again"));
 
-        expect(showErrorMessageMock).toHaveBeenCalledWith("Image gallery worker stopped: worker crashed");
+        expect(showErrorMessageMock).toHaveBeenCalledWith(
+            "Image gallery worker stopped again, so this gallery draws no more thumbnails until it reloads: " +
+                "worker crashed again",
+        );
     });
 
     it("forwards a requestThumbnails message to the pump", async () => {
@@ -460,5 +468,129 @@ describe("wireGalleryPanel message routing", () => {
         send({ type: "viewer", message: { type: "ready" } });
 
         expect(showErrorMessageMock, "a valid message was refused").not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The worker's lifecycle: one restart after a death, then thumbnails off with a message, and a fresh worker for
+ * every reading of the corpus so nothing it caches can outlive the install it came from.
+ */
+describe("wireGalleryPanel worker lifecycle", () => {
+    interface FakePort {
+        sent: GalleryRequest[];
+        disposed: boolean;
+        reply?: (response: GalleryResponse) => void;
+        die?: (err: Error) => void;
+    }
+    let ports: FakePort[] = [];
+    let gameChanged: (() => void) | undefined;
+
+    const deps = {
+        sourceFor: () =>
+            Promise.resolve({
+                ...fakeSource(),
+                stamp: (id: string) => `s:${id}`,
+                locate: (): Locator => ({ kind: "file", path: "/game/override/X.BAM" }),
+            }),
+        open: async () => {},
+        animationUri: () => undefined,
+        sets: (): readonly SetTile[] => [],
+        setUri: () => undefined,
+        makePort: () => {
+            const port: FakePort = { sent: [], disposed: false };
+            ports.push(port);
+            return {
+                postMessage: (request: GalleryRequest) => port.sent.push(request),
+                onMessage: (fn: (response: GalleryResponse) => void) => {
+                    port.reply = fn;
+                },
+                onError: (fn: (err: Error) => void) => {
+                    port.die = fn;
+                },
+                dispose: () => {
+                    port.disposed = true;
+                },
+            };
+        },
+        onDidChangeGame: (fn: () => void) => {
+            gameChanged = fn;
+            return { dispose: () => {} };
+        },
+    };
+
+    beforeEach(() => {
+        ports = [];
+        gameChanged = undefined;
+    });
+
+    async function wired() {
+        const { panel, posted, send } = fakePanel();
+        wireGalleryPanel(panel, { source: "game" }, context, deps);
+        send({ type: "ready" });
+        await readings(posted);
+        return { posted, send };
+    }
+
+    it("restarts a dead worker once and resends what it held unanswered", async () => {
+        const { send } = await wired();
+        send({ type: "requestThumbnails", ids: ["A.bam", "B.bam"], size: 64 });
+        expect(ports[0]!.sent.map((r) => r.item)).toEqual(["A.bam", "B.bam"]);
+
+        ports[0]!.die?.(new Error("out of memory"));
+
+        expect(ports).toHaveLength(2);
+        expect(ports[0]!.disposed).toBe(true);
+        expect(ports[1]!.sent.map((r) => r.item).toSorted()).toEqual(["A.bam", "B.bam"]);
+        expect(showErrorMessageMock).not.toHaveBeenCalled();
+    });
+
+    it("ignores a late reply from the worker it replaced", async () => {
+        const { posted, send } = await wired();
+        send({ type: "requestThumbnails", ids: ["A.bam"], size: 64 });
+        const stale = ports[0]!.sent[0]!;
+        ports[0]!.die?.(new Error("crashed"));
+        const before = posted.length;
+
+        ports[0]!.reply?.({ id: stale.id, kind: "thumbnail", item: stale.item, dataUri: "stale" });
+
+        expect(posted).toHaveLength(before);
+    });
+
+    it("turns thumbnails off after the replacement dies too, answering what was pending", async () => {
+        const { posted, send } = await wired();
+        send({ type: "requestThumbnails", ids: ["A.bam"], size: 64 });
+        ports[0]!.die?.(new Error("crashed"));
+        ports[1]!.die?.(new Error("crashed again"));
+
+        expect(ports, "a second death must not start a third worker").toHaveLength(2);
+        expect(showErrorMessageMock).toHaveBeenCalledTimes(1);
+        expect(posted.at(-1)).toEqual({ type: "thumbnail", id: "A.bam" });
+
+        send({ type: "requestThumbnails", ids: ["C.bam"], size: 64 });
+        expect(ports.flatMap((port) => port.sent).some((r) => r.item === "C.bam")).toBe(false);
+        expect(posted.at(-1)).toEqual({ type: "thumbnail", id: "C.bam" });
+    });
+
+    it("starts a fresh worker when the game changes, so no cache of the old install survives", async () => {
+        const { posted, send } = await wired();
+        gameChanged?.();
+        await readings(posted, 2);
+
+        expect(ports).toHaveLength(2);
+        expect(ports[0]!.disposed).toBe(true);
+        send({ type: "requestThumbnails", ids: ["A.bam"], size: 64 });
+        expect(ports[0]!.sent).toEqual([]);
+        expect(ports[1]!.sent.map((r) => r.item)).toEqual(["A.bam"]);
+    });
+
+    it("gets a working worker back on a game change after thumbnails were turned off", async () => {
+        const { posted, send } = await wired();
+        ports[0]!.die?.(new Error("crashed"));
+        ports[1]!.die?.(new Error("crashed again"));
+        gameChanged?.();
+        await readings(posted, 2);
+
+        send({ type: "requestThumbnails", ids: ["A.bam"], size: 64 });
+        expect(ports[2]!.sent.map((r) => r.item)).toEqual(["A.bam"]);
     });
 });

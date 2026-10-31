@@ -1,8 +1,10 @@
 import type * as vscode from "vscode";
 import { engineForFlavour, type IeScriptStyle, type TwoDaTable } from "@bgforge/binary";
 import { parseGradientTable, type Rgba } from "@bgforge/image";
+import { errorText } from "@bgforge/shared/error-text";
 import type { BcsNaming } from "../bcs-editor/document";
-import { bcsEngineForScriptStyle, compileSymbolsFrom } from "../../../compilers/bcs/src/index";
+import { bcsEngineForScriptStyle, compileSymbolsFrom } from "@bgforge/bcs";
+import { conlog } from "../logging";
 import { GAME_RESOURCE_SCHEME, parseResourceUri } from "./uri";
 import { kitNamesByBit, kitsByUsabilityMask } from "./kit-usability";
 
@@ -175,18 +177,71 @@ interface GameSource {
         | undefined;
 }
 
+/** An install `gameAt` handed back: what every resolver reads from. */
+type OpenGame = NonNullable<ReturnType<GameSource["gameAt"]>>;
+
+/** One resolver's guarded access to the game a document resolves against. */
+interface GameReader {
+    /**
+     * `read` applied to the document's game. Undefined with no game, with another install open, and when
+     * opening or reading the game throws.
+     */
+    read<T>(uri: vscode.Uri, read: (game: OpenGame) => T | undefined): T | undefined;
+    /** `read` for a game directory already resolved, for a caller that keys its own cache on it. */
+    readAt<T>(gameDir: string, read: (game: OpenGame) => T | undefined): T | undefined;
+    /** Reports a failure the caller caught itself, under the same once-per-install rule. */
+    warn(gameDir: string, error: unknown): void;
+}
+
+/**
+ * The shape every resolver shares: find the document's game, open it, read from it, and treat a failure as
+ * "no game" so a field keeps the plain value it shows outside one.
+ *
+ * Treated as no game, but not silently: a corrupt install would otherwise look exactly like a missing one
+ * in every editor at once. One warning per install per resolver, since every row of every record asks again.
+ */
+function gameReader(currentGame: GameSource, fallback: GameDirFallback | undefined, lookup: string): GameReader {
+    const warned = new Set<string>();
+    const warn = (gameDir: string, error: unknown): void => {
+        if (warned.has(gameDir)) return;
+        warned.add(gameDir);
+        conlog(`ieResources: ${lookup} cannot read the game at ${gameDir}: ${errorText(error)}`, "warn");
+    };
+    const readAt = <T>(gameDir: string, read: (game: OpenGame) => T | undefined): T | undefined => {
+        try {
+            const game = currentGame.gameAt(gameDir);
+            return game === undefined ? undefined : read(game);
+        } catch (error) {
+            warn(gameDir, error);
+            return undefined;
+        }
+    };
+    return {
+        read: (uri, read) => {
+            const gameDir = gameDirOf(uri, fallback);
+            return gameDir === undefined ? undefined : readAt(gameDir, read);
+        },
+        readAt,
+        warn,
+    };
+}
+
 /** How many hits a search returns when the caller names no limit; a picker shows a page, not a whole table. */
 const DEFAULT_SEARCH_LIMIT = 100;
 
 export function createStrrefSearch(currentGame: GameSource, fallback?: GameDirFallback): StrrefSearch {
+    const games = gameReader(currentGame, fallback, "strref search");
     return async (uri, query, limit = DEFAULT_SEARCH_LIMIT) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return [];
+        // gameAt and the male/default table, for the reasons given on the strref resolver below.
+        const tlk = games.readAt(gameDir, (game) => game.tlk());
+        if (tlk === undefined) return [];
         try {
-            // gameAt and the male/default table, for the reasons given on the strref resolver below.
-            return (await currentGame.gameAt(gameDir)?.tlk()?.search(query, { limit })) ?? [];
-        } catch {
-            // An unreadable game reads as "no matches" - the picker simply offers nothing to choose.
+            return await tlk.search(query, { limit });
+        } catch (error) {
+            // An unreadable table reads as "no matches" - the picker simply offers nothing to choose.
+            games.warn(gameDir, error);
             return [];
         }
     };
@@ -199,16 +254,9 @@ export function createStringTableProbe(
     currentGame: GameSource,
     fallback?: GameDirFallback,
 ): (uri: vscode.Uri) => boolean {
-    return (uri) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return false;
-        try {
-            return currentGame.gameAt(gameDir)?.tlk() !== undefined;
-        } catch {
-            // Same posture as the resolver: an unreadable game is "no table", not an error to surface here.
-            return false;
-        }
-    };
+    const games = gameReader(currentGame, fallback, "string table probe");
+    // Same posture as the resolver: an unreadable game is "no table".
+    return (uri) => games.read(uri, (game) => game.tlk() !== undefined) ?? false;
 }
 
 /**
@@ -230,49 +278,38 @@ export function createColorGradientResolver(
     // Per game directory: seven fields ask on every creature opened, and the answer is a bitmap decode.
     // `null` records an install that has no readable table, so a miss is not re-probed per field either.
     const cache = new Map<string, readonly (readonly Rgba[])[] | null>();
+    const games = gameReader(currentGame, fallback, "colour gradient lookup");
     return (uri) => {
         const gameDir = gameDirOf(uri, fallback);
         if (gameDir === undefined) return;
         const cached = cache.get(gameDir);
         if (cached !== undefined) return cached ?? undefined;
-        let table: readonly (readonly Rgba[])[] | null = null;
-        try {
-            const game = currentGame.gameAt(gameDir);
-            if (game?.canRead(GRADIENT_TABLE, "bmp") === true) {
-                table = parseGradientTable(game.read(GRADIENT_TABLE, "bmp"));
-            }
-        } catch {
-            // An unreadable game or an undecodable table is "no colours", the same posture the other
-            // resolvers take: the field keeps its number, which is what it shows outside a game anyway.
-        }
-        cache.set(gameDir, table);
-        return table ?? undefined;
+        // An unreadable game or an undecodable table is "no colours": the field keeps its number, which is
+        // what it shows outside a game anyway.
+        const table = games.readAt(gameDir, (game) =>
+            game.canRead(GRADIENT_TABLE, "bmp") ? parseGradientTable(game.read(GRADIENT_TABLE, "bmp")) : undefined,
+        );
+        cache.set(gameDir, table ?? null);
+        return table;
     };
 }
 
 export function createStrrefResolver(currentGame: GameSource, fallback?: GameDirFallback): StrrefResolver {
+    const games = gameReader(currentGame, fallback, "strref lookup");
     return (uri, strref) => {
         if (strref === NO_STRING || strref < 0) return;
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        let line: string | undefined;
-        try {
-            // gameAt, which opens the configured game when nothing is open yet: an editor VS Code restored
-            // across a reload asks before the view has re-opened anything, as the FS provider's read path does.
-            //
-            // Always the male/default `dialog.tlk`, though `Game.tlk` can open `dialogF.tlk` too: a record has
-            // no player gender, so there is nothing to select on, and the two tables differ for only a handful
-            // of strings. Making it selectable needs a user-facing control, not a default guess here.
-            line = currentGame.gameAt(gameDir)?.tlk()?.get(strref);
-        } catch {
-            // A missing game directory or an unreadable TLK is not worth failing an open over - the field
-            // simply shows its number, which is what a record outside a game does anyway.
-        }
+        // gameAt, which opens the configured game when nothing is open yet: an editor VS Code restored across
+        // a reload asks before the view has re-opened anything, as the FS provider's read path does.
+        //
+        // Always the male/default `dialog.tlk`, though `Game.tlk` can open `dialogF.tlk` too: a record has no
+        // player gender, so there is nothing to select on, and the two tables differ for only a handful of
+        // strings. Making it selectable needs a user-facing control, not a default guess here.
+        //
         // Returned verbatim, "" included: a TLK entry that exists and is empty IS resolved, and only the
         // consumer knows whether a blank line is worth showing. Collapsing it here made the dialog editor
         // report a real line as an unresolved strref; `game-rows.ts` makes that display call for the fields
         // that want it.
-        return line;
+        return games.read(uri, (game) => game.tlk()?.get(strref));
     };
 }
 
@@ -282,20 +319,17 @@ export function createStrrefResolver(currentGame: GameSource, fallback?: GameDir
  * decides rather than a merge.
  */
 export function createSlotLabelResolver(currentGame: GameSource, fallback?: GameDirFallback): SlotLabelResolver {
+    const games = gameReader(currentGame, fallback, "slot label lookup");
     return (uri, tables, index) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        let identifier: string | undefined;
-        try {
-            const game = currentGame.gameAt(gameDir);
-            if (game !== undefined)
-                for (const table of tables) {
-                    identifier = game.ids(table)?.get(index);
-                    if (identifier !== undefined) break;
-                }
-        } catch {
-            // Unreadable game - the slot keeps its generic label, as it does outside a game.
-        }
+        // Unreadable game - the slot keeps its generic label, as it does outside a game.
+        const identifier = games.read(uri, (game) => {
+            let found: string | undefined;
+            for (const table of tables) {
+                found = game.ids(table)?.get(index);
+                if (found !== undefined) break;
+            }
+            return found;
+        });
         return identifier === "" ? undefined : identifier;
     };
 }
@@ -311,24 +345,20 @@ export function createSlotLabelResolver(currentGame: GameSource, fallback?: Game
  * here, so an entry always comes from a table this install holds.
  */
 export function createNamingTableResolver(currentGame: GameSource, fallback?: GameDirFallback): NamingTableResolver {
-    return (uri, kind, tables) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        const found: NamedTable[] = [];
-        try {
-            const game = currentGame.gameAt(gameDir);
-            if (game !== undefined)
-                for (const table of tables) {
-                    const entries = kind === "2da" ? game.twoDa(table) : game.ids(table);
-                    if (entries !== undefined) found.push({ table, entries });
-                }
-        } catch {
-            // Unreadable game - the field falls back to its vendored table, as it does outside a game.
-        }
-        // Undefined rather than an empty list when the install ships none: the caller reads a table's presence
-        // as "the game names this field", and an empty list would turn a plain number into an empty dropdown.
-        return found.length === 0 ? undefined : found;
-    };
+    const games = gameReader(currentGame, fallback, "naming table lookup");
+    return (uri, kind, tables) =>
+        // Unreadable game - the field falls back to its vendored table, as it does outside a game.
+        games.read(uri, (game) => {
+            const found: NamedTable[] = [];
+            for (const table of tables) {
+                const entries = kind === "2da" ? game.twoDa(table) : game.ids(table);
+                if (entries !== undefined) found.push({ table, entries });
+            }
+            // Undefined rather than an empty list when the install ships none: the caller reads a table's
+            // presence as "the game names this field", and an empty list would turn a plain number into an
+            // empty dropdown.
+            return found.length === 0 ? undefined : found;
+        });
 }
 
 /** How a compiled script reads under its install, or undefined when the document has no game. */
@@ -342,37 +372,25 @@ export type BcsSymbolResolver = (uri: vscode.Uri) => BcsNaming | undefined;
  * object fields, enumerated arguments - wants one name per value and reads `ids`.
  */
 export function createBcsSymbolResolver(currentGame: GameSource, fallback?: GameDirFallback): BcsSymbolResolver {
-    return (uri) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        // Accumulated rather than returned from inside the try, so the catch can simply swallow - the same
-        // shape the resolvers above use.
-        let naming: BcsNaming | undefined;
-        try {
-            const game = currentGame.gameAt(gameDir);
-            if (game !== undefined) {
-                naming = {
-                    symbols: {
-                        trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
-                        action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
-                        ids: (table) => game.ids(table),
-                    },
-                    // Built once per resolve and captured, because compiling looks a name up per call and
-                    // rebuilding the index for each would re-walk the whole table thousands of times in one save.
-                    //
-                    // The same tables read the other way, from the same open game: a save must not resolve names
-                    // against one install while the view that produced them resolved against another.
-                    compileSymbols: compileSymbolsFrom(game),
-                    // The engine the install was detected as: it decides which table names each object field, and
-                    // no part of a script says which game wrote it.
-                    engine: bcsEngineForScriptStyle(game.identity.scriptStyle),
-                };
-            }
-        } catch {
-            // Unreadable game - the script reads as "no game behind this document", as it does outside one.
-        }
-        return naming;
-    };
+    const games = gameReader(currentGame, fallback, "script symbol lookup");
+    return (uri) =>
+        // Unreadable game - the script reads as "no game behind this document", as it does outside one.
+        games.read(uri, (game): BcsNaming => ({
+            symbols: {
+                trigger: (id) => game.idsAll("TRIGGER")?.get(id) ?? [],
+                action: (id) => game.idsAll("ACTION")?.get(id) ?? [],
+                ids: (table) => game.ids(table),
+            },
+            // Built once per resolve and captured, because compiling looks a name up per call and
+            // rebuilding the index for each would re-walk the whole table thousands of times in one save.
+            //
+            // The same tables read the other way, from the same open game: a save must not resolve names
+            // against one install while the view that produced them resolved against another.
+            compileSymbols: compileSymbolsFrom(game),
+            // The engine the install was detected as: it decides which table names each object field, and
+            // no part of a script says which game wrote it.
+            engine: bcsEngineForScriptStyle(game.identity.scriptStyle),
+        }));
 }
 
 /**
@@ -383,30 +401,24 @@ export function createBcsSymbolResolver(currentGame: GameSource, fallback?: Game
  * reports what the install says. A bit the table says nothing about is absent, so the vendored flag label stands.
  */
 export function createFlagBitNamesResolver(currentGame: GameSource, fallback?: GameDirFallback): FlagBitNamesResolver {
+    const games = gameReader(currentGame, fallback, "kit usability lookup");
     return (uri, ref) => {
         if (ref.kind !== "itmKitUsability") return;
         const byte = ref.byte;
         if (byte !== 1 && byte !== 2 && byte !== 3 && byte !== 4) return;
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        // Accumulated rather than returned from inside the try, so the catch can simply swallow - same shape as
-        // the naming-table resolver above.
-        let byBit: Readonly<Record<string, readonly string[]>> = {};
-        try {
-            const game = currentGame.gameAt(gameDir);
-            const table = game?.twoDaTable("KITLIST");
-            const tlk = table === undefined ? undefined : game?.tlk();
-            if (table !== undefined)
-                byBit = kitNamesByBit(
-                    kitsByUsabilityMask(table, (id) => tlk?.get(id)),
-                    byte,
-                );
-        } catch {
-            // Unreadable game - the bits fall back to their vendored labels, as they do outside a game.
-        }
+        // Unreadable game - the bits fall back to their vendored labels, as they do outside a game.
+        const byBit = games.read(uri, (game) => {
+            const table = game.twoDaTable("KITLIST");
+            if (table === undefined) return;
+            const tlk = game.tlk();
+            return kitNamesByBit(
+                kitsByUsabilityMask(table, (id) => tlk?.get(id)),
+                byte,
+            );
+        });
         // Undefined rather than an empty object when the table names none of this byte's bits: the caller reads
         // presence as "the install has something to say here", and an empty map would claim it does.
-        return Object.keys(byBit).length === 0 ? undefined : byBit;
+        return byBit === undefined || Object.keys(byBit).length === 0 ? undefined : byBit;
     };
 }
 
@@ -421,21 +433,13 @@ export function createFlagBitNamesResolver(currentGame: GameSource, fallback?: G
  * references what a later install step creates.
  */
 export function createResourceTypeResolver(currentGame: GameSource, fallback?: GameDirFallback): ResourceTypeResolver {
-    return (uri, decl, resref) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        let found: ResolvedResourceRef | undefined;
-        try {
-            const game = currentGame.gameAt(gameDir);
-            if (game !== undefined) {
-                const type = decl.byFlavour?.[game.identity.flavour] ?? decl.type;
-                found = { type, present: resref !== "" && game.canRead(resref, type) };
-            }
-        } catch {
-            // Unreadable game - no affordance, exactly as outside a game.
-        }
-        return found;
-    };
+    const games = gameReader(currentGame, fallback, "resource type lookup");
+    return (uri, decl, resref) =>
+        // Unreadable game - no affordance, exactly as outside a game.
+        games.read(uri, (game) => {
+            const type = decl.byFlavour?.[game.identity.flavour] ?? decl.type;
+            return { type, present: resref !== "" && game.canRead(resref, type) };
+        });
 }
 
 /**
@@ -447,22 +451,17 @@ export function createResourceTypeResolver(currentGame: GameSource, fallback?: G
  * on every write into `override/`.
  */
 export function createResourceListResolver(currentGame: GameSource, fallback?: GameDirFallback): ResourceListResolver {
+    const games = gameReader(currentGame, fallback, "resource list");
     return (uri, ext) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
         const want = ext.toLowerCase();
-        let resrefs: string[] | undefined;
-        try {
-            resrefs = currentGame
-                .gameAt(gameDir)
-                ?.list()
+        // Unreadable game - the field stays a plain text box, exactly as outside a game.
+        return games.read(uri, (game) =>
+            game
+                .list()
                 .filter((r) => r.ext?.toLowerCase() === want)
                 .map((r) => r.resref)
-                .sort((a, b) => a.localeCompare(b));
-        } catch {
-            // Unreadable game - the field stays a plain text box, exactly as outside a game.
-        }
-        return resrefs;
+                .sort((a, b) => a.localeCompare(b)),
+        );
     };
 }
 
@@ -476,20 +475,20 @@ export function createResourceBytesResolver(
     currentGame: GameSource,
     fallback?: GameDirFallback,
 ): ResourceBytesResolver {
-    return (uri, resref, ext) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        let bytes: Uint8Array | undefined;
-        try {
-            bytes = currentGame.gameAt(gameDir)?.read(resref, ext);
-        } catch {
-            // Every miss lands here, including the ordinary one: `read` throws for an absent resource, and a
-            // resref naming what a later install step creates is normal rather than an error. Deliberately not
-            // gated on a `canRead` first - it would resolve the resref twice on every HIT to avoid a throw on a
-            // rare miss, and the answer is the same either way.
-        }
-        return bytes;
-    };
+    const games = gameReader(currentGame, fallback, "resource read");
+    return (uri, resref, ext) =>
+        games.read(uri, (game) => {
+            let bytes: Uint8Array | undefined;
+            try {
+                bytes = game.read(resref, ext);
+            } catch {
+                // Silent, unlike an unreadable game: `read` throws for an absent resource, and a resref naming
+                // what a later install step creates is normal rather than an error. Deliberately not gated on a
+                // `canRead` first - it would resolve the resref twice on every HIT to avoid a throw on a rare
+                // miss, and the answer is the same either way.
+            }
+            return bytes;
+        });
 }
 
 /**
@@ -497,16 +496,7 @@ export function createResourceBytesResolver(
  * record not from a game, which leaves the editor on its preferred reading.
  */
 export function createEngineResolver(currentGame: GameSource, fallback?: GameDirFallback): EngineResolver {
-    return (uri) => {
-        const gameDir = gameDirOf(uri, fallback);
-        if (gameDir === undefined) return;
-        let engine: string | undefined;
-        try {
-            const game = currentGame.gameAt(gameDir);
-            if (game !== undefined) engine = engineForFlavour(game.identity.flavour);
-        } catch {
-            // Unreadable game - no engine, exactly as outside a game.
-        }
-        return engine;
-    };
+    const games = gameReader(currentGame, fallback, "engine lookup");
+    // Unreadable game - no engine, exactly as outside a game.
+    return (uri) => games.read(uri, (game) => engineForFlavour(game.identity.flavour));
 }

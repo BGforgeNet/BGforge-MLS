@@ -42,6 +42,42 @@ export interface GalleryHostDeps {
     animation?: AnimationStageHost;
 }
 
+/** What the watcher has seen since the current workspace source was built. */
+interface WorkspaceCounts {
+    /** Bumped on every create and change, so a stamp moves whenever the bytes could have. */
+    readonly revisions: Map<string, number>;
+    readonly removed: Set<string>;
+}
+
+interface WorkspaceWatch extends vscode.Disposable {
+    /** Start counting afresh for a new source, and hand back the counts it reads. */
+    restart(): WorkspaceCounts;
+}
+
+function watchWorkspace(): WorkspaceWatch {
+    let counts: WorkspaceCounts = { revisions: new Map(), removed: new Set() };
+    const watcher = vscode.workspace.createFileSystemWatcher("**/*");
+    const bump = (uri: vscode.Uri): void => {
+        counts.removed.delete(uri.fsPath);
+        counts.revisions.set(uri.fsPath, (counts.revisions.get(uri.fsPath) ?? 0) + 1);
+    };
+    const subscriptions = [
+        watcher,
+        watcher.onDidCreate(bump),
+        watcher.onDidChange(bump),
+        watcher.onDidDelete((uri) => counts.removed.add(uri.fsPath)),
+    ];
+    return {
+        restart: () => {
+            counts = { revisions: new Map(), removed: new Set() };
+            return counts;
+        },
+        dispose: () => {
+            for (const subscription of subscriptions) subscription.dispose();
+        },
+    };
+}
+
 export function registerGallery(context: vscode.ExtensionContext, deps: GalleryHostDeps): void {
     const sets = (): readonly SetTile[] => {
         const current = deps.gameSession();
@@ -74,24 +110,15 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
     };
 
     /**
-     * One workspace watcher for the extension's lifetime, feeding every workspace source's stamps.
+     * One workspace watcher while a gallery panel is open, feeding the workspace source's stamps.
      *
      * Owned here rather than inside a source: sources are rebuilt on every retarget and on every game change,
-     * and a watcher each would have to be disposed with them, which `GallerySource` has no hook for.
+     * and a watcher each would have to be disposed with them, which `GallerySource` has no hook for. Started
+     * with the first panel and disposed with the last, since a `**\/*` watch costs the editor a recursive watch
+     * of every folder whether or not anything reads it.
      */
-    const revisions = new Map<string, number>();
-    const removed = new Set<string>();
-    const watcher = vscode.workspace.createFileSystemWatcher("**/*");
-    const bump = (uri: vscode.Uri): void => {
-        removed.delete(uri.fsPath);
-        revisions.set(uri.fsPath, (revisions.get(uri.fsPath) ?? 0) + 1);
-    };
-    context.subscriptions.push(
-        watcher,
-        watcher.onDidCreate(bump),
-        watcher.onDidChange(bump),
-        watcher.onDidDelete((uri) => removed.add(uri.fsPath)),
-    );
+    let watch: WorkspaceWatch | undefined;
+    context.subscriptions.push({ dispose: () => watch?.dispose() });
 
     // Kept off `findFiles` as well as filtered inside the source: the filter is what the source promises, this
     // is what stops the editor walking a real checkout's `node_modules` to produce a list we then discard.
@@ -104,6 +131,9 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
         }
         const folders = vscode.workspace.workspaceFolders ?? [];
         if (folders.length === 0) return undefined;
+        // Counted afresh for each source, so the counts never outgrow one reading. The pump that keyed its cache
+        // on the previous source's counts is rebuilt alongside this one.
+        const counts = (watch ??= watchWorkspace()).restart();
         return workspaceSource(
             folders.map((folder) => ({ name: folder.name, path: folder.uri.fsPath })),
             {
@@ -116,7 +146,7 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
                     const found = await vscode.workspace.findFiles(new vscode.RelativePattern(root, "**/*"), heavyDirs);
                     return found.map((uri) => uri.fsPath);
                 },
-                revision: (fsPath) => (removed.has(fsPath) ? undefined : (revisions.get(fsPath) ?? 0)),
+                revision: (fsPath) => (counts.removed.has(fsPath) ? undefined : (counts.revisions.get(fsPath) ?? 0)),
             },
         );
     };
@@ -169,12 +199,17 @@ export function registerGallery(context: vscode.ExtensionContext, deps: GalleryH
 
     /** Wire a panel and make it the live one until it closes. */
     const adopt = (panel: vscode.WebviewPanel, state: GalleryPanelState): void => {
+        // Before wiring: the panel takes its first reading straight away, and a workspace reading counts edits.
+        watch ??= watchWorkspace();
         const handle = wireGalleryPanel(panel, state, context, panelDeps);
         live = { panel, handle };
         panel.onDidDispose(() => {
             // Guarded rather than cleared outright: a panel disposed AFTER another became live would
             // otherwise take the live one's place in the bookkeeping with it.
-            if (live?.panel === panel) live = undefined;
+            if (live?.panel !== panel) return;
+            live = undefined;
+            watch?.dispose();
+            watch = undefined;
         });
     };
 

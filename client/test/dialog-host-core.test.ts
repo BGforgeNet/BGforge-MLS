@@ -8,7 +8,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DialogHostCore, errorMessage, type DialogHostIO } from "../src/dialog-editor/host-core";
+import { DialogHostCore, type DialogHostIO } from "../src/dialog-editor/host-core";
 import type { DialogMessages, DialogModel } from "@bgforge/shared/dialog-model";
 
 /** An empty-but-valid D parse payload: toModel keys off `blocks`, yielding an empty (non-null) model. */
@@ -67,13 +67,6 @@ function newStateModel(): DialogModel {
 
 afterEach(() => {
     vi.useRealTimers();
-});
-
-describe("errorMessage", () => {
-    it("unwraps an Error's message and stringifies anything else", () => {
-        expect(errorMessage(new Error("boom"))).toBe("boom");
-        expect(errorMessage("plain")).toBe("plain");
-    });
 });
 
 describe("DialogHostCore.postModel (via handleReady)", () => {
