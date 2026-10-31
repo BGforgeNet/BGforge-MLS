@@ -32,6 +32,8 @@
   column names stay, and only spaces and tabs separate cells. An encrypted 2DA is left alone.
 - TP2 hovers and completions show a file name with spaces or other special characters as written, not
   percent-encoded (`a b.tpa`, not `a%20b.tpa`).
+- BAF: an object or rectangle in brackets that holds a hex number, such as `[ENEMY.0x10]`, is highlighted like any
+  other.
 
 ### Fallout SSL
 

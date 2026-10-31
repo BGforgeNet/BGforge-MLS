@@ -44,15 +44,16 @@ repository:
   # it makes no difference: a component scopes as what it is either way, so both forms produce identical
   # scopes and a second rule would only duplicate this one.
   #
-  # Components: an IDS name, its numeric equivalent, or a %variable% coordinate. The name/number split is
-  # kept (constant.other vs constant.numeric) rather than flattened - bgforge-monokai paints both purple,
-  # and a theme that distinguishes numbers is free to. The brackets and dots are not part of the value.
+  # Components: an IDS name, its numeric equivalent (decimal, or `0x` and decimal digits), or a %variable%
+  # coordinate. The name/number split is kept (constant.other vs constant.numeric) rather than flattened -
+  # bgforge-monokai paints both purple, and a theme that distinguishes numbers is free to. The brackets and
+  # dots are not part of the value.
   #
   # NOT the object.ids vocabulary (#object-ids): those are the static and marked objects (Myself, Player1,
   # LastSeenBy), written bare without brackets. IESDP lists the three categories separately - a specifier is
   # unbound and re-checked at every reference.
   bracketed-values:
-    begin: (\[)(?=((-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\.(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*)?\])
+    begin: (\[)(?=((-?(0x)?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\.(-?(0x)?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*)?\])
     beginCaptures:
       "1": { name: keyword.punctuation.bracket.weidu-baf }
     end: (\])
@@ -62,7 +63,7 @@ repository:
       - match: \.
         name: keyword.punctuation.separator.weidu-baf
       - include: "#vars"
-      - match: -?\b[0-9]+\b
+      - match: -?\b(0x)?[0-9]+\b
         name: constant.numeric.weidu-baf
       - match: \b[A-Za-z_][A-Za-z0-9_]*\b
         name: constant.other.weidu-baf

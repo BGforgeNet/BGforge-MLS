@@ -272,4 +272,16 @@ describe("weidu-baf TextMate syntax - the forms the reference reads", () => {
         expect(getTokenScopes(bracketed, 0, "7")).toContain(NUMBER);
         expect(getTokenScopes("IF See([]) THEN", 0, "[")).toContain("keyword.punctuation.bracket.weidu-baf");
     });
+
+    it("scopes a 0x component inside a bracket whole, as the reference reads it there too", () => {
+        const specifier = "IF See([ENEMY.0x10]) THEN";
+        const rectangle = "IF See(Player1[0x10.2.3.4]) THEN";
+
+        expect(getTokenScopes(specifier, 0, "[")).toContain("keyword.punctuation.bracket.weidu-baf");
+        expect(getTokenScopes(specifier, 0, "ENEMY")).toContain(CONSTANT);
+        expect(getTokenScopes(specifier, 0, "0x10")).toContain(NUMBER);
+        expect(getTokenScopes(rectangle, 0, "[")).toContain("keyword.punctuation.bracket.weidu-baf");
+        expect(getTokenScopes(rectangle, 0, "0x10")).toContain(NUMBER);
+        expect(getTokenScopes("IF See([0xFF]) THEN", 0, "0xFF")).not.toContain(NUMBER);
+    });
 });

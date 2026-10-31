@@ -58,7 +58,7 @@
       ]
     },
     "bracketed-values": {
-      "begin": "(\\[)(?=((-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\\.(-?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*)?\\])",
+      "begin": "(\\[)(?=((-?(0x)?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*)(\\.(-?(0x)?[0-9]+|%[A-Za-z_][A-Za-z0-9_]*%|[A-Za-z_][A-Za-z0-9_]*))*)?\\])",
       "beginCaptures": {
         "1": {
           "name": "keyword.punctuation.bracket.weidu-baf"
@@ -79,7 +79,7 @@
           "include": "#vars"
         },
         {
-          "match": "-?\\b[0-9]+\\b",
+          "match": "-?\\b(0x)?[0-9]+\\b",
           "name": "constant.numeric.weidu-baf"
         },
         {
