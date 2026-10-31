@@ -6,7 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "yaml";
-import { errorMessage } from "./diagnostics";
+import { errorMessage, getErrnoCode } from "./diagnostics";
 import { conlog } from "./logger";
 
 export interface SSLsettings {
@@ -17,6 +17,11 @@ export interface SSLsettings {
     compileOnValidate: boolean;
     /** Which compiler runs when no external `compilePath` is configured. */
     compiler: "wasm" | "built-in";
+}
+
+/** Splits a `compileOptions` setting into its arguments: any run of whitespace separates two of them. */
+export function compileOptionArgs(compileOptions: string): string[] {
+    return compileOptions.split(/\s+/).filter(Boolean);
 }
 
 export interface TSSLsettings {
@@ -53,9 +58,8 @@ export interface MLSsettings {
     debug: boolean;
 }
 
-// The global settings, used when the `workspace/configuration` request is not supported by the client.
-// Please note that this is not the case when using this server with the client provided in this example
-// but could happen with other clients.
+// The global settings, used when the client does not support the `workspace/configuration` request. The
+// extension's own client does; another LSP client may not.
 
 export const defaultSettings: MLSsettings = {
     falloutSSL: {
@@ -158,7 +162,12 @@ export function project(dir: string | undefined) {
             }
         }
     } catch (error) {
-        conlog(`Failed to load .bgforge.yml from ${dir}: ${errorMessage(error)}`, "warn");
+        // The file is optional, so its absence is the common case rather than an anomaly.
+        if (getErrnoCode(error) === "ENOENT") {
+            conlog(`No .bgforge.yml in ${dir}, using default project settings`, "debug");
+        } else {
+            conlog(`Failed to load .bgforge.yml from ${dir}: ${errorMessage(error)}`, "warn");
+        }
     }
     return settings;
 }

@@ -20,7 +20,7 @@ import { intOutputPath } from "../core/int-output-path";
 import { compileOnWorker } from "./compile-worker-client";
 import { abortAllCompiles, withCompileLifecycle } from "../core/compile-with-tmp-file";
 import { normalizeUri } from "../core/normalized-uri";
-import type { MLSsettings } from "../settings";
+import { compileOptionArgs, type MLSsettings } from "../settings";
 
 /**
  * In-flight compiles per document, so a save displaces the compile the previous one started rather
@@ -61,7 +61,7 @@ export async function compileTsslToInt(
     // setting is what already decided how a `.tssl` was compiled when it went through generated SSL.
     // The rest of that line addresses an SSL text compiler - a preprocessor, a keyword set, an output
     // format - and names nothing a TypeScript source has, so it is not read here.
-    const args = parseArgs(settings.falloutSSL.compileOptions.split(/\s+/).filter(Boolean));
+    const args = parseArgs(compileOptionArgs(settings.falloutSSL.compileOptions));
 
     const written = interactive || settings.falloutSSL.compileOnValidate;
     const intPath = intOutputPath(filepath, settings.falloutSSL.outputDirectory, uri, written);

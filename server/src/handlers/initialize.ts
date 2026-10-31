@@ -5,6 +5,7 @@ import {
     DidChangeConfigurationNotification,
     DidChangeWatchedFilesNotification,
 } from "vscode-languageserver/node";
+import { errorMessage } from "../diagnostics";
 import { conlog } from "../logger";
 import {
     LANG_FALLOUT_MSG,
@@ -108,7 +109,7 @@ export function register(ctx: HandlerContext): void {
                     translation.reloadConsumer(document.uri, text, document.languageId);
                 }
             })
-            .catch((error) => conlog(`Translation load failed: ${error}`, "error"));
+            .catch((error: unknown) => conlog(`Translation load failed: ${errorMessage(error)}`, "error"));
 
         // Route parser-init log lines through the LSP connection so they surface
         // in the client's Output panel (the default console.error sink would lose
@@ -200,9 +201,8 @@ export function register(ctx: HandlerContext): void {
         updateServerSettings(freshSettings);
         registry.updateSettings(freshSettings);
 
-        // Register file watchers for header files
-        // NOTE: For standalone LSP usage (e.g., Claude Code) where client may not support
-        // file watching, consider adding chokidar-based fallback in the future.
+        // Register file watchers for header files. A client without dynamic file-watcher registration gets no
+        // header change notifications; see the log line below.
         if (capabilityFlags.fileWatching) {
             const watchPatterns = registry.getWatchPatterns();
             if (watchPatterns.length > 0) {

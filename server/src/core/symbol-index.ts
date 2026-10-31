@@ -12,6 +12,7 @@
  */
 
 import { type CancellationToken, type Location, type SymbolInformation } from "vscode-languageserver/node";
+import { conlog } from "../logger";
 import type { NormalizedUri } from "./normalized-uri";
 import { type NameCase, nameCaseKey } from "./name-case";
 import { type SymbolKind, type IndexedSymbol, ScopeLevel, SourceType, symbolKindToVscodeKind } from "./symbol";
@@ -98,6 +99,9 @@ export class Symbols {
 
     /** Maximum number of files retained; oldest-inserted is evicted on overflow. */
     private readonly maxFiles: number;
+
+    /** Set once the first eviction has been logged, so a workspace past the cap logs one warning, not one per file. */
+    private evictionLogged = false;
 
     /** Static symbols (built-in, from YAML/JSON) */
     private staticSymbols: readonly IndexedSymbol[] = [];
@@ -204,6 +208,15 @@ export class Symbols {
             if (oldestKey !== undefined) {
                 this.removeFileFromIndices(oldestKey);
                 this.files.delete(oldestKey);
+            }
+            if (!this.evictionLogged) {
+                this.evictionLogged = true;
+                conlog(
+                    `Symbol index reached its cap of ${this.maxFiles} files and is evicting the least recently ` +
+                        "updated ones: definitions, references, completion and workspace symbols no longer cover " +
+                        "evicted files. Further evictions are not logged.",
+                    "warn",
+                );
             }
         }
 

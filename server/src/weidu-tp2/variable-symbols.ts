@@ -5,6 +5,7 @@
 
 import type { Location, Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { REGEX_TP2_STRING_VAR } from "../core/patterns";
 import { makeRange } from "../core/position-utils";
 import { parseWithCache, isInitialized } from "@bgforge/shared/parsers/weidu-tp2";
 import { ScopeKind, type ScopeKind as ScopeKindValue } from "./scope-kinds";
@@ -206,10 +207,7 @@ function findVariableInStringContent(node: SyntaxNode, position: Position): stri
     }
 
     // Find all %var% patterns in the text
-    const varPattern = /%([a-zA-Z_][a-zA-Z0-9_]*)%/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = varPattern.exec(text)) !== null) {
+    for (const match of text.matchAll(REGEX_TP2_STRING_VAR)) {
         const matchStart = match.index;
         const matchEnd = match.index + match[0].length;
 

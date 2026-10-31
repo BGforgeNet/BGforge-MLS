@@ -6,6 +6,7 @@
 
 import type { Position } from "vscode-languageserver/node";
 import type { Node as SyntaxNode } from "web-tree-sitter";
+import { REGEX_TP2_STRING_VAR } from "../core/patterns";
 import { ScopeKind } from "./scope-kinds";
 import { SyntaxType } from "./syntax-type";
 import {
@@ -393,10 +394,7 @@ function findAllVariableReferencesInStringContent(node: SyntaxNode, varName: str
     const references: SyntaxNode[] = [];
 
     // Find all %varName% patterns (case-insensitive)
-    const varPattern = /%([a-zA-Z_][a-zA-Z0-9_]*)%/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = varPattern.exec(text)) !== null) {
+    for (const match of text.matchAll(REGEX_TP2_STRING_VAR)) {
         const foundVarName = match[1];
         if (foundVarName !== undefined && matchesSymbol(foundVarName, varName)) {
             // Create a synthetic node for this %var% reference

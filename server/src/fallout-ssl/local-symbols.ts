@@ -5,7 +5,7 @@
  * hover/completion/definition handling. Delegates to shared symbol builders
  * in utils.ts (buildProcedureSymbol, buildMacroSymbol, buildVariableSymbol).
  *
- * Cached by text hash for performance - same text returns same result.
+ * Cached per document URI and version (FIFO eviction) - an unchanged document returns the same result.
  */
 
 import type { IndexedSymbol } from "../core/symbol";
@@ -41,7 +41,7 @@ interface LocalSymbolsData {
     byFoldedName: Map<string, IndexedSymbol>;
 }
 
-/** LRU cache for local symbols */
+/** FIFO cache for local symbols, keyed by document URI and version */
 const cache = new TextCache<LocalSymbolsData>();
 
 /**

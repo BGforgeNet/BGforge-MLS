@@ -3,13 +3,13 @@
  *
  * LSP `textDocument/publishDiagnostics` is last-write-wins: each
  * `sendDiagnostics(uri, [...])` replaces the file's entire diagnostic set. That
- * is fine when a single producer owns a file, but the extension now publishes
- * from two independent sources for the same file - the external compiler
- * (sslc / weidu) and the tree-sitter parse - and a raw send from either would
- * wipe the other.
+ * is fine when a single producer owns a file, but the extension publishes
+ * from several independent sources for the same file (see `DiagnosticSource`) -
+ * the compiler and the tree-sitter parse among them - and a raw send from any
+ * one would wipe the others.
  *
  * This store keeps one bucket per (uri, source) and republishes the union on
- * every change, so the two sources coexist regardless of arrival order (the
+ * every change, so the sources coexist regardless of arrival order (the
  * tree-sitter pass is synchronous; the compiler result arrives later, async).
  */
 

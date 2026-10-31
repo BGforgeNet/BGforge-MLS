@@ -96,6 +96,19 @@ describe("shared/text-cache", () => {
             expect(parse).toHaveBeenCalledOnce();
         });
 
+        it("does not evict another entry when re-parsing a URI already held at capacity", () => {
+            const cache = new TextCache<string>(2);
+            cache.getOrParse("file:///a.ssl", 1, "a", (t) => t);
+            cache.getOrParse("file:///b.ssl", 1, "b", (t) => t);
+
+            cache.getOrParse("file:///b.ssl", 2, "b2", (t) => t);
+
+            expect(cache.size).toBe(2);
+            const parse = vi.fn((t: string) => t);
+            expect(cache.getOrParse("file:///a.ssl", 1, "a", parse)).toBe("a");
+            expect(parse).not.toHaveBeenCalled();
+        });
+
         it("does not evict when cache size is below maximum", () => {
             const cache = new TextCache<number>(10);
             const parse = vi.fn().mockImplementation((_t: string, uri: string) => uri.length);

@@ -1,6 +1,6 @@
 /**
- * Centralized regex patterns for translation references.
- * Single source of truth for all translation-related patterns.
+ * Centralized regex patterns shared across features.
+ * Single source of truth for translation references and other patterns more than one module scans for.
  */
 
 // =============================================================================
@@ -103,6 +103,17 @@ export function regexMsgRef(entryNum: string): RegExp {
         "g",
     );
 }
+
+// =============================================================================
+// WeiDU TP2 string interpolation
+// Matches: %var% inside string content, which the grammar leaves as raw text
+// =============================================================================
+
+/**
+ * Matches one `%name%` variable reference; group 1 is the name without the `%` delimiters. Global, so scan it
+ * with `String.prototype.matchAll`, which never moves this shared instance's `lastIndex`.
+ */
+export const REGEX_TP2_STRING_VAR = /%([a-zA-Z_][a-zA-Z0-9_]*)%/g;
 
 // =============================================================================
 // @tra comment pattern

@@ -27,7 +27,7 @@ vi.mock("../../src/uri-utils", () => ({
 }));
 
 vi.mock("node:fs/promises", () => ({
-    readFile: vi.fn().mockResolvedValue("mock file content"),
+    readFile: vi.fn().mockResolvedValue(Buffer.from("mock file content")),
 }));
 
 function scannerProvider(reload: () => void): LanguageProvider {
@@ -95,5 +95,24 @@ describe("scanWorkspaceFiles", () => {
         });
 
         expect(done).toHaveBeenCalledTimes(1);
+    });
+
+    it("decodes a file that is not valid UTF-8 as windows-1252", async () => {
+        const { findFilesByExtensions } = await import("../../src/path-utils");
+        vi.mocked(findFilesByExtensions).mockResolvedValue(["lib/legacy.tph"]);
+        const { readFile } = await import("node:fs/promises");
+        // "caf" then 0xE9, which is "e acute" in windows-1252 and a truncated sequence in UTF-8.
+        vi.mocked(readFile).mockResolvedValueOnce(Buffer.from([0x63, 0x61, 0x66, 0xe9]));
+        const reloaded: string[] = [];
+
+        await scanWorkspaceFiles(
+            [scannerProvider(() => undefined)],
+            {
+                reloadFileData: (_providerId: string, _uri: string, text: string) => reloaded.push(text),
+            },
+            "/root",
+        );
+
+        expect(reloaded).toEqual(["caf\u00E9"]);
     });
 });

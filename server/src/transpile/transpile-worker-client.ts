@@ -12,7 +12,7 @@
  * it carries, so the boundary is not where the time goes.
  */
 
-import { TranspileError } from "../../../transpilers/common/transpile-error";
+import { TranspileError } from "@bgforge/transpile/internal";
 import { createWorkerClient } from "../worker/worker-client";
 import type { DDialogData, SSLDialogData } from "@bgforge/shared/dialog-types";
 import type { TranspileRequest, TranspileResponse, TranspileWorkerResult } from "./transpile-worker-protocol";

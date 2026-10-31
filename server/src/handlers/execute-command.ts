@@ -143,7 +143,8 @@ export function register(ctx: HandlerContext): void {
                     return;
                 }
 
-                const uri = typeof args.uri === "string" ? args.uri : undefined;
+                // args[0] may be absent, as in the branches above.
+                const uri = typeof args?.uri === "string" ? args.uri : undefined;
                 if (!uri || !uri.startsWith("file://")) {
                     conlog(`Compile: invalid non-file uri '${String(uri)}'`);
                     showInfo("Focus a valid file to run commands!");

@@ -15,6 +15,7 @@ import pLimit from "p-limit";
 import type { LanguageProvider } from "../language-provider";
 import { conlog } from "../logger";
 import { findFilesByExtensions, WORKSPACE_SCAN_CONCURRENCY } from "../path-utils";
+import { decodeFileBytes } from "../translation/encoding";
 import { pathToUri } from "../uri-utils";
 
 /**
@@ -105,7 +106,8 @@ async function scan(
                 try {
                     const absolutePath = join(workspaceRoot, relativePath);
                     const uri = pathToUri(absolutePath);
-                    const text = await readFile(absolutePath, "utf-8");
+                    // UTF-8, else windows-1252, as every other workspace read decodes a legacy-codepage file.
+                    const { text } = decodeFileBytes(await readFile(absolutePath));
                     registry.reloadFileData(provider.id, uri, text);
                 } catch {
                     failed.set(ext, (failed.get(ext) ?? 0) + 1);

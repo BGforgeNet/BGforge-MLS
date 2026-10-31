@@ -5,7 +5,7 @@
  * hover/completion/definition handling. This is the bridge between
  * AST-based local analysis and the indexed symbol lookup system.
  *
- * Cached by text hash for performance - same text returns same result.
+ * Cached per document URI and version (FIFO eviction) - an unchanged document returns the same result.
  * Also maintains a name->symbol map for O(1) lookups.
  *
  * Symbol-building pattern: Delegates to header-parser helpers.
@@ -26,7 +26,7 @@ export interface LocalSymbolsData {
     byName: ReadonlyMap<string, IndexedSymbol>;
 }
 
-/** LRU cache for local symbols */
+/** FIFO cache for local symbols, keyed by document URI and version */
 const cache = new TextCache<LocalSymbolsData>();
 
 /**

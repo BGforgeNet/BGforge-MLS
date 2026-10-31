@@ -22,7 +22,9 @@ vi.mock("../../src/logger", () => ({
     conlog: vi.fn(),
 }));
 
+import * as path from "path";
 import { loadStaticSymbols } from "../../src/core/static-loader";
+import { conlog } from "../../src/logger";
 import { readFileSync } from "fs";
 
 const mockReadFileSync = vi.mocked(readFileSync);
@@ -45,6 +47,23 @@ describe("static-loader", () => {
             const result = loadStaticSymbols("nonexistent-lang");
 
             expect(result).toEqual([]);
+        });
+
+        it("warns naming the completion file when it cannot be read", () => {
+            mockReadFileSync.mockImplementation(() => {
+                throw new Error("ENOENT: no such file");
+            });
+
+            loadStaticSymbols("nonexistent-lang");
+
+            expect(vi.mocked(conlog)).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(conlog)).toHaveBeenCalledWith(
+                `Failed to load static completion data for nonexistent-lang from ${path.join(
+                    import.meta.dirname,
+                    "../../src/shared/completion.nonexistent-lang.json",
+                )}: ENOENT: no such file`,
+                "warn",
+            );
         });
 
         it("should return empty array for empty JSON array", () => {

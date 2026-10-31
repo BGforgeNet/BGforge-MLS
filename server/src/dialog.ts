@@ -20,7 +20,6 @@ import {
     isSslMessageFn,
     isSslOptionFn,
 } from "@bgforge/shared/dialog-types";
-export { type SSLDialogData as DialogData } from "@bgforge/shared/dialog-types";
 
 // Default: no side-effect set supplied -> no detection (honest under-badging, preserving
 // the parser's pre-side-effect behavior for callers that don't pass the set).

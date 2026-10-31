@@ -8,8 +8,14 @@
  * it to "most-recent" position so it is not the next eviction candidate.
  */
 
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CompletionItemKind } from "vscode-languageserver/node";
+
+vi.mock("../../src/logger", () => ({
+    conlog: vi.fn(),
+}));
+
+import { conlog } from "../../src/logger";
 import { Symbols } from "../../src/core/symbol-index";
 import { type IndexedSymbol, SymbolKind, ScopeLevel, SourceType } from "../../src/core/symbol";
 
@@ -42,6 +48,34 @@ function makeSymbol(name: string, uri: string): IndexedSymbol {
 // ---------------------------------------------------------------------------
 
 describe("Symbols LRU cap", () => {
+    beforeEach(() => {
+        vi.mocked(conlog).mockClear();
+    });
+
+    it("warns once, on the first eviction, that evicted files drop out of cross-file answers", () => {
+        const index = new Symbols({ maxFiles: 3 });
+
+        for (let i = 1; i <= 3; i++) {
+            const uri = makeUri(i) as Parameters<typeof index.updateFile>[0];
+            index.updateFile(uri, [makeSymbol(`sym${i}`, uri)]);
+        }
+        expect(vi.mocked(conlog)).not.toHaveBeenCalled();
+
+        for (let i = 4; i <= 6; i++) {
+            const uri = makeUri(i) as Parameters<typeof index.updateFile>[0];
+            index.updateFile(uri, [makeSymbol(`sym${i}`, uri)]);
+        }
+
+        expect(vi.mocked(conlog).mock.calls).toEqual([
+            [
+                "Symbol index reached its cap of 3 files and is evicting the least recently updated ones: " +
+                    "definitions, references, completion and workspace symbols no longer cover evicted files. " +
+                    "Further evictions are not logged.",
+                "warn",
+            ],
+        ]);
+    });
+
     it("evicts oldest file when maxFiles is exceeded", () => {
         // Cap at 3, insert 5 files - files 1 and 2 must be evicted.
         const index = new Symbols({ maxFiles: 3 });

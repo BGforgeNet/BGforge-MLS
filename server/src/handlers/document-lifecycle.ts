@@ -205,7 +205,7 @@ export function register(ctx: HandlerContext): void {
                     return;
                 }
 
-                // Drop both diagnostic sources so stale marks vanish immediately on edit.
+                // Drop every diagnostic source so stale marks vanish immediately on edit.
                 clearAllDiagnostics(uri);
 
                 const docSettings = await ctx.getDocumentSettings(uri);

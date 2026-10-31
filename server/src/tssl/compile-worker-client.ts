@@ -13,7 +13,7 @@
  */
 
 import * as path from "path";
-import { TranspileError } from "../../../transpilers/common/transpile-error";
+import { TranspileError } from "@bgforge/transpile/internal";
 import { conlog } from "../logger";
 import { createWorkerClient } from "../worker/worker-client";
 import type { CompileRequest, CompileResponse } from "./compile-worker-protocol";

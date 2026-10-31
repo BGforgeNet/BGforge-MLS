@@ -200,6 +200,19 @@ describe("ssl_compile", () => {
         });
     });
 
+    describe("compile options", () => {
+        it("splits options on any whitespace, tabs included", async () => {
+            const proc = createMockProcess();
+            mockFork.mockReturnValue(proc);
+
+            const promise = ssl_compile({ ...baseOpts, options: "-q\t-p  -O2\n-n" });
+            proc.emit("close", 0);
+            await promise;
+
+            expect(mockFork.mock.calls[0]![1]).toEqual(["-q", "-p", "-O2", "-n", "script.ssl", "-o", "script.int"]);
+        });
+    });
+
     describe("-I flag conflict warning", () => {
         it("strips user -I flags and warns in interactive mode", async () => {
             const proc = createMockProcess();

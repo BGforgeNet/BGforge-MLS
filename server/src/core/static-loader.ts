@@ -13,12 +13,10 @@
  * from tooltip-format.ts and tooltip-table.ts.
  */
 
-import { readFileSync } from "fs";
-import * as path from "path";
 import { type CompletionItem, CompletionItemKind, type MarkupContent } from "vscode-languageserver/node";
 import type { CompletionItemWithCategory, CompletionCategory } from "../shared/completion-context";
+import { loadStaticJson } from "../shared/static-data";
 import { WEIDU_TP2_STANZAS } from "@bgforge/shared/stanza-names";
-import { conlog } from "../logger";
 import {
     type IndexedSymbol,
     type CallableSymbol,
@@ -135,26 +133,12 @@ function completionKindToSymbolKind(kind: CompletionItemKind): SymbolKind {
  * @returns Array of IndexedSymbol objects ready for Symbols.loadStatic()
  */
 export function loadStaticSymbols(langId: string): IndexedSymbol[] {
-    const items = loadCompletionJson(langId);
+    const items = loadStaticJson<StaticCompletionItem[]>("completion", langId);
     if (!items || items.length === 0) {
         return [];
     }
 
     return items.map((item) => convertToSymbol(item));
-}
-
-/**
- * Load raw completion items from JSON file.
- */
-function loadCompletionJson(langId: string): StaticCompletionItem[] | undefined {
-    try {
-        // __dirname in bundled code points to server/out/
-        const filePath = path.join(__dirname, `completion.${langId}.json`);
-        return JSON.parse(readFileSync(filePath, "utf-8")) as StaticCompletionItem[];
-    } catch (error) {
-        conlog(`Failed to load static completion data for ${langId}: ${error}`);
-        return undefined;
-    }
 }
 
 /**

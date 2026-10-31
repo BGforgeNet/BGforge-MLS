@@ -6,6 +6,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { conlog } from "../logger";
+import { compileOptionArgs } from "../settings";
 import { showWarning } from "../user-messages";
 import { fork } from "child_process";
 
@@ -62,10 +63,7 @@ export async function ssl_compile(opts: {
         };
     }
 
-    let cmdArgs = opts.options
-        .split(" ")
-        .map((s) => s.trim())
-        .filter(Boolean);
+    let cmdArgs = compileOptionArgs(opts.options);
 
     if (opts.headersDir) {
         if (cmdArgs.some((s) => s.startsWith("-I"))) {
@@ -151,8 +149,8 @@ export async function ssl_compile(opts: {
             conlog(msg, "error");
         }, timeoutMs);
 
-        // Handle fork failures (e.g., ENOENT when compiler module is missing).
-        // Without this, the promise would never resolve if fork fails before "close".
+        // Handle fork failures (e.g., ENOENT when compiler module is missing): log the error and keep its
+        // message for the result. The "close" that follows settles the promise, or the timer does.
         p.on("error", (err) => {
             conlog(`WebAssembly compiler fork error: ${err.message}`, "error");
             stderr.push(err.message);

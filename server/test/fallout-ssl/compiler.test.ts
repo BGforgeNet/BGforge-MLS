@@ -82,6 +82,11 @@ vi.mock("../../src/user-messages", () => ({
     showErrorWithActions: (...args: unknown[]) => mockShowErrorWithActions(...args),
 }));
 
+const mockConlog = vi.fn();
+vi.mock("../../src/logger", () => ({
+    conlog: (...args: unknown[]) => mockConlog(...args),
+}));
+
 const mockWasmCompiler = vi.fn();
 vi.mock("../../src/sslc/ssl_compiler", () => ({
     ssl_compile: (...args: unknown[]) => mockWasmCompiler(...args),
@@ -223,6 +228,23 @@ describe("fallout-ssl compiler", () => {
             await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
 
             expect(mockUnlink).toHaveBeenCalledWith(expect.stringContaining(TMP_SSL_NAME));
+        });
+
+        it("logs a failed compiler version check with the error's own message", async () => {
+            const externalSettings = { ...baseSettings, compilePath: "compile" };
+            mockExecFile.mockImplementation((...args: unknown[]) => {
+                const lastArg = args[args.length - 1];
+                if (typeof lastArg === "function" && (args[1] as string[]).includes("--version")) {
+                    (lastArg as (err: Error) => void)(new Error("spawn compile ENOENT"));
+                }
+            });
+
+            await compile(normalizeUri("file:///project/test.ssl"), externalSettings, false, "code");
+
+            expect(mockConlog).toHaveBeenCalledWith(
+                "Compiler check 'compile --version' failed: spawn compile ENOENT",
+                "warn",
+            );
         });
 
         it("cleans up tmp file even when external compiler fails", async () => {

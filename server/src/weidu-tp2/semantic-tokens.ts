@@ -19,6 +19,7 @@
 import { SemanticTokenTypes } from "vscode-languageserver/node";
 import type { Node } from "web-tree-sitter";
 import { isInitialized, parseWithCache } from "@bgforge/shared/parsers/weidu-tp2";
+import { REGEX_TP2_STRING_VAR } from "../core/patterns";
 import { SyntaxType } from "./syntax-type";
 import {
     collectLoopVarNames,
@@ -89,10 +90,7 @@ function scanStringContentForMatches(
     out: SemanticTokenSpan[],
 ): void {
     const text = node.text;
-    const varPattern = /%([a-zA-Z_][a-zA-Z0-9_]*)%/g;
-    let match: RegExpExecArray | null;
-
-    while ((match = varPattern.exec(text)) !== null) {
+    for (const match of text.matchAll(REGEX_TP2_STRING_VAR)) {
         const varName = match[1]!;
         const tokenType = resolveTokenType(varName);
         if (!tokenType) {

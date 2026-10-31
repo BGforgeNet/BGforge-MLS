@@ -18,6 +18,7 @@ import { FileChangeType, WatchKind } from "vscode-languageserver/node";
 import type { LanguageProvider } from "../language-provider";
 import { errorMessage } from "../diagnostics";
 import { conlog } from "../logger";
+import { decodeFileBytes } from "../translation/encoding";
 import { normalizeUri } from "./normalized-uri";
 
 /**
@@ -93,7 +94,8 @@ export class FileWatcherManager {
         } else {
             // Created or Changed - reload the file data
             try {
-                const text = await readFile(filePath, "utf-8");
+                // UTF-8, else windows-1252, as every other workspace read decodes a legacy-codepage file.
+                const { text } = decodeFileBytes(await readFile(filePath));
                 if (provider.reloadFileData) {
                     provider.reloadFileData(normUri, text);
                     conlog(

@@ -8,7 +8,7 @@
  *
  * Eviction is FIFO, not LRU: a cache hit returns without re-inserting, so entries
  * are dropped in insertion order once `maxSize` distinct URIs are held. Entries
- * are one-per-URI and version-invalidated, and both callers keep tiny per-document
+ * are one-per-URI and version-invalidated, and the callers keep tiny per-document
  * working sets, so the eviction policy is effectively never exercised - FIFO keeps
  * the implementation a plain insertion-ordered Map with no reordering on read.
  */
@@ -79,8 +79,9 @@ export class TextCache<T> {
             return null;
         }
 
-        // Evict oldest if at capacity (Map maintains insertion order)
-        if (this.cache.size >= this.maxSize) {
+        // Evict oldest if a new key would go past capacity (Map maintains insertion order). Replacing a held
+        // key's stale version adds no entry, so it evicts nothing.
+        if (!cached && this.cache.size >= this.maxSize) {
             const oldestKey = this.cache.keys().next().value;
             if (oldestKey !== undefined) {
                 this.cache.delete(oldestKey);

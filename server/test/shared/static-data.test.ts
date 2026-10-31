@@ -20,7 +20,9 @@ vi.mock("../../src/logger", () => ({
     conlog: vi.fn(),
 }));
 
+import * as path from "path";
 import { loadStaticMap } from "../../src/shared/static-data";
+import { conlog } from "../../src/logger";
 import { readFileSync } from "fs";
 
 const mockReadFileSync = vi.mocked(readFileSync);
@@ -51,6 +53,37 @@ describe("shared/static-data", () => {
 
             expect(result).toBeInstanceOf(Map);
             expect(result.size).toBe(0);
+        });
+
+        it("warns naming the file and the error's own message when the file cannot be read", () => {
+            mockReadFileSync.mockImplementation(() => {
+                throw new Error("ENOENT: no such file or directory");
+            });
+
+            loadStaticMap<string>("hover", "nonexistent-lang");
+
+            expect(vi.mocked(conlog)).toHaveBeenCalledTimes(1);
+            expect(vi.mocked(conlog)).toHaveBeenCalledWith(
+                `Failed to load static hover data for nonexistent-lang from ${path.join(
+                    import.meta.dirname,
+                    "../../src/shared/hover.nonexistent-lang.json",
+                )}: ENOENT: no such file or directory`,
+                "warn",
+            );
+        });
+
+        it("warns when the file holds unparsable JSON", () => {
+            mockReadFileSync.mockReturnValue("{not json");
+
+            const result = loadStaticMap<string>("signature", "weidu-baf");
+
+            expect(result.size).toBe(0);
+            expect(vi.mocked(conlog)).toHaveBeenCalledTimes(1);
+            const [message, level] = vi.mocked(conlog).mock.calls[0]!;
+            expect(level).toBe("warn");
+            expect(message).toMatch(
+                /^Failed to load static signature data for weidu-baf from .*signature\.weidu-baf\.json: /,
+            );
         });
 
         it("returns an empty Map when the JSON contains an empty object", () => {

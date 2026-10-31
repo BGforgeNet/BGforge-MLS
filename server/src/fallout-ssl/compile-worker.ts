@@ -34,9 +34,9 @@ function compile(request: CompileRequest): { errors: Diagnostic[]; warnings: Dia
             warnings: [],
         };
     }
-    // `filepath` is never read: it fixes where a quoted `#include` looks and which file an error names,
-    // so an unsaved buffer compiles exactly as the saved file would. The compiler reports by value and in
-    // source coordinates; nothing here catches or flattens a refusal.
+    // The file at `filepath` is never read - the text is: the path fixes where a quoted `#include` looks and
+    // which file an error names, so an unsaved buffer compiles exactly as the saved file would. The compiler
+    // reports by value and in source coordinates; nothing here catches or flattens a refusal.
     const result = compileSource(parser, request.text, request.filepath, {
         preprocess: { includeDirs: request.includeDirs, defines: request.defines },
         level: request.level,
@@ -73,9 +73,29 @@ const ready = initSSLParser();
 
 parentPort?.on("message", (request: CompileRequest) => {
     // Requests that arrive before the grammar finishes loading queue behind it rather than failing.
-    void ready.then(() => {
-        const response: CompileResponse = { id: request.id, ...compile(request) };
-        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
-        parentPort?.postMessage(response);
-    });
+    void ready
+        .then(() => {
+            const response: CompileResponse = { id: request.id, ...compile(request) };
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
+            parentPort?.postMessage(response);
+        })
+        .catch((error: unknown) => {
+            // Answered rather than dropped, so the caller fails now instead of waiting out its hang timeout.
+            const message = error instanceof Error ? error.message : String(error);
+            const response: CompileResponse = {
+                id: request.id,
+                errors: [
+                    {
+                        uri: pathToUri(request.filepath),
+                        line: 1,
+                        columnStart: 0,
+                        columnEnd: 0,
+                        message: `The SSL compiler failed to run: ${message}`,
+                    },
+                ],
+                warnings: [],
+            };
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
+            parentPort?.postMessage(response);
+        });
 });

@@ -35,7 +35,7 @@ import { compileOnWorker, stopCompileWorker } from "./compile-worker-client";
 import type { NormalizedUri } from "../core/normalized-uri";
 import { getDocuments } from "../lsp-connection";
 import { showError, showErrorWithActions, showInfo, showWarning } from "../user-messages";
-import type { SSLsettings } from "../settings";
+import { compileOptionArgs, type SSLsettings } from "../settings";
 import { ssl_compile as ssl_wasm_compiler } from "../sslc/ssl_compiler";
 import { encodeLikeFileOnDisk, UnsupportedEncodingCharacterError } from "../translation/encoding";
 
@@ -176,7 +176,7 @@ function parseCompileOutput(text: string, uri: string) {
 async function compileWithOwnCompiler(text: string, filepath: string, dstPath: string, sslSettings: SSLsettings) {
     // `compileOptions` is a command line for whichever compiler is selected, so it is read here with the
     // same parser the standalone CLI uses rather than a second, narrower reading of the same string.
-    const args = parseArgs(sslSettings.compileOptions.split(/\s+/).filter(Boolean));
+    const args = parseArgs(compileOptionArgs(sslSettings.compileOptions));
     // A switch this compiler cannot honour is refused rather than dropped. `-b` decides which words are
     // keywords, so compiling without it builds the script against a different language than the settings
     // asked for - and it would fail somewhere in the script rather than at the setting that caused it.
@@ -335,7 +335,10 @@ async function checkExternalCompiler(compilePath: string, interactive: boolean) 
         const launch = launchOf(executable, [...prefixArgs, "--version"]);
         const options = { windowsVerbatimArguments: launch.windowsVerbatimArguments, timeout: PROBE_TIMEOUT_MS };
         cp.execFile(launch.file, launch.args, options, (err) => {
-            conlog(`Compiler check '${compilePath} --version' err=${err}`, err ? "warn" : "debug");
+            conlog(
+                `Compiler check '${compilePath} --version' ${err ? `failed: ${err.message}` : "succeeded"}`,
+                err ? "warn" : "debug",
+            );
             if (err) {
                 failedProbes.add(compilePath);
                 resolve(false);
@@ -374,7 +377,7 @@ export async function compile(
     const tmpUri = pathToUri(tmpPath);
     const parsed = path.parse(filepath);
     const baseName = parsed.base;
-    const compileOptions = sslSettings.compileOptions.split(/\s+/).filter(Boolean);
+    const compileOptions = compileOptionArgs(sslSettings.compileOptions);
     const shouldWriteOutput = interactive || sslSettings.compileOnValidate;
     const dstPath = intOutputPath(filepath, sslSettings.outputDirectory, uri, shouldWriteOutput);
 

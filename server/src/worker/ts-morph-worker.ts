@@ -30,9 +30,18 @@ async function handle(request: WorkerRequest): Promise<WorkerResponse> {
 }
 
 parentPort?.on("message", (request: WorkerRequest) => {
-    queue = queue.then(async () => {
-        const response = await handle(request);
-        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
-        parentPort?.postMessage(response);
-    });
+    queue = queue
+        .then(async () => {
+            const response = await handle(request);
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
+            parentPort?.postMessage(response);
+        })
+        .catch((error: unknown) => {
+            // Answered so the caller fails now rather than at its timeout, and caught so a rejection does not
+            // skip every request chained after it.
+            const message = error instanceof Error ? error.message : String(error);
+            const response: WorkerResponse = { id: request.id, failure: { message: `Internal error: ${message}` } };
+            // oxlint-disable-next-line unicorn/require-post-message-target-origin -- a worker port's postMessage takes no origin; the rule is about window.postMessage.
+            parentPort?.postMessage(response);
+        });
 });

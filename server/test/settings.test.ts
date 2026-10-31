@@ -11,6 +11,7 @@ import * as path from "path";
 // Mock the common module to suppress logs during tests
 vi.mock("../src/diagnostics", () => ({
     errorMessage: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+    getErrnoCode: (err: unknown) => (err instanceof Error && "code" in err ? err.code : undefined),
 }));
 
 vi.mock("../src/logger", () => ({
@@ -149,6 +150,36 @@ describe("settings", () => {
             const settings = project("/some/path");
             expect(settings.translation.directory).toBe("tra");
             expect(settings.translation.auto_tra).toBe(true);
+        });
+
+        it("treats a missing .bgforge.yml as absent, logging at debug only", async () => {
+            mockReadFileSync.mockImplementation(() => {
+                throw Object.assign(new Error("ENOENT: no such file or directory"), { code: "ENOENT" });
+            });
+
+            const { project } = await import("../src/settings");
+            const { conlog } = await import("../src/logger");
+            vi.mocked(conlog).mockClear();
+            project("/some/path");
+
+            expect(vi.mocked(conlog).mock.calls).toEqual([
+                ["No .bgforge.yml in /some/path, using default project settings", "debug"],
+            ]);
+        });
+
+        it("warns when .bgforge.yml exists but cannot be read", async () => {
+            mockReadFileSync.mockImplementation(() => {
+                throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+            });
+
+            const { project } = await import("../src/settings");
+            const { conlog } = await import("../src/logger");
+            vi.mocked(conlog).mockClear();
+            project("/some/path");
+
+            expect(vi.mocked(conlog).mock.calls).toEqual([
+                ["Failed to load .bgforge.yml from /some/path: EACCES: permission denied", "warn"],
+            ]);
         });
 
         it("should parse translation.directory from .bgforge.yml", async () => {

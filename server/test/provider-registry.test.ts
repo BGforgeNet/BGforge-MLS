@@ -70,9 +70,9 @@ vi.mock("node:fs", () => ({
     readFileSync: vi.fn(() => "mock file content"),
 }));
 
-// Mock fs/promises.readFile for startup indexing tests
+// Mock fs/promises.readFile for startup indexing tests. Bytes, as the readers decode them themselves.
 vi.mock("node:fs/promises", () => ({
-    readFile: vi.fn().mockResolvedValue("mock file content"),
+    readFile: vi.fn().mockResolvedValue(Buffer.from("mock file content")),
 }));
 
 // Re-import registry after mocks are set up
