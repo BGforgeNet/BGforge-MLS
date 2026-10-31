@@ -82,15 +82,16 @@ or an immutable exact tag for a fully reproducible action revision:
 ```
 
 `actions/format/v1` is re-pointed to the latest `actions/format/v1.x` release; a breaking change bumps the major.
-Pinning the tag fixes the _action code_ only - the `@bgforge/format` it installs is governed by the `version`
-input (default `latest`), so set `version` too if you need the formatter pinned as well.
+The `version` input defaults to the `@bgforge/format` release that Action version was tested with, so pinning the
+tag pins the formatter as well. `version: latest` is an opt-in: it installs the newest published release on every
+run, so output can change with no change on your side.
 
 ## Inputs
 
 | Name                  | Default                                                 | Description                                                                           |
 | --------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `paths`               | `.`                                                     | Path passed to the format CLI (single path; recursive scan).                          |
-| `version`             | `latest`                                                | npm version specifier for `@bgforge/format`.                                          |
+| `version`             | the tested release                                      | npm version specifier for `@bgforge/format`; `latest` opts into the newest.           |
 | `commit-message`      | `style: format source files`                            | Commit subject when formatting changes files.                                         |
 | `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                      |
 | `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.            |

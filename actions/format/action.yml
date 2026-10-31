@@ -8,9 +8,9 @@ inputs:
     required: false
     default: "."
   version:
-    description: "npm version specifier for @bgforge/format."
+    description: 'npm version specifier for @bgforge/format. Defaults to the release this Action version was tested with; "latest" opts into the newest.'
     required: false
-    default: "latest"
+    default: "0.9.0"
   commit-message:
     description: "Commit subject when formatting changes files."
     required: false
@@ -59,6 +59,7 @@ runs:
       # zizmor: ignore[adhoc-packages] this step's purpose IS installing the
       # consumer-selected published @bgforge/format version to run it; there is
       # no lockfile to install from since the version is a caller-chosen input.
+      # npm, not pnpm: npm is what the consumer's runner provides.
       run: npm install -g "@bgforge/format@${PKG_VERSION}"
 
     - name: List changed source files

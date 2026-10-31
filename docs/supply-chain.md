@@ -12,6 +12,11 @@ and every `dist/*.zip` bundle. Consumers can use these to verify that a release 
 CI pipeline without tampering. npm tarballs carry npm's own provenance instead: `scripts/publish-lib.sh` publishes
 with `--provenance` from GitHub Actions and refuses a real publish anywhere else.
 
+The write scopes those steps need (`contents: write`, `id-token: write`) belong to the tag-only `release` job in
+`build.yml`; the `build` job, which runs every pull request and branch push, holds a read-only token and hands the
+release its artifacts. The reusable Actions under `actions/` install their CLI from npm at the library version each
+Action tag was tested with rather than `latest`, so a consumer who pins an Action tag also pins the code it runs.
+
 ## Static analysis
 
 OpenSSF Scorecard (`.github/workflows/scorecard.yml`) covers project-process hygiene, and CodeQL

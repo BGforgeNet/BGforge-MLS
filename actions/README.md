@@ -1,8 +1,9 @@
 # BGforge MLS reusable Actions
 
-This directory publishes four composite GitHub Actions that run a `@bgforge` CLI over the files changed in an
-event and either commit the result back to the branch (**save** mode, default) or verify it without committing
-(**check** mode):
+This directory publishes four composite GitHub Actions that run a `@bgforge` CLI and either commit the result back
+to the branch (**save** mode, default) or verify it without committing (**check** mode). `binary`, `format` and
+`transpile` process the files changed in an event; `tssl` compiles every source under its scan path, since a
+module's dependents do not show in the event's diff:
 
 | Action              | CLI                                                      | What it does                                         | README                                     |
 | ------------------- | -------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------ |

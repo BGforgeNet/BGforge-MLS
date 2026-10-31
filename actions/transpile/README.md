@@ -75,15 +75,16 @@ or an immutable exact tag for a fully reproducible action revision:
 ```
 
 `actions/transpile/v1` is re-pointed to the latest `actions/transpile/v1.x` release; a breaking change bumps the
-major. Pinning the tag fixes the _action code_ only - the `@bgforge/transpile` it installs is governed by the
-`version` input (default `latest`), so set `version` too if you need the transpiler pinned as well.
+major. The `version` input defaults to the `@bgforge/transpile` release that Action version was tested with, so
+pinning the tag pins the transpiler as well. `version: latest` is an opt-in: it installs the newest published
+release on every run, so output can change with no change on your side.
 
 ## Inputs
 
 | Name                  | Default                                                 | Description                                                                                   |
 | --------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `paths`               | `.`                                                     | Path passed to the transpile CLI (single path; recursive scan).                               |
-| `version`             | `latest`                                                | npm version specifier for `@bgforge/transpile`.                                               |
+| `version`             | the tested release                                      | npm version specifier for `@bgforge/transpile`; `latest` opts into the newest.                |
 | `commit-message`      | `chore: update transpiled output`                       | Commit subject when transpiled output changes.                                                |
 | `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                              |
 | `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                    |

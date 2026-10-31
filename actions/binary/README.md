@@ -75,15 +75,16 @@ or an immutable exact tag for a fully reproducible action revision:
 ```
 
 `actions/binary/v1` is re-pointed to the latest `actions/binary/v1.x` release; a breaking change bumps the major.
-Pinning the tag fixes the _action code_ only - the `@bgforge/binary` it installs is governed by the `version`
-input (default `latest`), so set `version` too if you need the binary parser pinned as well.
+The `version` input defaults to the `@bgforge/binary` release that Action version was tested with, so pinning the
+tag pins the binary parser as well. `version: latest` is an opt-in: it installs the newest published release on
+every run, so output can change with no change on your side.
 
 ## Inputs
 
 | Name                  | Default                                                 | Description                                                                                               |
 | --------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `paths`               | `.`                                                     | Path passed to the binary CLI (single path; recursive scan).                                              |
-| `version`             | `latest`                                                | npm version specifier for `@bgforge/binary`.                                                              |
+| `version`             | the tested release                                      | npm version specifier for `@bgforge/binary`; `latest` opts into the newest.                               |
 | `commit-message`      | `chore: update binary JSON snapshots`                   | Commit subject when snapshots change.                                                                     |
 | `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                                          |
 | `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                                |

@@ -2,6 +2,11 @@
 
 Notable changes to the `actions/transpile` Action. CLI changes: `transpilers/CHANGELOG.md`.
 
+## Unreleased
+
+- `version` defaults to `@bgforge/transpile` 0.5.0, the release this Action was tested with, instead of `latest`, so
+  a pinned Action tag installs a known CLI. Set `version: latest` to keep the newest release on every run.
+
 ## 1.0.4
 
 - Fix: when the last file in the changed list no longer exists, such as one the push deleted, the step no longer

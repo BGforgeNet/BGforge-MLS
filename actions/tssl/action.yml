@@ -8,9 +8,9 @@ inputs:
     required: false
     default: "."
   version:
-    description: "npm version specifier for @bgforge/tssl."
+    description: 'npm version specifier for @bgforge/tssl. Defaults to the release this Action version was tested with; "latest" opts into the newest.'
     required: false
-    default: "latest"
+    default: "0.3.0"
   ssl:
     description: 'If "true", also write the readable .ssl beside each .int and commit it. The .int is never committed.'
     required: false
@@ -75,6 +75,7 @@ runs:
       # zizmor: ignore[adhoc-packages] this step's purpose IS installing the
       # consumer-selected published @bgforge/tssl version to run it; there is no
       # lockfile to install from since the version is a caller-chosen input.
+      # npm, not pnpm: npm is what the consumer's runner provides.
       run: npm install -g "@bgforge/tssl@${PKG_VERSION}"
 
     - name: Build the compiler switches

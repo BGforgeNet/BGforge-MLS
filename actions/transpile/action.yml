@@ -8,9 +8,9 @@ inputs:
     required: false
     default: "."
   version:
-    description: "npm version specifier for @bgforge/transpile."
+    description: 'npm version specifier for @bgforge/transpile. Defaults to the release this Action version was tested with; "latest" opts into the newest.'
     required: false
-    default: "latest"
+    default: "0.5.0"
   commit-message:
     description: "Commit subject when transpiled output changes."
     required: false
@@ -59,6 +59,7 @@ runs:
       # zizmor: ignore[adhoc-packages] this step's purpose IS installing the
       # consumer-selected published @bgforge/transpile version to run it; there is
       # no lockfile to install from since the version is a caller-chosen input.
+      # npm, not pnpm: npm is what the consumer's runner provides.
       run: npm install -g "@bgforge/transpile@${PKG_VERSION}"
 
     - name: List changed source files

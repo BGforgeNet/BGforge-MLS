@@ -94,17 +94,17 @@ or an immutable exact tag for a fully reproducible action revision:
 ```
 
 `actions/tssl/v1` is re-pointed to the latest `actions/tssl/v1.x` release; a breaking change bumps the major.
-Pinning the tag fixes the _action code_ only - the `@bgforge/tssl` it installs is governed by the `version` input
-(default `latest`), so set `version` too if you need the compiler pinned as well. A compiler that emits different
-bytes is a change to what lands in your repo, so pinning `version` is worth considering for this action in
-particular.
+The `version` input defaults to the `@bgforge/tssl` release that Action version was tested with, so pinning the tag
+pins the compiler as well. `version: latest` is an opt-in: it installs the newest published release on every run.
+A compiler that emits different bytes is a change to what lands in your repo, so think twice before opting in for
+this action in particular.
 
 ## Inputs
 
 | Name                  | Default                                                 | Description                                                                                                          |
 | --------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `paths`               | `.`                                                     | Path passed to the tssl CLI (single path; recursive scan).                                                           |
-| `version`             | `latest`                                                | npm version specifier for `@bgforge/tssl`.                                                                           |
+| `version`             | the tested release                                      | npm version specifier for `@bgforge/tssl`; `latest` opts into the newest.                                            |
 | `ssl`                 | `false`                                                 | If `true`, also write the readable `.ssl` beside each `.int` and commit it. The `.int` is never committed.           |
 | `int`                 | `true`                                                  | If `false`, skip the bytecode and write only the `.ssl`. Needs `ssl: "true"`, and makes `opt`/`short-circuit` inert. |
 | `opt`                 | `""`                                                    | Optimisation level (`0`, `1` or `2`). Empty uses the compiler's default.                                             |
