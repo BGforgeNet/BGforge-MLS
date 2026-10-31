@@ -2,1128 +2,1725 @@
 import type { DialogModel } from "@bgforge/shared/dialog-model";
 
 export const REAL_MODEL: DialogModel = {
-    sourceLang: "d",
-    editable: true,
-    roots: [
+    "sourceLang": "d",
+    "editable": true,
+    "roots": [
         {
-            id: "dialog:%tutu_var%BRIELB",
-            label: "%tutu_var%BRIELB",
-            kind: "dialog",
-            states: [
+            "id": "dialog:%tutu_var%BRIELB",
+            "label": "%tutu_var%BRIELB",
+            "kind": "dialog",
+            "states": [
                 {
-                    id: "16",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@2",
-                    trigger: 'Global("HelpBrielbara","GLOBAL",1)',
-                    choices: [
+                    "id": "16",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@2",
+                    "trigger": "Global(\"HelpBrielbara\",\"GLOBAL\",1)",
+                    "choices": [
                         {
-                            id: "16#0",
-                            condition:
-                                'Global("P#CoranBaby","GLOBAL",2) Global("P#Briel_Stay","GLOBAL",1) InParty("coran")',
-                            action: 'SetGlobal("X#BriFinale","GLOBAL",1)',
-                            target: {
-                                kind: "state",
-                                stateId: "returnBriel",
+                            "id": "16#0",
+                            "condition": "Global(\"P#CoranBaby\",\"GLOBAL\",2) Global(\"P#Briel_Stay\",\"GLOBAL\",1) InParty(\"coran\")",
+                            "action": "SetGlobal(\"X#BriFinale\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "returnBriel"
                             },
+                            "sourceRange": {
+                                "start": 444,
+                                "end": 595
+                            },
+                            "targetRange": {
+                                "start": 584,
+                                "end": 595
+                            }
                         },
                         {
-                            id: "16#1",
-                            condition:
-                                'GlobalLT("P#CoranBaby","GLOBAL",2) Global("P#Briel_Stay","GLOBAL",1) InParty("coran")',
-                            action: 'SetGlobal("X#BriFinale","GLOBAL",1)',
-                            target: {
-                                kind: "state",
-                                stateId: "NamaraCor",
+                            "id": "16#1",
+                            "condition": "GlobalLT(\"P#CoranBaby\",\"GLOBAL\",2) Global(\"P#Briel_Stay\",\"GLOBAL\",1) InParty(\"coran\")",
+                            "action": "SetGlobal(\"X#BriFinale\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "NamaraCor"
                             },
+                            "sourceRange": {
+                                "start": 596,
+                                "end": 747
+                            },
+                            "targetRange": {
+                                "start": 738,
+                                "end": 747
+                            }
                         },
                         {
-                            id: "16#2",
-                            condition: 'Global("P#Briel_Stay","GLOBAL",2) InParty("coran")',
-                            action: 'SetGlobal("X#BriFinale","GLOBAL",1)',
-                            target: {
-                                kind: "state",
-                                stateId: "BrielCurse",
+                            "id": "16#2",
+                            "condition": "Global(\"P#Briel_Stay\",\"GLOBAL\",2) InParty(\"coran\")",
+                            "action": "SetGlobal(\"X#BriFinale\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "BrielCurse"
                             },
+                            "sourceRange": {
+                                "start": 748,
+                                "end": 865
+                            },
+                            "targetRange": {
+                                "start": 855,
+                                "end": 865
+                            }
                         },
                         {
-                            id: "16#3",
-                            condition: 'Global("P#Briel_Stay","GLOBAL",3)',
-                            action: 'SetGlobal("X#BriFinale","GLOBAL",1)',
-                            target: {
-                                kind: "state",
-                                stateId: "CoranStay",
+                            "id": "16#3",
+                            "condition": "Global(\"P#Briel_Stay\",\"GLOBAL\",3)",
+                            "action": "SetGlobal(\"X#BriFinale\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CoranStay"
                             },
+                            "sourceRange": {
+                                "start": 866,
+                                "end": 965
+                            },
+                            "targetRange": {
+                                "start": 956,
+                                "end": 965
+                            }
                         },
                         {
-                            id: "16#4",
-                            condition: 'Global("P#Briel_Stay","GLOBAL",1) !InParty("coran")',
-                            action: 'SetGlobal("X#BriFinale","GLOBAL",1)',
-                            target: {
-                                kind: "exit",
+                            "id": "16#4",
+                            "condition": "Global(\"P#Briel_Stay\",\"GLOBAL\",1) !InParty(\"coran\")",
+                            "action": "SetGlobal(\"X#BriFinale\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "exit"
                             },
+                            "sourceRange": {
+                                "start": 966,
+                                "end": 1073
+                            }
                         },
                         {
-                            id: "16#5",
-                            condition: '!Global("P#Briel_Stay","GLOBAL",1) !InParty("coran")',
-                            action: 'SetGlobal("X#BriFinale","GLOBAL",1)',
-                            target: {
-                                kind: "exit",
+                            "id": "16#5",
+                            "condition": "!Global(\"P#Briel_Stay\",\"GLOBAL\",1) !InParty(\"coran\")",
+                            "action": "SetGlobal(\"X#BriFinale\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "exit"
                             },
+                            "sourceRange": {
+                                "start": 1074,
+                                "end": 1182
+                            }
                         },
                         {
-                            id: "16#6",
-                            condition: 'GlobalGT("P#Briel_Stay","GLOBAL",1)',
-                            action: 'SetGlobal("X#BriFinale","GLOBAL",1)',
-                            target: {
-                                kind: "exit",
+                            "id": "16#6",
+                            "condition": "GlobalGT(\"P#Briel_Stay\",\"GLOBAL\",1)",
+                            "action": "SetGlobal(\"X#BriFinale\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 1183,
+                                "end": 1274
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 374,
-                        end: 1278,
+                    "sourceRange": {
+                        "start": 374,
+                        "end": 1278
                     },
+                    "sayRange": {
+                        "start": 441,
+                        "end": 443
+                    },
+                    "triggerRange": {
+                        "start": 377,
+                        "end": 413
+                    }
                 },
                 {
-                    id: "returnBriel",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@31",
-                    trigger:
-                        '%BGT_VAR% Global("P#Briel_Stay","GLOBAL",1) InParty("coran") InMyArea("coran") !StateCheck("coran",CD_STATE_NOTVALID)',
-                    choices: [
+                    "id": "returnBriel",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@31",
+                    "trigger": "%BGT_VAR% Global(\"P#Briel_Stay\",\"GLOBAL\",1) InParty(\"coran\") InMyArea(\"coran\") !StateCheck(\"coran\",CD_STATE_NOTVALID)",
+                    "choices": [
                         {
-                            id: "returnBriel#0",
-                            target: {
-                                kind: "external",
-                                label: "~%CORAN_JOINED%~:CBaby_Chain",
-                                resolved: false,
+                            "id": "returnBriel#0",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%CORAN_JOINED%~:CBaby_Chain",
+                                "resolved": false
                             },
-                        },
+                            "sourceRange": {
+                                "start": 7016,
+                                "end": 7062
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 6862,
-                        end: 7066,
+                    "sourceRange": {
+                        "start": 6862,
+                        "end": 7066
                     },
+                    "sayRange": {
+                        "start": 7012,
+                        "end": 7015
+                    },
+                    "triggerRange": {
+                        "start": 6865,
+                        "end": 6984
+                    }
                 },
                 {
-                    id: "BRIEL_PC",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@32",
-                    choices: [
+                    "id": "BRIEL_PC",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@32",
+                    "choices": [
                         {
-                            id: "BRIEL_PC#0",
-                            text: "@33",
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",4) GiveItemCreate("X#CBABY","coran",1,0,0) GiveItemCreate("X#CBOOK","coran",1,0,0) GiveItemCreate("X#COBAG","coran",1,0,0) GiveItemCreate("X#CMILK","coran",1,0,0)',
-                            target: {
-                                kind: "external",
-                                label: "~%CORAN_JOINED%~:CoranRun",
-                                resolved: false,
+                            "id": "BRIEL_PC#0",
+                            "text": "@33",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",4) GiveItemCreate(\"X#CBABY\",\"coran\",1,0,0) GiveItemCreate(\"X#CBOOK\",\"coran\",1,0,0) GiveItemCreate(\"X#COBAG\",\"coran\",1,0,0) GiveItemCreate(\"X#CMILK\",\"coran\",1,0,0)",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%CORAN_JOINED%~:CoranRun",
+                                "resolved": false
                             },
+                            "sourceRange": {
+                                "start": 7102,
+                                "end": 7357
+                            }
                         },
                         {
-                            id: "BRIEL_PC#1",
-                            text: "@34",
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",4) GiveItemCreate("X#CBABY","coran",1,0,0) GiveItemCreate("X#CBOOK","coran",1,0,0) GiveItemCreate("X#COBAG","coran",1,0,0) GiveItemCreate("X#CMILK","coran",1,0,0)',
-                            target: {
-                                kind: "external",
-                                label: "~%CORAN_JOINED%~:CoranRun",
-                                resolved: false,
+                            "id": "BRIEL_PC#1",
+                            "text": "@34",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",4) GiveItemCreate(\"X#CBABY\",\"coran\",1,0,0) GiveItemCreate(\"X#CBOOK\",\"coran\",1,0,0) GiveItemCreate(\"X#COBAG\",\"coran\",1,0,0) GiveItemCreate(\"X#CMILK\",\"coran\",1,0,0)",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%CORAN_JOINED%~:CoranRun",
+                                "resolved": false
                             },
+                            "sourceRange": {
+                                "start": 7358,
+                                "end": 7613
+                            }
                         },
                         {
-                            id: "BRIEL_PC#2",
-                            text: "@35",
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",4) GiveItemCreate("X#CBABY","coran",1,0,0) GiveItemCreate("X#CBOOK","coran",1,0,0) GiveItemCreate("X#COBAG","coran",1,0,0) GiveItemCreate("X#CMILK","coran",1,0,0)',
-                            target: {
-                                kind: "external",
-                                label: "~%CORAN_JOINED%~:Grumbles",
-                                resolved: false,
+                            "id": "BRIEL_PC#2",
+                            "text": "@35",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",4) GiveItemCreate(\"X#CBABY\",\"coran\",1,0,0) GiveItemCreate(\"X#CBOOK\",\"coran\",1,0,0) GiveItemCreate(\"X#COBAG\",\"coran\",1,0,0) GiveItemCreate(\"X#CMILK\",\"coran\",1,0,0)",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%CORAN_JOINED%~:Grumbles",
+                                "resolved": false
                             },
+                            "sourceRange": {
+                                "start": 7614,
+                                "end": 7869
+                            }
                         },
                         {
-                            id: "BRIEL_PC#3",
-                            text: "@36",
-                            condition: 'Global("P#CoranRomancePath","GLOBAL",1)',
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",4) GiveItemCreate("X#CBABY","coran",1,0,0) GiveItemCreate("X#CBOOK","coran",1,0,0) GiveItemCreate("X#COBAG","coran",1,0,0) GiveItemCreate("X#CMILK","coran",1,0,0)',
-                            target: {
-                                kind: "external",
-                                label: "~%CORAN_JOINED%~:Lover",
-                                resolved: false,
+                            "id": "BRIEL_PC#3",
+                            "text": "@36",
+                            "condition": "Global(\"P#CoranRomancePath\",\"GLOBAL\",1)",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",4) GiveItemCreate(\"X#CBABY\",\"coran\",1,0,0) GiveItemCreate(\"X#CBOOK\",\"coran\",1,0,0) GiveItemCreate(\"X#COBAG\",\"coran\",1,0,0) GiveItemCreate(\"X#CMILK\",\"coran\",1,0,0)",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%CORAN_JOINED%~:Lover",
+                                "resolved": false
                             },
+                            "sourceRange": {
+                                "start": 7870,
+                                "end": 8161
+                            }
                         },
                         {
-                            id: "BRIEL_PC#4",
-                            text: "@37",
-                            action: "GiveGoldForce(-10000)",
-                            target: {
-                                kind: "state",
-                                stateId: "OhMine",
+                            "id": "BRIEL_PC#4",
+                            "text": "@37",
+                            "condition": "PartyGoldGT(\"10001\")",
+                            "action": "GiveGoldForce(-10000)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "OhMine"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 8162,
+                                "end": 8231
+                            },
+                            "targetRange": {
+                                "start": 8225,
+                                "end": 8231
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 7068,
-                        end: 8235,
+                    "sourceRange": {
+                        "start": 7068,
+                        "end": 8235
                     },
+                    "sayRange": {
+                        "start": 7098,
+                        "end": 7101
+                    },
+                    "triggerRange": {
+                        "start": 7071,
+                        "end": 7073
+                    }
                 },
                 {
-                    id: "OhMine",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@38",
-                    choices: [
+                    "id": "OhMine",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@38",
+                    "choices": [
                         {
-                            id: "OhMine#0",
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",5) EscapeArea()',
-                            target: {
-                                kind: "exit",
+                            "id": "OhMine#0",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",5) EscapeArea()",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 8264,
+                                "end": 8334
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 8237,
-                        end: 8338,
+                    "sourceRange": {
+                        "start": 8237,
+                        "end": 8338
                     },
+                    "sayRange": {
+                        "start": 8254,
+                        "end": 8263
+                    },
+                    "triggerRange": {
+                        "start": 8240,
+                        "end": 8242
+                    },
+                    "sayTexts": [
+                        "@38",
+                        "@39"
+                    ]
                 },
                 {
-                    id: "NamaraCor",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@40",
-                    choices: [
+                    "id": "NamaraCor",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@40",
+                    "choices": [
                         {
-                            id: "NamaraCor#0",
-                            target: {
-                                kind: "external",
-                                label: "~%CORAN_JOINED%~:CoranMumbles",
-                                resolved: false,
+                            "id": "NamaraCor#0",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%CORAN_JOINED%~:CoranMumbles",
+                                "resolved": false
                             },
-                        },
+                            "sourceRange": {
+                                "start": 8375,
+                                "end": 8422
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 8340,
-                        end: 8426,
+                    "sourceRange": {
+                        "start": 8340,
+                        "end": 8426
                     },
+                    "sayRange": {
+                        "start": 8371,
+                        "end": 8374
+                    },
+                    "triggerRange": {
+                        "start": 8343,
+                        "end": 8345
+                    }
                 },
                 {
-                    id: "BrielCurse",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@41",
-                    choices: [
+                    "id": "BrielCurse",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@41",
+                    "choices": [
                         {
-                            id: "BrielCurse#0",
-                            target: {
-                                kind: "external",
-                                label: "~%CORAN_JOINED%~:CoranSigh",
-                                resolved: false,
+                            "id": "BrielCurse#0",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%CORAN_JOINED%~:CoranSigh",
+                                "resolved": false
                             },
-                        },
+                            "sourceRange": {
+                                "start": 8464,
+                                "end": 8508
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 8428,
-                        end: 8512,
+                    "sourceRange": {
+                        "start": 8428,
+                        "end": 8512
                     },
+                    "sayRange": {
+                        "start": 8460,
+                        "end": 8463
+                    },
+                    "triggerRange": {
+                        "start": 8431,
+                        "end": 8433
+                    }
                 },
                 {
-                    id: "CoranStay",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@42",
-                    choices: [
+                    "id": "CoranStay",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@42",
+                    "choices": [
                         {
-                            id: "CoranStay#0",
-                            target: {
-                                kind: "exit",
+                            "id": "CoranStay#0",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 8549,
+                                "end": 8564
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 8514,
-                        end: 8568,
+                    "sourceRange": {
+                        "start": 8514,
+                        "end": 8568
                     },
-                },
-            ],
+                    "sayRange": {
+                        "start": 8545,
+                        "end": 8548
+                    },
+                    "triggerRange": {
+                        "start": 8517,
+                        "end": 8519
+                    }
+                }
+            ]
         },
         {
-            id: "dialog:%CORAN_JOINED%",
-            label: "%CORAN_JOINED%",
-            kind: "dialog",
-            states: [
+            "id": "dialog:%CORAN_JOINED%",
+            "label": "%CORAN_JOINED%",
+            "kind": "dialog",
+            "states": [
                 {
-                    id: "CNRBabeBack",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@3",
-                    trigger: '%BGT_VAR% Global("P#CNRBabeBack","GLOBAL",1)',
-                    weight: -2,
-                    choices: [
+                    "id": "CNRBabeBack",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@3",
+                    "trigger": "%BGT_VAR% Global(\"P#CNRBabeBack\",\"GLOBAL\",1)",
+                    "weight": -2,
+                    "choices": [
                         {
-                            id: "CNRBabeBack#0",
-                            action: 'LeaveParty() SetGlobal("%KICKED_OUT%","LOCALS",1) SetLeavePartyDialogFile() ChangeAIScript("",DEFAULT) SetGlobal("P#CNRBabeBack","GLOBAL",2) SetGlobal("P#CoranMoves","GLOBAL",4) SetGlobalTimer("P#Alimony","GLOBAL",604800)',
-                            target: {
-                                kind: "exit",
+                            "id": "CNRBabeBack#0",
+                            "action": "LeaveParty() SetGlobal(\"%KICKED_OUT%\",\"LOCALS\",1) SetLeavePartyDialogFile() ChangeAIScript(\"\",DEFAULT) SetGlobal(\"P#CNRBabeBack\",\"GLOBAL\",2) SetGlobal(\"P#CoranMoves\",\"GLOBAL\",4) SetGlobalTimer(\"P#Alimony\",\"GLOBAL\",604800)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 2030,
+                                "end": 2322
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 1933,
-                        end: 2326,
+                    "sourceRange": {
+                        "start": 1933,
+                        "end": 2326
                     },
-                },
-                {
-                    id: "CORANBABY",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@6",
-                    trigger: '%BGT_VAR% Global("P#CoranBaby","GLOBAL",1)',
-                    weight: -2,
-                    choices: [
-                        {
-                            id: "CORANBABY#0",
-                            text: "@7",
-                            action: 'SetGlobal("P#CoranBaby","GLOBAL",2) RealSetGlobalTimer("P#CFriendTalkTime","GLOBAL",1800)',
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.1",
-                            },
-                        },
-                        {
-                            id: "CORANBABY#1",
-                            text: "@8",
-                            action: 'SetGlobal("P#CoranBaby","GLOBAL",2) SetGlobal("P#CoranRepeat","GLOBAL",1) RealSetGlobalTimer("P#CFriendTalkTime","GLOBAL",1800)',
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.2",
-                            },
-                        },
-                        {
-                            id: "CORANBABY#2",
-                            text: "@9",
-                            action: 'SetGlobal("P#CoranBaby","GLOBAL",2) RealSetGlobalTimer("P#CFriendTalkTime","GLOBAL",1800)',
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.3",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 2612,
-                        end: 3122,
+                    "sayRange": {
+                        "start": 2021,
+                        "end": 2029
                     },
-                },
-                {
-                    id: "CB_1.1",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@10",
-                    choices: [
-                        {
-                            id: "CB_1.1#0",
-                            text: "@11",
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.4",
-                            },
-                        },
-                        {
-                            id: "CB_1.1#1",
-                            text: "@12",
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.5",
-                            },
-                        },
-                        {
-                            id: "CB_1.1#2",
-                            text: "@13",
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.6",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 3124,
-                        end: 3258,
+                    "triggerRange": {
+                        "start": 1947,
+                        "end": 1993
                     },
+                    "sayTexts": [
+                        "@3",
+                        "@4"
+                    ]
                 },
                 {
-                    id: "CB_1.3",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@14",
-                    choices: [
+                    "id": "CORANBABY",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@6",
+                    "trigger": "%BGT_VAR% Global(\"P#CoranBaby\",\"GLOBAL\",1)",
+                    "weight": -2,
+                    "choices": [
                         {
-                            id: "CB_1.3#0",
-                            text: "@11",
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.4",
+                            "id": "CORANBABY#0",
+                            "text": "@7",
+                            "action": "SetGlobal(\"P#CoranBaby\",\"GLOBAL\",2) RealSetGlobalTimer(\"P#CFriendTalkTime\",\"GLOBAL\",1800)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.1"
                             },
+                            "sourceRange": {
+                                "start": 2700,
+                                "end": 2826
+                            },
+                            "targetRange": {
+                                "start": 2820,
+                                "end": 2826
+                            }
                         },
                         {
-                            id: "CB_1.3#1",
-                            text: "@12",
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.5",
+                            "id": "CORANBABY#1",
+                            "text": "@8",
+                            "action": "SetGlobal(\"P#CoranBaby\",\"GLOBAL\",2) SetGlobal(\"P#CoranRepeat\",\"GLOBAL\",1) RealSetGlobalTimer(\"P#CFriendTalkTime\",\"GLOBAL\",1800)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.2"
                             },
+                            "sourceRange": {
+                                "start": 2827,
+                                "end": 2991
+                            },
+                            "targetRange": {
+                                "start": 2985,
+                                "end": 2991
+                            }
                         },
                         {
-                            id: "CB_1.3#2",
-                            text: "@15",
-                            target: {
-                                kind: "state",
-                                stateId: "CB_1.6",
+                            "id": "CORANBABY#2",
+                            "text": "@9",
+                            "action": "SetGlobal(\"P#CoranBaby\",\"GLOBAL\",2) RealSetGlobalTimer(\"P#CFriendTalkTime\",\"GLOBAL\",1800)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.3"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 2992,
+                                "end": 3118
+                            },
+                            "targetRange": {
+                                "start": 3112,
+                                "end": 3118
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 3260,
-                        end: 3394,
+                    "sourceRange": {
+                        "start": 2612,
+                        "end": 3122
                     },
-                },
-                {
-                    id: "CB_1.2",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@16",
-                    choices: [
-                        {
-                            id: "CB_1.2#0",
-                            action: 'SetGlobal("P#CoranRepeat","GLOBAL",1)',
-                            target: {
-                                kind: "exit",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 3396,
-                        end: 3490,
+                    "sayRange": {
+                        "start": 2696,
+                        "end": 2698
                     },
+                    "triggerRange": {
+                        "start": 2626,
+                        "end": 2670
+                    }
                 },
                 {
-                    id: "CB_1.4",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@17",
-                    choices: [
+                    "id": "CB_1.1",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@10",
+                    "choices": [
                         {
-                            id: "CB_1.4#0",
-                            action: 'SetGlobal("P#CoranWillComplain","GLOBAL",1)',
-                            target: {
-                                kind: "exit",
+                            "id": "CB_1.1#0",
+                            "text": "@11",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.4"
                             },
+                            "sourceRange": {
+                                "start": 3156,
+                                "end": 3188
+                            },
+                            "targetRange": {
+                                "start": 3182,
+                                "end": 3188
+                            }
                         },
+                        {
+                            "id": "CB_1.1#1",
+                            "text": "@12",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.5"
+                            },
+                            "sourceRange": {
+                                "start": 3189,
+                                "end": 3221
+                            },
+                            "targetRange": {
+                                "start": 3215,
+                                "end": 3221
+                            }
+                        },
+                        {
+                            "id": "CB_1.1#2",
+                            "text": "@13",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.6"
+                            },
+                            "sourceRange": {
+                                "start": 3222,
+                                "end": 3254
+                            },
+                            "targetRange": {
+                                "start": 3248,
+                                "end": 3254
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 3492,
-                        end: 3592,
+                    "sourceRange": {
+                        "start": 3124,
+                        "end": 3258
                     },
-                },
-                {
-                    id: "CB_1.5",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@18",
-                    choices: [
-                        {
-                            id: "CB_1.5#0",
-                            action: 'ReputationInc(-1) ChangeAlignment("coran",CHAOTIC_NEUTRAL) SetGlobal("P#Briel_Stay","GLOBAL",2) SetGlobal("P#Briel_Stay","GLOBAL",2) SetGlobal("P#CoranRomancePath","GLOBAL",3)',
-                            target: {
-                                kind: "exit",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 3594,
-                        end: 3826,
+                    "sayRange": {
+                        "start": 3152,
+                        "end": 3155
                     },
+                    "triggerRange": {
+                        "start": 3127,
+                        "end": 3129
+                    }
                 },
                 {
-                    id: "CB_1.6",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@19",
-                    choices: [
+                    "id": "CB_1.3",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@14",
+                    "choices": [
                         {
-                            id: "CB_1.6#0",
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",3) ReputationInc(-1) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript("",DEFAULT) EscapeArea()',
-                            target: {
-                                kind: "exit",
+                            "id": "CB_1.3#0",
+                            "text": "@11",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.4"
                             },
+                            "sourceRange": {
+                                "start": 3292,
+                                "end": 3324
+                            },
+                            "targetRange": {
+                                "start": 3318,
+                                "end": 3324
+                            }
                         },
+                        {
+                            "id": "CB_1.3#1",
+                            "text": "@12",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.5"
+                            },
+                            "sourceRange": {
+                                "start": 3325,
+                                "end": 3357
+                            },
+                            "targetRange": {
+                                "start": 3351,
+                                "end": 3357
+                            }
+                        },
+                        {
+                            "id": "CB_1.3#2",
+                            "text": "@15",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_1.6"
+                            },
+                            "sourceRange": {
+                                "start": 3358,
+                                "end": 3390
+                            },
+                            "targetRange": {
+                                "start": 3384,
+                                "end": 3390
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 3828,
-                        end: 4018,
+                    "sourceRange": {
+                        "start": 3260,
+                        "end": 3394
                     },
-                },
-                {
-                    id: "CBABY_SECOND",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@20",
-                    trigger: '%BGT_VAR% Global("P#CBABY_AGAIN","GLOBAL",1)',
-                    weight: -2,
-                    choices: [
-                        {
-                            id: "CBABY_SECOND#0",
-                            text: "@7",
-                            action: 'SetGlobal("P#CBABY_AGAIN","GLOBAL",2)',
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.1",
-                            },
-                        },
-                        {
-                            id: "CBABY_SECOND#1",
-                            text: "@9",
-                            action: 'SetGlobal("P#CBABY_AGAIN","GLOBAL",2)',
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.3",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 4020,
-                        end: 4269,
+                    "sayRange": {
+                        "start": 3288,
+                        "end": 3291
                     },
+                    "triggerRange": {
+                        "start": 3263,
+                        "end": 3265
+                    }
                 },
                 {
-                    id: "DCB_1.1",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@10",
-                    choices: [
+                    "id": "CB_1.2",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@16",
+                    "choices": [
                         {
-                            id: "DCB_1.1#0",
-                            text: "@11",
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.4",
+                            "id": "CB_1.2#0",
+                            "action": "SetGlobal(\"P#CoranRepeat\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
-                        {
-                            id: "DCB_1.1#1",
-                            text: "@12",
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.5",
-                            },
-                        },
-                        {
-                            id: "DCB_1.1#2",
-                            text: "@21",
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.6",
-                            },
-                        },
+                            "sourceRange": {
+                                "start": 3428,
+                                "end": 3486
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 4271,
-                        end: 4409,
+                    "sourceRange": {
+                        "start": 3396,
+                        "end": 3490
                     },
-                },
-                {
-                    id: "DCB_1.3",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@14",
-                    choices: [
-                        {
-                            id: "DCB_1.3#0",
-                            text: "@11",
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.4",
-                            },
-                        },
-                        {
-                            id: "DCB_1.3#1",
-                            text: "@12",
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.5",
-                            },
-                        },
-                        {
-                            id: "DCB_1.3#2",
-                            text: "@15",
-                            target: {
-                                kind: "state",
-                                stateId: "DCB_1.6",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 4411,
-                        end: 4549,
+                    "sayRange": {
+                        "start": 3424,
+                        "end": 3427
                     },
+                    "triggerRange": {
+                        "start": 3399,
+                        "end": 3401
+                    }
                 },
                 {
-                    id: "DCB_1.4",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@17",
-                    choices: [
+                    "id": "CB_1.4",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@17",
+                    "choices": [
                         {
-                            id: "DCB_1.4#0",
-                            action: 'SetGlobal("P#CoranWillComplain","GLOBAL",1)',
-                            target: {
-                                kind: "exit",
+                            "id": "CB_1.4#0",
+                            "action": "SetGlobal(\"P#CoranWillComplain\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 3524,
+                                "end": 3588
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 4551,
-                        end: 4652,
+                    "sourceRange": {
+                        "start": 3492,
+                        "end": 3592
                     },
-                },
-                {
-                    id: "DCB_1.5",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@18",
-                    choices: [
-                        {
-                            id: "DCB_1.5#0",
-                            action: 'ReputationInc(-1) ChangeAlignment("coran",CHAOTIC_NEUTRAL) SetGlobal("P#Briel_Stay","GLOBAL",2) SetGlobal("P#CoranRomancePath","GLOBAL",3)',
-                            target: {
-                                kind: "exit",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 4654,
-                        end: 4850,
+                    "sayRange": {
+                        "start": 3520,
+                        "end": 3523
                     },
+                    "triggerRange": {
+                        "start": 3495,
+                        "end": 3497
+                    }
                 },
                 {
-                    id: "DCB_1.6",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@19",
-                    choices: [
+                    "id": "CB_1.5",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@18",
+                    "choices": [
                         {
-                            id: "DCB_1.6#0",
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",3) ReputationInc(-1) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript("",DEFAULT) EscapeArea()',
-                            target: {
-                                kind: "exit",
+                            "id": "CB_1.5#0",
+                            "action": "ReputationInc(-1) ChangeAlignment(\"coran\",CHAOTIC_NEUTRAL) SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",2) SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",2) SetGlobal(\"P#CoranRomancePath\",\"GLOBAL\",3)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 3626,
+                                "end": 3822
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 4852,
-                        end: 5043,
+                    "sourceRange": {
+                        "start": 3594,
+                        "end": 3826
                     },
-                },
-                {
-                    id: "CB_COMPLAINT",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@22",
-                    trigger: '%BGT_VAR% Global("P#Briel_Stay","GLOBAL",1) Global("P#CB_COMPLAINS","GLOBAL",1)',
-                    weight: -2,
-                    choices: [
-                        {
-                            id: "CB_COMPLAINT#0",
-                            text: "@23",
-                            action: 'SetGlobal("P#CB_COMPLAINS","GLOBAL",2)',
-                            target: {
-                                kind: "state",
-                                stateId: "CB_2.1",
-                            },
-                        },
-                        {
-                            id: "CB_COMPLAINT#1",
-                            text: "@24",
-                            action: 'SetGlobal("P#CB_COMPLAINS","GLOBAL",2)',
-                            target: {
-                                kind: "state",
-                                stateId: "CB_2.2",
-                            },
-                        },
-                        {
-                            id: "CB_COMPLAINT#2",
-                            text: "@21",
-                            action: 'SetGlobal("P#CB_COMPLAINS","GLOBAL",2)',
-                            target: {
-                                kind: "state",
-                                stateId: "CB_2.3",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 5045,
-                        end: 5408,
+                    "sayRange": {
+                        "start": 3622,
+                        "end": 3625
                     },
+                    "triggerRange": {
+                        "start": 3597,
+                        "end": 3599
+                    }
                 },
                 {
-                    id: "CB_2.1",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@17",
-                    choices: [
+                    "id": "CB_1.6",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@19",
+                    "choices": [
                         {
-                            id: "CB_2.1#0",
-                            action: 'SetGlobal("P#CoranWillQuit","GLOBAL",1)',
-                            target: {
-                                kind: "exit",
+                            "id": "CB_1.6#0",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",3) ReputationInc(-1) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript(\"\",DEFAULT) EscapeArea()",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 3860,
+                                "end": 4014
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 5410,
-                        end: 5506,
+                    "sourceRange": {
+                        "start": 3828,
+                        "end": 4018
                     },
-                },
-                {
-                    id: "CB_2.2",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@18",
-                    choices: [
-                        {
-                            id: "CB_2.2#0",
-                            action: 'ReputationInc(-1) ChangeAlignment("coran",CHAOTIC_NEUTRAL) SetGlobal("P#Briel_Stay","GLOBAL",2) SetGlobal("P#Briel_Stay","GLOBAL",2) SetGlobal("P#CoranRomancePath","GLOBAL",3)',
-                            target: {
-                                kind: "exit",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 5508,
-                        end: 5740,
+                    "sayRange": {
+                        "start": 3856,
+                        "end": 3859
                     },
+                    "triggerRange": {
+                        "start": 3831,
+                        "end": 3833
+                    }
                 },
                 {
-                    id: "CB_2.3",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@21",
-                    choices: [
+                    "id": "CBABY_SECOND",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@20",
+                    "trigger": "%BGT_VAR% Global(\"P#CBABY_AGAIN\",\"GLOBAL\",1)",
+                    "weight": -2,
+                    "choices": [
                         {
-                            id: "CB_2.3#0",
-                            action: 'SetGlobal("P#Briel_Stay","GLOBAL",3) ReputationInc(-1) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript("",DEFAULT) EscapeArea()',
-                            target: {
-                                kind: "exit",
+                            "id": "CBABY_SECOND#0",
+                            "text": "@7",
+                            "action": "SetGlobal(\"P#CBABY_AGAIN\",\"GLOBAL\",2)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.1"
                             },
+                            "sourceRange": {
+                                "start": 4114,
+                                "end": 4189
+                            },
+                            "targetRange": {
+                                "start": 4182,
+                                "end": 4189
+                            }
                         },
+                        {
+                            "id": "CBABY_SECOND#1",
+                            "text": "@9",
+                            "action": "SetGlobal(\"P#CBABY_AGAIN\",\"GLOBAL\",2)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.3"
+                            },
+                            "sourceRange": {
+                                "start": 4190,
+                                "end": 4265
+                            },
+                            "targetRange": {
+                                "start": 4258,
+                                "end": 4265
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 5742,
-                        end: 5932,
+                    "sourceRange": {
+                        "start": 4020,
+                        "end": 4269
                     },
-                },
-                {
-                    id: "CB_QUITS",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@25",
-                    trigger: '%BGT_VAR% Global("P#CB_QUITS","GLOBAL",1)',
-                    weight: -2,
-                    choices: [
-                        {
-                            id: "CB_QUITS#0",
-                            action: 'SetGlobal("P#CB_QUITS","GLOBAL",2) SetGlobal("P#Briel_Stay","GLOBAL",3) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript("",DEFAULT) EscapeArea()',
-                            target: {
-                                kind: "exit",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 5934,
-                        end: 6196,
+                    "sayRange": {
+                        "start": 4109,
+                        "end": 4112
                     },
+                    "triggerRange": {
+                        "start": 4034,
+                        "end": 4080
+                    }
                 },
                 {
-                    id: "CoranRun",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@26",
-                    choices: [
+                    "id": "DCB_1.1",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@10",
+                    "choices": [
                         {
-                            id: "CoranRun#0",
-                            action: 'SetGlobal("P#CoranHasBaby","GLOBAL",1) SetGlobalTimer("P#ReturnNamara","GLOBAL",151500)',
-                            target: {
-                                kind: "exit",
+                            "id": "DCB_1.1#0",
+                            "text": "@11",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.4"
                             },
+                            "sourceRange": {
+                                "start": 4304,
+                                "end": 4337
+                            },
+                            "targetRange": {
+                                "start": 4330,
+                                "end": 4337
+                            }
                         },
+                        {
+                            "id": "DCB_1.1#1",
+                            "text": "@12",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.5"
+                            },
+                            "sourceRange": {
+                                "start": 4338,
+                                "end": 4371
+                            },
+                            "targetRange": {
+                                "start": 4364,
+                                "end": 4371
+                            }
+                        },
+                        {
+                            "id": "DCB_1.1#2",
+                            "text": "@21",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.6"
+                            },
+                            "sourceRange": {
+                                "start": 4372,
+                                "end": 4405
+                            },
+                            "targetRange": {
+                                "start": 4398,
+                                "end": 4405
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 6198,
-                        end: 6344,
+                    "sourceRange": {
+                        "start": 4271,
+                        "end": 4409
                     },
-                },
-                {
-                    id: "Grumbles",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@27",
-                    choices: [
-                        {
-                            id: "Grumbles#0",
-                            action: 'SetGlobal("P#CoranHasBaby","GLOBAL",1) SetGlobalTimer("P#ReturnNamara","GLOBAL",151500)',
-                            target: {
-                                kind: "exit",
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 6346,
-                        end: 6492,
+                    "sayRange": {
+                        "start": 4300,
+                        "end": 4303
                     },
+                    "triggerRange": {
+                        "start": 4274,
+                        "end": 4276
+                    }
                 },
                 {
-                    id: "Lover",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@28",
-                    choices: [
+                    "id": "DCB_1.3",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@14",
+                    "choices": [
                         {
-                            id: "Lover#0",
-                            action: 'SetGlobal("P#CoranHasBaby","GLOBAL",1) SetGlobalTimer("P#ReturnNamara","GLOBAL",151500)',
-                            target: {
-                                kind: "exit",
+                            "id": "DCB_1.3#0",
+                            "text": "@11",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.4"
                             },
+                            "sourceRange": {
+                                "start": 4444,
+                                "end": 4477
+                            },
+                            "targetRange": {
+                                "start": 4470,
+                                "end": 4477
+                            }
                         },
+                        {
+                            "id": "DCB_1.3#1",
+                            "text": "@12",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.5"
+                            },
+                            "sourceRange": {
+                                "start": 4478,
+                                "end": 4511
+                            },
+                            "targetRange": {
+                                "start": 4504,
+                                "end": 4511
+                            }
+                        },
+                        {
+                            "id": "DCB_1.3#2",
+                            "text": "@15",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "DCB_1.6"
+                            },
+                            "sourceRange": {
+                                "start": 4512,
+                                "end": 4545
+                            },
+                            "targetRange": {
+                                "start": 4538,
+                                "end": 4545
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 6494,
-                        end: 6637,
+                    "sourceRange": {
+                        "start": 4411,
+                        "end": 4549
                     },
-                },
-                {
-                    id: "CoranMumbles",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@29",
-                    choices: [
-                        {
-                            id: "CoranMumbles#0",
-                            action: 'SetGlobal("P#CoranPrompted","GLOBAL",1)',
-                            target: {
-                                kind: "external",
-                                label: "~%tutu_var%BRIELB~:BrielCurse",
-                                resolved: false,
-                            },
-                        },
-                    ],
-                    sourceRange: {
-                        start: 6639,
-                        end: 6773,
+                    "sayRange": {
+                        "start": 4440,
+                        "end": 4443
                     },
+                    "triggerRange": {
+                        "start": 4414,
+                        "end": 4416
+                    }
                 },
                 {
-                    id: "CoranSigh",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@30",
-                    choices: [
+                    "id": "DCB_1.4",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@17",
+                    "choices": [
                         {
-                            id: "CoranSigh#0",
-                            target: {
-                                kind: "exit",
+                            "id": "DCB_1.4#0",
+                            "action": "SetGlobal(\"P#CoranWillComplain\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 4584,
+                                "end": 4648
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 6775,
-                        end: 6829,
+                    "sourceRange": {
+                        "start": 4551,
+                        "end": 4652
                     },
+                    "sayRange": {
+                        "start": 4580,
+                        "end": 4583
+                    },
+                    "triggerRange": {
+                        "start": 4554,
+                        "end": 4556
+                    }
                 },
                 {
-                    id: "CBaby_Chain",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@43",
-                    choices: [
+                    "id": "DCB_1.5",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@18",
+                    "choices": [
                         {
-                            id: "CBaby_Chain#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_1",
+                            "id": "DCB_1.5#0",
+                            "action": "ReputationInc(-1) ChangeAlignment(\"coran\",CHAOTIC_NEUTRAL) SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",2) SetGlobal(\"P#CoranRomancePath\",\"GLOBAL\",3)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 4687,
+                                "end": 4846
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 4654,
+                        "end": 4850
+                    },
+                    "sayRange": {
+                        "start": 4683,
+                        "end": 4686
+                    },
+                    "triggerRange": {
+                        "start": 4657,
+                        "end": 4659
+                    }
                 },
                 {
-                    id: "CBaby_Chain_1",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@44",
-                    choices: [
+                    "id": "DCB_1.6",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@19",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_1#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_2",
+                            "id": "DCB_1.6#0",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",3) ReputationInc(-1) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript(\"\",DEFAULT) EscapeArea()",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 4885,
+                                "end": 5039
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 4852,
+                        "end": 5043
+                    },
+                    "sayRange": {
+                        "start": 4881,
+                        "end": 4884
+                    },
+                    "triggerRange": {
+                        "start": 4855,
+                        "end": 4857
+                    }
                 },
                 {
-                    id: "CBaby_Chain_2",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@45",
-                    choices: [
+                    "id": "CB_COMPLAINT",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@22",
+                    "trigger": "%BGT_VAR% Global(\"P#Briel_Stay\",\"GLOBAL\",1) Global(\"P#CB_COMPLAINS\",\"GLOBAL\",1)",
+                    "weight": -2,
+                    "choices": [
                         {
-                            id: "CBaby_Chain_2#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_3",
+                            "id": "CB_COMPLAINT#0",
+                            "text": "@23",
+                            "action": "SetGlobal(\"P#CB_COMPLAINS\",\"GLOBAL\",2)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_2.1"
                             },
+                            "sourceRange": {
+                                "start": 5174,
+                                "end": 5250
+                            },
+                            "targetRange": {
+                                "start": 5244,
+                                "end": 5250
+                            }
                         },
-                    ],
-                    derivedFrom: "CHAIN",
-                },
-                {
-                    id: "CBaby_Chain_3",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@46",
-                    choices: [
                         {
-                            id: "CBaby_Chain_3#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_4",
+                            "id": "CB_COMPLAINT#1",
+                            "text": "@24",
+                            "action": "SetGlobal(\"P#CB_COMPLAINS\",\"GLOBAL\",2)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_2.2"
                             },
+                            "sourceRange": {
+                                "start": 5251,
+                                "end": 5327
+                            },
+                            "targetRange": {
+                                "start": 5321,
+                                "end": 5327
+                            }
                         },
-                    ],
-                    derivedFrom: "CHAIN",
-                },
-                {
-                    id: "CBaby_Chain_4",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@47",
-                    choices: [
                         {
-                            id: "CBaby_Chain_4#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_5",
+                            "id": "CB_COMPLAINT#2",
+                            "text": "@21",
+                            "action": "SetGlobal(\"P#CB_COMPLAINS\",\"GLOBAL\",2)",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CB_2.3"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 5328,
+                                "end": 5404
+                            },
+                            "targetRange": {
+                                "start": 5398,
+                                "end": 5404
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 5045,
+                        "end": 5408
+                    },
+                    "sayRange": {
+                        "start": 5169,
+                        "end": 5172
+                    },
+                    "triggerRange": {
+                        "start": 5059,
+                        "end": 5140
+                    }
                 },
                 {
-                    id: "CBaby_Chain_5",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@48",
-                    choices: [
+                    "id": "CB_2.1",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@17",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_5#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_6",
+                            "id": "CB_2.1#0",
+                            "action": "SetGlobal(\"P#CoranWillQuit\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 5442,
+                                "end": 5502
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 5410,
+                        "end": 5506
+                    },
+                    "sayRange": {
+                        "start": 5438,
+                        "end": 5441
+                    },
+                    "triggerRange": {
+                        "start": 5413,
+                        "end": 5415
+                    }
                 },
                 {
-                    id: "CBaby_Chain_6",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@49",
-                    choices: [
+                    "id": "CB_2.2",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@18",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_6#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_7",
+                            "id": "CB_2.2#0",
+                            "action": "ReputationInc(-1) ChangeAlignment(\"coran\",CHAOTIC_NEUTRAL) SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",2) SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",2) SetGlobal(\"P#CoranRomancePath\",\"GLOBAL\",3)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 5540,
+                                "end": 5736
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 5508,
+                        "end": 5740
+                    },
+                    "sayRange": {
+                        "start": 5536,
+                        "end": 5539
+                    },
+                    "triggerRange": {
+                        "start": 5511,
+                        "end": 5513
+                    }
                 },
                 {
-                    id: "CBaby_Chain_7",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@50",
-                    choices: [
+                    "id": "CB_2.3",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@21",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_7#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_8",
+                            "id": "CB_2.3#0",
+                            "action": "SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",3) ReputationInc(-1) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript(\"\",DEFAULT) EscapeArea()",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 5774,
+                                "end": 5928
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 5742,
+                        "end": 5932
+                    },
+                    "sayRange": {
+                        "start": 5770,
+                        "end": 5773
+                    },
+                    "triggerRange": {
+                        "start": 5745,
+                        "end": 5747
+                    }
                 },
                 {
-                    id: "CBaby_Chain_8",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@51",
-                    choices: [
+                    "id": "CB_QUITS",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@25",
+                    "trigger": "%BGT_VAR% Global(\"P#CB_QUITS\",\"GLOBAL\",1)",
+                    "weight": -2,
+                    "choices": [
                         {
-                            id: "CBaby_Chain_8#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_9",
+                            "id": "CB_QUITS#0",
+                            "action": "SetGlobal(\"P#CB_QUITS\",\"GLOBAL\",2) SetGlobal(\"P#Briel_Stay\",\"GLOBAL\",3) LeaveParty() SetLeavePartyDialogFile() ChangeAIScript(\"\",DEFAULT) EscapeArea()",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 6021,
+                                "end": 6192
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 5934,
+                        "end": 6196
+                    },
+                    "sayRange": {
+                        "start": 6016,
+                        "end": 6019
+                    },
+                    "triggerRange": {
+                        "start": 5948,
+                        "end": 5991
+                    }
                 },
                 {
-                    id: "CBaby_Chain_9",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@52",
-                    choices: [
+                    "id": "CoranRun",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@26",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_9#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_10",
+                            "id": "CoranRun#0",
+                            "action": "SetGlobal(\"P#CoranHasBaby\",\"GLOBAL\",1) SetGlobalTimer(\"P#ReturnNamara\",\"GLOBAL\",151500)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 6232,
+                                "end": 6340
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 6198,
+                        "end": 6344
+                    },
+                    "sayRange": {
+                        "start": 6228,
+                        "end": 6231
+                    },
+                    "triggerRange": {
+                        "start": 6201,
+                        "end": 6203
+                    }
                 },
                 {
-                    id: "CBaby_Chain_10",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@53",
-                    choices: [
+                    "id": "Grumbles",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@27",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_10#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_11",
+                            "id": "Grumbles#0",
+                            "action": "SetGlobal(\"P#CoranHasBaby\",\"GLOBAL\",1) SetGlobalTimer(\"P#ReturnNamara\",\"GLOBAL\",151500)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 6380,
+                                "end": 6488
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 6346,
+                        "end": 6492
+                    },
+                    "sayRange": {
+                        "start": 6376,
+                        "end": 6379
+                    },
+                    "triggerRange": {
+                        "start": 6349,
+                        "end": 6351
+                    }
                 },
                 {
-                    id: "CBaby_Chain_11",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@54",
-                    choices: [
+                    "id": "Lover",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@28",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_11#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_12",
+                            "id": "Lover#0",
+                            "action": "SetGlobal(\"P#CoranHasBaby\",\"GLOBAL\",1) SetGlobalTimer(\"P#ReturnNamara\",\"GLOBAL\",151500)",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 6525,
+                                "end": 6633
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 6494,
+                        "end": 6637
+                    },
+                    "sayRange": {
+                        "start": 6521,
+                        "end": 6524
+                    },
+                    "triggerRange": {
+                        "start": 6497,
+                        "end": 6499
+                    }
                 },
                 {
-                    id: "CBaby_Chain_12",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@55",
-                    choices: [
+                    "id": "CoranMumbles",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@29",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_12#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_13",
+                            "id": "CoranMumbles#0",
+                            "action": "SetGlobal(\"P#CoranPrompted\",\"GLOBAL\",1)",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%tutu_var%BRIELB~:BrielCurse",
+                                "resolved": false
                             },
-                        },
+                            "sourceRange": {
+                                "start": 6677,
+                                "end": 6769
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 6639,
+                        "end": 6773
+                    },
+                    "sayRange": {
+                        "start": 6673,
+                        "end": 6676
+                    },
+                    "triggerRange": {
+                        "start": 6642,
+                        "end": 6644
+                    }
                 },
                 {
-                    id: "CBaby_Chain_13",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@56",
-                    choices: [
+                    "id": "CoranSigh",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@30",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_13#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_14",
+                            "id": "CoranSigh#0",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 6810,
+                                "end": 6825
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "sourceRange": {
+                        "start": 6775,
+                        "end": 6829
+                    },
+                    "sayRange": {
+                        "start": 6806,
+                        "end": 6809
+                    },
+                    "triggerRange": {
+                        "start": 6778,
+                        "end": 6780
+                    }
                 },
                 {
-                    id: "CBaby_Chain_14",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@57",
-                    choices: [
+                    "id": "CBaby_Chain",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@43",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_14#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_15",
-                            },
-                        },
+                            "id": "CBaby_Chain#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_1"
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "derivedFrom": "CHAIN"
                 },
                 {
-                    id: "CBaby_Chain_15",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@58",
-                    choices: [
+                    "id": "CBaby_Chain_1",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@44",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_15#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_16",
-                            },
-                        },
+                            "id": "CBaby_Chain_1#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_2"
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "derivedFrom": "CHAIN"
                 },
                 {
-                    id: "CBaby_Chain_16",
-                    speaker: "%CORAN_JOINED%",
-                    text: "@59",
-                    choices: [
+                    "id": "CBaby_Chain_2",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@45",
+                    "choices": [
                         {
-                            id: "CBaby_Chain_16#0",
-                            target: {
-                                kind: "state",
-                                stateId: "CBaby_Chain_17",
-                            },
-                        },
+                            "id": "CBaby_Chain_2#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_3"
+                            }
+                        }
                     ],
-                    derivedFrom: "CHAIN",
+                    "derivedFrom": "CHAIN"
                 },
                 {
-                    id: "CBaby_Chain_17",
-                    speaker: "%tutu_var%BRIELB",
-                    text: "@60",
-                    choices: [],
-                    derivedFrom: "CHAIN",
+                    "id": "CBaby_Chain_3",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@46",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_3#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_4"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
                 },
-            ],
+                {
+                    "id": "CBaby_Chain_4",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@47",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_4#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_5"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_5",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@48",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_5#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_6"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_6",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@49",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_6#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_7"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_7",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@50",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_7#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_8"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_8",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@51",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_8#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_9"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_9",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@52",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_9#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_10"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_10",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@53",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_10#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_11"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_11",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@54",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_11#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_12"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_12",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@55",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_12#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_13"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_13",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@56",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_13#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_14"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_14",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@57",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_14#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_15"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_15",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@58",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_15#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_16"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_16",
+                    "speaker": "%CORAN_JOINED%",
+                    "text": "@59",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_16#0",
+                            "target": {
+                                "kind": "state",
+                                "stateId": "CBaby_Chain_17"
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                },
+                {
+                    "id": "CBaby_Chain_17",
+                    "speaker": "%tutu_var%BRIELB",
+                    "text": "@60",
+                    "choices": [
+                        {
+                            "id": "CBaby_Chain_17#0",
+                            "target": {
+                                "kind": "external",
+                                "label": "~%tutu_var%BRIELB~:BRIEL_PC",
+                                "resolved": false
+                            }
+                        }
+                    ],
+                    "derivedFrom": "CHAIN"
+                }
+            ]
         },
         {
-            id: "dialog:%CORAN_POST%",
-            label: "%CORAN_POST%",
-            kind: "dialog",
-            states: [
+            "id": "dialog:%CORAN_POST%",
+            "label": "%CORAN_POST%",
+            "kind": "dialog",
+            "states": [
                 {
-                    id: "CNRBack",
-                    speaker: "%CORAN_POST%",
-                    text: "@5",
-                    trigger: '%BGT_VAR% Global("P#CoranMoves","GLOBAL",6)',
-                    weight: -100,
-                    choices: [
+                    "id": "CNRBack",
+                    "speaker": "%CORAN_POST%",
+                    "text": "@5",
+                    "trigger": "%BGT_VAR% Global(\"P#CoranMoves\",\"GLOBAL\",6)",
+                    "weight": -100,
+                    "choices": [
                         {
-                            id: "CNRBack#0",
-                            action: 'SetGlobal("P#CoranMoves","GLOBAL",7) JoinParty()',
-                            target: {
-                                kind: "exit",
+                            "id": "CNRBack#0",
+                            "action": "SetGlobal(\"P#CoranMoves\",\"GLOBAL\",7) JoinParty()",
+                            "target": {
+                                "kind": "exit"
                             },
-                        },
+                            "sourceRange": {
+                                "start": 2508,
+                                "end": 2577
+                            }
+                        }
                     ],
-                    sourceRange: {
-                        start: 2420,
-                        end: 2581,
+                    "sourceRange": {
+                        "start": 2420,
+                        "end": 2581
                     },
-                },
-            ],
+                    "sayRange": {
+                        "start": 2505,
+                        "end": 2507
+                    },
+                    "triggerRange": {
+                        "start": 2436,
+                        "end": 2481
+                    }
+                }
+            ]
         },
         {
-            id: "patch#0",
-            label: "REPLACE_SAY %CORAN_JOINED%",
-            kind: "patch",
-            states: [],
+            "id": "patch#0",
+            "label": "REPLACE_SAY %CORAN_JOINED%",
+            "kind": "patch",
+            "states": []
         },
         {
-            id: "patch#1",
-            label: "REPLACE_SAY %tutu_var%BRIELB",
-            kind: "patch",
-            states: [],
+            "id": "patch#1",
+            "label": "REPLACE_SAY %tutu_var%BRIELB",
+            "kind": "patch",
+            "states": []
         },
         {
-            id: "patch#2",
-            label: "PATCH %tutu_var%BRIELB",
-            kind: "patch",
-            states: [],
+            "id": "patch#2",
+            "label": "ALTER_TRANS %tutu_var%BRIELB",
+            "kind": "patch",
+            "states": []
         },
+        {
+            "id": "patch#3",
+            "label": "PATCH %tutu_var%BRIELB",
+            "kind": "patch",
+            "states": []
+        }
     ],
-    messages: {
+    "messages": {
         "0": "I'm sorry, Briel, but we... we have been over this already... and you have said, that...",
         "1": "That you are an idiot. Go, if you want, but maybe someday you'll figure out what is it you really want, elf.",
         "2": "I must thank you again for the service you have done.",
         "3": "<CHARNAME>, it's becoming too dangerous to keep Namara around. Not to mention all the bad habits she picks up from our rag-tag band... I'll go talk to Briel.",
-        "4": 'I hope that I still have some influence over her... *grins* so it should not take me long to persuade her to take money and visits instead of me babysitting Namara on battlefields. Meet me back in the "Sturgeon", <CHARNAME>.',
+        "4": "I hope that I still have some influence over her... *grins* so it should not take me long to persuade her to take money and visits instead of me babysitting Namara on battlefields. Meet me back in the \"Sturgeon\", <CHARNAME>.",
         "5": "Ah, here you are. Back to adventure!",
         "6": "May I have a word with you, <CHARNAME>?",
         "7": "Of course, Coran, what is it?",
@@ -1179,6 +1776,6 @@ export const REAL_MODEL: DialogModel = {
         "57": "Would you want to travel with me then? I am sure <CHARNAME>...",
         "58": "No, Coran, I will not be a part of a mercenary group, and I would not go about robbing people with you. My reputation is ruined as is. If you want to help - take care of Namara for a bit...",
         "59": "Well, if that's what you want me to do, I will do it.",
-        "60": "Good. Thank you, Coran. And do not look so sour, you might come to enjoy it, after all. Here is the book, and I will bring Namara in a moment.",
-    },
+        "60": "Good. Thank you, Coran. And do not look so sour, you might come to enjoy it, after all. Here is the book, and I will bring Namara in a moment."
+    }
 };
