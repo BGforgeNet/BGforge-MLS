@@ -23,11 +23,6 @@ const GRAMMARS = ["fallout-ssl", "weidu-baf", "weidu-d", "weidu-tp2"];
 
 const REGENERATE_TIMEOUT_MS = 60_000;
 
-/** The same pipeline as build-grammar.sh, run in a dir whose `src/` holds the grammar's JSON inputs. */
-const PIPELINE =
-    "\"$1\" . | sed 's/export const enum /export enum /' > src/tree-sitter.d.ts" +
-    ' && node "$2" src/tree-sitter.d.ts src/syntax-type.ts';
-
 function missingInputs(grammar: string): string[] {
     const dir = path.join(REPO_ROOT, "grammars", grammar);
     return [
@@ -45,12 +40,19 @@ function regenerate(grammar: string): string {
         for (const name of ["node-types.json", "grammar.json"]) {
             fs.copyFileSync(path.join(dir, "src", name), path.join(workDir, "src", name));
         }
+        // The same steps as build-grammar.sh's pipeline (dts-tree-sitter | sed | split-syntax-type.mjs), run one
+        // process at a time with no shell between them: the paths come from this file's location, and a shell
+        // command built from them is what a code scanner reads as an injection path.
         const dtsBin = path.join(dir, "node_modules", ".bin", "dts-tree-sitter");
-        execFileSync("sh", ["-c", PIPELINE, "sh", dtsBin, SPLIT_SCRIPT], {
-            cwd: workDir,
-            timeout: REGENERATE_TIMEOUT_MS,
-            stdio: "pipe",
-        });
+        const spawnOptions = { cwd: workDir, timeout: REGENERATE_TIMEOUT_MS, stdio: "pipe" } as const;
+        const generated = execFileSync(dtsBin, ["."], { ...spawnOptions, encoding: "utf8" });
+        // sed's `s/export const enum /export enum /`: the first occurrence on each line.
+        const dts = generated
+            .split("\n")
+            .map((line) => line.replace("export const enum ", "export enum "))
+            .join("\n");
+        fs.writeFileSync(path.join(workDir, "src", "tree-sitter.d.ts"), dts);
+        execFileSync(process.execPath, [SPLIT_SCRIPT, "src/tree-sitter.d.ts", "src/syntax-type.ts"], spawnOptions);
         return fs.readFileSync(path.join(workDir, "src", "syntax-type.ts"), "utf8");
     } finally {
         fs.rmSync(workDir, { recursive: true, force: true });
