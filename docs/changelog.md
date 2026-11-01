@@ -51,6 +51,8 @@
 - BAF: a NUL byte inside a block comment no longer ends the comment early.
 - Dialog editor: an error that arrives while a dialog is open, such as a refused `.dlg` save or a failed re-read
   after the file changed on disk, is shown in a banner above the dialog. Before, it was dropped without a word.
+- Dialog editor: the graph view draws only the nodes in view, so a large dialog pans and zooms without every node
+  on the page.
 
 ### Fallout SSL
 

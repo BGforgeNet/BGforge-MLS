@@ -77,14 +77,24 @@ check("switching to Graph renders the node graph", nodeCount > 0, `nodes=${nodeC
 await page.locator(".svelte-flow__node").first().click();
 const dupBtn = page.getByRole("button", { name: "Duplicate state" });
 await dupBtn.waitFor({ timeout: 5000 });
-const before = await page.locator(".svelte-flow__node").count();
+// Counted off the tab headers' state counts, not off mounted `.svelte-flow__node` elements: the graph mounts only
+// the nodes in view, and a duplicate lands wherever the layout puts it.
+const stateCount = (): Promise<number> =>
+    page.evaluate(() =>
+        [...document.querySelectorAll(".tcount")].reduce((sum, el) => sum + Number(el.textContent ?? "0"), 0),
+    );
+const before = await stateCount();
 await dupBtn.click();
 await page
-    .waitForFunction((n) => document.querySelectorAll(".svelte-flow__node").length === n + 1, before, {
-        timeout: 5000,
-    })
+    .waitForFunction(
+        (n) =>
+            [...document.querySelectorAll(".tcount")].reduce((sum, el) => sum + Number(el.textContent ?? "0"), 0) ===
+            n + 1,
+        before,
+        { timeout: 5000 },
+    )
     .catch(() => undefined);
-const after = await page.locator(".svelte-flow__node").count();
+const after = await stateCount();
 check(
     "Duplicate state adds a node (deep-clones the $state proxy)",
     after === before + 1,

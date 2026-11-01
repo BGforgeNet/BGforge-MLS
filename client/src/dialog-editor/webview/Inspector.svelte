@@ -1,6 +1,5 @@
 <script lang="ts">
     import Checkbox from "../../webview-ui/Checkbox.svelte";
-    import { writable } from "svelte/store";
     import {
         resolveText,
         sslTerminalKind,
@@ -33,13 +32,14 @@
 
     // The detail panel for the selected state. For an editable format (WeiDU D) it is the
     // edit surface: content fields (SAY, trigger, weight, reply/condition/action) mutate the
-    // passed `state`/`messages` directly (reactive editModel proxies, so the card re-renders
+    // passed `dialogState`/`messages` directly (reactive editModel proxies, so the card re-renders
     // without a relayout) and structural changes go through `actions`. For a view-only format
     // (Fallout SSL) it is a read-only, SSL-native presentation - SSL is derived from script
     // and has no surgical write-back yet, so editing is disabled and the WeiDU vocabulary
     // (trigger/weight/`DO ~...~`) is replaced or dropped.
-    let { state, messages, stateIds, actions, format, sourceLang, editable, structuralEditable, deletable, sourceName, callers, reachability, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
-        state: DialogState;
+    let { dialogState, messages, stateIds, actions, format, sourceLang, editable, structuralEditable, deletable, sourceName, callers, reachability, selectedChoiceId, highlightedBranchKey, onNavigate, onFocusOwnerState }: {
+        /** The selected state. Not `state`: a prop of that name makes a `$state` local read as a store subscription. */
+        dialogState: DialogState;
         messages: Record<string, string> | undefined;
         stateIds: string[];
         /** When the user selects an individual option in the tree, its choice id - this panel scrolls to
@@ -81,7 +81,7 @@
     // A bare `@N` line is backed by a .tra entry: edit that entry so localization is
     // preserved (the project decision). A literal line is edited in place.
     function setSay(v: string): void {
-        writeText(state, messages, v);
+        writeText(dialogState, messages, v);
     }
     function setReply(c: DialogChoice, v: string): void {
         writeText(c, messages, v);
@@ -91,10 +91,10 @@
     // `@a=@b=@c`); a literal line updates sayTexts[i] in place, which the writer's serializeSayValue re-joins.
     // Line 0 is the primary `text` field above - the writer reads `text` for it and `sayTexts[1..]` for the rest.
     function setSayLine(i: number, v: string): void {
-        if (!state.sayTexts) return;
-        const t = { text: state.sayTexts[i] };
+        if (!dialogState.sayTexts) return;
+        const t = { text: dialogState.sayTexts[i] };
         writeText(t, messages, v);
-        state.sayTexts[i] = t.text ?? "";
+        dialogState.sayTexts[i] = t.text ?? "";
     }
 
     // A `.msg`/`.tra` line is single-line, but these fields are <textarea>s (they wrap/autosize long lines for
@@ -139,7 +139,7 @@
 
     function setWeight(v: string): void {
         const n = Number(v);
-        state.weight = v.trim() === "" || !Number.isFinite(n) ? undefined : n;
+        dialogState.weight = v.trim() === "" || !Number.isFinite(n) ? undefined : n;
     }
 
     // SSL is a full scripting language with no surgical write-back, so its detail panel is
@@ -169,32 +169,32 @@
     // Structure is read-only when the model can't be saved (SSL) or for a derived state
     // (CHAIN/INTERJECT/EXTEND link) with no standalone source span to write back to -
     // editing it would require rewriting the containing construct, which the save does not do.
-    const readOnly = $derived(!editable || Boolean(state.derivedFrom));
+    const readOnly = $derived(!editable || Boolean(dialogState.derivedFrom));
 
     // Concrete, actionable reasons for the disabled controls, computed once per state (see inspector-edit.ts).
     // Every disabled control binds its `title` to the matching reason so a locked field always explains why.
-    const structReason = $derived(structuralLockReason(state, ssl, editable));
-    const roReason = $derived(stateReadOnlyReason(state.derivedFrom));
+    const structReason = $derived(structuralLockReason(dialogState, ssl, editable));
+    const roReason = $derived(stateReadOnlyReason(dialogState.derivedFrom));
     // Trigger, condition and action are TEXT in a compiled dialog, and the save path writes an edited one back
     // into its table - so they follow their own predicate rather than `readOnly`, whose `editable` flag says
     // only that a DLG line is a strref instead of prose.
-    const codeEditable = $derived(codeFieldEditable({ dlg, foreign, editable, derivedFrom: state.derivedFrom }));
-    const codeReason = $derived(codeLockReason({ dlg, foreign, editable, derivedFrom: state.derivedFrom }));
+    const codeEditable = $derived(codeFieldEditable({ dlg, foreign, editable, derivedFrom: dialogState.derivedFrom }));
+    const codeReason = $derived(codeLockReason({ dlg, foreign, editable, derivedFrom: dialogState.derivedFrom }));
 
     // When the user selects an individual option in the tree, the Inspector FOCUSES that option: a breadcrumb
     // back to the owner state, then just that option's fields (rendered by the shared choiceRow snippet in
     // `labeled` mode) instead of the whole-state editor. Only flat options are tree-selectable (branch options
     // are read-only there), so this is scoped to a non-bundle state; `selectedChoiceId` then always names one
-    // of `state.choices`. If the id doesn't resolve (e.g. stale after a delete), fall back to the full view.
+    // of `dialogState.choices`. If the id doesn't resolve (e.g. stale after a delete), fall back to the full view.
     // A structured node (`block`) renders its options through a dedicated read-only summary, exactly like a
     // bundle node (`branches`); excluding both keeps a clicked option on a structured node out of the flat
     // "focused option" template (dashed disabled inputs with no explanation banner) and in its own read-only view.
     const focusedChoice = $derived(
-        !state.branches && !state.block && selectedChoiceId
-            ? state.choices.find((c) => c.id === selectedChoiceId)
+        !dialogState.branches && !dialogState.block && selectedChoiceId
+            ? dialogState.choices.find((c) => c.id === selectedChoiceId)
             : undefined,
     );
-    const focusedIndex = $derived(focusedChoice ? state.choices.findIndex((c) => c.id === selectedChoiceId) : -1);
+    const focusedIndex = $derived(focusedChoice ? dialogState.choices.findIndex((c) => c.id === selectedChoiceId) : -1);
 
     // The ONE text-field gate for this inspector, shared by the NPC line and every option row: it returns the
     // lock AND its reason together so the template never re-assembles `textFieldLocked`'s inputs (the seam where
@@ -204,20 +204,16 @@
         // The inspector locks text only on a derived (no-own-source) state; a D-family literal otherwise stays
         // editable even when the STRUCTURE is read-only (a .tra edit is structure-independent - a typo in an
         // unfaithful TD state's line can still be fixed). SSL's own @N gate lives inside textEditability.
-        return textEditability({ state, choice, messages, ssl, textRO: Boolean(state.derivedFrom), dlg, foreign });
+        return textEditability({ state: dialogState, choice, messages, ssl, textRO: Boolean(dialogState.derivedFrom), dlg, foreign });
     }
 
 
-    // Inline condition input for adding a new if-branch. A plain `$state("")` local here
-    // produced two build warnings in this component: the compiler flagged the ambiguity between
-    // the `state` prop binding and the `$state` rune (a `$`-prefixed local named after a prop
-    // is treated as a store subscription), leaving the variable non-reactive. A writable store
-    // avoids those warnings while providing the same two-way reactive binding.
-    const newBranchCond = writable("");
+    // Inline condition input for adding a new if-branch.
+    let newBranchCond = $state("");
 
     // Resolve a branch's choice ids to their DialogChoice objects, preserving source order.
     function branchChoices(b: DialogBranch): DialogChoice[] {
-        const byId = new Map(state.choices.map((c) => [c.id, c]));
+        const byId = new Map(dialogState.choices.map((c) => [c.id, c]));
         return b.choiceIds.map((id) => byId.get(id)).filter((c): c is DialogChoice => c !== undefined);
     }
 
@@ -227,9 +223,9 @@
     // "(always)" section for unconditional top-level options. The section keys match the tree's branch keys
     // (conversation-tree stampBranchKeys), so `highlightedBranchKey` tints the section for the clicked branch.
     const inspectorBranches = $derived.by((): InspectorSection[] => {
-        const block = state.block;
+        const block = dialogState.block;
         if (!block) return [];
-        const byId = new Map(state.choices.map((c) => [c.id, c]));
+        const byId = new Map(dialogState.choices.map((c) => [c.id, c]));
         const collect = (b: DialogBlock): DialogChoice[] =>
             b.flatMap((it) => {
                 if (it.kind === "choice") return byId.get(it.choiceId) ? [byId.get(it.choiceId)!] : [];
@@ -248,9 +244,9 @@
                 const c = byId.get(it.choiceId);
                 if (c) always.push(c);
             } else if (it.kind === "group") {
-                sections.push({ key: `${state.id}#${gi}if`, kind: "if", condition: it.condition, npc: firstLine(it.thenBlock), choices: collect(it.thenBlock) });
+                sections.push({ key: `${dialogState.id}#${gi}if`, kind: "if", condition: it.condition, npc: firstLine(it.thenBlock), choices: collect(it.thenBlock) });
                 if (it.elseBlock)
-                    sections.push({ key: `${state.id}#${gi}else`, kind: "else", condition: `not ${it.condition}`, npc: firstLine(it.elseBlock), choices: collect(it.elseBlock) });
+                    sections.push({ key: `${dialogState.id}#${gi}else`, kind: "else", condition: `not ${it.condition}`, npc: firstLine(it.elseBlock), choices: collect(it.elseBlock) });
                 gi++;
             }
         }
@@ -274,11 +270,8 @@
     // is the `.choicesel` class on the row). Editing itself happens inline in the tree now, so this no longer
     // steals focus into the panel - it only reveals the matching row. Keyed on `selectedChoiceId` so it fires
     // on each new option pick. The row is found via `document` scoped to `.inspector` rather than a bind:this
-    // ref for two reasons: a `$state` ref miscompiles to a store auto-subscription here (this component has a
-    // `state` prop that shadows the rune - store_invalid_shape at runtime, the same reason the branch input
-    // above uses `writable`), and a plain-`let` bind:this ref trips oxlint no-unassigned-vars (it can't see
-    // the template assignment). Exactly one `.inspector` is mounted at a time (the shared siderail), so the
-    // query is unambiguous.
+    // ref: a plain-`let` bind:this ref trips oxlint no-unassigned-vars (it can't see the template assignment).
+    // Exactly one `.inspector` is mounted at a time (the shared siderail), so the query is unambiguous.
     $effect(() => {
         if (!selectedChoiceId) return;
         document.querySelector(`.inspector .trow[data-cid="${CSS.escape(selectedChoiceId)}"]`)?.scrollIntoView({ block: "nearest" });
@@ -300,21 +293,21 @@
              the single source of truth). The state crumb clears the option focus and returns to the
              whole-state editor. -->
         <div class="ih crumbs">
-            <button class="crumb" title="Back to the whole state" onclick={onFocusOwnerState}>{stateHeadLabel(state, sourceName)}</button>
+            <button class="crumb" title="Back to the whole state" onclick={onFocusOwnerState}>{stateHeadLabel(dialogState, sourceName)}</button>
             <span class="crumbsep">&#8250;</span>
             <span class="crumbcur">option #{focusedIndex + 1}</span>
         </div>
     {:else}
     <!-- SSL nodes carry no speaker, so fall back to the node id (as the cards do) rather than a
          meaningless "NPC" title; WeiDU D shows its real speaker name. -->
-    <div class="ih">{stateHeadLabel(state, sourceName)}</div>
+    <div class="ih">{stateHeadLabel(dialogState, sourceName)}</div>
 
-    {#if state.derivedFrom}
+    {#if dialogState.derivedFrom}
         <div class="ronote">
-            Read-only - this state is expanded from a <b>{state.derivedFrom}</b> block. It has no
-            standalone source to edit here; change it in the <b>{state.derivedFrom}</b> source directly.
+            Read-only - this state is expanded from a <b>{dialogState.derivedFrom}</b> block. It has no
+            standalone source to edit here; change it in the <b>{dialogState.derivedFrom}</b> source directly.
         </div>
-    {:else if ssl && structuralEditable && state.branches}
+    {:else if ssl && structuralEditable && dialogState.branches}
         <div class="ronote">
             Text edits save to the <b>{textFile}</b>; each branch's <b>condition</b>, option <b>retarget</b>,
             and <b>add/remove/reorder</b> options write back to the <b>source file</b>.
@@ -327,7 +320,7 @@
             A condition is editable here when it belongs to one option; a condition shared by
             several options is source-only (edit the <b>source file</b>).
         </div>
-    {:else if ssl && state.approximate}
+    {:else if ssl && dialogState.approximate}
         <!-- Approximate node: the shown tree is not just read-only, it is LOSSY - control flow the editor can't
              model (loop/switch) means only the first line + a flattened option list are shown. Say so loudly. -->
         <div class="ronote">
@@ -345,8 +338,8 @@
         <!-- A state from a dialog this editor did not open. It is on screen so a hand-off leads somewhere
              visible; every control that would write it is withheld rather than shown doing nothing. -->
         <div class="ronote">
-            This state belongs to <b>{state.dlgResref}</b>, shown so this conversation's hand-offs are visible.
-            This editor saves only the file it opened - open <b>{state.dlgResref}</b> to change it.
+            This state belongs to <b>{dialogState.dlgResref}</b>, shown so this conversation's hand-offs are visible.
+            This editor saves only the file it opened - open <b>{dialogState.dlgResref}</b> to change it.
         </div>
     {:else if dlg}
         <!-- A compiled dialog. Its text is not prose the editor can write - it is a number pointing into the
@@ -372,25 +365,25 @@
          A compiled dialog's state has no name at all - its number is its address - so the field is locked for
          it whatever its structural editability, matching the `nodeRenamable` gate the commit path applies. -->
     <div class="ik">{ssl ? "State" : dlg ? "State number" : !structuralEditable && readOnly ? "State label (read-only)" : "State label (jump target)"}</div>
-    <input class="iv code" value={state.id} disabled={dlg || (!structuralEditable && readOnly)} title={dlg ? DLG_RENAME_LOCK_REASON : !structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
+    <input class="iv code" value={dialogState.id} disabled={dlg || (!structuralEditable && readOnly)} title={dlg ? DLG_RENAME_LOCK_REASON : !structuralEditable && readOnly ? structReason : ""} onchange={(e) => actions.rename(e.currentTarget.value)} />
 
-    {#if !state.branches && !state.block}
+    {#if !dialogState.branches && !dialogState.block}
         <!-- A bundle/structured node shows its NPC line per branch below ([if]/[else] sections); the node-level
              reply field would duplicate it (and only the first branch's line), so omit it for branch nodes. -->
         <div class="ik">NPC line</div>
         {@const npc = textEdit(null)}
-        <textarea class="iv npc" rows="2" use:autosize={resolveText(state.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(state.text, messages)} oninput={(e) => setSay(e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+        <textarea class="iv npc" rows="2" use:autosize={resolveText(dialogState.text, messages)} disabled={!npc.editable} title={npc.reason} value={resolveText(dialogState.text, messages)} oninput={(e) => setSay(e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
         <!-- A compiled dialog's line is a reference into the game's string table, so it is chosen, not typed. -->
         {#if dlg && !foreign}<button type="button" class="pickstr" onclick={() => actions.pickString(null)}>Change string...</button>{/if}
         <!-- Continuation lines of a multisay `SAY @a = @b = @c` monologue (line 1 is the field above): the NPC
              speaks several lines before the player replies. Each edits like the primary line - an @N line writes
              its .msg/.tra entry, a literal writes the .d source (setSayLine). Absent for a single-say state. -->
-        {#if state.sayTexts && state.sayTexts.length > 1}
-            {#each state.sayTexts.slice(1) as _line, idx (idx)}
+        {#if dialogState.sayTexts && dialogState.sayTexts.length > 1}
+            {#each dialogState.sayTexts.slice(1) as _line, idx (idx)}
                 {@const i = idx + 1}
-                {@const sl = sayLineEditability({ text: state.sayTexts[i], messages, ssl, textRO: Boolean(state.derivedFrom), derivedFrom: state.derivedFrom })}
+                {@const sl = sayLineEditability({ text: dialogState.sayTexts[i], messages, ssl, textRO: Boolean(dialogState.derivedFrom), derivedFrom: dialogState.derivedFrom })}
                 <div class="ik">NPC line (cont. {i + 1})</div>
-                <textarea class="iv npc" rows="1" use:autosize={resolveText(state.sayTexts[i], messages)} disabled={!sl.editable} title={sl.reason} value={resolveText(state.sayTexts[i], messages)} oninput={(e) => setSayLine(i, e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
+                <textarea class="iv npc" rows="1" use:autosize={resolveText(dialogState.sayTexts[i], messages)} disabled={!sl.editable} title={sl.reason} value={resolveText(dialogState.sayTexts[i], messages)} oninput={(e) => setSayLine(i, e.currentTarget.value)} onkeydown={commitOnEnter}></textarea>
             {/each}
         {/if}
     {/if}
@@ -399,7 +392,7 @@
         <!-- SSL: the node's reply condition (its enclosing `if`) and the state-mutating
              builtins it calls. Both read-only; "weight" and the per-choice `DO` action are
              WeiDU D concepts that have no SSL equivalent and are omitted. -->
-        {#if !state.branches && !state.block}
+        {#if !dialogState.branches && !dialogState.block}
             <!-- For a bundle/structured node the condition is shown per branch (the [if]/[else] head) and
                  side-effects in each branch; the node-level fields would duplicate (first branch only), so
                  omit them for branch nodes. -->
@@ -409,10 +402,10 @@
                  reply condition. Disabled until then - CodeField's disabled styling and the tooltip explain
                  why, and the same CodeField (codeLang) as the per-option conditions keeps the two uniform:
                  SSL-coloured for SSL, TypeScript-coloured for TSSL, read-only here. -->
-            <CodeField lang={codeLang} value={state.trigger ?? ""} disabled title="Node-level condition editing is not supported yet - edit the source" placeholder="(unconditional)" />
-            {#if state.sideEffects?.length}
+            <CodeField lang={codeLang} value={dialogState.trigger ?? ""} disabled title="Node-level condition editing is not supported yet - edit the source" placeholder="(unconditional)" />
+            {#if dialogState.sideEffects?.length}
                 <div class="ik">Side effects</div>
-                <div class="iv sfx">{state.sideEffects.join(", ")}</div>
+                <div class="iv sfx">{dialogState.sideEffects.join(", ")}</div>
             {/if}
         {/if}
     {:else}
@@ -422,14 +415,14 @@
                 <!-- The D family reaches this branch: a D trigger is BAF, a TD trigger is TypeScript source (the
                      enclosing `if (...)` condition) - codeLang picks the grammar. CodeField's textarea wraps a
                      long trigger into view instead of scrolling it out of sight. -->
-                <CodeField lang={codeLang} value={state.trigger ?? ""} disabled={!codeEditable} title={codeReason} placeholder="(unconditional)" oninput={(v) => (state.trigger = v.trim() === "" ? undefined : v)} />
+                <CodeField lang={codeLang} value={dialogState.trigger ?? ""} disabled={!codeEditable} title={codeReason} placeholder="(unconditional)" oninput={(v) => (dialogState.trigger = v.trim() === "" ? undefined : v)} />
             </div>
             <!-- Weight is a `.d` construct (IF WEIGHT #n): a compiled dialog has no such field, so showing an
                  always-empty box would invite an edit with nowhere to go. -->
             {#if !dlg}
                 <div class="wcol">
                     <div class="ik">Weight</div>
-                    <input class="iv" type="number" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(default)" value={state.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
+                    <input class="iv" type="number" disabled={readOnly} title={readOnly ? roReason : ""} placeholder="(default)" value={dialogState.weight ?? ""} oninput={(e) => setWeight(e.currentTarget.value)} />
                 </div>
             {/if}
         </div>
@@ -437,7 +430,7 @@
 
     <!-- Add lives as a trailing "+" at the END of the options list (below), so adding reads as "append to
          this list". Each option row carries its own delete (the row's x). Bundle nodes add per branch. -->
-    <div class="ik">Options ({state.choices.length})</div>
+    <div class="ik">Options ({dialogState.choices.length})</div>
     {/if}
 
     {#snippet choiceRow(c: DialogChoice, i: number, bi?: number, branchLen?: number, labeled?: boolean)}
@@ -466,16 +459,16 @@
                                  UNCONDITIONAL options. A conditional SSL option sits in an `if` wrapper the
                                  save path does not rewrite (Tier 3), so its Remove is shown DISABLED (not
                                  hidden) with a tooltip - the unavailable action stays visible and explained. -->
-                            {#if structuralEditable && !state.branches}
+                            {#if structuralEditable && !dialogState.branches}
                                 <button title={i === 0 ? "Already the first option" : "Move up"} disabled={i === 0} onclick={() => actions.moveReply(c.id, -1)}>&#9650;</button>
-                                <button title={i === state.choices.length - 1 ? "Already the last option" : "Move down"} disabled={i === state.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
+                                <button title={i === dialogState.choices.length - 1 ? "Already the last option" : "Move down"} disabled={i === dialogState.choices.length - 1} onclick={() => actions.moveReply(c.id, 1)}>&#9660;</button>
                             {/if}
                             <!-- `dlg` joins the plain-Remove arm: a compiled reply is removed by rebuilding its
                                  state's transition list, which its trigger does not affect - the SSL arm below
                                  would disable it for carrying one, and say so in SSL's terms. -->
                             {#if !readOnly || dlg}
                                 <button title="Remove" class="del" onclick={() => actions.removeReply(c.id)}>&#10005;</button>
-                            {:else if structuralEditable && !state.branches}
+                            {:else if structuralEditable && !dialogState.branches}
                                 <!-- Faithful SSL/TSSL and every TD node: remove writes back to source. A conditional
                                      SSL/TSSL option sits in an `if` the save leaves alone, so its Remove is disabled
                                      with a reason; a TD option carries no per-option condition, so it is removable. -->
@@ -491,7 +484,7 @@
             <!-- Inside a bundle branch the condition is already shown once at the branch head
                  (the [if] chip), so the per-option condition field is omitted to avoid a
                  redundant disabled control on every row. Flat-path render is unchanged. -->
-            {#if !state.branches}
+            {#if !dialogState.branches}
                 {#if labeled}<div class="ik">Condition</div>{/if}
                 <!-- Read-only reason differs: a structured/approximate node's whole structure is read-only
                      (a nested/composite gate cannot round-trip), so the condition shown is the full conjoined
@@ -502,7 +495,7 @@
                          TypeScript-expression grammar for a TSSL condition (its source is TypeScript). Both run
                          through the same tokenizer as every other field, so it is editor parity by construction.
                          Disabled (a shared condition) renders dashed via CodeField's own disabled styling. -->
-                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(state, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
+                    <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!c.conditionEditable} title={!c.conditionEditable ? conditionLockReason(dialogState, c, ssl, editable) : ""} placeholder="(no condition)" oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
                 {:else}
                     <!-- D-family condition: BAF for D, TypeScript source for TD - codeLang picks the grammar. -->
                     <CodeField lang={codeLang} value={c.condition ?? ""} disabled={!codeEditable} title={codeReason} placeholder={!codeEditable ? "(none)" : dlg ? "(no condition)" : "condition (IF ~...~)"} oninput={(v) => (c.condition = v.trim() === "" ? undefined : v)} />
@@ -511,11 +504,11 @@
                      structured/approximate node the top-of-panel banner already says the whole structure is
                      read-only, so repeating it on all N option cards is just clutter - the dashed field carries
                      the signal, the banner the explanation. -->
-                {#if ssl && c.conditionEditable === false && !state.structured && !state.approximate}
+                {#if ssl && c.conditionEditable === false && !dialogState.structured && !dialogState.approximate}
                     <div class="condnote">shared by other options - edit in <b>source file</b></div>
                 {/if}
             {/if}
-            {#if !ssl && !state.branches}
+            {#if !ssl && !dialogState.branches}
                 {#if labeled}<div class="ik">Action</div>{/if}
                 <!-- Guarded by `!ssl` above: a D-family action. Coloured by codeLang like the condition/trigger -
                      BAF for a D dialog, TypeScript for a TD one (its source is TypeScript, even though the D it
@@ -564,8 +557,8 @@
 
     {#if focusedChoice}
         {@render choiceRow(focusedChoice, focusedIndex, undefined, undefined, true)}
-    {:else if state.branches}
-        {#each state.branches as b, bi (bi)}
+    {:else if dialogState.branches}
+        {#each dialogState.branches as b, bi (bi)}
             {@const bcs = branchChoices(b)}
             <div class="branch">
                 {#if b.kind === "else"}
@@ -631,31 +624,30 @@
         {/each}
         {#if structuralEditable}
             <!-- Add a new if-branch: the condition is required (an if without a condition
-                 is not valid SSL). The button is disabled until a non-empty condition is typed.
-                 $newBranchCond is a writable store - see the declaration comment above. -->
+                 is not valid SSL). The button is disabled until a non-empty condition is typed. -->
             <div class="branchadd-row">
                 <div class="branchcondwrap">
                     <CodeField
                         lang={codeLang}
-                        value={$newBranchCond}
+                        value={newBranchCond}
                         placeholder="condition for new if branch"
-                        oninput={(v) => newBranchCond.set(v)}
+                        oninput={(v) => (newBranchCond = v)}
                     />
                 </div>
                 <button
                     class="add"
-                    disabled={$newBranchCond.trim() === ""}
-                    title={$newBranchCond.trim() === "" ? "Type a condition for the new if-branch first (an if without a condition isn't valid SSL)." : "Add if-branch"}
-                    onclick={() => { actions.addBranch($newBranchCond.trim()); newBranchCond.set(""); }}
+                    disabled={newBranchCond.trim() === ""}
+                    title={newBranchCond.trim() === "" ? "Type a condition for the new if-branch first (an if without a condition isn't valid SSL)." : "Add if-branch"}
+                    onclick={() => { actions.addBranch(newBranchCond.trim()); newBranchCond = ""; }}
                 >+ if</button>
             </div>
             <!-- Add an else-branch only when there is exactly one if-branch and no else yet.
                  The op enforces the same precondition; the button visibility keeps the UI consistent. -->
-            {#if state.branches.length === 1 && state.branches[0]?.kind === "if"}
+            {#if dialogState.branches.length === 1 && dialogState.branches[0]?.kind === "if"}
                 <button class="add branchadd" onclick={actions.addElse}>+ else</button>
             {/if}
         {/if}
-    {:else if ssl && state.block}
+    {:else if ssl && dialogState.block}
         <!-- Structured (read-only) node: options grouped into read-only [if]/[else] branch sections mirroring
              the tree's fork. The section for the branch clicked in the tree (highlightedBranchKey) is tinted and
              scrolled into view. Each option shows its text, target, and full condition - editing the structure
@@ -677,7 +669,7 @@
             </div>
         {/each}
     {:else}
-        {#each state.choices as c, i (c.id)}
+        {#each dialogState.choices as c, i (c.id)}
             {@render choiceRow(c, i)}
         {/each}
         {#if structuralEditable}

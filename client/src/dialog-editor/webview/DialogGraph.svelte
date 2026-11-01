@@ -1396,7 +1396,7 @@
 {/snippet}
 
 {#snippet inspectorBox(s: DialogState)}
-    <Inspector state={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceLang={editModel.sourceLang} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} reachability={selectedReachability} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
+    <Inspector dialogState={s} messages={editModel.messages} {stateIds} {actions} format={renderFamily(editModel.sourceLang)} sourceLang={editModel.sourceLang} sourceName={editModel.sourceName} editable={editModel.editable} structuralEditable={structEditable(s)} deletable={canDelete(s)} callers={callerRows} reachability={selectedReachability} {selectedChoiceId} {highlightedBranchKey} onNavigate={navigateToState} onFocusOwnerState={focusOwnerState} />
 {/snippet}
 
 <svelte:window onkeydown={onWindowKeydown} />
@@ -1558,7 +1558,10 @@
             <!-- deleteKey={null}: svelte-flow's built-in delete would drop the flow node/edge without
                  touching the model, leaving dangling GOTOs; node deletion goes through requestDeleteState
                  (Delete/Backspace in onWindowKeydown) so it is confirmed and redirects inbound refs. -->
-            <SvelteFlow bind:nodes bind:edges bind:viewport {nodeTypes} {edgeTypes} deleteKey={null} onnodeclick={onNodeClick} onconnect={onConnect} onreconnect={onReconnect} nodesDraggable>
+            <!-- onlyRenderVisibleElements: only the cards in view are mounted, so a large dialog pans and zooms
+                 without the whole graph in the DOM. A card holds no local state (editing lives in the tree and the
+                 inspector), so unmounting loses nothing but keyboard focus inside the card, accepted. -->
+            <SvelteFlow bind:nodes bind:edges bind:viewport {nodeTypes} {edgeTypes} deleteKey={null} onnodeclick={onNodeClick} onconnect={onConnect} onreconnect={onReconnect} nodesDraggable onlyRenderVisibleElements>
                 <Background />
                 <Controls showFitView={false}>
                     <ControlButton onclick={fitViewport} title="Fit view" aria-label="Fit view">
