@@ -1,4 +1,5 @@
 import { openGame, type Game } from "@bgforge/binary";
+import { conlog } from "../logging";
 
 /**
  * The install-opening seam, as `server/src/ie-resources/configured-game.ts` has one. Injected in tests, where
@@ -10,7 +11,11 @@ export type GameOpener = (dir: string, encoding: string | undefined) => Game;
 /** The one place the open options are built, so a caller wrapping this cannot let them drift. */
 export const defaultOpener: GameOpener = (dir, encoding) =>
     // Engine mode: resolve what the running game sees, so a mod's override files win as they do in play.
-    openGame(dir, { mode: "engine", ...(encoding === undefined ? {} : { encoding }) });
+    openGame(dir, {
+        mode: "engine",
+        ...(encoding === undefined ? {} : { encoding }),
+        onWarning: (message) => conlog(`ieResources: ${dir}: ${message}`, "warn"),
+    });
 
 /**
  * The one open IE game, for the resource viewer and every lookup that resolves against an install.

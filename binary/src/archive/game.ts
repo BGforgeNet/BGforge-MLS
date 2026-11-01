@@ -18,6 +18,7 @@ import { detectGameIdentity, refineGameFlavour, type GameIdentity } from "./game
 import { parseKey, type KeyIndex } from "./key";
 import { RESOURCE_TYPE_TIS, resourceTypeCode, resourceTypeExt } from "./resource-type";
 import { parseIds, parseIdsAll } from "./ids";
+import { nonAsciiByteCount } from "./text-resource";
 import { parse2daRowNames, parse2daTable, type TwoDaTable } from "./two-da";
 import { openTlk, type Tlk } from "./tlk";
 
@@ -171,6 +172,13 @@ export interface OpenGameOptions {
      * accepts; overrides the auto-detect.
      */
     encoding?: string;
+    /**
+     * Receives a warning the library can carry on past: today, an IDS or 2DA table holding bytes outside ASCII.
+     * Tables are read as windows-1252 whatever `encoding` says, since the engine's tables hold identifiers,
+     * numbers and resrefs in every localization; a table that does not is reported here, once per table, rather
+     * than decoded by a guess. Unset, the warning is dropped.
+     */
+    onWarning?: (message: string) => void;
 }
 
 /** WeiDU's default override search: `<game>/override` only. */
@@ -433,7 +441,15 @@ export function openGame(gameDir: string, options: OpenGameOptions = {}): Game {
                 entry = null;
             } else {
                 try {
-                    entry = { table: parse(readResource(resref, resType)) };
+                    const bytes = readResource(resref, resType);
+                    const nonAscii = nonAsciiByteCount(bytes);
+                    if (nonAscii > 0) {
+                        const name = `${resref.toUpperCase()}.${(resourceTypeExt(resType) ?? "").toUpperCase()}`;
+                        options.onWarning?.(
+                            `${name} holds ${nonAscii} byte(s) outside ASCII; read as windows-1252, which may not be its codepage`,
+                        );
+                    }
+                    entry = { table: parse(bytes) };
                 } catch (error) {
                     const name = `${resref.toUpperCase()}.${(resourceTypeExt(resType) ?? "").toUpperCase()}`;
                     const reason = error instanceof Error ? error.message : String(error);

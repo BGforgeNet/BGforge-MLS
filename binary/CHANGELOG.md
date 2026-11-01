@@ -4,6 +4,11 @@ Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-e
 
 ## Unreleased
 
+### Added
+
+- `openGame` takes `onWarning`, which receives a warning the library carries on past: an IDS or 2DA table
+  holding bytes outside ASCII, read as windows-1252 whatever the TLK encoding is, is reported once per table.
+
 ### Changed
 
 - `createBinaryJsonSnapshot` and `loadBinaryJsonSnapshot` refuse a format with no registered format adapter
@@ -21,6 +26,9 @@ Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-e
 - `fgbin --load` reads the snapshot named on the command line, not the value of a flag before it:
   `fgbin --load --proto-dir <dir> file.json` used to read `<dir>`. `--help` says which options `--load` ignores.
 - `fgbin --help` lists every option in its usage line.
+- `fgbin` reads a hyphenated no-value flag such as `--parse-only`, `--graceful-map` or `--save-and-check` correctly
+  when a file follows it; before, the flag swallowed the file and the run failed with "No file or directory
+  specified". A flag it does not know is refused by name.
 
 ## 0.9.0
 

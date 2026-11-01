@@ -19,7 +19,11 @@ export type GameOpener = (dir: string, encoding: string | undefined) => Game;
 
 const defaultOpener: GameOpener = (dir, encoding) =>
     // Engine mode: resolve what the running game sees, so a mod's override files win as they do in play.
-    openGame(dir, { mode: "engine", ...(encoding === undefined ? {} : { encoding }) });
+    openGame(dir, {
+        mode: "engine",
+        ...(encoding === undefined ? {} : { encoding }),
+        onWarning: (message) => conlog(`ieResources: ${dir}: ${message}`, "warn"),
+    });
 
 /** The settings that decide which string table is read; a change to either re-opens the game. */
 type GameConfig = Pick<WeiDUsettings, "gamePath" | "tlkEncoding">;

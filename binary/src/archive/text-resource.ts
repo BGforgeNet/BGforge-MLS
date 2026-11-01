@@ -17,13 +17,27 @@ const IE_XOR_KEY = Uint8Array.from([
     0xb4, 0x9d, 0xcc, 0xaf, 0xa5, 0x95, 0xba, 0x99, 0x87, 0xd2, 0x9d, 0xe3, 0x91, 0xba, 0x90, 0xca,
 ]);
 
-/** Decode a text resource as windows-1252, decrypting first when it carries the 0xFFFF marker. */
-export function decodeTextResource(bytes: Uint8Array): string {
-    if (bytes[0] !== ENCRYPTED_MARKER || bytes[1] !== ENCRYPTED_MARKER) {
-        return decodeWindows1252(bytes);
-    }
+/** The resource's text bytes: the input itself, or its body decrypted when it carries the 0xFFFF marker. */
+function plainTextBytes(bytes: Uint8Array): Uint8Array {
+    if (bytes[0] !== ENCRYPTED_MARKER || bytes[1] !== ENCRYPTED_MARKER) return bytes;
     const body = bytes.subarray(2);
     const plain = new Uint8Array(body.length);
     for (const [i, byte] of body.entries()) plain[i] = byte ^ IE_XOR_KEY[i % IE_XOR_KEY.length]!;
-    return decodeWindows1252(plain);
+    return plain;
+}
+
+/** Decode a text resource as windows-1252, decrypting first when it carries the 0xFFFF marker. */
+export function decodeTextResource(bytes: Uint8Array): string {
+    return decodeWindows1252(plainTextBytes(bytes));
+}
+
+/**
+ * How many bytes of the resource's text fall outside ASCII. The engine's tables hold identifiers, numbers and
+ * resrefs, so a nonzero count means the fixed windows-1252 decoding is a guess for this table; the caller
+ * reports it rather than switching codepage on a byte it cannot classify.
+ */
+export function nonAsciiByteCount(bytes: Uint8Array): number {
+    let count = 0;
+    for (const byte of plainTextBytes(bytes)) if (byte >= 0x80) count++;
+    return count;
 }

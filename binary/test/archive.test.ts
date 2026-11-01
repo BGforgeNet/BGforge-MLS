@@ -838,6 +838,33 @@ describe("openGame (real filesystem)", () => {
         }
     });
 
+    // Tables are decoded as windows-1252 whatever the TLK encoding is, so a table with bytes outside ASCII is
+    // reported through `onWarning` - once, on the first read - instead of being decoded by a guess. An ASCII
+    // table stays silent: the warning must not fire on the shipped case.
+    it("warns once about a table holding bytes outside ASCII and stays silent on an ASCII one", () => {
+        const ascii = new TextEncoder().encode("IDS V1.0\r\n0 INITIAL_MEETING\r\n");
+        const accented = Uint8Array.from([
+            ...new TextEncoder().encode("IDS V1.0\r\n0 R"),
+            0xc9,
+            ...new TextEncoder().encode("UNION\r\n"),
+        ]);
+        const warnings: string[] = [];
+        const game = openGame(makeGameDir({ "override/sndslot.ids": ascii, "override/sndslot2.ids": accented }), {
+            onWarning: (message) => warnings.push(message),
+        });
+        try {
+            expect(game.ids("SNDSLOT")?.get(0)).toBe("INITIAL_MEETING");
+            expect(warnings).toEqual([]);
+            expect(game.ids("SNDSLOT2")?.get(0)).toBe(`R${String.fromCodePoint(0xc9)}UNION`);
+            game.ids("SNDSLOT2");
+            expect(warnings).toEqual([
+                "SNDSLOT2.IDS holds 1 byte(s) outside ASCII; read as windows-1252, which may not be its codepage",
+            ]);
+        } finally {
+            game.close();
+        }
+    });
+
     /**
      * The path the editor's naming-table resolver takes - install file through to `Game.ids` - over a table
      * whose identifiers carry spaces. MISSILE.IDS is the shipped case: it names projectiles in prose, so a

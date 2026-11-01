@@ -104,6 +104,9 @@
 - When an install cannot be read, the output channel says why, once per install and lookup. Before, every editor
   behaved as if no game were open, with no trace. Animation resources the gallery index skips because they cannot be
   read are listed there too.
+- An IDS or 2DA table holding bytes outside ASCII is reported in the output channel, once per table. Tables are
+  read as windows-1252 whatever `bgforge.weidu.tlkEncoding` says, since the engine's tables hold identifiers,
+  numbers and resource names in every language; the report shows when an install breaks that rule.
 - Image gallery: a crashed thumbnail worker is restarted once and finishes the tiles it was drawing; a second crash
   turns thumbnails off with a message instead of leaving tiles loading forever. Opening another game, or switching
   between the game and workspace gallery, starts from a fresh worker, so a thumbnail is never drawn from another
