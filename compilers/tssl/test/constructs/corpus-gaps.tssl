@@ -53,6 +53,11 @@ export function start(): void {
     let mask = (limit ^ 6) & ~limit;
     display_msg(mask);
 
+    // A left shift, which SSL lacks: both routes write it as a multiply, the text route restating the
+    // sum's grouping that `*` would otherwise take apart.
+    let packed = limit + 1 << 12;
+    display_msg(packed);
+
     // A float literal written out. The old bundler normalised 1.0 to 1 and silently turned float
     // division into integer division.
     let ratio = 1.0 * 7 / 2;

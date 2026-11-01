@@ -151,8 +151,8 @@ function renderModule(module: ModuleItems, program: TsslProgram, ctx: TsslContex
                 const func = stmt.asKindOrThrow(SyntaxKind.FunctionDeclaration);
                 const name = func.getName();
                 if (!name || !program.kept.has(func)) break;
-                // Extracted inline functions expand at call sites; list() and map() become literals.
-                if (program.inlineFunctions.has(name) || RESERVED_VAR_NAMES.has(name)) break;
+                // list() and map() become literals. Inline functions are never kept: they expand at call sites.
+                if (RESERVED_VAR_NAMES.has(name)) break;
                 renderProcedure(func, name, module, ctx, section, originOf(func));
                 break;
             }

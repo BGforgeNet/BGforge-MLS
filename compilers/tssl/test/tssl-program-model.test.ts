@@ -139,6 +139,41 @@ describe("collisions", () => {
         );
         expect(out).toContain("#define WIDTH 32");
     });
+
+    // An imported library's @inline functions all enter the module graph, the ones nothing calls included.
+    const unusableLib = [
+        "/** @inline */",
+        "export function weapon_is_unusable(w: number): boolean {",
+        "    return is_unusable(w);",
+        "}",
+        "export function touch(): void {",
+        "    display_msg(1);",
+        "}",
+        "export function check(): boolean {",
+        "    return weapon_is_unusable(1);",
+        "}",
+        "",
+    ].join("\n");
+    const localUnusable = "function weapon_is_unusable(w: number): boolean {\n    return w == 3;\n}\n";
+
+    it("calls a local function that shares a name with an uncalled @inline one elsewhere", async () => {
+        const out = await emit(
+            `import { touch } from "./lib";\n${localUnusable}function start() {\n    touch();\n    display_msg(weapon_is_unusable(2));\n}\n`,
+            { "lib.ts": unusableLib },
+        );
+        expect(out).toContain("procedure weapon_is_unusable(variable w) begin");
+        expect(out).toContain("display_msg(weapon_is_unusable(2));");
+        expect(out).not.toContain("#define weapon_is_unusable");
+    });
+
+    it("refuses a local function sharing a name with an @inline one the program also calls", async () => {
+        await expect(
+            emit(
+                `import { check } from "./lib";\n${localUnusable}function start() {\n    check();\n    display_msg(weapon_is_unusable(2));\n}\n`,
+                { "lib.ts": unusableLib },
+            ),
+        ).rejects.toThrow(/'weapon_is_unusable' is defined in both .*lib\.ts:2 and .*main\.tssl:2/);
+    });
 });
 
 describe("literal fidelity", () => {

@@ -163,17 +163,21 @@ switch (x) {
 
 TypeScript operators map to their SSL equivalents:
 
-| TypeScript | SSL     | Description |
-| ---------- | ------- | ----------- |
-| `&&`       | `and`   | Logical AND |
-| `\|\|`     | `or`    | Logical OR  |
-| `!`        | `not`   | Logical NOT |
-| `&`        | `bwand` | Bitwise AND |
-| `\|`       | `bwor`  | Bitwise OR  |
-| `^`        | `bwxor` | Bitwise XOR |
-| `~`        | `bwnot` | Bitwise NOT |
+| TypeScript | SSL        | Description |
+| ---------- | ---------- | ----------- |
+| `&&`       | `and`      | Logical AND |
+| `\|\|`     | `or`       | Logical OR  |
+| `!`        | `not`      | Logical NOT |
+| `&`        | `bwand`    | Bitwise AND |
+| `\|`       | `bwor`     | Bitwise OR  |
+| `^`        | `bwxor`    | Bitwise XOR |
+| `~`        | `bwnot`    | Bitwise NOT |
+| `a << 12`  | `a * 4096` | Left shift  |
 
 Operators that pass through unchanged: `==`, `!=`, `<`, `>`, `<=`, `>=`, `+`, `-`, `*`, `/`, `%`, `=`, `+=`, `-=`, `*=`, `/=`, `++`, `--`.
+
+SSL has no shift operator. `<<` takes an integer literal count from 0 to 31 and compiles to a multiply by that power
+of two. `>>` and `>>>` are refused: for a non-negative value, divide by a power of two instead.
 
 **Ternary operator** is supported:
 

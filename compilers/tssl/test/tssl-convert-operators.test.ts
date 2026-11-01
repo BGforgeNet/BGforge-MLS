@@ -137,6 +137,34 @@ describe("expressions the emitter does not recognise", () => {
     });
 });
 
+describe("shifts, which SSL does not have", () => {
+    it("writes a left shift by a literal count as a multiply by that power of two", async () => {
+        const out = await emit(`function start() {\n    let x = 5 << 12;\n}\n`);
+        expect(out).toContain("variable x = 5 * 4096;");
+    });
+
+    // `+` binds tighter than `<<` but looser than `*`, so the sum keeps its grouping only in parentheses.
+    it("parenthesises an additive left operand, up to the largest count", async () => {
+        const out = await emit(`function start() {\n    let a = 1;\n    let x = a + 1 << 31;\n}\n`);
+        expect(out).toContain("variable x = (a + 1) * 2147483648;");
+    });
+
+    // `as` binds looser than `+`, so the cast wraps the sum and erases from the output.
+    it("parenthesises an additive left operand under a cast", async () => {
+        const out = await emit(`function start() {\n    let a = 1;\n    let x = a + 1 as number << 2;\n}\n`);
+        expect(out).toContain("variable x = (a + 1) * 4;");
+    });
+
+    it.each([
+        ["a computed count", "let n = 2;\n    let x = 1 << n;", /'<<' needs an integer literal count from 0 to 31/],
+        ["a count past 31", "let x = 1 << 32;", /'<<' needs an integer literal count from 0 to 31/],
+        ["a right shift", "let x = 8 >> 1;", /'>>' is not supported; SSL has no shift/],
+        ["an unsigned right shift", "let x = 8 >>> 1;", /'>>>' is not supported; SSL has no shift/],
+    ])("refuses %s", async (_name, body, message) => {
+        await expect(emit(`function start() {\n    ${body}\n}\n`)).rejects.toThrow(message);
+    });
+});
+
 describe("constructs with no SSL spelling", () => {
     // These reached the output verbatim and failed in the generated file, where the error named a line
     // nobody wrote. The bytecode front end already refused them, so the two routes disagreed.

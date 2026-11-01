@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Transpilers
+
+- TSSL compiles `a << n` for a literal count `n`, and refuses `>>` and `>>>` with what to write instead.
+- A TSSL function named like a folib `@inline` function compiles as itself; before, calls to it silently ran
+  folib's.
+
 ## 3.19.0
 
 ### All languages

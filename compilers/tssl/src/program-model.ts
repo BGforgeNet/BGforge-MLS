@@ -56,9 +56,12 @@ export interface TsslProgram {
     kept: Set<Node>;
     /** Flat `EnumName_Member` names something referenced, which is what keeps that member's define. */
     usedEnumMembers: Set<string>;
-    /** Names of functions declared @inline anywhere in the graph. */
+    /**
+     * The @inline functions something actually calls, by name - only these become macros. One name per
+     * declaration: the collision check refuses a second meaning for any of them.
+     */
     inlineFunctions: Map<string, InlineFunc>;
-    /** The @inline functions something actually calls - only these become macros. */
+    /** The keys of `inlineFunctions`. */
     usedInline: Set<string>;
     /** Kept procedure names: what gets the `call` keyword, and keeps its parentheses at zero args. */
     definedFunctions: Set<string>;
@@ -333,14 +336,26 @@ export function buildProgramModel(
     // Inline-ness is decided by successful EXTRACTION, not the @inline tag alone: a tagged function
     // whose body is none of the shapes the macro extractor reads - control flow, a local - stays a
     // regular procedure rather than refusing the compile.
-    const inlineFunctions = new Map<string, InlineFunc>();
-    for (const module of modules) {
-        for (const [name, fn] of extractInline(module.source)) inlineFunctions.set(name, fn);
-    }
+    //
+    // Keyed by the declaring file, not merged by name: a library barrel brings every module of the library
+    // into the graph, so a name-keyed merge made a local function that merely shared a name with an uncalled
+    // library macro expand as that macro.
+    const inlineByFile = new Map<SourceFile, Map<string, InlineFunc>>();
+    const inlineIn = (decl: FunctionDeclaration): InlineFunc | undefined => {
+        const name = decl.getName();
+        if (name === undefined) return undefined;
+        const source = decl.getSourceFile();
+        let inFile = inlineByFile.get(source);
+        if (!inFile) {
+            inFile = extractInline(source);
+            inlineByFile.set(source, inFile);
+        }
+        return inFile.get(name);
+    };
 
     const kept = new Set<Node>();
     const usedEnumMembers = new Set<string>();
-    const usedInline = new Set<string>();
+    const usedInline = new Map<FunctionDeclaration, InlineFunc>();
     const scanned = new Set<Node>();
     const queue: Node[] = [];
 
@@ -358,13 +373,15 @@ export function buildProgramModel(
     const markIdentifier = (id: Identifier): void => {
         const decl = declarationOf(id);
         if (!decl || !isEmittable(decl)) return;
-        const name = Node.isFunctionDeclaration(decl) ? decl.getName() : undefined;
-        if (name !== undefined && inlineFunctions.has(name)) {
-            usedInline.add(name);
-            // The macro's body references travel with it - its constants still need their defines -
-            // but the function itself is expanded at call sites, never emitted as a procedure.
-            scanOnly(decl);
-            return;
+        if (Node.isFunctionDeclaration(decl)) {
+            const inline = inlineIn(decl);
+            if (inline !== undefined) {
+                usedInline.set(decl, inline);
+                // The macro's body references travel with it - its constants still need their defines -
+                // but the function itself is expanded at call sites, never emitted as a procedure.
+                scanOnly(decl);
+                return;
+            }
         }
         keep(decl);
     };
@@ -391,10 +408,13 @@ export function buildProgramModel(
     // Seeds: what the engine reaches by name, what hooks register, and everything the entry's defines
     // state - entry consts are emitted unconditionally, so whatever their values reference is live too.
     const roots = rootNames(entrySource, engineProcedureNames);
+    // An @inline function is never kept, so it never becomes a procedure; its body is still scanned.
     for (const func of entry.functions) {
         const name = func.getName();
-        if (name && roots.has(name)) keep(func);
-        if (func.isExported()) keep(func);
+        if ((name && roots.has(name)) || func.isExported()) {
+            if (inlineIn(func)) scanOnly(func);
+            else keep(func);
+        }
     }
     for (const decl of entry.consts) keep(decl);
     for (const decl of entry.lets) if (decl.getVariableStatement()?.isExported()) keep(decl);
@@ -421,11 +441,17 @@ export function buildProgramModel(
     for (const module of modules) {
         for (const func of module.functions) {
             const name = func.getName();
-            if (name && kept.has(func) && !inlineFunctions.has(name)) definedFunctions.add(name);
+            if (name && kept.has(func)) definedFunctions.add(name);
         }
     }
 
-    refuseCollisions(modules, kept);
+    refuseCollisions(modules, kept, usedInline);
+
+    const inlineFunctions = new Map<string, InlineFunc>();
+    for (const [decl, inline] of usedInline) {
+        const name = decl.getName();
+        if (name !== undefined) inlineFunctions.set(name, inline);
+    }
 
     return {
         modules,
@@ -435,7 +461,7 @@ export function buildProgramModel(
         kept,
         usedEnumMembers,
         inlineFunctions,
-        usedInline,
+        usedInline: new Set(inlineFunctions.keys()),
         definedFunctions,
         importRenames,
     };
@@ -444,9 +470,10 @@ export function buildProgramModel(
 /**
  * Two kept declarations sharing one name would emit a program where every reference silently binds to
  * whichever came out last. The bundler used to rename one and the output repair guessed the rename
- * back; refusing with both locations is the honest version.
+ * back; refusing with both locations is the honest version. A called @inline function counts: its
+ * macro shares the namespace.
  */
-function refuseCollisions(modules: ModuleItems[], kept: Set<Node>): void {
+function refuseCollisions(modules: ModuleItems[], kept: Set<Node>, usedInline: ReadonlyMap<Node, InlineFunc>): void {
     const seen = new Map<string, Node>();
     const claim = (name: string, decl: Node): void => {
         const previous = seen.get(name);
@@ -475,7 +502,7 @@ function refuseCollisions(modules: ModuleItems[], kept: Set<Node>): void {
         }
         for (const func of module.functions) {
             const name = func.getName();
-            if (name && kept.has(func)) claim(name, func);
+            if (name && (kept.has(func) || usedInline.has(func))) claim(name, func);
         }
         for (const decl of module.enums) {
             if (kept.has(decl)) claim(decl.getName(), decl);

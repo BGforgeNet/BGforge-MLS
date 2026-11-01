@@ -9,9 +9,9 @@
  * it does not recognise instead of passing it through.
  */
 
-import type { Node } from "ts-morph";
+import { Node } from "ts-morph";
 import { SyntaxKind, FORBIDDEN_GLOBALS, RESERVED_VAR_NAMES, sslName, sslNumber, type TsslContext } from "./types";
-import { ASSIGN_OPS, BINARY_OPS } from "./operators";
+import { ASSIGN_OPS, BINARY_OPS, leftShiftFactor, REFUSED_OPS } from "./operators";
 import { DESTRUCTURING_REFUSAL, refuseAt } from "./program-model";
 
 /** Syntax with no SSL counterpart: passing it through would emit text SSL cannot compile. */
@@ -51,11 +51,22 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             if (operator === ",") {
                 return convertOperatorsAST(binary.getRight(), ctx);
             }
-            if (operator === "**") {
-                throw refuseAt(node, "'**' is not supported; SSL spells exponentiation '^'");
-            }
-            if (operator === "??") {
-                throw refuseAt(node, "'??' is not supported; SSL has no null");
+            const refused = REFUSED_OPS.get(operator);
+            if (refused !== undefined) throw refuseAt(node, refused);
+            if (operator === "<<") {
+                const factor = leftShiftFactor(binary);
+                // `<<` binds looser than `+` and `-` but SSL's `*` binds tighter, so only a sum or difference
+                // needs its grouping restated; every other operand TypeScript allows there binds tighter still.
+                // A cast binds looser than `+` too and erases from the output, so it is looked through.
+                const leftNode = binary.getLeft();
+                let grouped: Node = leftNode;
+                while (Node.isAsExpression(grouped) || Node.isSatisfiesExpression(grouped)) {
+                    grouped = grouped.getExpression();
+                }
+                const additive =
+                    Node.isBinaryExpression(grouped) && ["+", "-"].includes(grouped.getOperatorToken().getText());
+                const left = convertOperatorsAST(leftNode, ctx);
+                return `${additive ? `(${left})` : left} * ${factor}`;
             }
 
             // An allowlist rather than a fix-up switch: passing an unrecognised operator through put

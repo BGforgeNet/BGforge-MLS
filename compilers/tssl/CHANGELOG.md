@@ -2,6 +2,19 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
+## Unreleased
+
+### Added
+
+- `a << n` with an integer literal `n` from 0 to 31 compiles, as a multiply by 2^n, since SSL has no shift. A
+  computed count, `>>` and `>>>` are refused with what to write instead.
+
+### Fixed
+
+- A function named like an `@inline` function of an imported library, such as folib's `weapon_is_unusable`,
+  compiles as itself; before, its body was dropped and calls expanded to the library's macro. When the script also
+  calls the library's one, the compile is refused, naming both.
+
 ## 0.4.0
 
 ### Changed

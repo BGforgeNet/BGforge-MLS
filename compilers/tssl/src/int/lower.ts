@@ -41,7 +41,7 @@ import {
     refuseAt,
     type TsslProgram,
 } from "../program-model";
-import { ASSIGN_OPS, BINARY_OPS } from "../operators";
+import { ASSIGN_OPS, BINARY_OPS, leftShiftFactor, REFUSED_OPS } from "../operators";
 import { RESERVED_VAR_NAMES, sslName, sslNumber, type InlineFunc } from "../types";
 import { createBatchState, prepareEntry, type TranspileBatchState } from "../batch";
 import { extractInlineFunctions } from "../inline-functions";
@@ -198,7 +198,7 @@ class TsslLowering {
 
     /**
      * Kept procedures in emission order: bundled modules in dependency order, the entry last. Inline
-     * functions and the `list`/`map` helpers expand at their call sites and never become procedures.
+     * functions are never kept, and the `list`/`map` helpers expand at their call sites.
      */
     private keptFunctions(): FunctionDeclaration[] {
         const out: FunctionDeclaration[] = [];
@@ -206,7 +206,7 @@ class TsslLowering {
             for (const func of module.functions) {
                 const name = func.getName();
                 if (name === undefined || !this.model.kept.has(func)) continue;
-                if (this.model.inlineFunctions.has(name) || RESERVED_VAR_NAMES.has(name)) continue;
+                if (RESERVED_VAR_NAMES.has(name)) continue;
                 out.push(func);
             }
         }
@@ -921,6 +921,17 @@ class TsslLowering {
             case SyntaxKind.BinaryExpression: {
                 const binary = node.asKindOrThrow(SyntaxKind.BinaryExpression);
                 const operator = binary.getOperatorToken().getText();
+                const refused = REFUSED_OPS.get(operator);
+                if (refused !== undefined) throw refuseAt(binary, refused);
+                if (operator === "<<") {
+                    const factor = leftShiftFactor(binary);
+                    return {
+                        kind: "binary",
+                        op: "*",
+                        left: this.lowerExpression(binary.getLeft(), scope),
+                        right: { kind: "int", value: factor },
+                    };
+                }
                 const op = BINARY_OPS.get(operator);
                 if (op === undefined) throw refuseAt(binary, `'${operator}' is not lowered yet`);
                 return {

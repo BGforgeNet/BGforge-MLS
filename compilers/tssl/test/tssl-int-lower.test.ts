@@ -97,6 +97,37 @@ describe("declarations", () => {
         expect(assignment.value).toEqual({ kind: "unary", op: "negate", operand: { kind: "int", value: 1 } });
     });
 
+    it("lowers a local function as a procedure when an uncalled @inline one elsewhere shares its name", () => {
+        const lib = `lib${fileSeq}`;
+        fs.writeFileSync(
+            path.join(tmpDir, `${lib}.ts`),
+            "/** @inline */\nexport function twice(v: number): number {\n    return add(v, v);\n}\nexport function touch(): void {}\n",
+            "utf-8",
+        );
+        const program = lower(
+            `import { touch } from "./${lib}";\nfunction twice(v: number): number {\n    return v * 2;\n}\nfunction start() {\n    touch();\n    display_msg(twice(3));\n}\n`,
+        );
+        expect(program.declarations.map((d) => (d.kind === "procedure" ? d.procedure.name : d.kind))).toEqual([
+            "touch",
+            "twice",
+            "start",
+        ]);
+    });
+
+    it("lowers a left shift by a literal count to a multiply, SSL having no shift", () => {
+        const program = lower("function start() {\n    let x = 0;\n    x = 5 << 12;\n}\n");
+        const [first] = program.declarations;
+        if (first?.kind !== "procedure") throw new Error("expected a procedure");
+        const assignment = first.procedure.body[0];
+        if (assignment?.kind !== "assign") throw new Error("expected an assignment");
+        expect(assignment.value).toEqual({
+            kind: "binary",
+            op: "*",
+            left: { kind: "int", value: 5 },
+            right: { kind: "int", value: 4096 },
+        });
+    });
+
     it("folds a negation into a global's slot, where an initial value must be constant", () => {
         const program = lower("let g = -1;\nfunction start() {\n    display_msg(g);\n}\n");
         const global = program.declarations.find((d) => d.kind === "global");
@@ -107,7 +138,13 @@ describe("declarations", () => {
 describe("refusals", () => {
     it.each([
         ["an unknown identifier", "function start() {\n    display_msg(nope);\n}\n", /unknown identifier 'nope'/],
-        ["an operator with no mapping", "function start() {\n    let x = 1 << 2;\n}\n", /'<<' is not lowered yet/],
+        ["an operator with no mapping", "function start() {\n    let x = 1 in 2;\n}\n", /'in' is not lowered yet/],
+        [
+            "a shift by a computed count",
+            "function start() {\n    let n = 2;\n    let x = 1 << n;\n}\n",
+            /'<<' needs an integer literal count from 0 to 31/,
+        ],
+        ["a right shift", "function start() {\n    let x = 8 >> 1;\n}\n", /'>>' is not supported; SSL has no shift/],
         [
             "a statement with no mapping",
             "function start() {\n    do {} while (1);\n}\n",
