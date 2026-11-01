@@ -1,12 +1,11 @@
 /**
- * Pure diagnostic filtering for the TSSL TypeScript plugin.
- * Filters out TS6133 ("declared but never read") for Fallout engine
- * procedure names in .tssl files.
+ * Pure diagnostic filtering for .tssl files, shared by the TSSL TypeScript plugin and the tssl CLI's type
+ * check so the editor and the command line report the same errors.
+ * Filters out TS6133 ("declared but never read") for Fallout engine procedure names.
  */
 
-// Generated from server/data/fallout-ssl-base.yml by generate-data.sh.
-// Inlined by esbuild at bundle time.
-import engineProcedureNames from "@bgforge/shared/data/fallout-ssl-engine-procedures.json";
+// Generated from server/data/fallout-ssl-base.yml by generate-data.sh; inlined by each consumer's bundler.
+import engineProcedureNames from "./data/fallout-ssl-engine-procedures.json";
 
 const ENGINE_PROCEDURES: ReadonlySet<string> = new Set(engineProcedureNames);
 

@@ -12,7 +12,7 @@
 
 import type ts from "typescript";
 import { appendEngineProcDoc } from "./engine-proc-hover";
-import { filterEngineProcedureDiagnostics } from "./filter-diagnostics";
+import { filterEngineProcedureDiagnostics } from "@bgforge/shared/tssl-diagnostics";
 
 const TSSL_EXTENSION = ".tssl";
 

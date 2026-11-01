@@ -4,14 +4,13 @@
         "lib": ["es2024", "es2025.collection"],
         // TS Language Service plugins must use `export = init` (CommonJS module.exports).
         // verbatimModuleSyntax conflicts with `export =` in CommonJS modules, so it is disabled here.
-        // node16 rather than the older `commonjs`/`node` pair: this package declares no `"type"`, so
-        // node16 still resolves and emits CommonJS and `export =` stays legal, while `node` (node10) has
-        // been removed in TS 7 and made the whole package unanalysable by the type-aware lint. Output
-        // format does not ride on this either way - scripts/build-ts-plugin.sh bundles with esbuild
-        // --format=cjs.
+        // `preserve` with bundler resolution because the plugin is never loaded unbundled:
+        // scripts/build-ts-plugin.sh bundles it with esbuild --format=cjs, which inlines the ES modules of
+        // `@bgforge/shared` that node16 would refuse a CommonJS file to import. `node` (node10) is gone in
+        // TS 7 and made the package unanalysable by the type-aware lint.
         "verbatimModuleSyntax": false,
-        "module": "node16",
-        "moduleResolution": "node16",
+        "module": "preserve",
+        "moduleResolution": "bundler",
         "allowImportingTsExtensions": true,
         "tsBuildInfoFile": "../../tmp/tssl-plugin.tsbuildinfo"
     },
