@@ -4,120 +4,82 @@
 
 ### All languages
 
-- Formatting never drops, duplicates or merges a comment, and never changes the text of a string or a comment.
-  Before, comments between call arguments, after `begin`, around `END ELSE`, in TP2 loop and `COPY` headers and in
-  several other places were lost or garbled, and tabs or blanks inside strings and comments could change. The
-  safety check now compares comments too, so a formatter fault leaves the file unformatted instead of losing text.
-  Should a comment ever have to move to keep it, the file is still formatted and a message says where.
-- Formatting keeps the blank lines above comments, and a second format of the result changes nothing.
-- Typing `/*` no longer hides the outline and highlighting of the rest of a TP2, D, BAF or SSL file: an unclosed
-  comment ends before the next top-level item and is reported there. Files with many unclosed comments parse in
-  milliseconds instead of seconds.
-- No single line can stall the language server any more: the text scans behind hover, completion, go to
-  definition, doc comments, compiler output and transpiler output take time in proportion to their input.
-- Syntax highlighting no longer stalls on a long line of blanks, `[` or one long word in SSL, D, TRA and
-  `worldmap.txt` files.
-- Formatting honours `.editorconfig` sections for one extension (`[*.ssl]`) or a list (`[*.{d,tp2}]`), and a nearer
-  `.editorconfig` takes precedence over one in a parent directory. An unreadable or malformed `.editorconfig` is
-  reported in the output channel instead of being ignored.
-- Workspace indexing and file-watcher reloads decode a legacy windows-1252 header correctly, so an accented name no
-  longer indexes as a replacement character.
-- A failure inside the SSL compile or transpile worker is reported at once instead of after a 60-second timeout, and
-  a failed request no longer blocks the ones after it.
-- The "BGforge MLS" output channel warns once when the symbol index passes its file cap and starts dropping files
-  from cross-file results, and names a built-in data file that is missing or unreadable. A missing `.bgforge.yml` is
-  no longer logged as a warning at every start.
-- `Ctrl+R` runs the compile command only in the languages it serves (SSL, BAF, D, TP2 and the TSSL, TBAF and TD
-  files); elsewhere it keeps its VS Code meaning. Running the command with no arguments no longer throws.
+- Formatting never loses, duplicates or alters a comment or the text of a string. If a comment has to move to be
+  kept, the file is still formatted and the output channel says where.
+- Formatting keeps the blank lines above comments, and formatting a formatted file changes nothing.
+- An unclosed `/*` no longer hides the outline and highlighting of the rest of a TP2, D, BAF or SSL file.
+- Hover, completion, go to definition and syntax highlighting no longer stall on a long line.
+- `.editorconfig` sections such as `[*.ssl]` or `[*.{d,tp2}]` apply, and a nearer `.editorconfig` wins over one in
+  a parent directory. A malformed `.editorconfig` is reported in the output channel.
+- File names in a legacy windows-1252 encoding are indexed correctly.
+- A failed compile or transpile is reported at once instead of after a 60-second timeout.
+- The output channel says when the symbol index has stopped indexing files, and names a built-in data file that is
+  missing. A missing `.bgforge.yml` is no longer logged at every start.
+- `Ctrl+R` runs the compile command only in SSL, BAF, D, TP2, TSSL, TBAF and TD files; elsewhere it keeps its
+  VS Code meaning.
 
 ### WeiDU
 
 - TP2: `/*` and `//` inside a `%...%` string are text, as WeiDU reads them. TP2 and D: a `/*` after `//` is part of
   the line comment.
-- TP2: `%MOD_FOLDER%` paths read the tp2's `BACKUP` directive itself, not `BACKUP` text inside a string or comment.
-- TP2 formatting indents an `ELSE INNER_ACTION` block like any other block.
+- TP2: `%MOD_FOLDER%` paths follow the `BACKUP` directive, not `BACKUP` inside a string or comment.
+- TP2: `ELSE INNER_ACTION` blocks are indented like any other block.
+- TP2: hovers and completions show a file name with spaces as written (`a b.tpa`, not `a%20b.tpa`).
 - TRA: formatting a file with an unclosed comment no longer adds a blank line each time.
-- TRA: a dialog editor save that adds text to a `.tra` holding a string or comment that never closes is refused
-  with the line to fix. Before, the new entry landed inside it, so WeiDU read neither entry as written.
-- Dialog editor: saving no longer warns that the same `.tra` in other language folders still holds the previous
-  text.
-- 2DA formatting no longer changes what GemRB or WeiDU read, apart from trimming trailing spaces: text past a
-  row's last column stays as written, a row that starts with a space keeps its empty name, blank lines above the
-  column names stay, and only spaces and tabs separate cells. An encrypted 2DA is left alone.
-- TP2 hovers and completions show a file name with spaces or other special characters as written, not
-  percent-encoded (`a b.tpa`, not `a%20b.tpa`).
-- BAF: an object or rectangle in brackets that holds a hex number, such as `[ENEMY.0x10]`, is highlighted like any
-  other.
-- BAF: a NUL byte inside a block comment no longer ends the comment early.
-- Dialog editor: an error that arrives while a dialog is open, such as a refused `.dlg` save or a failed re-read
-  after the file changed on disk, is shown in a banner above the dialog. Before, it was dropped without a word.
-- Dialog editor: the graph view draws only the nodes in view, so a large dialog pans and zooms without every node
-  on the page.
+- TRA: a dialog editor save into a file with a string or comment that never closes is refused, with the line to
+  fix.
+- 2DA: formatting changes nothing GemRB or WeiDU read, apart from trailing spaces. An encrypted file is left alone.
+- BAF: `[ENEMY.0x10]` and other bracketed hex values are highlighted like any other object; a NUL byte inside a
+  comment no longer ends it.
+- Dialog editor: an error while a dialog is open, such as a refused `.dlg` save, is shown in a banner above the
+  dialog. Saving no longer warns about the same `.tra` in other language folders. The graph draws only the nodes
+  in view, so a large dialog pans and zooms smoothly.
 
 ### Fallout SSL
 
 - Formatting keeps both dimensions of `variable b[4, 2]`.
-- The compiler refuses an engine function that returns nothing where a value is expected, such as
-  `x := play_sfx("a")`: the engine pushes no result, so the script read whatever the stack held.
+- The compiler refuses what the game cannot run: a value taken from an engine function that returns nothing, such
+  as `x := play_sfx("a")`; a name over 31 characters; an integer past 32 bits; a procedure that needs more than the
+  engine's 682 stack values; a string over 65533 bytes. The limits are listed in the compiler's README.
 - Hovers and signature help show `critter_injure`, `critter_mod_skill`, `critter_set_flee_state`,
   `critter_stop_attacking`, `destroy_object`, `explosion`, `gdialog_mod_barter`, `jam_lock` and `use_obj_on_obj`
-  as returning nothing, as the engine does.
-- A macro parameter named after a keyword, as in `#define C(proc, when)`, is no longer read as that keyword
-  anywhere in the macro's body, so a body like `call proc when when` is reported as the compiler reports it.
-- `#a` in a macro body reads as a stringify of the parameter `a`, not as a directive that took the rest of the line,
-  so renaming the parameter renames that use too.
-- The compiler accepts a timed or conditional call to a string or variable, `call "p" in 5` and `call s when x`, as
-  the reference compiler does.
-- The compiler, and TSSL's, refuse a script that would fail in the game on an engine limit: an exported or
-  imported name over 31 characters, an integer past 32 bits, a procedure whose arguments and locals with the
-  script's globals need more than the engine's 682 stack values, and a string over 65533 bytes. The limits are
-  listed in the compiler's README.
-- The WebAssembly compiler honours tab- or newline-separated `compileOptions`, as the other compilers already did.
-- At `-O2`, a hex literal past `0x7FFFFFFF` folds as its 32-bit pattern, as the reference compiler does:
-  `0xFFFFFFFF == -1` now folds to 1.
+  as returning nothing.
+- Macros: a parameter named after a keyword, such as `when`, and `#a` stringification work as in the reference
+  compiler.
+- `call "p" in 5` and `call s when x` compile, as in the reference compiler.
+- At `-O2`, a hex literal past `0x7FFFFFFF` folds as its 32-bit pattern, as in the reference compiler.
+- The built-in compiler accepts `compileOptions` separated by tabs or newlines.
 
 ### Fallout MSG
 
-- A dialog editor save that adds text to a `.msg` with a field that never closes is refused with the line to fix.
-  Before, the new entry landed inside that field, and the game read it as part of the open text.
+- A dialog editor save into a `.msg` with a field that never closes is refused, with the line to fix.
 
 ### Transpilers
 
-- TSSL, TBAF and TD substitute a name containing `$` correctly, and `$count` is no longer taken for `count`.
-- TSSL compiles a hex number with an `e` or `E` digit, such as `0xFE`, as an integer. Before, it was compiled as a
-  float.
-- TSSL: a numeric literal with `_` separators, such as `1_000`, compiles to its value instead of 0, and the generated
-  `.ssl` no longer keeps the separator. A literal in exponent form (`1e3`), binary (`0b101`) or octal (`0o17`) now
-  compiles to its value on the `.ssl` route too, written as the float (`1000.0`) or hex integer (`0x5`) SSL reads.
-- The `fgbin`, `fgfmt`, `fgtp` and `tssl` CLIs read a hyphenated no-value flag such as `--save-and-check`,
-  `--check-idempotency`, `--parse-only` or `--graceful-map` correctly when a file follows it. Before, the flag
-  swallowed the file and the run failed with "No file or directory specified". A flag the CLI does not know is now
-  refused by name instead of being read the same way.
+- TSSL, TBAF and TD handle a name containing `$` correctly; `$count` is no longer taken for `count`.
+- TSSL compiles `0xFE` as an integer, and `1_000`, `1e3`, `0b101` and `0o17` to their values, in the bytecode and in
+  the generated `.ssl`.
+- The `fgbin`, `fgfmt`, `fgtp` and `tssl` CLIs accept a flag such as `--parse-only` or `--save-and-check` before
+  the file name, and refuse a flag they do not know by name.
 
 ### Binary editor
 
-- CRE: memorizing a spell into a level with none memorized works after spells at other levels were duplicated
-  and removed. Before, it could fail with an inconsistent-partition error.
-- Records that repeat a field named by a game table, such as a creature's items or spells, fill in their names
-  faster when opened from a game.
+- CRE: memorizing a spell into an empty level works after spells at other levels were duplicated and removed.
+- A creature's items, spells and other repeated fields named by a game table fill in their names faster.
 
 ### Infinity Engine resources
 
-- When an install cannot be read, the output channel says why, once per install and lookup. Before, every editor
-  behaved as if no game were open, with no trace. Animation resources the gallery index skips because they cannot be
-  read are listed there too.
-- An IDS or 2DA table holding bytes outside ASCII is reported in the output channel, once per table. Tables are
-  read as windows-1252 whatever `bgforge.weidu.tlkEncoding` says, since the engine's tables hold identifiers,
-  numbers and resource names in every language; the report shows when an install breaks that rule.
-- Image gallery: a crashed thumbnail worker is restarted once and finishes the tiles it was drawing; a second crash
-  turns thumbnails off with a message instead of leaving tiles loading forever. Opening another game, or switching
-  between the game and workspace gallery, starts from a fresh worker, so a thumbnail is never drawn from another
-  install's pages of the same name.
+- When an install cannot be read, the output channel says why, once per install. Animations the gallery skips
+  because they cannot be read are listed there too.
+- An IDS or 2DA table holding bytes outside ASCII is reported in the output channel. Tables are always read as
+  windows-1252, whatever `bgforge.weidu.tlkEncoding` says.
+- Image gallery: a crashed thumbnail worker is restarted once; a second crash turns thumbnails off with a message.
+  A thumbnail is never drawn from another install's file of the same name.
 
 ### Editors
 
-- The Kate bundle's file types cover `scripts.lst`, `worldmap.txt`, `weidu.log` and `.slb`, and `scripts.lst` and
-  `worldmap.txt` get their icons in Kate and Dolphin.
+- Kate: file types for `scripts.lst`, `worldmap.txt`, `weidu.log` and `.slb`; `scripts.lst` and `worldmap.txt` get
+  icons in Kate and Dolphin.
 
 ## 3.18.0
 
