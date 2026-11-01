@@ -44,15 +44,24 @@ function regenerate(grammar: string): string {
         // process at a time with no shell between them: the paths come from this file's location, and a shell
         // command built from them is what a code scanner reads as an injection path.
         const dtsBin = path.join(dir, "node_modules", ".bin", "dts-tree-sitter");
-        const spawnOptions = { cwd: workDir, timeout: REGENERATE_TIMEOUT_MS, stdio: "pipe" } as const;
-        const generated = execFileSync(dtsBin, ["."], { ...spawnOptions, encoding: "utf8" });
+        // Each spawn names its timeout inline: the spawn-timeouts guard reads the call, not a shared object.
+        const generated = execFileSync(dtsBin, ["."], {
+            cwd: workDir,
+            timeout: REGENERATE_TIMEOUT_MS,
+            stdio: "pipe",
+            encoding: "utf8",
+        });
         // sed's `s/export const enum /export enum /`: the first occurrence on each line.
         const dts = generated
             .split("\n")
             .map((line) => line.replace("export const enum ", "export enum "))
             .join("\n");
         fs.writeFileSync(path.join(workDir, "src", "tree-sitter.d.ts"), dts);
-        execFileSync(process.execPath, [SPLIT_SCRIPT, "src/tree-sitter.d.ts", "src/syntax-type.ts"], spawnOptions);
+        execFileSync(process.execPath, [SPLIT_SCRIPT, "src/tree-sitter.d.ts", "src/syntax-type.ts"], {
+            cwd: workDir,
+            timeout: REGENERATE_TIMEOUT_MS,
+            stdio: "pipe",
+        });
         return fs.readFileSync(path.join(workDir, "src", "syntax-type.ts"), "utf8");
     } finally {
         fs.rmSync(workDir, { recursive: true, force: true });
