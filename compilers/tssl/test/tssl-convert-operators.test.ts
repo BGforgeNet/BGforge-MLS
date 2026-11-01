@@ -66,6 +66,14 @@ describe("operator mappings", () => {
         expect(out).toContain("variable x = 1000 + 0xFFFF + 10.5;");
     });
 
+    // SSL reads decimal and hex integers and floats with a point, nothing else. The bytecode route already reads
+    // these spellings to their value, so the text route writes what SSL reads: the same value, as a float where
+    // TypeScript's exponent form is one, and in hex where the author wrote a bit pattern in binary or octal.
+    it("writes exponent, binary and octal literals the way SSL reads them", async () => {
+        const out = await emit(`function start() {\n    let x = 1e3 + 0b101 + 0o17 + 2.5E2 + 1E-3 + 1_0e1;\n}\n`);
+        expect(out).toContain("variable x = 1000.0 + 0x5 + 0xF + 250.0 + 0.001 + 100.0;");
+    });
+
     it("drops numeric separators from a map key", async () => {
         const out = await emit(`function start() {\n    let m = { 1_000: 5 };\n}\n`);
         expect(out).toContain("{1000: 5}");

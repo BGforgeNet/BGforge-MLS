@@ -31,11 +31,12 @@ export function intLiteralProblem(text: string, value: number): string | null {
 export type NumberLiteral = { kind: "float"; value: number } | { kind: "int"; value: number; problem: string | null };
 
 /**
- * Reads a numeric literal the way both front ends spell one: a `.`, or an `e` in a decimal spelling, makes it a
- * float, and anything else is an integer. In a hex spelling such as `0xFE` an `e` is a digit.
+ * Reads a numeric literal the way both front ends spell one: a `.` makes it a float, and anything else is an
+ * integer. Neither front end hands this an exponent form: the SSL grammar has none, and the TSSL front end writes
+ * one out as a float with a point before it gets here.
  */
 export function numberLiteral(text: string): NumberLiteral {
     const value = Number(text);
-    if (text.includes(".") || (!/^0x/i.test(text) && /e/i.test(text))) return { kind: "float", value };
+    if (text.includes(".")) return { kind: "float", value };
     return { kind: "int", value, problem: intLiteralProblem(text, value) };
 }

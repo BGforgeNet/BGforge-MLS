@@ -111,11 +111,29 @@ export function sslName(name: string): string {
 }
 
 /**
- * A numeric literal as SSL spells it: TypeScript's `_` separators dropped, the radix and the `.` that makes it a
- * float kept as written. SSL has no separator, so both routes read the literal through this one spelling.
+ * A numeric literal as SSL spells it. SSL reads decimal and hex integers and floats with a point, and nothing else:
+ * TypeScript's `_` separators are dropped, a binary or octal integer is written in hex (a bit pattern stays one),
+ * and an exponent form such as `1e3` is written out as the float it is, `1000.0`. A decimal or hex spelling with
+ * a point or not keeps its radix and type as written. Both routes read the literal through this one spelling.
  */
 export function sslNumber(text: string): string {
-    return text.replaceAll("_", "");
+    const plain = text.replaceAll("_", "");
+    if (/^0[bo]/i.test(plain)) return `0x${Number(plain).toString(16).toUpperCase()}`;
+    // In a hex spelling such as `0xFE` an `e` is a digit.
+    if (!/^0x/i.test(plain) && /e/i.test(plain)) return plainFloat(Number(plain));
+    return plain;
+}
+
+/** A float written in digits with a point, which is the one float spelling SSL reads. */
+function plainFloat(value: number): string {
+    const text = String(value);
+    if (!/e/i.test(text)) return text.includes(".") ? text : `${text}.0`;
+    // String() falls back to an exponent past 1e21 and below 1e-6.
+    if (Number.isInteger(value)) return `${BigInt(value)}.0`;
+    const fixed = value.toFixed(20);
+    let end = fixed.length;
+    while (fixed[end - 1] === "0") end--;
+    return fixed.slice(0, end);
 }
 
 // Route diagnostics to stderr, apart from the per-file progress lines the CLI prints on

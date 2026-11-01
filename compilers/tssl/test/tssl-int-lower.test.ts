@@ -52,7 +52,11 @@ describe("declarations", () => {
         ["0xFE", { kind: "int", value: 254 }],
         ["0xe", { kind: "int", value: 14 }],
         ["1e3", { kind: "float", value: 1000 }],
+        ["1E-3", { kind: "float", value: 0.001 }],
         ["2.5", { kind: "float", value: 2.5 }],
+        // Binary and octal are integers by value, whatever spelling the text route writes them in.
+        ["0b101", { kind: "int", value: 5 }],
+        ["0o17", { kind: "int", value: 15 }],
         // A numeric separator is spelling only: the value is the literal without it.
         ["1_000", { kind: "int", value: 1000 }],
         ["0xFF_FF", { kind: "int", value: 65535 }],

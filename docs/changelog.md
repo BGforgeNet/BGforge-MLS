@@ -85,7 +85,12 @@
 - TSSL compiles a hex number with an `e` or `E` digit, such as `0xFE`, as an integer. Before, it was compiled as a
   float.
 - TSSL: a numeric literal with `_` separators, such as `1_000`, compiles to its value instead of 0, and the generated
-  `.ssl` no longer keeps the separator.
+  `.ssl` no longer keeps the separator. A literal in exponent form (`1e3`), binary (`0b101`) or octal (`0o17`) now
+  compiles to its value on the `.ssl` route too, written as the float (`1000.0`) or hex integer (`0x5`) SSL reads.
+- The `fgbin`, `fgfmt`, `fgtp` and `tssl` CLIs read a hyphenated no-value flag such as `--save-and-check`,
+  `--check-idempotency`, `--parse-only` or `--graceful-map` correctly when a file follows it. Before, the flag
+  swallowed the file and the run failed with "No file or directory specified". A flag the CLI does not know is now
+  refused by name instead of being read the same way.
 
 ### Binary editor
 
