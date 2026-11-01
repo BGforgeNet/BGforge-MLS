@@ -1,8 +1,11 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { CurrentGame } from "../src/ie-resources/current-game";
+
+// The holder's default opener logs game warnings through the extension's output channel, which needs `vscode`.
+vi.mock("../src/logging", () => ({ conlog: () => {} }));
 
 // CurrentGame has no vscode dependency (it wraps @bgforge/binary's openGame), so it is unit-testable directly.
 // Write a minimal valid chitin.key (header + 1 BIF entry + 2 resource entries + name) to a temp dir.
