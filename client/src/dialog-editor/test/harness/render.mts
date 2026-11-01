@@ -71,18 +71,27 @@ await showGraph();
 const nodeCount = await page.locator(".svelte-flow__node").count();
 check("switching to Graph renders the node graph", nodeCount > 0, `nodes=${nodeCount}`);
 
+// The model's state count, read off the tab headers rather than off mounted `.svelte-flow__node` elements: the
+// graph mounts only the nodes in view, so a structural edit that moves the layout changes what is mounted.
+const stateCount = (): Promise<number> =>
+    page.evaluate(() =>
+        [...document.querySelectorAll(".tcount")].reduce((sum, el) => sum + Number(el.textContent ?? "0"), 0),
+    );
+// Whether a state is in the model: the tree lists every state; the graph only the ones in view.
+const stateInTree = async (id: string): Promise<boolean> => {
+    await page.getByRole("tab", { name: "Tree" }).click();
+    await page.waitForSelector('[role="treeitem"]', { timeout: 10_000 });
+    const present = (await page.locator(`.st[data-sid="${id}"]`).count()) > 0;
+    await showGraph();
+    return present;
+};
+
 // Exercise a structural edit that deep-clones a $state proxy: select a card, Duplicate it.
 // duplicateState uses JSON.parse(JSON.stringify(...)) precisely because structuredClone
 // throws on the proxy; this drives that path end to end.
 await page.locator(".svelte-flow__node").first().click();
 const dupBtn = page.getByRole("button", { name: "Duplicate state" });
 await dupBtn.waitFor({ timeout: 5000 });
-// Counted off the tab headers' state counts, not off mounted `.svelte-flow__node` elements: the graph mounts only
-// the nodes in view, and a duplicate lands wherever the layout puts it.
-const stateCount = (): Promise<number> =>
-    page.evaluate(() =>
-        [...document.querySelectorAll(".tcount")].reduce((sum, el) => sum + Number(el.textContent ?? "0"), 0),
-    );
 const before = await stateCount();
 await dupBtn.click();
 await page
@@ -217,7 +226,7 @@ await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 1000, height: 700 });
 await postModel();
 await showGraph();
-const beforeDel = await page.locator(".svelte-flow__node").count();
+const beforeDel = await stateCount();
 await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
 await page.getByRole("button", { name: "Delete state" }).click();
 const confirmMsg = (await page.locator(".confirm .confirmmsg").textContent()) ?? "";
@@ -227,22 +236,20 @@ check(
     JSON.stringify(confirmMsg.trim().slice(0, 120)),
 );
 await page.locator(".confirm .toolbtn:not(.confirmdel)").click(); // Cancel
-const afterCancel = await page.locator(".svelte-flow__node").count();
+const afterCancel = await stateCount();
 await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
 await page.getByRole("button", { name: "Delete state" }).click();
 await page.locator(".confirm .confirmdel").click(); // confirm Delete
 await page
     .waitForFunction(
-        () =>
-            !Array.from(document.querySelectorAll(".svelte-flow__node")).some((n) =>
-                n.textContent?.includes("returnBriel"),
-            ),
-        undefined,
+        (n) =>
+            [...document.querySelectorAll(".tcount")].reduce((sum, el) => sum + Number(el.textContent ?? "0"), 0) < n,
+        beforeDel,
         { timeout: 5000 },
     )
     .catch(() => undefined);
-const afterDel = await page.locator(".svelte-flow__node").count();
-const returnBrielGone = (await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).count()) === 0;
+const afterDel = await stateCount();
+const returnBrielGone = !(await stateInTree("returnBriel"));
 check(
     "cancel keeps the graph; confirm removes the state",
     // Cancel is a no-op; confirm removes returnBriel (and may prune a now-orphaned external stub too,
@@ -258,14 +265,14 @@ await page.goto("file://" + appHtml);
 await page.setViewportSize({ width: 1000, height: 700 });
 await postModel();
 await showGraph();
-const beforeKbd = await page.locator(".svelte-flow__node").count();
+const beforeKbd = await stateCount();
 await page.locator(".svelte-flow__node", { hasText: "returnBriel" }).first().click();
 await page.keyboard.press("Backspace");
 await page
     .waitForFunction(() => !!document.querySelector(".confirm"), undefined, { timeout: 5000 })
     .catch(() => undefined);
 const kbdConfirm = await page.locator(".confirm").isVisible();
-const afterKbdNoConfirm = await page.locator(".svelte-flow__node").count();
+const afterKbdNoConfirm = await stateCount();
 check(
     "Backspace on a selected referenced node confirms (does not silently delete)",
     kbdConfirm && afterKbdNoConfirm === beforeKbd,
