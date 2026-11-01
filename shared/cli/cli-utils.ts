@@ -8,7 +8,7 @@ import { spawn } from "child_process";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import cac from "cac";
+import cac, { type CAC } from "cac";
 import { diffLines } from "diff";
 
 export type FileResult = "changed" | "unchanged" | "error";
@@ -86,6 +86,39 @@ interface ParseCliOptions {
     readonly modes: readonly Exclude<OutputMode, "stdout">[];
 }
 
+type CacCommand = ReturnType<CAC["command"]>;
+
+/** `--save-and-check` for cac's `saveAndCheck`; a one-letter name is a short flag. */
+function spellFlag(name: string): string {
+    if (name.length === 1) return `-${name}`;
+    return `--${name.replaceAll(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`;
+}
+
+/**
+ * cac hands its argument parser the camelCased names of its no-value options while the parser reads each flag as
+ * typed, so a hyphenated one such as `--parse-only` is a value-taking flag to it and swallows the argument after
+ * it: `--parse-only file` lost `file`. Spelling those flags camelCased before the parse puts the two in
+ * agreement; cac camelCases every parsed key anyway, so nothing downstream changes. A negated flag (`--no-int`)
+ * needs none of this: the parser reads its `no-` prefix before it looks the name up.
+ */
+function camelCaseBooleanFlags(argv: readonly string[], options: CacCommand["options"]): string[] {
+    const spellings = new Map<string, string>();
+    for (const option of options) {
+        if (option.isBoolean !== true || option.negated) continue;
+        for (const name of option.names) {
+            const kebab = spellFlag(name);
+            if (kebab !== `--${name}`) spellings.set(kebab, `--${name}`);
+        }
+    }
+    const out: string[] = [];
+    let passThrough = false;
+    for (const arg of argv) {
+        if (arg === "--") passThrough = true;
+        out.push(passThrough ? arg : (spellings.get(arg) ?? arg));
+    }
+    return out;
+}
+
 /**
  * @returns null when `--help` was handled and the caller should stop; a bad argument exits here instead.
  */
@@ -109,9 +142,20 @@ export function parseCliArgs(helpText: string, { extraOptions = [], modes }: Par
     // pick up a trailing colon. cac prints it itself on --help, so returning null here - rather than
     // printing a second copy - is what leaves the caller with one.
     cli.help(() => [{ body: helpText }]);
-    cli.parse(process.argv, { run: false });
+    cli.parse(camelCaseBooleanFlags(process.argv, command.options), { run: false });
 
     if (cli.options.help) return null;
+
+    // cac checks for an unregistered option only when it runs the command, which `run: false` skips. Without the
+    // check an unregistered flag reads as one taking a value and swallows the argument after it, and the run
+    // reports a missing target, far from the typo or the forgotten registration that caused it.
+    const unknown = Object.keys(cli.options).find(
+        (name) => name !== "--" && !command.hasOption(name) && !cli.globalCommand.hasOption(name),
+    );
+    if (unknown !== undefined) {
+        console.error(`Error: Unknown option \`${spellFlag(unknown)}\``);
+        process.exit(1);
+    }
 
     const target = cli.args[0] as string | undefined;
     const { save, check, saveAndCheck, checkIdempotency, recursive, quiet, jobs, filesFrom, excludeFrom, excludeBase } =

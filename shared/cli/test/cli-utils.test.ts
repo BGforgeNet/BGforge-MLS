@@ -353,6 +353,39 @@ describe("parseCliArgs", () => {
         expect(String(args?.extra?.opt)).toBe("2");
     });
 
+    // cac names a hyphenated no-value flag camelCased to its parser, which reads the flag as typed and so took the
+    // argument after `--save-and-check` or `--dry-run` as the flag's value, losing the target.
+    it("keeps the target that follows a hyphenated no-value option, shared or the caller's own", () => {
+        process.argv = ["node", "cli.js", "--save-and-check", __filename];
+        const shared = parseCliArgs("help", EVERY_MODE);
+        expect(shared?.target).toBe(__filename);
+        expect(shared?.mode).toBe("save-and-check");
+
+        process.argv = ["node", "cli.js", "--dry-run", __filename, "--check-idempotency"];
+        const own = parseCliArgs("help", {
+            ...EVERY_MODE,
+            extraOptions: [["--dry-run", "An option belonging to one CLI rather than to all of them"]],
+        });
+        expect(own?.target).toBe(__filename);
+        expect(own?.extra?.dryRun).toBe(true);
+        expect(own?.mode).toBe("check-idempotency");
+    });
+
+    it("leaves everything after `--` alone", () => {
+        process.argv = ["node", "cli.js", __dirname, "-r", "--", "--save-and-check", "--unregistered-flag"];
+        const args = parseCliArgs("help", EVERY_MODE);
+        expect(args?.mode).toBe("stdout");
+        expect(args?.target).toBe(__dirname);
+    });
+
+    it("refuses an option no caller registered instead of letting it take the next argument", () => {
+        // An unregistered flag reads as one taking a value, so `--mystery-flag file` lost `file` and reported a
+        // missing target - the wrong error, at a distance from the typo or the forgotten registration.
+        process.argv = ["node", "cli.js", "--mystery-flag", __filename];
+        expect(() => parseCliArgs("help", EVERY_MODE)).toThrow("exit");
+        expect(errorSpy).toHaveBeenCalledWith("Error: Unknown option `--mystery-flag`");
+    });
+
     it("leaves a caller option absent from `extra` when it is not passed", () => {
         process.argv = ["node", "cli.js", __filename];
         const args = parseCliArgs("help", {

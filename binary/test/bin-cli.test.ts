@@ -119,6 +119,34 @@ describe("bin CLI integration", () => {
         });
     });
 
+    describe("fgbin's own no-value flags", () => {
+        // Both flags used to be read out of argv without being registered with the option parser, which then
+        // took the argument after each as its value: `--graceful-map file.map` lost the file and failed with
+        // a missing-target error.
+        it("keeps a target that follows --graceful-map and honours --parse-only after it", () => {
+            const mapFile = path.join(REPO_ROOT, "client/testFixture/maps/arcaves.map");
+            const { code, stdout, stderr } = run("--graceful-map", mapFile, "--parse-only");
+            expect(stderr).not.toContain("No file or directory specified");
+            expect(code).toBe(0);
+            // --parse-only builds no snapshot, so nothing reaches stdout.
+            expect(stdout).toBe("");
+        });
+
+        it("refuses --parse-only combined with a writing mode", () => {
+            const proFile = path.join(FIXTURES, "misc", "00000001.pro");
+            const { code, stderr } = run(proFile, "--parse-only", "--save");
+            expect(code).toBe(1);
+            expect(stderr).toContain("Error: --parse-only cannot be combined with --save");
+        });
+
+        it("refuses a flag it does not know", () => {
+            const proFile = path.join(FIXTURES, "misc", "00000001.pro");
+            const { code, stderr } = run("--gracefull-map", proFile);
+            expect(code).toBe(1);
+            expect(stderr).toContain("Error: Unknown option `--gracefull-map`");
+        });
+    });
+
     describe("modes fgbin does not implement", () => {
         it.each(["--save-and-check", "--check-idempotency"])("refuses %s instead of printing the snapshot", (flag) => {
             const { code, stdout, stderr } = run(path.join(FIXTURES, "misc", "00000001.pro"), flag);

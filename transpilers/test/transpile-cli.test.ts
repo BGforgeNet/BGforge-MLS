@@ -60,6 +60,14 @@ describe("transpile CLI integration", () => {
             const { stdout } = run("--help");
             expect(stdout).toContain("Usage: fgtp");
         });
+
+        it("refuses a flag it does not know instead of taking the next argument as its value", () => {
+            const file = path.join(tmpDir, "test.td");
+            fs.writeFileSync(file, "");
+            const { code, stderr } = run("--chekc", file);
+            expect(code).toBe(1);
+            expect(stderr).toContain("Error: Unknown option `--chekc`");
+        });
     });
 
     describe("stdout mode", () => {

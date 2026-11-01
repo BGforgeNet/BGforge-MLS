@@ -294,52 +294,56 @@ function readProtoDirOverride(extra: Record<string, unknown>): string | undefine
 }
 
 async function main() {
-    const argv = new Set(process.argv.slice(2));
-
-    // `--graceful-map` is a binary-specific preference axis, so it stays out of the shared cac parser
-    // (`parseCliArgs`, also backing fgfmt/fgtp) and is read straight from argv.
-    const cliParseOptions: ParseOptions = { gracefulMapBoundaries: argv.has("--graceful-map") };
-
-    // Same argv-read convention as --graceful-map: binary-specific and no value. The output modes all consume
-    // the snapshot this flag skips, so combining them would silently write or compare nothing.
-    const parseOnly = argv.has("--parse-only");
-    if (parseOnly) {
-        const conflicting = ["--save", "--check", "--save-and-check", "--load"].filter((flag) => argv.has(flag));
-        if (conflicting.length > 0) {
-            console.error(`Error: --parse-only cannot be combined with ${conflicting.join(", ")}`);
-            process.exit(1);
-        }
-    }
-
     // --extensions: print the registry's extension list one per line and exit.
     // Consumed by the actions/binary/ shell scripts to build their file
     // filters from the same source the parsers register, so a new format
     // landing in @bgforge/binary is picked up by the action without a
-    // matching action release.
-    if (argv.has("--extensions")) {
+    // matching action release. Read before the parser runs: it takes no target.
+    if (process.argv.includes("--extensions")) {
         for (const ext of parserRegistry.getExtensions()) {
             process.stdout.write(`${ext}\n`);
         }
         return;
     }
 
-    // --load is registered so cac knows it takes no value: an unregistered flag takes the argument after it.
+    // Every no-value flag is registered: the parser refuses a flag it does not know, and an unregistered one
+    // would otherwise take the argument after it as its value.
     const args = parseCliArgs(HELP, {
         extraOptions: [
             ["--proto-dir <dir>", "Load MAP proto subtype overrides from <dir>"],
             ["--load", "Load JSON and write binary"],
+            ["--graceful-map", "Permissive MAP boundary guessing for ambiguous files"],
+            ["--parse-only", "Parse and report errors without building the JSON snapshot"],
         ],
         modes: ["save", "check"],
     });
     if (!args) return;
+    const extra = args.extra ?? {};
+
+    const cliParseOptions: ParseOptions = { gracefulMapBoundaries: extra.gracefulMap === true };
+
+    // The output modes all consume the snapshot --parse-only skips, so combining them would silently write
+    // or compare nothing.
+    const parseOnly = extra.parseOnly === true;
+    if (parseOnly) {
+        const conflicting = [
+            args.mode !== "stdout" ? `--${args.mode}` : undefined,
+            extra.load === true ? "--load" : undefined,
+        ];
+        const named = conflicting.filter((flag): flag is string => flag !== undefined);
+        if (named.length > 0) {
+            console.error(`Error: --parse-only cannot be combined with ${named.join(", ")}`);
+            process.exit(1);
+        }
+    }
 
     // --load takes .json input, not a binary file, and none of the parse path's options apply to it.
-    if (args.extra?.load === true) {
+    if (extra.load === true) {
         loadJsonToBinary(args.target, cliParseOptions);
         return;
     }
 
-    const protoDirOverride = readProtoDirOverride(args.extra ?? {});
+    const protoDirOverride = readProtoDirOverride(extra);
 
     await runCli({
         args,

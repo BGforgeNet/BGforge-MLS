@@ -59,6 +59,15 @@ describe("tssl CLI integration", () => {
         expect(fs.readdirSync(tmpDir)).toStrictEqual(["mode.tssl"]);
     });
 
+    it("refuses a flag it does not know instead of taking the next argument as its value", () => {
+        const file = path.join(tmpDir, "flag.tssl");
+        fs.writeFileSync(file, 'function start() {\n    display_msg("hi");\n}\n', "utf-8");
+        const { code, stderr } = run("--ssll", file);
+        expect(code).toBe(1);
+        expect(stderr).toContain("Error: Unknown option `--ssll`");
+        expect(fs.readdirSync(tmpDir)).toStrictEqual(["flag.tssl"]);
+    });
+
     describe("which outputs a run writes", () => {
         const source = 'function start() {\n    display_msg("hi");\n}\n';
 

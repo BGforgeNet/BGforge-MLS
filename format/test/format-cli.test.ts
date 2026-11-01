@@ -59,6 +59,14 @@ describe("format CLI integration", () => {
             const { stdout } = run("--help");
             expect(stdout).toContain("Usage: fgfmt");
         });
+
+        it("refuses a flag it does not know instead of taking the next argument as its value", () => {
+            const file = path.join(tmpDir, "test.baf");
+            fs.writeFileSync(file, "IF\nTrue()\nTHEN\nEND\n");
+            const { code, stderr } = run("--chekc", file);
+            expect(code).toBe(1);
+            expect(stderr).toContain("Error: Unknown option `--chekc`");
+        });
     });
 
     describe("stdout mode", () => {
