@@ -29,10 +29,22 @@ tssl src/ -r --ssl --no-int       # the readable .ssl alone, for a tree that com
   and passing it without `--ssl` is an error, since the run would write nothing. `--opt` and `-s` steer
   the bytecode emitter it skips, so passing either alongside warns and carries on: the optimisation
   choice belongs to whatever compiles the generated `.ssl`.
+- `--no-typecheck` - compile without the type check described below
 - `--opt <0|1|2>` - optimisation level (default 1, matching the `ssl` compiler's own default)
 - `-s`, `--short-circuit` - short-circuit `and`/`or`: skip the right operand once the left decides the result
 - `-r`, `-q`, `--jobs <n>`, `--check`, `--exclude-from <path>`, `--exclude-base <dir>` - as the repo's other
   CLIs. `--save` is accepted and does what the default already does
+
+## Type checking
+
+Each script is type-checked before it is compiled, and a script with type errors is not compiled: no
+output is written for it and the run exits 1. The check uses the nearest `tsconfig.json` whose files
+include the script, so its options, `strict` among them, are the mod's own. Where no
+`tsconfig.json` includes the script, it is checked with strict defaults, and the run says so once.
+
+Only the script's own errors are reported; errors in the mod's `.ts` modules are for `tsc`. "Declared but
+never read" is not reported for an engine procedure such as `start`, which the engine calls by name. Compiling
+from the editor does not run the check, since the editor shows the same errors as you type.
 
 ## The two outputs agree, and that is checked
 

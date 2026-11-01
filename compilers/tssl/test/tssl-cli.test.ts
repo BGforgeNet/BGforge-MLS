@@ -32,12 +32,23 @@ function run(...args: string[]): { code: number; stdout: string; stderr: string 
     return { code: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
+/** The compiled and generated files in a directory: what a refused run must not have written. */
+function outputsIn(dir: string): string[] {
+    return fs.readdirSync(dir).filter((name) => /\.(int|ssl)$/.test(name));
+}
+
 describe("tssl CLI integration", () => {
     const tmpDir = path.join(REPO_ROOT, "tmp/cli-test-tssl");
 
     beforeEach(() => {
         if (!fs.existsSync(CLI)) throw new Error("cli.js not built. Run: pnpm build:tssl");
         fs.mkdirSync(tmpDir, { recursive: true });
+        // What a mod has, so the type check the CLI runs by default sees the engine function the scripts call.
+        fs.writeFileSync(path.join(tmpDir, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true } }));
+        fs.writeFileSync(
+            path.join(tmpDir, "engine.d.ts"),
+            "declare function display_msg(value: number | string): void;\n",
+        );
     });
 
     afterEach(() => {
@@ -56,7 +67,7 @@ describe("tssl CLI integration", () => {
         const { code, stderr } = run(file, flag);
         expect(code).toBe(1);
         expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
-        expect(fs.readdirSync(tmpDir)).toStrictEqual(["mode.tssl"]);
+        expect(outputsIn(tmpDir)).toStrictEqual([]);
     });
 
     it("refuses a flag it does not know instead of taking the next argument as its value", () => {
@@ -65,11 +76,53 @@ describe("tssl CLI integration", () => {
         const { code, stderr } = run("--ssll", file);
         expect(code).toBe(1);
         expect(stderr).toContain("Error: Unknown option `--ssll`");
-        expect(fs.readdirSync(tmpDir)).toStrictEqual(["flag.tssl"]);
+        expect(outputsIn(tmpDir)).toStrictEqual([]);
+    });
+
+    describe("the type check it runs before compiling", () => {
+        const typeError = 'function start() {\n    const n: number = "a";\n    display_msg(n);\n}\n';
+
+        it("refuses a script with a type error, naming the error's position and writing nothing", () => {
+            const file = path.join(tmpDir, "typed.tssl");
+            fs.writeFileSync(file, typeError, "utf-8");
+
+            const { code, stderr } = run(file, "--ssl");
+
+            expect(code).toBe(1);
+            expect(stderr).toContain(`${file}:2:11: error TS2322: Type 'string' is not assignable to type 'number'.`);
+            expect(outputsIn(tmpDir)).toStrictEqual([]);
+        });
+
+        it("compiles the same script under --no-typecheck", () => {
+            const file = path.join(tmpDir, "unchecked.tssl");
+            fs.writeFileSync(file, typeError, "utf-8");
+
+            expect(run(file, "--no-typecheck").code).toBe(0);
+            expect(outputsIn(tmpDir)).toStrictEqual(["unchecked.int"]);
+        });
+
+        it("says when no tsconfig.json includes a script, and checks it with strict defaults", () => {
+            const dir = path.join(tmpDir, "unconfigured");
+            fs.mkdirSync(dir);
+            // Excluded from the tsconfig above, as a script outside a mod's `include` is.
+            fs.writeFileSync(
+                path.join(tmpDir, "tsconfig.json"),
+                JSON.stringify({ compilerOptions: { strict: true }, exclude: ["unconfigured"] }),
+            );
+            const file = path.join(dir, "loose.tssl");
+            fs.writeFileSync(file, "export function start(): void {}\n", "utf-8");
+
+            const { code, stderr } = run(file);
+
+            expect(code).toBe(0);
+            expect(stderr).toContain(`No tsconfig.json includes ${file}; type-checking with strict defaults`);
+        });
     });
 
     describe("which outputs a run writes", () => {
-        const source = 'function start() {\n    display_msg("hi");\n}\n';
+        // A module, as a script importing folib is: two global scripts in one program would both declare
+        // `start`, which the type check reports as a duplicate, as the editor does.
+        const source = 'export {};\nfunction start() {\n    display_msg("hi");\n}\n';
 
         /** A self-contained script: no imports, so nothing depends on a mod's node_modules. */
         function write(name: string): string {

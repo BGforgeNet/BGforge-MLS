@@ -4,6 +4,13 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
 ## Unreleased
 
+### Changed
+
+- `tssl` type-checks each script before compiling it, against the `tsconfig.json` that includes it, and does
+  not compile a script with type errors: it reports each error as `file:line:column: error TS<code>: ...` and
+  exits 1. `--no-typecheck` compiles without the check. A script no `tsconfig.json` includes is checked with
+  strict defaults.
+
 ### Added
 
 - `a << n` with an integer literal `n` from 0 to 31 compiles, as a multiply by 2^n, since SSL has no shift. A

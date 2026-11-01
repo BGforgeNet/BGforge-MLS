@@ -19,6 +19,7 @@ import { EXT_TSSL } from "@bgforge/shared/languages";
 import { emitProgram, optimize } from "@bgforge/ssl";
 import { createBatchState, transpile, type TranspileBatchState } from "./index";
 import { lowerTsslProgram } from "./int/lower";
+import { TsslTypechecker, type TsslTypeError } from "./typecheck";
 import {
     type FileResult,
     type OutputMode,
@@ -42,9 +43,31 @@ interface CompileSwitches {
     level: 0 | 1 | 2;
     shortCircuit: boolean;
     emit: Emit;
+    typecheck: boolean;
 }
 
-let switches: CompileSwitches = { level: 1, shortCircuit: false, emit: "int" };
+let switches: CompileSwitches = { level: 1, shortCircuit: false, emit: "int", typecheck: true };
+
+/** Shared across a run like `batch`: one type-check program per tsconfig serves every script it includes. */
+const typechecker = new TsslTypechecker();
+let notedUnconfigured = false;
+
+/** `file:line:col: error TS1234: message`, the shape editors' problem matchers read. */
+function formatTypeError(error: TsslTypeError): string {
+    const position = error.line === undefined ? "" : `:${error.line}:${error.column ?? 1}`;
+    return `${error.file}${position}: error TS${error.code}: ${error.message}`;
+}
+
+/** Reports a script's type errors and whether there were any; a script with errors is not compiled. */
+function typecheckFails(filePath: string): boolean {
+    const result = typechecker.check(filePath);
+    if (result.config === undefined && !notedUnconfigured) {
+        notedUnconfigured = true;
+        console.warn(`No tsconfig.json includes ${filePath}; type-checking with strict defaults`);
+    }
+    for (const error of result.errors) console.error(formatTypeError(error));
+    return result.errors.length > 0;
+}
 
 /**
  * Shared across a run: one ts-morph project, and the inline extraction it caches. Standing one up costs
@@ -82,6 +105,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
         if (!checkFileSize(filePath, MAX_FILE_SIZES)) return "error";
         const text = fs.readFileSync(filePath, "utf-8");
         const resolved = path.resolve(filePath);
+        if (switches.typecheck && typecheckFails(resolved)) return "error";
 
         let changed = false;
         if (switches.emit !== "ssl") {
@@ -127,11 +151,13 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: tssl <file.tssl|dir> [--ssl] [--no-int] [--opt <0|1|2>] [-s] [--check] [-r] [-q] [--jobs <n>]
+const HELP = `Usage: tssl <file.tssl|dir> [--ssl] [--no-int] [--no-typecheck] [--opt <0|1|2>] [-s] [--check] [-r] [-q] [--jobs <n>]
   Compiles TSSL to Fallout INT bytecode. No SSL text is produced or read on the way.
+  Each script is type-checked first, against the tsconfig.json that includes it; one with errors is not compiled.
 
   --ssl             Also write the readable .ssl (default: off)
   --no-int          Skip the bytecode, leaving only the .ssl (default: the .int is written)
+  --no-typecheck    Compile without the type check
   --opt <0|1|2>     Optimisation level (default: 1, as the ssl compiler's own default)
   -s                Short-circuit and/or: skip the right operand once the left decides the result
   --check           Report stale output instead of writing it (exit 1 if any is stale)
@@ -165,6 +191,7 @@ async function main() {
         extraOptions: [
             ["--ssl", "Also write the readable .ssl"],
             ["--no-int", "Skip the bytecode"],
+            ["--no-typecheck", "Compile without the type check"],
             ["--opt <level>", "Optimisation level"],
             ["-s, --short-circuit", "Short-circuit and/or"],
         ],
@@ -186,7 +213,8 @@ async function main() {
     if (emit === "ssl" && (extra.opt !== undefined || extra.shortCircuit === true)) {
         console.warn("Warning: --opt and -s select how the bytecode is compiled, and no bytecode is written");
     }
-    switches = { level, shortCircuit: extra.shortCircuit === true, emit };
+    // cac spells a default-true flag `--no-x`, as for `--no-int`.
+    switches = { level, shortCircuit: extra.shortCircuit === true, emit, typecheck: extra.typecheck !== false };
 
     // One chunk per worker: a TSSL compile is dominated by standing up the TypeScript program, which a
     // child pays once and then reuses through `batch`. Cut finer, the parallel run spawns a process per

@@ -104,10 +104,14 @@ export function shadowEntryPath(entryPath: string): string {
     return `${entryPath}.ts`;
 }
 
+/** The author's .tssl for a shadow path, any other path unchanged. */
+export function realEntryPath(file: string): string {
+    return file.endsWith(".tssl.ts") ? file.slice(0, -".ts".length) : file;
+}
+
 /** The file a node's refusal should name - the author's .tssl for nodes in the entry's shadow file. */
 export function realFileOf(node: Node): string {
-    const file = node.getSourceFile().getFilePath();
-    return file.endsWith(".tssl.ts") ? file.slice(0, -".ts".length) : file;
+    return realEntryPath(node.getSourceFile().getFilePath());
 }
 
 /** The refusal for a binding pattern where SSL declares one name at a time. */
