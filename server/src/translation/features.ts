@@ -62,10 +62,10 @@ export function isTraRef(word: string, langId: string, filePath?: string): boole
     }
 
     // For other languages, check the language arrays
-    if (TRA_LANGUAGES.includes(langId) && word.match(REGEX_TRA_HOVER)) {
+    if (TRA_LANGUAGES.includes(langId) && REGEX_TRA_HOVER.test(word)) {
         return true;
     }
-    if (MSG_LANGUAGES.includes(langId) && word.match(REGEX_MSG_HOVER)) {
+    if (MSG_LANGUAGES.includes(langId) && REGEX_MSG_HOVER.test(word)) {
         return true;
     }
     return false;

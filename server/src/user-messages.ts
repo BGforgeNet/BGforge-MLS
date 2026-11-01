@@ -21,7 +21,7 @@ const FILE_URI_RE = /file:\/\/\/[^\s)'"]+/g;
  * (backslashes on Windows, forward slashes on Unix).
  */
 export function decodeFileUris(message: string): string {
-    return message.replace(FILE_URI_RE, (uri) => {
+    return message.replaceAll(FILE_URI_RE, (uri) => {
         try {
             return fileURLToPath(uri);
         } catch {

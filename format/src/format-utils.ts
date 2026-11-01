@@ -76,7 +76,7 @@ export function throwOnParseError(root: SyntaxNode): void {
 
 /** Normalize a line comment. Input must be a comment token (may have outer whitespace). */
 export function normalizeLineComment(text: string): string {
-    const trimmed = text.replace(EDGE_BLANKS, "");
+    const trimmed = text.replaceAll(EDGE_BLANKS, "");
     if (!trimmed.startsWith("//")) return trimmed;
     const content = trimmed.slice(2);
     // Decorative separator (all slashes, e.g. //////): preserve verbatim.
@@ -87,7 +87,7 @@ export function normalizeLineComment(text: string): string {
 
 /** Normalize a block comment. Input must be a comment token (may have outer whitespace). */
 export function normalizeBlockComment(text: string): string {
-    const trimmed = text.replace(EDGE_BLANKS, "");
+    const trimmed = text.replaceAll(EDGE_BLANKS, "");
     if (!trimmed.startsWith("/*")) return trimmed;
     const inner = trimmed.slice(2, -2);
     // A `/**` doc-comment opener leaves `*` as the first inner char. Preserve it
@@ -108,11 +108,11 @@ export function normalizeBlockComment(text: string): string {
         }
         return `/*${result}*/`;
     }
-    const innerTrimmed = inner.replace(EDGE_BLANKS, "");
+    const innerTrimmed = inner.replaceAll(EDGE_BLANKS, "");
     if (innerTrimmed.length === 0) return "/* */";
     if (isDoc) {
         // Single-line doc comment: keep the `/**` opener, one space, then the body.
-        const docBody = innerTrimmed.slice(1).replace(EDGE_BLANKS, "");
+        const docBody = innerTrimmed.slice(1).replaceAll(EDGE_BLANKS, "");
         return docBody.length === 0 ? "/** */" : `/** ${docBody} */`;
     }
     return `/* ${innerTrimmed} */`;
@@ -120,7 +120,7 @@ export function normalizeBlockComment(text: string): string {
 
 /** Normalize a comment node's text, dispatching by delimiter. */
 export function normalizeComment(text: string): string {
-    const trimmed = text.replace(EDGE_BLANKS, "");
+    const trimmed = text.replaceAll(EDGE_BLANKS, "");
     if (trimmed.startsWith("//")) return normalizeLineComment(trimmed);
     if (trimmed.startsWith("/*")) return normalizeBlockComment(trimmed);
     return trimmed;
@@ -696,7 +696,7 @@ export function restoreLostComments(
         let lineIndent = /^[ \t]*/.exec(formatted.slice(lineStart))?.[0] ?? "";
         // A survivor behind code on its line (`end // c`) says little about where a comment above it sits: the line
         // before it, deeper when a block closes here, does.
-        if (formatted.slice(lineStart, above).replace(EDGE_BLANKS, "") !== "" && lineStart > 0) {
+        if (formatted.slice(lineStart, above).replaceAll(EDGE_BLANKS, "") !== "" && lineStart > 0) {
             const previousStart = formatted.lastIndexOf("\n", lineStart - 2) + 1;
             const previousIndent = /^[ \t]*/.exec(formatted.slice(previousStart, lineStart))?.[0] ?? "";
             if (previousIndent.length > lineIndent.length) lineIndent = previousIndent;
@@ -764,7 +764,7 @@ export function normalizeWhitespaceWeidu(text: string): string {
     }
 
     // Join parts directly (no separator) - whitespace is already in Code tokens
-    return parts.join("").replace(EDGE_BLANKS, "");
+    return parts.join("").replaceAll(EDGE_BLANKS, "");
 }
 
 /**
@@ -875,7 +875,7 @@ function scanMsg(text: string): { code: string; omitted: string[] } {
             // Between groups: a note. Tagged with the number of groups before it, so moving it past an entry shows.
             const next = text.indexOf("{", i);
             const end = next === -1 ? text.length : next;
-            const note = text.slice(i, end).replace(EDGE_BLANKS, "");
+            const note = text.slice(i, end).replaceAll(EDGE_BLANKS, "");
             if (note !== "") omitted.push(`note ${groups}: ${note}`);
             i = end;
             continue;
@@ -886,9 +886,9 @@ function scanMsg(text: string): { code: string; omitted: string[] } {
         const field = text.slice(i + 1, end);
         const kind = groups % MSG_GROUPS_PER_ENTRY;
         if (kind === MSG_NUMBER_GROUP) {
-            code += field.replace(EDGE_BLANKS, "");
+            code += field.replaceAll(EDGE_BLANKS, "");
         } else if (kind === MSG_AUDIO_GROUP) {
-            omitted.push(`audio ${groups}: ${field.replace(EDGE_BLANKS, "")}`);
+            omitted.push(`audio ${groups}: ${field.replaceAll(EDGE_BLANKS, "")}`);
         } else {
             code += ` ${protectStringWhitespace(field)}`;
         }
