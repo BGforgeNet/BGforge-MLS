@@ -2,7 +2,13 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
-## Unreleased
+## 0.4.0
+
+### Changed
+
+- Depends on `@bgforge/transpile` for the shared pipeline, which npm installs with it; before, that code was bundled
+  in. Ships an `internal` entry for the sibling packages of its repository, with no type declarations and outside
+  the public API.
 
 ### Fixed
 
@@ -10,6 +16,12 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
   its place, and `--ssl` wrote it unchanged, which SSL does not read.
 - `--opt 2` folds a hex literal past `0x7FFFFFFF` as its 32-bit pattern: `0xFFFFFFFF == -1` folds to 1, as in
   the reference SSL compiler.
+- A numeric literal in exponent form (`1e3`), binary (`0b101`) or octal (`0o17`) compiles to its value on the
+  `--ssl` route too, written as the float (`1000.0`) or hex integer (`0x5`) SSL reads; before, `--ssl` kept the
+  spelling, which SSL does not read.
+- `tssl` reads a hyphenated no-value flag such as `--short-circuit` or `--save-and-check` correctly when a file
+  follows it; before, the flag swallowed the file and the run failed with "No file or directory specified". A flag
+  it does not know is refused by name.
 
 ## 0.3.0
 

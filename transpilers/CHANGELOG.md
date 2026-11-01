@@ -2,6 +2,19 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
+## 0.5.1
+
+### Changed
+
+- Ships an `internal` entry (`@bgforge/transpile/internal`) for the sibling packages of its repository. It carries
+  no type declarations and is not part of the public API.
+
+### Fixed
+
+- `fgtp` reads a hyphenated no-value flag such as `--check-idempotency` correctly when a file follows it; before,
+  the flag swallowed the file and the run failed with "No file or directory specified". A flag it does not know is
+  refused by name.
+
 ## 0.5.0
 
 ### Changed

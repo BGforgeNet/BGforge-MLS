@@ -10,7 +10,7 @@ inputs:
   version:
     description: 'npm version specifier for @bgforge/binary. Defaults to the release this Action version was tested with; "latest" opts into the newest.'
     required: false
-    default: "0.9.0"
+    default: "0.10.0"
   commit-message:
     description: "Commit subject when snapshots change."
     required: false

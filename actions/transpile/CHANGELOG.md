@@ -2,10 +2,10 @@
 
 Notable changes to the `actions/transpile` Action. CLI changes: `transpilers/CHANGELOG.md`.
 
-## Unreleased
+## 1.1.0
 
 - `actions/setup-node` v7.1.0.
-- `version` defaults to `@bgforge/transpile` 0.5.0, the release this Action was tested with, instead of `latest`, so
+- `version` defaults to `@bgforge/transpile` 0.5.1, the release this Action was tested with, instead of `latest`, so
   a pinned Action tag installs a known CLI. Set `version: latest` to keep the newest release on every run.
 
 ## 1.0.4

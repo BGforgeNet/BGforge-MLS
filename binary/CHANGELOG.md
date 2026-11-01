@@ -2,7 +2,7 @@
 
 Notable changes to `@bgforge/binary` (the library and the `fgbin` CLI). Binary-editor UI changes ship in the extension changelog, not here.
 
-## Unreleased
+## 0.10.0
 
 ### Added
 

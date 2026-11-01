@@ -2,10 +2,10 @@
 
 Notable changes to the `actions/tssl` Action. Compiler changes: `compilers/tssl/CHANGELOG.md`.
 
-## Unreleased
+## 1.1.0
 
 - `actions/setup-node` v7.1.0.
-- `version` defaults to `@bgforge/tssl` 0.3.0, the release this Action was tested with, instead of `latest`, so a
+- `version` defaults to `@bgforge/tssl` 0.4.0, the release this Action was tested with, instead of `latest`, so a
   pinned Action tag installs a known compiler. Set `version: latest` to keep the newest release on every run.
 - Correction to 1.0.4: this Action has no changed-file list, since it compiles every `.tssl` under `paths`, and 1.0.3
   was not affected by the failure that entry describes. 1.0.4 changed nothing a run does.

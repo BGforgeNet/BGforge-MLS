@@ -2,10 +2,12 @@
 
 Notable changes to `@bgforge/ssl` (the compiler library and the `ssl` CLI).
 
-## Unreleased
+## 0.3.0
 
 - `-O2` folds a hex literal past `0x7FFFFFFF` as its 32-bit pattern, as the reference does: `0xFFFFFFFF == -1`
   folds to 1 and `0xFFFFFFFF / 2` to 0, where they folded to 0 and 2147483647.
+- Exports `numberLiteral` and `intLiteralProblem`, the one reading of a numeric literal both front ends use: a `.`
+  makes it a float, anything else an integer, refused by name when it does not fit 32 bits.
 
 ## 0.2.0
 
