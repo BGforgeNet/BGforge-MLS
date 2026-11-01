@@ -11,7 +11,7 @@
             "defaultOrientation": 0,
             "numLocalVars": 0,
             "scriptId": 1552,
-            "flags": 8,
+            "flags": ["skipElevation2Tiles"],
             "darkness": 1,
             "numGlobalVars": 4,
             "mapId": -1,
@@ -22,17 +22,17 @@
         "tiles": [],
         "scripts": [
             {
-                "type": 0,
-                "count": 0,
-                "extents": []
-            },
-            {
                 "type": 1,
                 "count": 0,
                 "extents": []
             },
             {
                 "type": 2,
+                "count": 0,
+                "extents": []
+            },
+            {
+                "type": 3,
                 "count": 6,
                 "extents": [
                     {
@@ -40,7 +40,7 @@
                             {
                                 "sid": 50331650,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 511,
                                 "programPointerSlot": 0,
                                 "ownerId": 1201,
@@ -58,7 +58,7 @@
                             {
                                 "sid": 50331649,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 511,
                                 "programPointerSlot": 0,
                                 "ownerId": 1029,
@@ -76,7 +76,7 @@
                             {
                                 "sid": 50331648,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 511,
                                 "programPointerSlot": 0,
                                 "ownerId": 54,
@@ -94,7 +94,7 @@
                             {
                                 "sid": 50331651,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 511,
                                 "programPointerSlot": 0,
                                 "ownerId": 70,
@@ -112,7 +112,7 @@
                             {
                                 "sid": 50331652,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 1552,
                                 "programPointerSlot": 0,
                                 "ownerId": 22,
@@ -130,7 +130,7 @@
                             {
                                 "sid": 50331653,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 1553,
                                 "programPointerSlot": 0,
                                 "ownerId": 20,
@@ -148,7 +148,7 @@
                             {
                                 "sid": 3490384909,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 8,
+                                "flags": ["noSave"],
                                 "index": 0,
                                 "programPointerSlot": 0,
                                 "ownerId": 0,
@@ -166,7 +166,7 @@
                             {
                                 "sid": 11,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 0,
                                 "programPointerSlot": 0,
                                 "ownerId": 218103808,
@@ -184,7 +184,30 @@
                             {
                                 "sid": 0,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 1987540854,
+                                "flags": [
+                                    "executed",
+                                    "noRemove",
+                                    "noSpatial",
+                                    "bit5",
+                                    "bit6",
+                                    "bit8",
+                                    "bit9",
+                                    "bit10",
+                                    "bit12",
+                                    "bit13",
+                                    "bit14",
+                                    "bit16",
+                                    "bit17",
+                                    "bit18",
+                                    "bit20",
+                                    "bit21",
+                                    "bit22",
+                                    "bit25",
+                                    "bit26",
+                                    "bit28",
+                                    "bit29",
+                                    "bit30"
+                                ],
                                 "index": 151455238,
                                 "programPointerSlot": 0,
                                 "ownerId": 789563959,
@@ -202,7 +225,7 @@
                             {
                                 "sid": 164432589,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 101256204,
+                                "flags": ["executed", "noSave", "bit10", "bit11", "bit16", "bit19", "bit25", "bit26"],
                                 "index": 142047095,
                                 "programPointerSlot": 0,
                                 "ownerId": 151587173,
@@ -220,7 +243,21 @@
                             {
                                 "sid": 2018249485,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 164040036,
+                                "flags": [
+                                    "executed",
+                                    "bit5",
+                                    "bit6",
+                                    "bit8",
+                                    "bit10",
+                                    "bit11",
+                                    "bit16",
+                                    "bit17",
+                                    "bit18",
+                                    "bit22",
+                                    "bit23",
+                                    "bit24",
+                                    "bit27"
+                                ],
                                 "index": 0,
                                 "programPointerSlot": 0,
                                 "ownerId": 0,
@@ -238,7 +275,7 @@
                             {
                                 "sid": 219047119,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": 0,
+                                "flags": [],
                                 "index": 0,
                                 "programPointerSlot": 0,
                                 "ownerId": 184549376,
@@ -256,7 +293,27 @@
                             {
                                 "sid": 0,
                                 "nextScriptLinkLegacy": -1,
-                                "flags": -808491830,
+                                "flags": [
+                                    "noSave",
+                                    "noSpatial",
+                                    "bit6",
+                                    "bit7",
+                                    "bit10",
+                                    "bit13",
+                                    "bit14",
+                                    "bit16",
+                                    "bit17",
+                                    "bit18",
+                                    "bit19",
+                                    "bit22",
+                                    "bit23",
+                                    "bit24",
+                                    "bit25",
+                                    "bit26",
+                                    "bit27",
+                                    "bit30",
+                                    "bit31"
+                                ],
                                 "index": 1684328399,
                                 "programPointerSlot": 0,
                                 "ownerId": 147654922,
@@ -275,7 +332,23 @@
                                 "sid": 1389055307,
                                 "nextScriptLinkLegacy": -1,
                                 "timerTime": 252381302,
-                                "flags": -884120476,
+                                "flags": [
+                                    "executed",
+                                    "bit5",
+                                    "bit6",
+                                    "bit10",
+                                    "bit13",
+                                    "bit14",
+                                    "bit16",
+                                    "bit18",
+                                    "bit19",
+                                    "bit22",
+                                    "bit24",
+                                    "bit25",
+                                    "bit27",
+                                    "bit30",
+                                    "bit31"
+                                ],
                                 "index": 0,
                                 "programPointerSlot": 1288113503,
                                 "ownerId": 240371532,
@@ -293,7 +366,24 @@
                             {
                                 "sid": 4294967295,
                                 "nextScriptLinkLegacy": -833849224,
-                                "flags": 172767183,
+                                "flags": [
+                                    "executed",
+                                    "loaded",
+                                    "noSave",
+                                    "noSpatial",
+                                    "bit6",
+                                    "bit7",
+                                    "bit8",
+                                    "bit9",
+                                    "bit10",
+                                    "bit12",
+                                    "bit13",
+                                    "bit18",
+                                    "bit19",
+                                    "bit22",
+                                    "bit25",
+                                    "bit27"
+                                ],
                                 "index": 0,
                                 "programPointerSlot": 0,
                                 "ownerId": 0,
@@ -311,7 +401,18 @@
                             {
                                 "sid": 4294967295,
                                 "nextScriptLinkLegacy": 0,
-                                "flags": 231755008,
+                                "flags": [
+                                    "bit8",
+                                    "bit10",
+                                    "bit11",
+                                    "bit14",
+                                    "bit20",
+                                    "bit22",
+                                    "bit23",
+                                    "bit24",
+                                    "bit26",
+                                    "bit27"
+                                ],
                                 "index": 0,
                                 "programPointerSlot": -837956018,
                                 "ownerId": 1296911822,
@@ -16829,5 +16930,8 @@
                 "0000000000000000000000000000000000000000"
             ]
         }
+    ],
+    "warnings": [
+        "Object data from offset 0x13d98 could not be fully decoded and is preserved unchanged (446292 bytes). Some objects are not shown and editing past this point is unavailable; full decoding requires resolving every referenced PRO subtype."
     ]
 }
