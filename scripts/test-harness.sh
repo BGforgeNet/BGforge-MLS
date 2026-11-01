@@ -38,7 +38,16 @@ done
 failed=()
 for d in "${drivers[@]}"; do
     echo "=== $d ==="
-    if pnpm exec tsx "$d"; then
+    # tsx reads only the tsconfig it is given (docs/architecture.md). The dialog-editor drivers load server
+    # source, whose `@bgforge/*` imports reach the sibling sources through the `paths` in server/tsconfig.json;
+    # without it tsx falls back to each package's built exports, which its CommonJS view of a server module
+    # cannot resolve. The binary-editor drivers run the built binary core on purpose and need no map.
+    if [[ "$d" == client/src/dialog-editor/* ]]; then
+        run=(pnpm exec tsx --tsconfig server/tsconfig.json "$d")
+    else
+        run=(pnpm exec tsx "$d")
+    fi
+    if "${run[@]}"; then
         echo "  ok"
     else
         echo "  FAIL"
