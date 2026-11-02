@@ -2,7 +2,7 @@
 
 Notable changes to `@bgforge/ssl` (the compiler library and the `ssl` CLI).
 
-## Unreleased
+## 0.3.1
 
 - `set_perk_skill1_mag` compiles, to the opcode the reference gives it; before, it was refused as not an engine
   function.

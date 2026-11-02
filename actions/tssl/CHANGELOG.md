@@ -2,6 +2,10 @@
 
 Notable changes to the `actions/tssl` Action. Compiler changes: `compilers/tssl/CHANGELOG.md`.
 
+## 1.2.1
+
+- `version` defaults to `@bgforge/tssl` 0.5.1, which compiles a ternary, `floor(x)` and `set_perk_skill1_mag`.
+
 ## 1.2.0
 
 - `version` defaults to `@bgforge/tssl` 0.5.0. It type-checks each script against the `tsconfig.json` that includes

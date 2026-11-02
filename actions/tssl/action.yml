@@ -10,7 +10,7 @@ inputs:
   version:
     description: 'npm version specifier for @bgforge/tssl. Defaults to the release this Action version was tested with; "latest" opts into the newest.'
     required: false
-    default: "0.5.0"
+    default: "0.5.1"
   ssl:
     description: 'If "true", also write the readable .ssl beside each .int and commit it. The .int is never committed.'
     required: false
