@@ -37,7 +37,7 @@ interface Signature {
  *
  * Every one of these was found by counting call sites across the Restoration Project and comparing
  * them with the documented signature. Four of the entries are documented with no parameter list at
- * all, so the data is merely silent; the other five state a list that shipped code contradicts at every
+ * all, so the data is merely silent; the other four state a list that shipped code contradicts at every
  * site. The counts here are what the corpus shows, with the number of call sites as the evidence.
  *
  * The signatures themselves are deliberately NOT rewritten to match. A count is all the corpus
@@ -52,7 +52,6 @@ const OBSERVED_ARITY: Readonly<Record<string, { args: number; sites: number }>> 
     gsay_end: { args: 0, sites: 1377 },
     inven_unwield: { args: 0, sites: 26 },
     kill_critter_type: { args: 2, sites: 85 },
-    metarule2_explosions: { args: 3, sites: 72 },
     reg_anim_animate_forever: { args: 2, sites: 37 },
     scr_return: { args: 1, sites: 25 },
 };

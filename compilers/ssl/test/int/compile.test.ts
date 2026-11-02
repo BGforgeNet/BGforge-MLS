@@ -60,6 +60,8 @@ const CASES: Case[] = [
     },
     { name: "global variable", source: "variable g := 3;\nprocedure start begin\n g := 4;\nend\n" },
     { name: "engine call as a statement", source: 'procedure start begin\n display_msg("hi");\nend\n' },
+    // The one perk setter whose opcode the table once had no source name for.
+    { name: "set_perk_skill1_mag", source: "procedure start begin\n set_perk_skill1_mag(1, 2);\nend\n" },
     {
         name: "engine call in an expression",
         source: "procedure start begin\n variable x;\n x := random(1, 10);\nend\n",

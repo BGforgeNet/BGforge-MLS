@@ -58,6 +58,25 @@ describe("engine function lookup", () => {
 
     it("covers the full engine vocabulary", () => {
         // A collapse here would let the lookup tests above pass while most functions were unreachable.
-        expect(Object.keys(ENGINE_FUNCTIONS).length).toBe(557);
+        expect(Object.keys(ENGINE_FUNCTIONS).length).toBe(558);
+    });
+
+    // An opcode no source name reaches cannot be compiled, and nothing else notices: a misspelled slot name once
+    // left `set_perk_skill1_mag` refused. The exceptions are reserved slots, and `^` and `div`, which are syntax.
+    it("reaches every engine opcode from a source name, but the reserved slots and the operators", () => {
+        const named = new Set(Object.values(ENGINE_FUNCTIONS).map((fn) => fn.opcode));
+        const unnamed = Object.entries(EngineOp)
+            .filter(([, opcode]) => !named.has(opcode))
+            .map(([name]) => name);
+        expect(unnamed).toEqual([
+            "TS_RESERVD2",
+            "TS_RESERVD3",
+            "TS_RESERVD4",
+            "TS_POW",
+            "TS_RESERVD5",
+            "TS_RESERVD6",
+            "TS_RESERVD7",
+            "TS_DIV",
+        ]);
     });
 });

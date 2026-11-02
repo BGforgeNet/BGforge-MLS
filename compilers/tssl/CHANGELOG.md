@@ -9,6 +9,7 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 - A ternary `c ? a : b` compiles. The `.ssl` output wrote it as `?:`, which SSL does not have, so the compiler
   refused the file; it now writes SSL's conditional expression, `(a) if (c) else (b)`. Compiling to `.int` refused
   a ternary outright; it now compiles to the same bytecode the compiler produces from that SSL.
+- `floor(x)` and `set_perk_skill1_mag(...)` compile to `.int`; before, both were refused as unknown procedures.
 
 ## 0.5.0
 

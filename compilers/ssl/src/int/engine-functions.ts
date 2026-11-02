@@ -492,6 +492,7 @@ export const ENGINE_FUNCTIONS: Readonly<Record<string, EngineFunction>> = {
     set_perk_per: { opcode: EngineOp.TS_SET_PERK_PER, args: 2 },
     set_perk_ranks: { opcode: EngineOp.TS_SET_PERK_RANKS, args: 2 },
     set_perk_skill1: { opcode: EngineOp.TS_SET_PERK_SKILL1, args: 2 },
+    set_perk_skill1_mag: { opcode: EngineOp.TS_SET_PERK_SKILL1_MAG, args: 2 },
     set_perk_skill2: { opcode: EngineOp.TS_SET_PERK_SKILL2, args: 2 },
     set_perk_skill2_mag: { opcode: EngineOp.TS_SET_PERK_SKILL2_MAG, args: 2 },
     set_perk_stat: { opcode: EngineOp.TS_SET_PERK_STAT, args: 2 },

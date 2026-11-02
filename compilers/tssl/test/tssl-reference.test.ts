@@ -74,6 +74,15 @@ const CASES: Case[] = [
             "function pick(a: number) {\n    return 1 + (a > 2 ? a : 2) * 3;\n}\n" +
             "export function start() {\n    display_msg(pick(global_var(1)));\n    display_msg(-(global_var(1) ? 1 : 2));\n}\n",
     },
+    {
+        // SSL's `floor` is a prefix operator, not an engine function, so `floor(x) + 1` is `(floor x) + 1`.
+        name: "floor",
+        source: "export function start() {\n    display_msg(floor(global_var(1) / 2.0) + 1);\n}\n",
+    },
+    {
+        name: "set_perk_skill1_mag",
+        source: "export function start() {\n    set_perk_skill1_mag(1, global_var(2));\n}\n",
+    },
 ];
 
 async function compareWithReference(name: string, source: string, level: 0 | 2): Promise<void> {
@@ -100,7 +109,7 @@ async function compareWithReference(name: string, source: string, level: 0 | 2):
 
 describe.skipIf(compiler === null)("TSSL compiles as the reference compiles its SSL", () => {
     it("covers every case in the table", () => {
-        expect(CASES.length).toBe(5);
+        expect(CASES.length).toBe(7);
     });
 
     it.each(CASES)("$name", async ({ name, source }) => {

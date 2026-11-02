@@ -2,6 +2,11 @@
 
 Notable changes to `@bgforge/ssl` (the compiler library and the `ssl` CLI).
 
+## Unreleased
+
+- `set_perk_skill1_mag` compiles, to the opcode the reference gives it; before, it was refused as not an engine
+  function.
+
 ## 0.3.0
 
 - `-O2` folds a hex literal past `0x7FFFFFFF` as its 32-bit pattern, as the reference does: `0xFFFFFFFF == -1`

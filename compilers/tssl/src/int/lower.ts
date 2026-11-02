@@ -438,6 +438,14 @@ class TsslLowering {
 
         const args = call.getArguments().map((argument) => this.lowerExpression(argument, scope));
 
+        // SSL's `floor` is a prefix operator, not an engine function: the `floor(x)` the text route writes
+        // reads as `floor (x)`, and keywords are case-insensitive.
+        if (name.toLowerCase() === "floor") {
+            const [operand] = args;
+            if (operand === undefined || args.length > 1) throw refuseAt(call, "floor takes one argument");
+            return { kind: "expr", expr: { kind: "unary", op: "floor", operand } };
+        }
+
         const fn = engineFunction(name.toLowerCase());
         if (fn) {
             const bound = this.withProcedureArgs(call, args, fn.procArgs ?? 0);

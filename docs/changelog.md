@@ -5,6 +5,7 @@
 ### Transpilers
 
 - A TSSL ternary `c ? a : b` compiles, to `.int` and to `.ssl`; before, both refused it.
+- TSSL compiles `floor(x)` and `set_perk_skill1_mag(...)` to `.int`; before, both were refused.
 
 ### Fallout SSL
 
@@ -14,6 +15,7 @@
 - Hover and signature help describe each argument of an sfall function, show its default, and list every argument
   count a `sfall_funcN` call accepts. Signatures name and type every argument, and `hide_window`, `show_window`,
   `remove_timer_event` and `string_compare` are listed under their own names.
+- The built-in compiler compiles `set_perk_skill1_mag`; before, it refused it as not an engine function.
 
 ## 3.19.1
 
