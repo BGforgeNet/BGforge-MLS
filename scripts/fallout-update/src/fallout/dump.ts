@@ -42,6 +42,10 @@ function createCompletionSeq(doc: Document, items: readonly FalloutCompletionIte
             map.add(doc.createPair("type", item.type));
         }
 
+        if (item.deprecated !== undefined) {
+            map.add(doc.createPair("deprecated", item.deprecated));
+        }
+
         seq.add(map);
     }
     return seq;

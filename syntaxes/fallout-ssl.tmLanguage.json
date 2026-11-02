@@ -2000,6 +2000,10 @@
           "name": "support.function.fallout-ssl.sfall"
         },
         {
+          "match": "\\b(?i)(encounter_detection)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
           "match": "\\b(?i)(exec_map_update_scripts)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
@@ -2604,6 +2608,10 @@
           "name": "support.function.fallout-ssl.sfall"
         },
         {
+          "match": "\\b(?i)(opcode_exists)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
           "match": "\\b(?i)(outlined_object)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
@@ -2713,6 +2721,10 @@
         },
         {
           "match": "\\b(?i)(remove_weapon_knockback)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(remove_wm_town_names)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
         {
@@ -2893,6 +2905,10 @@
         },
         {
           "match": "\\b(?i)(set_flags)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(set_fo1_hit_chance)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
         {
@@ -3093,6 +3109,10 @@
         },
         {
           "match": "\\b(?i)(set_quest_failure_value)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(set_reaction_thresholds)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
         {

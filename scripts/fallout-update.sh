@@ -14,7 +14,7 @@ sfall_repo="https://github.com/sfall-team/sfall.git"
 sfall_dir="external/sfall-data"
 # Pinned so a regeneration of the tracked sfall data is reproducible; bump it deliberately
 # to the commit of an sfall release tag.
-sfall_commit="63606b96d7bb844f0ef82f1c347affca026453b5" # sfall v4.5
+sfall_commit="6c65e67342bda1488671601e417194199ec72a09" # sfall v4.5.1
 sfall_file="server/data/fallout-ssl-sfall.yml"
 
 checkout_pinned_repo "$sfall_repo" "$sfall_commit" "$sfall_dir"

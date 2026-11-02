@@ -14,16 +14,32 @@ export interface SfallCategory {
     readonly items?: readonly SfallFunction[];
 }
 
-/** An individual sfall function within a category */
+/**
+ * An individual sfall function within a category. Its signature is `type` and `args`, called through
+ * `sfall_funcN` when it has a `metarule`; `detail` replaces all three for what is not a call.
+ */
 export interface SfallFunction {
     readonly name: string;
-    readonly detail: string;
+    readonly detail?: string;
     readonly doc?: string;
     readonly opcode?: string | number;
     readonly unsafe?: boolean;
     readonly macro?: string;
-    readonly args?: readonly FalloutArg[];
+    readonly metarule?: string;
+    readonly args?: readonly SfallArg[];
     readonly type?: string;
+    readonly deprecated?: boolean | string;
+}
+
+/** An argument as functions.yml declares it. */
+export interface SfallArg {
+    readonly name: string;
+    readonly type: string;
+    readonly doc?: string;
+    /** Only on a metarule call: this argument, and every one after it, can be omitted. */
+    readonly optional?: boolean;
+    /** The value an omitted argument takes; it marks the argument optional too. */
+    readonly default?: string;
 }
 
 /** A hook entry from hooks.yml */
@@ -41,13 +57,15 @@ export interface FalloutCompletionItem {
     readonly doc?: string;
     readonly args?: readonly FalloutArg[];
     readonly type?: string;
+    readonly deprecated?: boolean | string;
 }
 
-/** A function argument */
+/** A function argument, as the data pipeline reads it */
 export interface FalloutArg {
     readonly name: string;
     readonly type: string;
-    readonly doc: string;
+    readonly doc?: string;
+    readonly default?: string;
 }
 
 /** Completion type constants matching the LSP extension's type enum */

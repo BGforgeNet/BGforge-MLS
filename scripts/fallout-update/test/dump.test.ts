@@ -70,6 +70,25 @@ other-stanza:
         expect(other.preserved).toBe(true);
     });
 
+    it("writes arguments and a deprecation, which the data pipeline reads", () => {
+        const functions: FalloutCompletionItem[] = [
+            {
+                name: "func",
+                detail: "int func(int a, bool b = False)",
+                type: "int",
+                args: [
+                    { name: "a", type: "int" },
+                    { name: "b", type: "bool", doc: "a flag", default: "False" },
+                ],
+                deprecated: "Use other_func.",
+            },
+        ];
+        dumpFalloutCompletion(filePath, functions, []);
+
+        const result = YAML.parse(fs.readFileSync(filePath, "utf8")) as Record<string, { items: unknown[] }>;
+        expect(result[SFALL_FUNCTIONS_STANZA]!.items).toEqual(functions);
+    });
+
     it("uses block scalar for multiline doc", () => {
         const functions: FalloutCompletionItem[] = [{ name: "func", detail: "void func()", doc: "Line 1\nLine 2" }];
         dumpFalloutCompletion(filePath, functions, []);

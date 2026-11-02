@@ -619,6 +619,7 @@ repository:
       - match: \b(?i)(draw_image)\b
       - match: \b(?i)(draw_image_scaled)\b
       - match: \b(?i)(eax_available)\b
+      - match: \b(?i)(encounter_detection)\b
       - match: \b(?i)(exec_map_update_scripts)\b
       - match: \b(?i)(exponent)\b
       - match: \b(?i)(fix_array)\b
@@ -770,6 +771,7 @@ repository:
       - match: \b(?i)(obj_is_openable)\b
       - match: \b(?i)(obj_under_cursor)\b
       - match: \b(?i)(objects_in_radius)\b
+      - match: \b(?i)(opcode_exists)\b
       - match: \b(?i)(outlined_object)\b
       - match: \b(?i)(party_member_list)\b
       - match: \b(?i)(path_find_to)\b
@@ -798,6 +800,7 @@ repository:
       - match: \b(?i)(remove_target_knockback)\b
       - match: \b(?i)(remove_trait)\b
       - match: \b(?i)(remove_weapon_knockback)\b
+      - match: \b(?i)(remove_wm_town_names)\b
       - match: \b(?i)(reset_critical_table)\b
       - match: \b(?i)(resize_array)\b
       - match: \b(?i)(resume_game)\b
@@ -843,6 +846,7 @@ repository:
       - match: \b(?i)(set_fake_trait)\b
       - match: \b(?i)(set_fake_trait_npc)\b
       - match: \b(?i)(set_flags)\b
+      - match: \b(?i)(set_fo1_hit_chance)\b
       - match: \b(?i)(set_global_script_repeat)\b
       - match: \b(?i)(set_global_script_type)\b
       - match: \b(?i)(set_hero_race)\b
@@ -893,6 +897,7 @@ repository:
       - match: \b(?i)(set_proto_data)\b
       - match: \b(?i)(set_pyromaniac_mod)\b
       - match: \b(?i)(set_quest_failure_value)\b
+      - match: \b(?i)(set_reaction_thresholds)\b
       - match: \b(?i)(set_rest_heal_time)\b
       - match: \b(?i)(set_rest_mode)\b
       - match: \b(?i)(set_scr_name)\b

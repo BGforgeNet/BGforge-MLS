@@ -39,43 +39,46 @@ function buildCompletionItem(
         doc = doc === "" ? categoryDoc : `${doc}\n${categoryDoc}`;
     }
 
+    const detail = signatureOf(func);
     const item: FalloutCompletionItem = {
         name: func.name,
-        ...(func.detail !== "" ? { detail: func.detail } : {}),
+        ...(detail !== "" ? { detail } : {}),
         ...(doc !== "" ? { doc: litscal(doc) } : {}),
-        ...(func.args !== undefined ? { args: func.args, type: func.type } : {}),
+        // `optional` is not carried: the signature already shows which arguments can be omitted.
+        ...(func.args !== undefined
+            ? {
+                  args: func.args.map((a) => ({ name: a.name, type: a.type, doc: a.doc, default: a.default })),
+                  type: func.type,
+              }
+            : {}),
+        ...(func.deprecated !== undefined ? { deprecated: func.deprecated } : {}),
     };
     return item;
 }
 
 /**
- * TODO: remove once sfall's functions.yml documents the real signature (BGforgeNet/sfall).
- *
- * The engine takes two parameters - `ScriptShaders.h` declares `SetShaderMode(DWORD d, DWORD mode)`, and
- * sfall's own rain example calls it with two - so importing the one-parameter doc entry would leave hover
- * and completion contradicting the built-in compiler, which refuses a one-argument call.
+ * The signature sfall's documentation generator writes for a function: its `detail` where it has one, else the
+ * type, name and arguments, with a default after the argument it belongs to. A metarule function is called as
+ * `sfall_funcN("metarule", ...)`, N the number of arguments passed, so it gets one line per count it accepts:
+ * an omittable argument (`optional`, or one with a `default`) drops off the right along with those after it.
  */
-const SHADER_MODE_FIX = {
-    name: "set_shader_mode",
-    detail: { from: "void set_shader_mode(int mode)", to: "void set_shader_mode(int ID, int mode)" },
-    doc: { from: "The parameter is a set of 32 flags", to: "`mode` is a set of 32 flags" },
-} as const;
-
-/** Applies {@link SHADER_MODE_FIX}, refusing to run on upstream text it no longer recognises. */
-function correctShaderMode(func: SfallFunction): SfallFunction {
-    if (func.name !== SHADER_MODE_FIX.name) return func;
-    const doc = func.doc ?? "";
-    if (func.detail !== SHADER_MODE_FIX.detail.from || !doc.includes(SHADER_MODE_FIX.doc.from)) {
-        throw new Error(
-            `${SHADER_MODE_FIX.name} no longer matches the text the local override corrects ` +
-                `(detail: "${func.detail}"). Check the signature upstream and drop the override if it is fixed.`,
-        );
+function signatureOf(func: SfallFunction): string {
+    if (func.detail !== undefined) return func.detail;
+    const args = func.args ?? [];
+    const params = args.map((a) =>
+        a.default === undefined ? `${a.type} ${a.name}` : `${a.type} ${a.name} = ${a.default}`,
+    );
+    if (func.metarule !== undefined) {
+        const required = args.filter((a) => a.optional !== true && a.default === undefined).length;
+        const lines: string[] = [];
+        for (let count = required; count <= params.length; count++) {
+            const passed = [`"${func.metarule}"`, ...params.slice(0, count)];
+            lines.push(`${func.type} sfall_func${count}(${passed.join(", ")})`);
+        }
+        return lines.join("\n");
     }
-    return {
-        ...func,
-        detail: SHADER_MODE_FIX.detail.to,
-        doc: doc.replace(SHADER_MODE_FIX.doc.from, SHADER_MODE_FIX.doc.to),
-    };
+    if (func.args === undefined) return `${func.type} ${func.name}`;
+    return `${func.type} ${func.name}(${params.join(", ")})`;
 }
 
 /**
@@ -103,7 +106,7 @@ export function loadSfallFunctions(srcDir: string): SfallFunctionsResult {
             const sortedFunctions = [...category.items].sort((a, b) => cmpStr(a.name, b.name));
 
             for (const func of sortedFunctions) {
-                completionItems.push(buildCompletionItem(correctShaderMode(func), categoryDoc));
+                completionItems.push(buildCompletionItem(func, categoryDoc));
             }
         }
     }

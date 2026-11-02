@@ -208,7 +208,7 @@ export function loadData(yamlPaths: readonly string[]): DataFile {
 
 /**
  * Returns full function invocation string.
- * Fallout format: "int get_sfall_arg_at(int a, ObjectPtr b)"
+ * Fallout format: the item's `detail` when it has one, else "int get_sfall_arg_at(int a, ObjectPtr b)"
  * WeiDU format: "dimorphic function SUBSTRING" (no args in signature)
  * When includeTypes is false, omits types (used for signature labels).
  *
@@ -225,7 +225,9 @@ export function getDetail(item: DataItem, includeTypes = true, stanzaName?: stri
             return item.name;
         }
 
-        // Fallout format: show "returnType name(type arg, ...)"
+        // Fallout format: a written detail wins, being the call form the source documents (sfall's
+        // `sfall_funcN("name", ...)`); otherwise "returnType name(type arg, ...)".
+        if (item.detail !== undefined) return item.detail;
         if (item.args !== undefined) {
             const params = item.args.map((a) => ({
                 name: a.name,
@@ -432,8 +434,15 @@ export function generateSignatures(data: DataFile, langId: string): Record<strin
             const weidu = isWeiduFormat(item);
             // WeiDU labels name the call alone; a Fallout one is the typed signature, the same shape a signature
             // read off a detail line has, with each parameter marked by its offset in it.
-            const label = weidu ? getDetail(item, false) : getDetail(item);
+            // A detail of several lines gives the call once per argument count it accepts; the last line takes
+            // every argument, so it is the one the arguments can be marked in.
+            const label = weidu ? getDetail(item, false) : (getDetail(item).split("\n").at(-1) ?? "");
             const offsets = weidu ? undefined : parameterOffsets(label);
+            if (offsets !== undefined && offsets.length !== item.args.length) {
+                throw new Error(
+                    `${name}: detail "${label}" lists ${offsets.length} arguments, args ${item.args.length}`,
+                );
+            }
             const parameters: SignatureParam[] = item.args.map((arg, index) => {
                 const categoryPrefix = weidu ? getCategoryPrefix(arg.type) : "";
                 const docStr = arg.doc ?? "";

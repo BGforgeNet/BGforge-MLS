@@ -6,6 +6,12 @@
 
 - A TSSL ternary `c ? a : b` compiles, to `.int` and to `.ssl`; before, both refused it.
 
+### Fallout SSL
+
+- sfall data updated to v4.5.1: `set_fo1_hit_chance`, `encounter_detection`, `remove_wm_town_names`,
+  `set_reaction_thresholds` and `opcode_exists` get completion and hover, `intface_redraw` takes an `int`, and
+  documentation fixes for functions and hooks.
+
 ## 3.19.1
 
 ### Transpilers

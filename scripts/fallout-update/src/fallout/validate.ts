@@ -22,7 +22,7 @@ export {
     requireString,
     validateArray,
 } from "../../../utils/src/validate-helpers.ts";
-import type { FalloutArg, SfallCategory, SfallFunction, SfallHook } from "./types.ts";
+import type { SfallArg, SfallCategory, SfallFunction, SfallHook } from "./types.ts";
 
 /**
  * Returns a field as string or number if present, undefined otherwise. Throws if present but wrong type.
@@ -42,34 +42,59 @@ function optionalStringOrNumber(
     return value;
 }
 
-function validateFalloutArg(data: unknown, context: string): FalloutArg {
+function validateSfallArg(data: unknown, context: string): SfallArg {
     const r = assertObject(data, context);
+    // YAML reads an unquoted `0` as a number; the signature prints it either way.
+    const value = optionalStringOrNumber(r, "default", context);
     return {
         name: requireString(r, "name", context),
         type: requireString(r, "type", context),
-        doc: requireString(r, "doc", context),
+        doc: optionalString(r, "doc", context),
+        optional: optionalBoolean(r, "optional", context),
+        default: value === undefined ? undefined : String(value),
     };
+}
+
+function optionalDeprecation(record: Record<string, unknown>, context: string): boolean | string | undefined {
+    const value = record["deprecated"];
+    if (value === undefined || typeof value === "boolean" || typeof value === "string") return value;
+    throw new TypeError(`Invalid 'deprecated' (expected true, false or a message) in ${context}`);
 }
 
 export function validateSfallFunction(data: unknown, context: string): SfallFunction {
     const r = assertObject(data, context);
 
     const rawArgs = r["args"];
-    let args: readonly FalloutArg[] | undefined;
+    let args: readonly SfallArg[] | undefined;
     if (rawArgs !== undefined) {
         const arr = assertArray(rawArgs, `${context}.args`);
-        args = arr.map((a, i) => validateFalloutArg(a, `${context}.args[${i}]`));
+        args = arr.map((a, i) => validateSfallArg(a, `${context}.args[${i}]`));
+    }
+
+    const detail = optionalString(r, "detail", context);
+    const type = optionalString(r, "type", context);
+    if (detail === undefined && type === undefined) {
+        throw new TypeError(`Missing 'type' in ${context}: a function without 'detail' needs its return type`);
+    }
+    const metarule = optionalString(r, "metarule", context);
+    const omittable = metarule === undefined ? args?.find((a) => a.optional === true) : undefined;
+    if (omittable !== undefined) {
+        throw new TypeError(
+            `'optional' on argument '${omittable.name}' in ${context}: only a metarule call can omit an argument`,
+        );
     }
 
     return {
         name: requireString(r, "name", context),
-        detail: requireString(r, "detail", context),
+        detail,
         doc: optionalString(r, "doc", context),
         opcode: optionalStringOrNumber(r, "opcode", context),
         unsafe: optionalBoolean(r, "unsafe", context),
         macro: optionalString(r, "macro", context),
+        metarule,
         args,
-        type: optionalString(r, "type", context),
+        type,
+        deprecated: optionalDeprecation(r, context),
     };
 }
 

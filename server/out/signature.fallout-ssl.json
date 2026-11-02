@@ -5670,7 +5670,7 @@
         "label": "void add_g_timer_event(int time, int fixedParam)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nAdds a timer event that calls the `timed_event_p_proc` procedure in the current global script\n`time`: the number of ticks after which the event timer is triggered\n`fixedParam`: the value that is passed to the `timed_event_p_proc` procedure for the `fixed_param` function\n"
+            "value": "---\nAdds a timer event that calls the `timed_event_p_proc` procedure in the current global script\n- `time`: the number of ticks after which the event timer is triggered\n- `fixedParam`: the value that is passed to the `timed_event_p_proc` procedure for the `fixed_param` function\n"
         },
         "parameters": [
             {
@@ -5784,7 +5784,7 @@
         "label": "array art_frame_data(string/int artFile/artId, int frame, int rotation)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\n- returns the dimensions of a given PCX or FRM frame as a temp array in the form **[width, height]**\n- `artFile/artId`: path to the PCX/FRM file (e.g. `art\\\\inven\\\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)\noptional arguments:\n- `frame`: frame number, the first frame starts from zero\n- `rotation`: rotation to get the frame for, useful when reading FRM files by path\n"
+            "value": "---\n- returns the dimensions of a given PCX or FRM frame as a temp array in the form **[width, height]**\n- `artFile/artId`: path to the PCX/FRM file (e.g. `art\\\\inven\\\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)\noptional arguments:\n- `frame`: frame number, the first frame starts at zero\n- `rotation`: rotation to get the frame for, useful when reading FRM files by path\n"
         },
         "parameters": [
             {
@@ -6336,7 +6336,7 @@
         "label": "void disable_aimed_shots(int pid)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nAllows overriding the normal rules regarding which weapons are allowed to make aimed attacks. (e.g. weapons that cause explosive damage normally cannot normally make aimed shots.) stops a weapon from making aimed shots even if it normally coulld. Affects player and NPCs alike. The list of edited weapons is not saved over game loads, so you need to call the function once at each reload. Use a pid of 0 to represent unarmed."
+            "value": "---\nAllows overriding the normal rules regarding which weapons are allowed to make aimed attacks. (e.g. weapons that cause explosive damage cannot normally make aimed shots.) stops a weapon from making aimed shots even if it normally coulld. Affects player and NPCs alike. The list of edited weapons is not saved over game loads, so you need to call the function once at each reload. Use a pid of 0 to represent unarmed."
         },
         "parameters": [
             {
@@ -6372,7 +6372,7 @@
         "label": "void draw_image(string/int artFile/artId, int frame, int x, int y, bool noTransparent)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\n- displays the specified PCX or FRM image in the active window created by vanilla `CreateWin` or sfall's `create_win` script function\n- artFile/artId: path to the PCX/FRM file (e.g. `art\\\\inven\\\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)\noptional arguments:\n- `frame`: frame number, the first frame starts from zero\n- `x/y`: offset relative to the top-left corner of the window\n- `noTransparent`: pass True to display an image without transparent background\n- NOTE: to omit optional arguments starting from the right, call the functions with different `sfall_funcX` (e.g. `sfall_func4(\"draw_image\", pathFile, frame, x, y))`\n"
+            "value": "---\n- displays the specified PCX or FRM image in the active window created by vanilla `CreateWin` or sfall's `create_win` script function\n- artFile/artId: path to the PCX/FRM file (e.g. `art\\\\inven\\\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)\noptional arguments:\n- `frame`: frame number, the first frame starts at zero\n- `x/y`: offset relative to the top-left corner of the window\n- `noTransparent`: pass True to display an image without transparent background\n- NOTE: to omit optional arguments starting from the right, call the functions with different `sfall_funcX` (e.g. `sfall_func4(\"draw_image\", pathFile, frame, x, y))`\n"
         },
         "parameters": [
             {
@@ -6452,6 +6452,21 @@
             }
         ]
     },
+    "encounter_detection": {
+        "label": "void sfall_func1(\"encounter_detection\", bool toggle)",
+        "documentation": {
+            "kind": "markdown",
+            "value": "---\nEnables/disables the engine's random encounter detection process (grants XP and displays a dialog box).\n- If the process is disabled, the player will always be forced into random encounters when they occur.\n"
+        },
+        "parameters": [
+            {
+                "label": [
+                    40,
+                    51
+                ]
+            }
+        ]
+    },
     "exponent": {
         "label": "float exponent(float x)",
         "documentation": {
@@ -6501,7 +6516,7 @@
         "label": "void force_aimed_shots(int pid)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nAllows overriding the normal rules regarding which weapons are allowed to make aimed attacks. (e.g. weapons that cause explosive damage normally cannot normally make aimed shots.) Will allow a weapon to make aimed shots even if it normally couldn't. Affects player and NPCs alike. Does not override the effects of the fast shot trait. The list of edited weapons is not saved over game loads, so you need to call the function once at each reload. Use a pid of 0 to represent unarmed."
+            "value": "---\nAllows overriding the normal rules regarding which weapons are allowed to make aimed attacks. (e.g. weapons that cause explosive damage cannot normally make aimed shots.) Will allow a weapon to make aimed shots even if it normally couldn't. Affects player and NPCs alike. Does not override the effects of the fast shot trait. The list of edited weapons is not saved over game loads, so you need to call the function once at each reload. Use a pid of 0 to represent unarmed."
         },
         "parameters": [
             {
@@ -7095,7 +7110,7 @@
         "label": "get_current_inven_size(ObjectPtr object)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nReturns the current inventory size of the container or the critter."
+            "value": "---\nReturns the total size of items in a container or a critter's inventory."
         },
         "parameters": [
             {
@@ -7434,7 +7449,7 @@
         "label": "mixed get_sfall_arg_at(int argNum)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nReturns the value of hook argument with the specified argument number (first argument of hook starts from 0)"
+            "value": "---\nReturns the value of hook argument with the specified argument number (first argument of hook starts at 0)"
         },
         "parameters": [
             {
@@ -7812,7 +7827,7 @@
         "label": "int sfall_func4(\"interface_art_draw\", int winType, string artFile/int artID, int x, int y)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\n```c++\nint sfall_func4(\"interface_art_draw\", int winType, string artFile/int artID, int x, int y)\nint sfall_func5(\"interface_art_draw\", int winType, string artFile/int artID, int x, int y, int frame)\nint sfall_func6(\"interface_art_draw\", int winType, string artFile/int artID, int x, int y, int frame, array param)\n```\n- draws the specified PCX or FRM image in the game interface window, returns -1 on any error\n- `winType`: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)\n  this also takes the value of the flag (0x1000000) to prevent immediate redrawing of the interface window\n- `artFile/artId`: path to the PCX/FRM file (e.g. `art\\\\inven\\\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)\n- `x/y`: offset relative to the top-left corner of the window\n\noptional arguments:\n- `frame`: frame number, the first frame starts from zero\n- `param`: an array which specifies additional parameters, where:\n  index 0 - sprite direction for multi-directional FRM\n  index 1/index 2 - the new width/height to scale the image to. Pass -1 to use the original width/height\n"
+            "value": "---\n```c++\nint sfall_func4(\"interface_art_draw\", int winType, string artFile/int artID, int x, int y)\nint sfall_func5(\"interface_art_draw\", int winType, string artFile/int artID, int x, int y, int frame)\nint sfall_func6(\"interface_art_draw\", int winType, string artFile/int artID, int x, int y, int frame, array param)\n```\n- draws the specified PCX or FRM image in the game interface window, returns -1 on any error\n- `winType`: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)\n  this also takes the value of the flag (0x1000000) to prevent immediate redrawing of the interface window\n- `artFile/artId`: path to the PCX/FRM file (e.g. `art\\\\inven\\\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)\n- `x/y`: offset relative to the top-left corner of the window\n\noptional arguments:\n- `frame`: frame number, the first frame starts at zero\n- `param`: an array which specifies additional parameters, where:\n  index 0 - sprite direction for multi-directional FRM\n  index 1/index 2 - the new width/height to scale the image to. Pass -1 to use the original width/height\n"
         },
         "parameters": [
             {
@@ -7902,7 +7917,7 @@
         ]
     },
     "intface_redraw": {
-        "label": "void intface_redraw(bool winType)",
+        "label": "void intface_redraw(int winType)",
         "documentation": {
             "kind": "markdown",
             "value": "---\nRedraws main game interface. Useful after direct changes to current player weapons or stats to reflect changes.\n- redraws main game interface, useful to reflect changes after directly changing current player weapons or stats\n- `winType`: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**). Pass `-1` to redraw all interface windows.\n"
@@ -7911,7 +7926,7 @@
             {
                 "label": [
                     20,
-                    32
+                    31
                 ]
             }
         ]
@@ -8444,6 +8459,21 @@
             }
         ]
     },
+    "opcode_exists": {
+        "label": "bool opcode_exists(int opcodeNum)",
+        "documentation": {
+            "kind": "markdown",
+            "value": "---\nReturns True if an opcode with the specified number exists in the current version of sfall.\n- `opcodeNum` starts at `0x8000`.\n"
+        },
+        "parameters": [
+            {
+                "label": [
+                    19,
+                    32
+                ]
+            }
+        ]
+    },
     "party_member_list": {
         "label": "array party_member_list(int includeHidden)",
         "documentation": {
@@ -8814,7 +8844,7 @@
         "label": "void register_hook_proc(int hookID, proc procedure)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nThe same as `register_hook`, except that you specifically define which procedure in the current script should be called as a hook (instead of \"start\" by default). Pass procedure the same as how you use dialog option functions. This IS the recommended way to use hook scripts, as it gives both modularity (each mod logic in a separate global script with no conflicts) and flexibility. You can place all related hook scripts for a specific mod in one global script!\n\nUse zero (0) as second argument to unregister hook script from current global script.\n\n__NOTE:__ you can hook several scripts to a single hook point, for example if it's different mods from different authors or just some different aspects of one larger mod. When one of the scripts in a chain returns value with `set_sfall_return`, the next script may override this value if calls `set_sfall_return` again.\n\n__Example:__ Sometimes you need to multiply certain value in a chain of hook scripts. Let's say we have a **Mod A** which reduces all \"to hit\" chances by 50%. The code might look like this:\n\n```js\noriginal_chance = get_sfall_arg;\nset_sfall_return(original_chance / 2);\n```\n\n**Mod B** also want to affect hit chances globally, by increasing them by 50%. Now in order for both mods to work well together, we need to add this line to **Mod A** hook script:\n```js\nset_sfall_arg(0, (original_chance / 2));\n```\n\nThis basically changes hook argument for the next script. **Mod B** code:\n```js\noriginal_chance = get_sfall_arg;\nset_sfall_return(original_chance * 1.5);\nset_sfall_arg(0, (original_chance * 1.5));\n```\n\nSo if you combine both mods together, they will run in chain and the end result will be a 75% from original hit chance (hook register order doesn't matter in this case, if you use `set_sfall_arg` in both hooks).\n\nThe defines to use for the `hookID` are in **sfall.h**.\n"
+            "value": "---\nWorks just like `register_hook`, except that you specifically define which procedure in the current script should be called as a hook (instead of `start`). Pass procedure the same as how you use dialog option functions. This IS the recommended way to use hook scripts, as it gives both modularity (each mod logic in a separate global script with no conflicts) and flexibility. You can place all related hook scripts for a specific mod in one global script!\n\nUse zero (0) as the second argument to unregister the hook from the current global script.\n\n__NOTE:__ you can hook several scripts to a single hook point, for example if it's different mods from different authors or just some different aspects of one larger mod. When one of the scripts in a chain returns value with `set_sfall_return`, the next script may override this value if calls `set_sfall_return` again.\n\n__Example:__ Sometimes you need to multiply certain value in a chain of hook scripts. Let's say we have a **Mod A** which reduces all \"to hit\" chances by 50%. The code might look like this:\n\n```js\noriginal_chance = get_sfall_arg;\nset_sfall_return(original_chance / 2);\n```\n\n**Mod B** also want to affect hit chances globally, by increasing them by 50%. Now in order for both mods to work well together, we need to add this line to **Mod A** hook script:\n```js\nset_sfall_arg(0, (original_chance / 2));\n```\n\nThis basically changes hook argument for the next script. **Mod B** code:\n```js\noriginal_chance = get_sfall_arg;\nset_sfall_return(original_chance * 1.5);\nset_sfall_arg(0, (original_chance * 1.5));\n```\n\nSo if you combine both mods together, they will run in chain and the end result will be a 75% from original hit chance (hook register order doesn't matter in this case, if you use `set_sfall_arg` in both hooks).\n\nThe defines to use for the `hookID` are in **sfall.h**.\n"
         },
         "parameters": [
             {
@@ -8923,6 +8953,21 @@
                 "label": [
                     29,
                     38
+                ]
+            }
+        ]
+    },
+    "remove_wm_town_names": {
+        "label": "void sfall_func1(\"remove_wm_town_names\", bool toggle)",
+        "documentation": {
+            "kind": "markdown",
+            "value": "---\nEnables/disables drawing town names under green circles on the world map.\n- `toggle`: True - hides town names (Fallout 1 behavior); False - shows town names (default).\n"
+        },
+        "parameters": [
+            {
+                "label": [
+                    41,
+                    52
                 ]
             }
         ]
@@ -9693,7 +9738,7 @@
         "label": "void set_explosion_max_targets(x)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nSets the maximum number of additional targets for an explosion, valid range: 1..6 (default is 6)."
+            "value": "---\nSets the maximum number of additional targets for an explosion. Valid range: 1..6 (default: 6)."
         },
         "parameters": [
             {
@@ -9886,6 +9931,21 @@
                 "label": [
                     30,
                     39
+                ]
+            }
+        ]
+    },
+    "set_fo1_hit_chance": {
+        "label": "void set_fo1_hit_chance(bool toggle)",
+        "documentation": {
+            "kind": "markdown",
+            "value": "---\nEnables/disables Fallout 1 behavior when calculating the player's hit chance.\n- `toggle`: True - removes the (PE - 2) distance penalty (Fallout 1 behavior); False - keeps the penalty (default).\n"
+        },
+        "parameters": [
+            {
+                "label": [
+                    24,
+                    35
                 ]
             }
         ]
@@ -10868,6 +10928,27 @@
             }
         ]
     },
+    "set_reaction_thresholds": {
+        "label": "void sfall_func2(\"set_reaction_thresholds\", int neutral, int good)",
+        "documentation": {
+            "kind": "markdown",
+            "value": "---\nSets the thresholds for \"neutral\" and \"good\" NPC reactions\n- `neutral`: any reaction value greater than this is considered neutral. Valid range: -125..125 (default: -10)\n- `good`: any reaction value greater than this is considered good. Valid range: -125..125 (default: 10). The value must be greater than or equal to the `neutral` threshold\n"
+        },
+        "parameters": [
+            {
+                "label": [
+                    44,
+                    55
+                ]
+            },
+            {
+                "label": [
+                    57,
+                    65
+                ]
+            }
+        ]
+    },
     "set_rest_heal_time": {
         "label": "void set_rest_heal_time(int time)",
         "documentation": {
@@ -11136,7 +11217,7 @@
         "label": "void set_shader_mode(int ID, int mode)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nTells sfall when to use a shader. `mode` is a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.\nThe graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing."
+            "value": "---\nTells sfall when to use a shader.\n- `ID`: shader ID\n- `mode`: a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.\n\nThe graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing."
         },
         "parameters": [
             {
@@ -11388,7 +11469,7 @@
         "label": "void sfall_func2(\"set_town_title\", int areaID, string title)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nSets a floating text for a town on the world map when hovering the cursor over the player's marker.\n```\n- areaID: the ID number of the town from city.txt\n```\n"
+            "value": "---\nSets a floating text for a town on the world map when hovering the cursor over the player's marker.\n- `areaID`: the ID number of the town from city.txt.\n"
         },
         "parameters": [
             {
@@ -11574,7 +11655,7 @@
         "label": "void set_window_flag(string winName/int winID, int flag, bool value)",
         "documentation": {
             "kind": "markdown",
-            "value": "---\nChanges the specified flag for the created script or game interface window.\n- winName: the window name, assigned to the window by the `CreateWin/create_win` function\n- winID: the ID number of the interface or script window obtained with the `get_window_under_mouse` function, or 0 for the current game interface\n- flag: the flag to change (see `WIN_FLAG_*` constants in **define_extra.h**)\n- value: `True` - set the flag, `False` - unset the flag\n"
+            "value": "---\nChanges the specified flag for the created script or game interface window.\n- `winName`: the window name, assigned to the window by the `CreateWin/create_win` function\n- `winID`: the ID number of the interface or script window obtained with the `get_window_under_mouse` function, or 0 for the current game interface\n- `flag`: the flag to change (see `WIN_FLAG_*` constants in **define_extra.h**)\n- `value`: True - sets the flag; False - unsets the flag\n"
         },
         "parameters": [
             {

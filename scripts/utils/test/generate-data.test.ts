@@ -34,6 +34,20 @@ describe("getDetail", () => {
         expect(getDetail(item, false)).toBe("my_func(a)");
     });
 
+    // sfall's import writes the call form sfall documents, which is not always `name(args)`.
+    it("returns the detail field over a signature derived from args", () => {
+        const item = {
+            name: "get_terrain_name",
+            type: "string",
+            detail: 'string sfall_func2("get_terrain_name", int x, int y)',
+            args: [
+                { name: "x", type: "int" },
+                { name: "y", type: "int" },
+            ],
+        };
+        expect(getDetail(item)).toBe('string sfall_func2("get_terrain_name", int x, int y)');
+    });
+
     it("returns detail field when no args", () => {
         const item = { name: "my_func", detail: "void my_func()" };
         expect(getDetail(item)).toBe("void my_func()");
@@ -437,6 +451,54 @@ describe("generateSignatures", () => {
         expect(result["f"]!.parameters[0]!.documentation?.value).toContain("int x");
         expect(result["f"]!.parameters[0]!.documentation?.value).toContain("the value");
         expect(result["f"]!.documentation.value).toContain("A function.");
+    });
+
+    // A detail of several lines gives the call once per argument count it accepts; the last takes them all.
+    it("labels a signature with the detail line taking every argument, marking each argument in it", () => {
+        const data = {
+            funcs: {
+                type: 3,
+                items: [
+                    {
+                        name: "message_box",
+                        type: "int",
+                        detail:
+                            'int sfall_func1("message_box", string message)\n' +
+                            'int sfall_func2("message_box", string message, int flags)',
+                        args: [
+                            { name: "message", type: "string" },
+                            { name: "flags", type: "int", doc: "mode flags" },
+                        ],
+                    },
+                ],
+            },
+        };
+        const sig = generateSignatures(data, "lang")["message_box"]!;
+        expect(sig.label).toBe('int sfall_func2("message_box", string message, int flags)');
+        expect(
+            sig.parameters.map((p) => (typeof p.label === "string" ? p.label : sig.label.slice(...p.label))),
+        ).toEqual(["string message", "int flags"]);
+        expect(sig.parameters[1]!.documentation?.value).toContain("mode flags");
+    });
+
+    it("throws when a detail line lists other arguments than args", () => {
+        const data = {
+            funcs: {
+                type: 3,
+                items: [
+                    {
+                        name: "f",
+                        type: "int",
+                        detail: "int f(int a)",
+                        args: [
+                            { name: "a", type: "int" },
+                            { name: "b", type: "int" },
+                        ],
+                    },
+                ],
+            },
+        };
+        expect(() => generateSignatures(data, "lang")).toThrow('f: detail "int f(int a)" lists 1 arguments, args 2');
     });
 
     it("skips items without args", () => {

@@ -52,8 +52,52 @@ describe("validateSfallFunction", () => {
         expect(() => validateSfallFunction({ detail: "x" }, "test")).toThrow("Missing or invalid 'name'");
     });
 
-    it("throws on missing detail", () => {
-        expect(() => validateSfallFunction({ name: "x" }, "test")).toThrow("Missing or invalid 'detail'");
+    // sfall writes a signature as `type` plus `args`; `detail` replaces both only for what is not a call.
+    it("validates a function given by type, metarule and args", () => {
+        const result = validateSfallFunction(
+            {
+                name: "message_box",
+                type: "int",
+                metarule: "message_box",
+                deprecated: "Use something else.",
+                args: [
+                    { name: "message", type: "string" },
+                    { name: "flags", type: "int", optional: true, default: -1, doc: "mode flags" },
+                ],
+            },
+            "test",
+        );
+        expect(result).toEqual({
+            name: "message_box",
+            type: "int",
+            metarule: "message_box",
+            deprecated: "Use something else.",
+            args: [
+                { name: "message", type: "string" },
+                { name: "flags", type: "int", optional: true, default: "-1", doc: "mode flags" },
+            ],
+        });
+    });
+
+    it("throws on a function with neither detail nor type", () => {
+        expect(() => validateSfallFunction({ name: "x" }, "test")).toThrow(
+            "Missing 'type' in test: a function without 'detail' needs its return type",
+        );
+    });
+
+    it("throws on an optional argument outside a metarule call", () => {
+        expect(() =>
+            validateSfallFunction(
+                { name: "x", type: "int", args: [{ name: "a", type: "int", optional: true }] },
+                "test",
+            ),
+        ).toThrow("'optional' on argument 'a' in test: only a metarule call can omit an argument");
+    });
+
+    it("throws on an invalid deprecated value", () => {
+        expect(() => validateSfallFunction({ name: "x", type: "int", deprecated: 1 }, "test")).toThrow(
+            "Invalid 'deprecated' (expected true, false or a message) in test",
+        );
     });
 
     it("throws on invalid doc type", () => {

@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { loadSfallFunctions, loadSfallHooks } from "../src/fallout/sfall-data.ts";
+import type { FalloutCompletionItem } from "../src/fallout/types.ts";
 
 const TMP_BASE = "tmp";
 beforeAll(() => fs.mkdirSync(TMP_BASE, { recursive: true }));
@@ -86,32 +87,85 @@ describe("loadSfallFunctions", () => {
         expect(item.type).toBe("int");
     });
 
-    it("corrects the one-parameter set_shader_mode sfall documents", () => {
-        const yaml = `
-- name: "Graphics"
-  items:
-    - name: set_shader_mode
-      detail: "void set_shader_mode(int mode)"
-      doc: "Tells sfall when to use a shader. The parameter is a set of 32 flags naming screens."
-`;
-        fs.writeFileSync(path.join(tmpDir, "functions.yml"), yaml, "utf8");
-        const item = loadSfallFunctions(tmpDir).completionItems[0]!;
+    /** The one function a functions.yml holding just `item` (YAML, indented as an item) imports to. */
+    function importOne(item: string): FalloutCompletionItem {
+        fs.writeFileSync(path.join(tmpDir, "functions.yml"), `- name: "Cat"\n  items:\n${item}`, "utf8");
+        const items = loadSfallFunctions(tmpDir).completionItems;
+        expect(items).toHaveLength(1);
+        return items[0]!;
+    }
 
-        expect(item.detail).toBe("void set_shader_mode(int ID, int mode)");
-        expect(item.doc).toContain("`mode` is a set of 32 flags");
+    // The signatures are the ones sfall's own documentation generator writes from the same fields.
+    it("builds the signature from the type and the arguments, defaults included", () => {
+        const item = importOne(`
+    - name: get_stat_max
+      type: int
+      args:
+        - name: stat
+          type: int
+        - name: who
+          type: bool
+          default: "False"
+          doc: 1 for other critters
+`);
+        expect(item).toEqual({
+            name: "get_stat_max",
+            detail: "int get_stat_max(int stat, bool who = False)",
+            type: "int",
+            args: [
+                { name: "stat", type: "int" },
+                { name: "who", type: "bool", default: "False", doc: "1 for other critters" },
+            ],
+        });
     });
 
-    it("throws when set_shader_mode no longer carries the text the override corrects", () => {
-        const yaml = `
-- name: "Graphics"
-  items:
-    - name: set_shader_mode
-      detail: "void set_shader_mode(int ID, int mode)"
-      doc: "Tells sfall when to use a shader. \`mode\` is a set of 32 flags naming screens."
-`;
-        fs.writeFileSync(path.join(tmpDir, "functions.yml"), yaml, "utf8");
+    it("writes a function without arguments without parentheses", () => {
+        expect(importOne("    - name: get_year\n      type: int\n").detail).toBe("int get_year");
+    });
 
-        expect(() => loadSfallFunctions(tmpDir)).toThrow("no longer matches the text the local override corrects");
+    it("writes a metarule call once per argument count it accepts, an omittable argument dropping from the right", () => {
+        const item = importOne(`
+    - name: message_box
+      type: int
+      metarule: message_box
+      args:
+        - name: message
+          type: string
+        - name: flags
+          type: int
+          optional: true
+        - name: color
+          type: int
+          default: "145"
+`);
+        expect(item.detail).toBe(
+            [
+                'int sfall_func1("message_box", string message)',
+                'int sfall_func2("message_box", string message, int flags)',
+                'int sfall_func3("message_box", string message, int flags, int color = 145)',
+            ].join("\n"),
+        );
+    });
+
+    it("calls a metarule by its own name, which can differ from the function's", () => {
+        const item = importOne(`
+    - name: remove_all_timer_events
+      type: void
+      metarule: remove_timer_event
+`);
+        expect(item.detail).toBe('void sfall_func0("remove_timer_event")');
+    });
+
+    it("takes a detail line as the signature, for what is not a call", () => {
+        const item = importOne('    - name: div\n      detail: "x div y"\n');
+        expect(item).toEqual({ name: "div", detail: "x div y" });
+    });
+
+    it("carries a deprecation through, a flag or a message", () => {
+        const flagged = importOne("    - name: f\n      type: int\n      deprecated: true\n");
+        expect(flagged.deprecated).toBe(true);
+        const explained = importOne("    - name: f\n      type: int\n      deprecated: Obsolete since sfall 2.1a.\n");
+        expect(explained.deprecated).toBe("Obsolete since sfall 2.1a.");
     });
 
     it("throws when functions.yml not found", () => {
