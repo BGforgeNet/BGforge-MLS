@@ -707,8 +707,8 @@ importers:
         specifier: ^7.3.3
         version: 7.3.3
       sslc-emscripten-noderawfs:
-        specifier: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
-        version: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz
+        specifier: https://github.com/sfall-team/sslc/releases/download/2026-09-17-13-26-18/wasm-emscripten-node-noderawfs.tar.gz
+        version: https://github.com/sfall-team/sslc/releases/download/2026-09-17-13-26-18/wasm-emscripten-node-noderawfs.tar.gz
       ts-morph:
         specifier: 'catalog:'
         version: 28.0.0
@@ -4348,8 +4348,8 @@ packages:
   spdx-license-ids@3.0.24:
     resolution: {integrity: sha512-cLS9TtWkIQFyLkJ3/5aFQAOHOSKTlOs/7WDut/XPSdjom1fJhUdkepeJAKXa9Y05+FabHd0sti+Et559vDtkpQ==}
 
-  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz:
-    resolution: {integrity: sha512-rfaUD8f+Bsj2baPKZ3ZTzLqa4FK+2pHc17KmyFiiBC9iue7GeCCc5pz27oBhwh9Ev7j8F37IQWtqH1KsthZUbg==, tarball: https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz}
+  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-09-17-13-26-18/wasm-emscripten-node-noderawfs.tar.gz:
+    resolution: {integrity: sha512-y31Cw0Oqy/esdql/uimfluyPtWfZDVgPrv6yaB6YX4XoGrkRvpaPJtzAMUrMbtZfnmkAAAD0FzwBTaqOXkjEcA==, tarball: https://github.com/sfall-team/sslc/releases/download/2026-09-17-13-26-18/wasm-emscripten-node-noderawfs.tar.gz}
     version: 1.0.0
     hasBin: true
 
@@ -8498,7 +8498,7 @@ snapshots:
 
   spdx-license-ids@3.0.24: {}
 
-  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-08-17-13-40-20/wasm-emscripten-node-noderawfs.tar.gz: {}
+  sslc-emscripten-noderawfs@https://github.com/sfall-team/sslc/releases/download/2026-09-17-13-26-18/wasm-emscripten-node-noderawfs.tar.gz: {}
 
   stackback@0.0.2: {}
 

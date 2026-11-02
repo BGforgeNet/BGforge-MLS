@@ -2,7 +2,7 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
-## Unreleased
+## 0.5.0
 
 ### Changed
 

@@ -1,7 +1,7 @@
 # Corpus oracle digests: sha256 of the compiled bytes per script per level (-O0 -O1 -O2), or
 # 'refused'. Generated against the pinned compiler and corpus by: pnpm ssl-oracles
 # The integration sweeps compare against these and refuse to run when the pins below have moved.
-compiler sha256:a992a0fd9177a21370016e1d39b03ba78ee51243c5ebdd15b81ef78aab5adfd4
+compiler sha256:bd39929e1bea82768108e3a5b111a4a5e579349c288af8027fc7f76ac6e3ee35
 corpus https://github.com/BGforgeNet/Fallout2_Restoration_Project f0934f2b1ed9457b334baa6a950aa8ed3782642e
 corpus https://github.com/BGforgeNet/FO2tweaks acf81c2b923c55e6b0a0eb9d267dcf6627e03410
 corpus https://github.com/BGforgeNet/Fallout2_Party_Orders 14c4d134d772b1a97f1389fdc5967a3bfb6e38eb

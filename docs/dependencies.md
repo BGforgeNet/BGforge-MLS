@@ -187,7 +187,7 @@ So, per bump:
   integrity across those, so `pnpm update` keeps working. Do **not** `rm pnpm-lock.yaml` to regenerate from scratch -
   that drops the field and breaks `pnpm update` until it is re-added. The release asset is immutable, so the hash is
   stable; if a full regen is ever unavoidable, restore the line
-  `resolution: {integrity: sha512-rfaUD8f+Bsj2baPKZ3ZTzLqa4FK+2pHc17KmyFiiBC9iue7GeCCc5pz27oBhwh9Ev7j8F37IQWtqH1KsthZUbg==, tarball: <url>}`.
+  `resolution: {integrity: sha512-y31Cw0Oqy/esdql/uimfluyPtWfZDVgPrv6yaB6YX4XoGrkRvpaPJtzAMUrMbtZfnmkAAAD0FzwBTaqOXkjEcA==, tarball: <url>}`.
   The same dep is also listed under `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` (a non-registry tarball has no
   publish timestamp for the `minimumReleaseAge` window to check). After any bump of this dependency, regenerate the
   committed corpus oracles with `pnpm ssl-oracles` - the SSL integration sweeps pin the dependency's identity and
