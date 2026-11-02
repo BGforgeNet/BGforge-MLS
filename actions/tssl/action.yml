@@ -27,6 +27,10 @@ inputs:
     description: 'If "true", compile and/or to skip the right operand once the left decides the result.'
     required: false
     default: "false"
+  typecheck:
+    description: 'If "false", compile without type-checking each script against the tsconfig.json that includes it. Needs a tssl newer than 0.4.0.'
+    required: false
+    default: "true"
   commit-message:
     description: "Commit subject when compiled output changes."
     required: false
@@ -86,6 +90,7 @@ runs:
         INT: ${{ inputs.int }}
         OPT: ${{ inputs.opt }}
         SHORT_CIRCUIT: ${{ inputs.short-circuit }}
+        TYPECHECK: ${{ inputs.typecheck }}
       run: ${{ github.action_path }}/scripts/switches.sh
 
     - name: Compile every .tssl under the scan path

@@ -3,7 +3,8 @@
 Compiles every TSSL source to Fallout INT bytecode with
 [`@bgforge/tssl`](https://www.npmjs.com/package/@bgforge/tssl) (the `tssl` CLI). Bytecode is a build artifact, not
 a committed one, so by default the action commits nothing: a clean compile IS the check, and a compile error fails
-the job.
+the job. So does a type error: the compiler checks each script against the `tsconfig.json` that includes it, unless
+`typecheck: "false"`.
 
 TSSL is a compiler, not a transpiler: the TypeScript source becomes bytecode directly, with no SSL text produced
 or read on the way.
@@ -109,6 +110,7 @@ this action in particular.
 | `int`                 | `true`                                                  | If `false`, skip the bytecode and write only the `.ssl`. Needs `ssl: "true"`, and makes `opt`/`short-circuit` inert. |
 | `opt`                 | `""`                                                    | Optimisation level (`0`, `1` or `2`). Empty uses the compiler's default.                                             |
 | `short-circuit`       | `false`                                                 | If `true`, compile `and`/`or` to skip the right operand once the left decides the result.                            |
+| `typecheck`           | `true`                                                  | If `false`, compile without type-checking each script against its `tsconfig.json`. Needs a tssl newer than 0.4.0.    |
 | `commit-message`      | `chore: update compiled output`                         | Commit subject when compiled output changes.                                                                         |
 | `commit-author-name`  | `github-actions[bot]`                                   | git author name.                                                                                                     |
 | `commit-author-email` | `41898282+github-actions[bot]@users.noreply.github.com` | git author email - the numeric prefix links the commit to the bot account.                                           |

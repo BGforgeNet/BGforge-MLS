@@ -2,6 +2,12 @@
 
 Notable changes to the `actions/tssl` Action. Compiler changes: `compilers/tssl/CHANGELOG.md`.
 
+## Unreleased
+
+- Input `typecheck`, default `"true"`. From the `@bgforge/tssl` release after 0.4.0, the compiler type-checks each
+  script against the `tsconfig.json` that includes it and refuses one with type errors, so a mod's CI fails on them.
+  `typecheck: "false"` compiles without the check; 0.4.0 does not know the switch, so keep it on with that version.
+
 ## 1.1.0
 
 - `actions/setup-node` v7.1.0.

@@ -7,7 +7,7 @@
 # can carry between steps; every token here is a fixed flag or a single digit
 # validated below, so the word-splitting run.sh does on it cannot surprise.
 #
-# Inputs (env): SSL, INT, OPT, SHORT_CIRCUIT, GITHUB_OUTPUT.
+# Inputs (env): SSL, INT, OPT, SHORT_CIRCUIT, TYPECHECK, GITHUB_OUTPUT.
 set -euo pipefail
 
 # Both opt and short-circuit steer the bytecode emitter, which int: "false" never reaches - the CLI
@@ -23,6 +23,7 @@ args=()
 [[ "$SSL" == "true" ]] && args+=(--ssl)
 [[ "$INT" == "false" ]] && args+=(--no-int)
 [[ "$SHORT_CIRCUIT" == "true" ]] && args+=(-s)
+[[ "$TYPECHECK" == "false" ]] && args+=(--no-typecheck)
 
 if [[ -n "$OPT" ]]; then
     # Refused here rather than passed on: the CLI would reject it too, but this
