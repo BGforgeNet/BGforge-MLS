@@ -8,9 +8,12 @@
 
 ### Fallout SSL
 
-- sfall data updated to v4.5.1: `set_fo1_hit_chance`, `encounter_detection`, `remove_wm_town_names`,
-  `set_reaction_thresholds` and `opcode_exists` get completion and hover, `intface_redraw` takes an `int`, and
-  documentation fixes for functions and hooks.
+- sfall data updated past v4.5.1: `set_fo1_hit_chance`, `encounter_detection`, `remove_wm_town_names`,
+  `set_reaction_thresholds` and `opcode_exists` get completion and hover, and documentation fixes for functions and
+  hooks.
+- Hover and signature help describe each argument of an sfall function, show its default, and list every argument
+  count a `sfall_funcN` call accepts. Signatures name and type every argument, and `hide_window`, `show_window`,
+  `remove_timer_event` and `string_compare` are listed under their own names.
 
 ## 3.19.1
 

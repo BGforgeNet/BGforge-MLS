@@ -7,65 +7,163 @@ sfall_functions:
       detail: void set_npc_stat_max(int stat, int value)
       doc: |-
         The `set_stat_max/min` functions can be used to set the valid ranges on stats. Values returned by `get_current_stat` will be clamped to this range. The `set_pc_` function only affects the player, the `set_npc_` functions only affects other critters, and the `set_` functions affects both.
+      args:
+        - name: stat
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_npc_stat_min
       detail: void set_npc_stat_min(int stat, int value)
       doc: |-
         The `set_stat_max/min` functions can be used to set the valid ranges on stats. Values returned by `get_current_stat` will be clamped to this range. The `set_pc_` function only affects the player, the `set_npc_` functions only affects other critters, and the `set_` functions affects both.
+      args:
+        - name: stat
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_pc_stat_max
       detail: void set_pc_stat_max(int stat, int value)
       doc: |-
         The `set_stat_max/min` functions can be used to set the valid ranges on stats. Values returned by `get_current_stat` will be clamped to this range. The `set_pc_` function only affects the player, the `set_npc_` functions only affects other critters, and the `set_` functions affects both.
+      args:
+        - name: stat
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_pc_stat_min
       detail: void set_pc_stat_min(int stat, int value)
       doc: |-
         The `set_stat_max/min` functions can be used to set the valid ranges on stats. Values returned by `get_current_stat` will be clamped to this range. The `set_pc_` function only affects the player, the `set_npc_` functions only affects other critters, and the `set_` functions affects both.
+      args:
+        - name: stat
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_stat_max
       detail: void set_stat_max(int stat, int value)
       doc: |-
         The `set_stat_max/min` functions can be used to set the valid ranges on stats. Values returned by `get_current_stat` will be clamped to this range. The `set_pc_` function only affects the player, the `set_npc_` functions only affects other critters, and the `set_` functions affects both.
+      args:
+        - name: stat
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_stat_min
       detail: void set_stat_min(int stat, int value)
       doc: |-
         The `set_stat_max/min` functions can be used to set the valid ranges on stats. Values returned by `get_current_stat` will be clamped to this range. The `set_pc_` function only affects the player, the `set_npc_` functions only affects other critters, and the `set_` functions affects both.
+      args:
+        - name: stat
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: reg_anim_animate_and_hide
-      detail: void reg_anim_animate_and_hide(ObjectPtr, int animID, int delay)
+      detail: void reg_anim_animate_and_hide(ObjectPtr obj, int animID, int delay)
       doc: |
         Works exactly like `reg_anim_animate` but the object will automatically disappear after the last animation frame (but not destroyed).
-        - `delay`: delay from the previous animation. A value of -1 will execute the specified animation immediately after the previous one in the sequence ends.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: animID
+          type: int
+        - name: delay
+          type: int
+          doc: delay from the previous animation. A value of -1 will execute the specified animation immediately after the previous one in the sequence ends.
+      type: void
     - name: reg_anim_animate_and_move
-      detail: void reg_anim_animate_and_move(ObjectPtr, int tile, int animID, int delay)
+      detail: void reg_anim_animate_and_move(ObjectPtr obj, int tile, int animID, int delay)
       doc: |
         Plays the specified animation while simultaneously moving the object to the given tile.
-        - `delay`: delay from the previous animation. A value of -1 will execute the specified animation immediately after the previous one in the sequence ends.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: tile
+          type: int
+        - name: animID
+          type: int
+        - name: delay
+          type: int
+          doc: delay from the previous animation. A value of -1 will execute the specified animation immediately after the previous one in the sequence ends.
+      type: void
     - name: reg_anim_callback
       detail: void reg_anim_callback(procedure proc)
       doc: |-
         Adds the given procedure to an animation sequence-list and executes it in the registered sequence.
+      args:
+        - name: proc
+          type: procedure
+      type: void
     - name: reg_anim_change_fid
-      detail: void reg_anim_change_fid(ObjectPtr, int FID, int delay)
+      detail: void reg_anim_change_fid(ObjectPtr obj, int FID, int delay)
       doc: |-
         Should work like `art_change_fid_num` but in `reg_anim` sequence.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: FID
+          type: int
+        - name: delay
+          type: int
+      type: void
     - name: reg_anim_combat_check
       detail: void reg_anim_combat_check(int enable)
       doc: |-
         Allows enabling all `reg_anim_*` functions in combat (including vanilla functions) if set to 0. It is automatically reset at the end of each frame, so you need to call it before `reg_anim_begin` - `reg_anim_end` block.
+      args:
+        - name: enable
+          type: int
+      type: void
     - name: reg_anim_destroy
-      detail: void reg_anim_destroy(ObjectPtr)
+      detail: void reg_anim_destroy(ObjectPtr obj)
       doc: |-
         Given object is destroyed at the end of current animation set.
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: void
     - name: reg_anim_light
-      detail: void reg_anim_light(ObjectPtr, int light, int delay)
+      detail: void reg_anim_light(ObjectPtr obj, int light, int delay)
       doc: |-
         Change light of any object. Light argument is a light radius (0-8), but you can use highest 2 bytes to pass light intensity as well (example: 0xFFFF0008 - intensity 65535 and radius 8). If highest 2 bytes are 0, intensity will not be changed. Intensity range is from 0 to 65535 (0xFFFF)
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: light
+          type: int
+        - name: delay
+          type: int
+      type: void
     - name: reg_anim_take_out
-      detail: void reg_anim_take_out(ObjectPtr, int weaponCode, int delay)
+      detail: void reg_anim_take_out(ObjectPtr obj, int weaponCode, int delay)
       doc: |
         Plays "take out weapon" animation for the given `weaponCode` (see `WPN_ANIM_*` constants in **define_extra.h**).
         - It is not required for the critter to have this type of weapon in its inventory.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: weaponCode
+          type: int
+        - name: delay
+          type: int
+      type: void
     - name: reg_anim_turn_towards
-      detail: void reg_anim_turn_towards(ObjectPtr, int tile/target, delay)
+      detail: void reg_anim_turn_towards(ObjectPtr obj, int tile, int delay)
       doc: |-
         Makes object change its direction to face the given tile number or target object.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: tile
+          type: int
+        - name: delay
+          type: int
+      type: void
     - name: array_key
       detail: mixed array_key(int arrayID, int index)
       doc: |
@@ -73,12 +171,24 @@ sfall_functions:
           - for lists, returns index back (no change).
           - for maps, returns a key at the specified numeric index (don't rely on the order in which keys are stored though).
           - can be checked if given array is associative or not, by using index (-1): 0 - array is list, 1 - array is map.
+      args:
+        - name: arrayID
+          type: int
+        - name: index
+          type: int
+      type: mixed
     - name: arrayexpr
       detail: int arrayexpr(mixed key, mixed value)
       doc: |
         Don't use it directly; it is used by compiler to create array expressions.
         - assigns value to a given key in an array, created by last `create_array` or `temp_array` call.
         - always returns 0.
+      args:
+        - name: key
+          type: mixed
+        - name: value
+          type: mixed
+      type: int
     - name: create_array
       detail: int create_array(int size, int nothing)
       doc: |
@@ -87,34 +197,68 @@ sfall_functions:
         - if `size == -1`, creates map (associative array).
         - if `size == -1` and `flags == 2`, creates a "lookup" map (associative array) in which the values of existing keys are read-only and can't be updated. This type of array allows you to store a zero (0) key value.
         - returns array ID (valid until array is deleted).
+      args:
+        - name: size
+          type: int
+        - name: nothing
+          type: int
+      type: int
     - name: fix_array
       detail: void fix_array(int arrayID)
       doc: |-
         Changes "temporary" array into "permanent" ("permanent" arrays are not automatically saved into savegames).
+      args:
+        - name: arrayID
+          type: int
+      type: void
     - name: free_array
       detail: void free_array(int arrayID)
       doc: |
         Deletes any array.
         - if array was "saved", it will be removed from a savegame.
+      args:
+        - name: arrayID
+          type: int
+      type: void
     - name: get_array
       detail: mixed get_array(int arrayID, mixed key)
       doc: |
         Returns array value by key or index (shorthand: `arrayID[key]`).
         - if key doesn't exist or index is not in valid range, returns 0.
+      args:
+        - name: arrayID
+          type: int
+        - name: key
+          type: mixed
+      type: mixed
     - name: len_array
       detail: int len_array(int arrayID)
       doc: |
         Returns number of elements or key=>value pairs in a given array.
         - if array is not found, returns -1 (can be used to check if given array exist).
+      args:
+        - name: arrayID
+          type: int
+      type: int
     - name: load_array
       detail: int load_array(mixed key)
       doc: |
         Loads array from savegame data by the same key provided in `save_array`.
         - returns array ID or zero (0) if none found.
+      args:
+        - name: key
+          type: mixed
+      type: int
     - name: resize_array
       detail: void resize_array(int arrayID, int size)
       doc: |-
         Changes array size. - applicable to maps too, but only to reduce elements. - there are number of special negative values of "size" which perform various operations on the array, use macros `sort_array`, `sort_array_reverse`, `reverse_array`, `shuffle_array` from **sfall.h** header.
+      args:
+        - name: arrayID
+          type: int
+        - name: size
+          type: int
+      type: void
     - name: save_array
       detail: void save_array(mixed key, int arrayID)
       doc: |
@@ -123,12 +267,24 @@ sfall_functions:
         - array becomes permanent (if it was temporary) and "saved".
         - key can be of any type (int, float or string).
         - if you specify 0 as the key for the array ID, it will make the array "unsaved".
+      args:
+        - name: key
+          type: mixed
+        - name: arrayID
+          type: int
+      type: void
     - name: scan_array
       detail: mixed scan_array(int arrayID, mixed value)
       doc: |
         Searches for a first occurence of given value inside given array.
         - if value is found, returns its index (for lists) or key (for maps).
         - if value is not found, returns -1 (be careful, as -1 can be a valid key for a map).
+      args:
+        - name: arrayID
+          type: int
+        - name: value
+          type: mixed
+      type: mixed
     - name: set_array
       detail: void set_array(int arrayID, mixed key, mixed value)
       doc: |
@@ -137,10 +293,24 @@ sfall_functions:
         - if used on map, key can be of any type
         - to "unset" a value from map, just set it to zero (0)
           - NOTE: to add a value of 0 for the key, use the float value of 0.0
+      args:
+        - name: arrayID
+          type: int
+        - name: key
+          type: mixed
+        - name: value
+          type: mixed
+      type: void
     - name: temp_array
       detail: int temp_array(int size, int nothing)
       doc: |-
         Works exactly like `create_array`, only created array becomes "temporary".
+      args:
+        - name: size
+          type: int
+        - name: nothing
+          type: int
+      type: int
     - name: art_cache_clear
       detail: void art_cache_clear
       doc: |-
@@ -150,30 +320,58 @@ sfall_functions:
       doc: |
         Checks if the given `artFID` exists in the game.
         - Useful when you want to check if critter can use specific weapon: `art_exists((artFid bwand 0xffff0fff) bwor (weaponAnim * 0x1000))`.
+      args:
+        - name: artFID
+          type: int
+      type: int
     - name: refresh_pc_art
       detail: void refresh_pc_art
     - name: set_hero_race
       detail: void set_hero_race(int style)
+      args:
+        - name: style
+          type: int
+      type: void
     - name: set_hero_style
       detail: void set_hero_style(int style)
+      args:
+        - name: style
+          type: int
+      type: void
     - name: eax_available
       detail: int eax_available
       doc: |-
-        Obsolete since sfall 2.1a. Always returns 0.
+        Always returns 0.
+      deprecated: Obsolete since sfall 2.1a.
     - name: play_sfall_sound
       detail: int play_sfall_sound(string file, int mode)
       doc: |
         Used to play `mp3/wav/wma` files. The path given is relative to the Fallout folder. Specify mode as 1 to loop the file continuously, 2 to replace the current background game music with playing the specified file in loop mode, or 0 to play the file once. If you don't wish to loop, `play_sfall_sound` returns 0. If you do loop, it returns an ID which can be passed back to `stop_sfall_sound` when you want to stop the effect. All sounds effects will be stopped on game reload, looping or not. Does not require `AllowDShowSound` to be set to 1 in `ddraw.ini`.
 
         Starting from sfall 4.2.8/3.8.28, you can pass a value in the `mode` argument for a reduced sound volume. To set the volume, you need to convert the number to hexadecimal and use the argument format `0xZZZZ000Y`, where `ZZZZ` is the volume reduction value in the range of 0 to 32767 (the value 32767 is mute), and `Y` is the playback mode.
+      args:
+        - name: file
+          type: string
+        - name: mode
+          type: int
+      type: int
     - name: set_eax_environment
       detail: void set_eax_environment(int environment)
       doc: |-
-        Obsolete since sfall 2.1a. Has no effect.
+        Has no effect.
+      args:
+        - name: environment
+          type: int
+      type: void
+      deprecated: Obsolete since sfall 2.1a.
     - name: stop_sfall_sound
       detail: void stop_sfall_sound(int soundID)
       doc: |-
         Stops looping `mp3/wav/wma` files previously launched by `play_sfall_sound`. All sounds effects will be stopped on game reload, looping or not. Does not require `AllowDShowSound` to be set to 1 in `ddraw.ini`.
+      args:
+        - name: soundID
+          type: int
+      type: void
     - name: car_gas_amount
       detail: int car_gas_amount
       doc: |
@@ -183,12 +381,20 @@ sfall_functions:
       detail: void set_car_current_town(int town)
       doc: |-
         Changes the current town index for the player's car.
+      args:
+        - name: town
+          type: int
+      type: void
     - name: set_car_intface_art
       detail: void set_car_intface_art(int artIndex)
       doc: |
         - Changes the interface art (index in `intrface.lst`) for the car image on the world map interface
         - Should be called before going to the world map
         - Vanilla art index is 433
+      args:
+        - name: artIndex
+          type: int
+      type: void
     - name: attack_is_aimed
       detail: bool attack_is_aimed
       doc: |-
@@ -197,6 +403,10 @@ sfall_functions:
       detail: void block_combat(bool value)
       doc: |-
         Deny the player to enter combat mode.
+      args:
+        - name: value
+          type: bool
+      type: void
     - name: combat_data
       detail: mixed combat_data
       doc: |
@@ -207,16 +417,28 @@ sfall_functions:
       detail: void disable_aimed_shots(int pid)
       doc: |-
         Allows overriding the normal rules regarding which weapons are allowed to make aimed attacks. (e.g. weapons that cause explosive damage cannot normally make aimed shots.) stops a weapon from making aimed shots even if it normally coulld. Affects player and NPCs alike. The list of edited weapons is not saved over game loads, so you need to call the function once at each reload. Use a pid of 0 to represent unarmed.
+      args:
+        - name: pid
+          type: int
+      type: void
     - name: force_aimed_shots
       detail: void force_aimed_shots(int pid)
       doc: |-
         Allows overriding the normal rules regarding which weapons are allowed to make aimed attacks. (e.g. weapons that cause explosive damage cannot normally make aimed shots.) Will allow a weapon to make aimed shots even if it normally couldn't. Affects player and NPCs alike. Does not override the effects of the fast shot trait. The list of edited weapons is not saved over game loads, so you need to call the function once at each reload. Use a pid of 0 to represent unarmed.
+      args:
+        - name: pid
+          type: int
+      type: void
     - name: get_attack_type
       detail: int get_attack_type
     - name: get_bodypart_hit_modifier
       detail: int get_bodypart_hit_modifier(int bodypart)
       doc: |-
         Returns the hit percentage modifiers for aiming at specific bodyparts. Valid bodypart id's are from 0 to 8.
+      args:
+        - name: bodypart
+          type: int
+      type: int
     - name: get_combat_free_move
       detail: int get_combat_free_move
       doc: |-
@@ -225,55 +447,137 @@ sfall_functions:
       detail: int get_critical_table(int crittertype, int bodypart, int level, int valuetype)
       doc: |-
         Returns the current critical table. For details see [critical hit tables](http://falloutmods.wikia.com/wiki/Critical_hit_tables). Requires `OverrideCriticalTable` to be enabled in `ddraw.ini` (already enabled by default).
+      args:
+        - name: crittertype
+          type: int
+        - name: bodypart
+          type: int
+        - name: level
+          type: int
+        - name: valuetype
+          type: int
+      type: int
     - name: get_critter_current_ap
-      detail: int get_critter_current_ap(CritterPtr)
+      detail: int get_critter_current_ap(ObjectPtr critter)
       doc: |-
         Should only be used during the target critters turn while in combat. Calling it outside of combat typically returns the critters max ap, but don't rely on that behaviour. (Specifically, if the critter has never before entered combat, it will probably return the critters base ap ignoring any extra bonuses from perks etc.)
+      args:
+        - name: critter
+          type: ObjectPtr
+      type: int
     - name: get_last_attacker
       detail: ObjectPtr get_last_attacker(ObjectPtr critter)
       doc: |-
         Will return the last critter to deliberately launch an attack against the argument critter. If a critter has not launched/received an attack, it will return 0. Outside of combat always returns 0.
+      args:
+        - name: critter
+          type: ObjectPtr
+      type: ObjectPtr
     - name: get_last_target
       detail: ObjectPtr get_last_target(ObjectPtr critter)
       doc: |-
         Will return the last critter to be deliberately attacked. Outside of combat always returns 0.
+      args:
+        - name: critter
+          type: ObjectPtr
+      type: ObjectPtr
     - name: reset_critical_table
       detail: void reset_critical_table(int crittertype, int bodypart, int level, int valuetype)
       doc: |-
         Resets the critical table to default (or to the contents of `CriticalOverrides.ini`, if it exists). For details see 'http://falloutmods.wikia.com/wiki/Critical_hit_tables'. Requires `OverrideCriticalTable` to be set to 1 in `ddraw.ini`. (Disabled by default, because it noticably increases loading times.)
+      args:
+        - name: crittertype
+          type: int
+        - name: bodypart
+          type: int
+        - name: level
+          type: int
+        - name: valuetype
+          type: int
+      type: void
     - name: set_bodypart_hit_modifier
       detail: void set_bodypart_hit_modifier(int bodypart, int value)
       doc: |-
         Alters the hit percentage modifiers for aiming at specific bodyparts. Valid bodypart id's are from 0 to 8. Changes are not saved, and will reset to the defaults (or to the values specified in ddraw.ini if they exist) at each reload.
+      args:
+        - name: bodypart
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_combat_free_move
       detail: void set_combat_free_move(int value)
       doc: |
         Allows changing "bonus move" points (yellow lights on the interface bar) that can only be used for movement, not attacking
         - Can be called from `HOOK_COMBATTURN` at the start of the turn (will not work on `dude_obj`)
         - Can be called from `HOOK_STDPROCEDURE` with `combat_proc` event (will work on both NPCs and `dude_obj`)
+      args:
+        - name: value
+          type: int
+      type: void
     - name: set_critical_table
       detail: void set_critical_table(int crittertype, int bodypart, int level, int valuetype, int value)
       doc: |-
         Used for modifying the critical table. For details see [critical hit tables](http://falloutmods.wikia.com/wiki/Critical_hit_tables). Changes are not saved, and will reset to the defaults (or to the contents of `CriticalOverrides.ini`, if it exists) at each game reload. Requires `OverrideCriticalTable` to be enabled in `ddraw.ini` (already enabled by default).
+      args:
+        - name: crittertype
+          type: int
+        - name: bodypart
+          type: int
+        - name: level
+          type: int
+        - name: valuetype
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_critter_burst_disable
-      detail: void set_critter_burst_disable(int critter, int disable)
+      detail: void set_critter_burst_disable(ObjectPtr critter, int disable)
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: disable
+          type: int
+      type: void
     - name: set_critter_current_ap
-      detail: void set_critter_current_ap(CritterPtr, int ap)
+      detail: void set_critter_current_ap(ObjectPtr critter, int ap)
       doc: |-
         Should only be used during the target critters turn while in combat.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: ap
+          type: int
+      type: void
     - name: set_fo1_hit_chance
       detail: void set_fo1_hit_chance(bool toggle)
       doc: |
         Enables/disables Fallout 1 behavior when calculating the player's hit chance.
-        - `toggle`: True - removes the (PE - 2) distance penalty (Fallout 1 behavior); False - keeps the penalty (default).
+      args:
+        - name: toggle
+          type: bool
+          doc: True - removes the (PE - 2) distance penalty (Fallout 1 behavior); False - keeps the penalty (default).
+      type: void
     - name: set_spray_settings
       detail: void set_spray_settings(int centerMult, int centerDiv, int targetMult, int targetDiv)
       doc: |
         Allows changing the multipliers and divisors for the bullet distribution of burst attacks dynamically. All settings are automatically reset to default values (i.e. **ComputeSpray_\*** settings in ddraw.ini) after each attack action
         - Should be called before the calculation of the bullet distribution (e.g. in `HOOK_TOHIT` or `HOOK_AMMOCOST`)
-        - `centerDiv/targetDiv`: the minimum value of divisor is 1
-        - `centerMult/targetMult`: multiplier values are capped at divisor values
         - __NOTE:__ refer to the description of **ComputeSpray_\*** settings in ddraw.ini for details of the bullet distribution of burst attacks
+      args:
+        - name: centerMult
+          type: int
+          doc: multiplier values are capped at divisor values
+        - name: centerDiv
+          type: int
+          doc: the minimum value of divisor is 1
+        - name: targetMult
+          type: int
+          doc: multiplier values are capped at divisor values
+        - name: targetDiv
+          type: int
+          doc: the minimum value of divisor is 1
+      type: void
     - name: get_cursor_mode
       detail: int get_cursor_mode
       doc: |-
@@ -282,96 +586,199 @@ sfall_functions:
       detail: void set_cursor_mode(int mode)
       doc: |-
         Sets the current cursor mode.
+      args:
+        - name: mode
+          type: int
+      type: void
     - name: get_explosion_damage
-      detail: array get_explosion_damage(itemPid)
+      detail: array get_explosion_damage(int itemPid)
       doc: |-
         Returns an array of the minimum and maximum damage of the explosive item.
+      args:
+        - name: itemPid
+          type: int
+      type: array
     - name: item_make_explosive
       detail: void item_make_explosive(int pid, int activePid, int minDamage, int maxDamage)
       doc: |
         - makes the specified item (pid) an explosive item like Dynamite or Plastic Explosives
         - `maxDamage` is optional
-        - `activePid` is for an item with an active timer, can be the same as the `pid` argument
         - the item proto must be of the **Misc Item** type and have the **Use** action flag
-        - minDamage/maxDamage are the minimum and maximum explosion damage
         - using the function on an item that is already set as an explosive will override its previous settings
         - NOTE: this function does not work for pids of Dynamite and Plastic Explosives
+      args:
+        - name: pid
+          type: int
+        - name: activePid
+          type: int
+          doc: for an item with an active timer, can be the same as the `pid` argument
+        - name: minDamage
+          type: int
+          doc: the minimum explosion damage
+        - name: maxDamage
+          type: int
+          doc: the maximum explosion damage
+      type: void
     - name: metarule2_explosions
-      detail: int metarule2_explosions(int arg1, int arg2)
+      detail: int metarule2_explosions(int mode, int arg1, int arg2)
       doc: |-
         Was made as a quick-and-dirty hack to enable dynamic changes to some explosion parameters for ranged attacks. All changed parameters are automatically reset to vanilla state after each attack action.
+      args:
+        - name: mode
+          type: int
+        - name: arg1
+          type: int
+        - name: arg2
+          type: int
+      type: int
     - name: set_attack_explosion_art
-      detail: void set_attack_explosion_art(x, y)
+      detail: void set_attack_explosion_art(int x, int y)
       doc: |-
         Y not used and X is a misc frame ID (last 3 bytes, without object type) to use for the next explosion.
+      args:
+        - name: x
+          type: int
+        - name: y
+          type: int
+      type: void
     - name: set_attack_explosion_pattern
-      detail: void set_attack_explosion_pattern(x, y)
+      detail: void set_attack_explosion_pattern(int x, int y)
       doc: |-
         Currently Y is not used and X means: 1 - reduced explosion pattern (3 effects are spawned instead of 7), 0 - full pattern.
+      args:
+        - name: x
+          type: int
+        - name: y
+          type: int
+      type: void
     - name: set_attack_explosion_radius
-      detail: void set_attack_explosion_radius(x)
+      detail: void set_attack_explosion_radius(int x)
       doc: |-
         Changes radius at which explosion will hit secondary targets for the next attack (from the experiments it is limited to something around 8 by the engine).
+      args:
+        - name: x
+          type: int
+      type: void
     - name: set_attack_is_explosion_fire
       detail: void set_attack_is_explosion_fire
       doc: |-
         If you call this right before using a weapon with fire damage type (e.g. in `HOOK_AFTERHITROLL`), it will produce explosion effects (and radius damage) just like "explosion" type, but all targets will still receive fire damage.
     - name: set_dynamite_damage
-      detail: void set_dynamite_damage(minDmg, maxDmg)
+      detail: void set_dynamite_damage(int minDmg, int maxDmg)
       doc: |-
         Sets the minimum and maximum damage for Dynamite. Changed damage will be reset each time the player reloads the game.
+      args:
+        - name: minDmg
+          type: int
+        - name: maxDmg
+          type: int
+      type: void
     - name: set_explosion_max_targets
-      detail: void set_explosion_max_targets(x)
+      detail: void set_explosion_max_targets(int x)
       doc: |-
         Sets the maximum number of additional targets for an explosion. Valid range: 1..6 (default: 6).
+      args:
+        - name: x
+          type: int
+      type: void
     - name: set_explosion_radius
-      detail: void set_explosion_radius(grenade, rocket)
+      detail: void set_explosion_radius(int grenade, int rocket)
       doc: |-
         Sets a permanent radius of the explosion for grenades and/or rockets. Passing 0 means not changing the corresponding radius. Changed radius will be reset each time the player reloads the game.
+      args:
+        - name: grenade
+          type: int
+        - name: rocket
+          type: int
+      type: void
     - name: set_plastic_damage
-      detail: void set_plastic_damage(minDmg, maxDmg)
+      detail: void set_plastic_damage(int minDmg, int maxDmg)
       doc: |-
         Sets the minimum and maximum damage for Plastic Explosives. Changed damage will be reset each time the player reloads the game.
+      args:
+        - name: minDmg
+          type: int
+        - name: maxDmg
+          type: int
+      type: void
     - name: available_global_script_types
       detail: int available_global_script_types
     - name: set_global_script_repeat
       detail: void set_global_script_repeat(int frames)
       doc: |-
         Only has an effect on the script it is called from. Every global script needs its own `game_loaded` block to correctly set up repeat rate. Will have no effect if called on a non-global script.
+      args:
+        - name: frames
+          type: int
+      type: void
     - name: set_global_script_type
       detail: void set_global_script_type(int type)
       doc: |
         Only has an effect on the script it is called from. Every global script needs its own `game_loaded` block to correctly set up the script type.
         - (DEPRECATED) Using type 1 requires the input wrapper to be enabled. Use `available_global_script_types` to check what is available.
+      args:
+        - name: type
+          type: int
+      type: void
     - name: get_sfall_global_float
       detail: float get_sfall_global_float(string/int varname)
       doc: |-
         These functions require an __EXACTLY 8 characters long__, case sensitive string for the variable name. The variables behave the same as normal Fallout globals, except that they don't have to be declared beforehand in `vault13.gam`. Trying to get a variable which hasn't been set will always return 0. The functions are intended for use when a patch to a mod requires the addition of a new global variable, a case which would otherwise require the player to start a new game.
+      args:
+        - name: varname
+          type: string/int
+      type: float
     - name: get_sfall_global_int
       detail: int get_sfall_global_int(string/int varname)
       doc: |-
         These functions require an __EXACTLY 8 characters long__, case sensitive string for the variable name. The variables behave the same as normal Fallout globals, except that they don't have to be declared beforehand in `vault13.gam`. Trying to get a variable which hasn't been set will always return 0. The functions are intended for use when a patch to a mod requires the addition of a new global variable, a case which would otherwise require the player to start a new game.
+      args:
+        - name: varname
+          type: string/int
+      type: int
     - name: set_sfall_global
       detail: void set_sfall_global(string/int varname, int/float value)
       doc: |-
         These functions require an __EXACTLY 8 characters long__, case sensitive string for the variable name. The variables behave the same as normal Fallout globals, except that they don't have to be declared beforehand in `vault13.gam`. Trying to get a variable which hasn't been set will always return 0. The functions are intended for use when a patch to a mod requires the addition of a new global variable, a case which would otherwise require the player to start a new game.
+      args:
+        - name: varname
+          type: string/int
+        - name: value
+          type: int/float
+      type: void
     - name: activate_shader
       detail: void activate_shader(int ID)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+      type: void
     - name: deactivate_shader
       detail: void deactivate_shader(int ID)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+      type: void
     - name: force_graphics_refresh
       detail: void force_graphics_refresh(bool enabled)
       doc: |-
         Forces the screen to redraw at times when it normally wouldn't. If you're using animated shader, turning this option on is recommended.
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: enabled
+          type: bool
+      type: void
     - name: free_shader
       detail: void free_shader(int ID)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+      type: void
     - name: get_screen_height
       detail: int get_screen_height
       doc: |-
@@ -384,6 +791,12 @@ sfall_functions:
       detail: int get_shader_texture(int ID, int texture)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+        - name: texture
+          type: int
+      type: int
     - name: get_shader_version
       detail: int get_shader_version
       doc: |-
@@ -398,34 +811,86 @@ sfall_functions:
       doc: |-
         Takes a path relative to the `<GameRoot>\<master_patches>\shaders\` directory as an argument and returns a shader ID. That ID should be passed as the first argument to all other shader functions, and is valid until `free_shader` is called on the ID, the player loads a saved game or the player quits to the main menu.
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: path
+          type: string
+      type: int
     - name: set_palette
       detail: void set_palette(string path)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: path
+          type: string
+      type: void
     - name: set_shader_float
       detail: void set_shader_float(int ID, string param, float value)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+        - name: param
+          type: string
+        - name: value
+          type: float
+      type: void
     - name: set_shader_int
       detail: void set_shader_int(int ID, string param, int value)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+        - name: param
+          type: string
+        - name: value
+          type: int
+      type: void
     - name: set_shader_mode
       detail: void set_shader_mode(int ID, int mode)
       doc: |-
         Tells sfall when to use a shader.
-        - `ID`: shader ID
-        - `mode`: a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.
 
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+          doc: shader ID
+        - name: mode
+          type: int
+          doc: a set of 32 flags which specify the screens on which the shader will be disabled, unless bit 32 is set, in which case the shader will only be active on those screens. Remember that screens are displayed on top of each other; if the player opens the character menu which in combat, the game still considers the player to be in combat. See **sfall.h** for a list of defines.
+      type: void
     - name: set_shader_texture
       detail: void set_shader_texture(int ID, string param, int texID)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+        - name: param
+          type: string
+        - name: texID
+          type: int
+      type: void
     - name: set_shader_vector
       detail: void set_shader_vector(int ID, string param, float f1, float f2, float f3, float f4)
       doc: |-
         The graphics functions are only available if the user is using graphics mode 4 or 5. Use `graphics_funcs_available` to check; it returns 1 if you can use them or 0 if you can't. Calling graphics functions when `graphics_funcs_available` returns 0 will do nothing.
+      args:
+        - name: ID
+          type: int
+        - name: param
+          type: string
+        - name: f1
+          type: float
+        - name: f2
+          type: float
+        - name: f3
+          type: float
+        - name: f4
+          type: float
+      type: void
     - name: get_sfall_arg
       detail: mixed get_sfall_arg
       doc: |-
@@ -434,6 +899,10 @@ sfall_functions:
       detail: mixed get_sfall_arg_at(int argNum)
       doc: |-
         Returns the value of hook argument with the specified argument number (first argument of hook starts at 0)
+      args:
+        - name: argNum
+          type: int
+      type: mixed
     - name: get_sfall_args
       detail: int get_sfall_args
       doc: |-
@@ -446,6 +915,10 @@ sfall_functions:
       detail: void register_hook(int hookID)
       doc: |-
         Used from a normal global script if you want to run it at the same point a full hook script would normally run. In case of this function, `start` procedure will be executed in current global script. You can use all above functions like normal.
+      args:
+        - name: hookID
+          type: int
+      type: void
     - name: register_hook_proc
       detail: void register_hook_proc(int hookID, proc procedure)
       doc: |
@@ -477,40 +950,80 @@ sfall_functions:
         So if you combine both mods together, they will run in chain and the end result will be a 75% from original hit chance (hook register order doesn't matter in this case, if you use `set_sfall_arg` in both hooks).
 
         The defines to use for the `hookID` are in **sfall.h**.
+      args:
+        - name: hookID
+          type: int
+        - name: procedure
+          type: proc
+      type: void
     - name: register_hook_proc_spec
       detail: void register_hook_proc_spec(int hookID, procedure proc)
       doc: |-
         Works the same as `register_hook_proc`, except that it registers the current script at the end of the hook script execution chain (i.e. the script will be executed after all previously registered scripts for the same hook, including the `hs_<name>.int` script). In addition, all scripts hooked to a single hook point with this function are executed in the exact order of how they were registered. In the case of using `register_hook` and `register_hook_proc` functions, scripts are executed in reverse order of how they were registered.
         **The execution chain of script procedures for a hook is as follows:** 1. Procedures registered with `register_hook` and `register_hook_proc` functions (executed in reverse order of registration). 2. The `hs_<name>.int` script. 3. Procedures registered with the `register_hook_proc_spec` function (executed in the exact order of registration).
+      args:
+        - name: hookID
+          type: int
+        - name: proc
+          type: procedure
+      type: void
     - name: set_sfall_arg
       detail: void set_sfall_arg(int argNum, int value)
       doc: |-
         Changes argument value. The argument number (`argNum`) is 0-indexed. This is useful if you have several hook scripts attached to one hook point (see `register_hook_proc`).
+      args:
+        - name: argNum
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_sfall_return
       detail: void set_sfall_return(any value)
       doc: |-
         Used to return the new values from the script. Each time it's called it sets the next value, or if you've already set all return values it does nothing.
+      args:
+        - name: value
+          type: any
+      type: void
     - name: get_ini_config
       detail: array get_ini_config(string file)
       doc: |
         Loads a given INI file and returns a permanent array (map) where keys are section names and values are permanent sub-arrays (maps) where keys and values are strings.
         - Searches the file in the regular file system, like with all other ini-related functions.
         - Subsequent calls for the same file will return the same array, unless it was disposed using `free_array`.
+      args:
+        - name: file
+          type: string
+      type: array
     - name: get_ini_config_db
       detail: array get_ini_config_db(string file)
       doc: |-
         Works exactly like `get_ini_config`, except it searches the file in database (DAT) files. If not found, then it will try the regular file system.
+      args:
+        - name: file
+          type: string
+      type: array
     - name: get_ini_section
       detail: array get_ini_section(string file, string sect)
       doc: |
         Returns an associative array of keys and values for a given INI file and section.
         - If the INI file is not found, it returns an empty array.
         - __NOTE:__ all keys and their values will be of String type.
+      args:
+        - name: file
+          type: string
+        - name: sect
+          type: string
+      type: array
     - name: get_ini_sections
       detail: array get_ini_sections(string file)
       doc: |
         Returns an array of names of all sections in a given INI file.
         - If the INI file is not found, it returns an empty array.
+      args:
+        - name: file
+          type: string
+      type: array
     - name: get_ini_setting
       detail: int get_ini_setting(string setting)
       doc: |
@@ -520,12 +1033,20 @@ sfall_functions:
         - The file name is limited to 63 chars, including the extension.
         - The section name is limited to 32 characters.
         - It can also be used to get sfall settings by using **ddraw.ini** as the file name.
+      args:
+        - name: setting
+          type: string
+      type: int
     - name: get_ini_string
       detail: string get_ini_string(string setting)
       doc: |
         Reads a string value from an ini file in the Fallout directory.
         - If the file or key cannot be found, it returns an empty string.
         - If the setting argument is in an invalid format, it returns -1 (integer).
+      args:
+        - name: setting
+          type: string
+      type: string
     - name: modified_ini
       detail: int modified_ini
       doc: |-
@@ -534,15 +1055,26 @@ sfall_functions:
       detail: void set_ini_setting(string setting, int/string value)
       doc: |-
         Writes an integer or a string value to an ini file in the Fallout directory. If the ini file does not exist, it will be created The setting argument works in the same way as in `get_ini_setting`, seperate the file name, section and key with a "|" character. __Note:__ the file name is limited to 63 chars (including the extension), the section name is limited to 32 characters.
+      args:
+        - name: setting
+          type: string
+        - name: value
+          type: int/string
+      type: void
     - name: display_stats
       detail: void display_stats
       doc: |
         - Updates player's stats in the inventory display window or on the character screen.
         - NOTE: works only when the interface window is opened
     - name: inventory_redraw
-      detail: void inventory_redraw(invSide)
+      detail: void inventory_redraw(int invSide)
       doc: |-
-        Redraws inventory items list in the inventory/loot/barter screens. Argument invSide specifies which side needs to be redrawn: 0 - the player, 1 - target (container/NPC in loot/barter screens), -1 - both sides (same as without argument).
+        Redraws inventory items list in the inventory/loot/barter screens.
+      args:
+        - name: invSide
+          type: int
+          doc: "specifies which side needs to be redrawn: 0 - the player, 1 - target (container/NPC in loot/barter screens), -1 - both sides (same as without argument)."
+      type: void
     - name: get_mouse_buttons
       detail: int get_mouse_buttons
       doc: |-
@@ -553,65 +1085,141 @@ sfall_functions:
       detail: int get_mouse_y
     - name: key_pressed
       detail: int key_pressed(int dxScancode)
+      args:
+        - name: dxScancode
+          type: int
+      type: int
     - name: tap_key
       detail: void tap_key(int dxScancode)
+      args:
+        - name: dxScancode
+          type: int
+      type: void
     - name: remove_attacker_knockback
-      detail: void remove_attacker_knockback(CritterPtr)
+      detail: void remove_attacker_knockback(ObjectPtr critter)
       doc: |-
         The `type` value in the weapon knockback functions can be 0 or 1. If 0, the value becomes an absolute distance that targets will be knocked back. If 1, the value is multiplied by the distance they would normally have been knocked back. Weapon knockback modifiers are applied in the order weapon -> attacker -> target, so a x2 weapon wielded by an abs 6 attacker hitting a /2 target will knock the target back 3 squares. The knockback functions will not override the stonewall perk or knockdowns resulting from criticals. knockback values set on weapons or critters are not saved, and must be reset each time the player reloads.
+      args:
+        - name: critter
+          type: ObjectPtr
+      type: void
     - name: remove_target_knockback
-      detail: void remove_target_knockback(CritterPtr)
+      detail: void remove_target_knockback(ObjectPtr critter)
       doc: |-
         The `type` value in the weapon knockback functions can be 0 or 1. If 0, the value becomes an absolute distance that targets will be knocked back. If 1, the value is multiplied by the distance they would normally have been knocked back. Weapon knockback modifiers are applied in the order weapon -> attacker -> target, so a x2 weapon wielded by an abs 6 attacker hitting a /2 target will knock the target back 3 squares. The knockback functions will not override the stonewall perk or knockdowns resulting from criticals. knockback values set on weapons or critters are not saved, and must be reset each time the player reloads.
+      args:
+        - name: critter
+          type: ObjectPtr
+      type: void
     - name: remove_weapon_knockback
-      detail: void remove_weapon_knockback(WeaponPtr)
+      detail: void remove_weapon_knockback(ObjectPtr weapon)
       doc: |-
         The `type` value in the weapon knockback functions can be 0 or 1. If 0, the value becomes an absolute distance that targets will be knocked back. If 1, the value is multiplied by the distance they would normally have been knocked back. Weapon knockback modifiers are applied in the order weapon -> attacker -> target, so a x2 weapon wielded by an abs 6 attacker hitting a /2 target will knock the target back 3 squares. The knockback functions will not override the stonewall perk or knockdowns resulting from criticals. knockback values set on weapons or critters are not saved, and must be reset each time the player reloads.
+      args:
+        - name: weapon
+          type: ObjectPtr
+      type: void
     - name: set_attacker_knockback
-      detail: void set_attacker_knockback(CritterPtr, int type, float value)
+      detail: void set_attacker_knockback(ObjectPtr critter, int type, float value)
       doc: |-
         The `type` value in the weapon knockback functions can be 0 or 1. If 0, the value becomes an absolute distance that targets will be knocked back. If 1, the value is multiplied by the distance they would normally have been knocked back. Weapon knockback modifiers are applied in the order weapon -> attacker -> target, so a x2 weapon wielded by an abs 6 attacker hitting a /2 target will knock the target back 3 squares. The knockback functions will not override the stonewall perk or knockdowns resulting from criticals. knockback values set on weapons or critters are not saved, and must be reset each time the player reloads.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: type
+          type: int
+        - name: value
+          type: float
+      type: void
     - name: set_target_knockback
-      detail: void set_target_knockback(CritterPtr, int type, float value)
+      detail: void set_target_knockback(ObjectPtr critter, int type, float value)
       doc: |-
         The `type` value in the weapon knockback functions can be 0 or 1. If 0, the value becomes an absolute distance that targets will be knocked back. If 1, the value is multiplied by the distance they would normally have been knocked back. Weapon knockback modifiers are applied in the order weapon -> attacker -> target, so a x2 weapon wielded by an abs 6 attacker hitting a /2 target will knock the target back 3 squares. The knockback functions will not override the stonewall perk or knockdowns resulting from criticals. knockback values set on weapons or critters are not saved, and must be reset each time the player reloads.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: type
+          type: int
+        - name: value
+          type: float
+      type: void
     - name: set_weapon_knockback
-      detail: void set_weapon_knockback(WeaponPtr, int type, float value)
+      detail: void set_weapon_knockback(ObjectPtr weapon, int type, float value)
       doc: |-
         The `type` value in the weapon knockback functions can be 0 or 1. If 0, the value becomes an absolute distance that targets will be knocked back. If 1, the value is multiplied by the distance they would normally have been knocked back. Weapon knockback modifiers are applied in the order weapon -> attacker -> target, so a x2 weapon wielded by an abs 6 attacker hitting a /2 target will knock the target back 3 squares. The knockback functions will not override the stonewall perk or knockdowns resulting from criticals. knockback values set on weapons or critters are not saved, and must be reset each time the player reloads.
+      args:
+        - name: weapon
+          type: ObjectPtr
+        - name: type
+          type: int
+        - name: value
+          type: float
+      type: void
     - name: list_as_array
       detail: array list_as_array(int type)
       doc: |-
         The `list_xxx` functions can be used to loop over all items on a map. `list_begin` takes an argument telling sfall what you want to list (defined in **sfall.h**). It returns a list pointer, which you iterate through with `list_next`. Finally, when you've finished with the list use `list_end` on it. Not calling `list_end` will result in a memory leak. Alternatively, use `list_as_array` to get the whole list at once as a temp array variable, which can be looped over using `len_array` and which you don't need to remember to free afterwards.
+      args:
+        - name: type
+          type: int
+      type: array
     - name: list_begin
       detail: int list_begin(int type)
       doc: |-
         The `list_xxx` functions can be used to loop over all items on a map. `list_begin` takes an argument telling sfall what you want to list (defined in **sfall.h**). It returns a list pointer, which you iterate through with `list_next`. Finally, when you've finished with the list use `list_end` on it. Not calling `list_end` will result in a memory leak. Alternatively, use `list_as_array` to get the whole list at once as a temp array variable, which can be looped over using `len_array` and which you don't need to remember to free afterwards.
+      args:
+        - name: type
+          type: int
+      type: int
     - name: list_end
       detail: void list_end(int listid)
       doc: |-
         The `list_xxx` functions can be used to loop over all items on a map. `list_begin` takes an argument telling sfall what you want to list (defined in **sfall.h**). It returns a list pointer, which you iterate through with `list_next`. Finally, when you've finished with the list use `list_end` on it. Not calling `list_end` will result in a memory leak. Alternatively, use `list_as_array` to get the whole list at once as a temp array variable, which can be looped over using `len_array` and which you don't need to remember to free afterwards.
+      args:
+        - name: listid
+          type: int
+      type: void
     - name: list_next
       detail: int list_next(int listid)
       doc: |-
         The `list_xxx` functions can be used to loop over all items on a map. `list_begin` takes an argument telling sfall what you want to list (defined in **sfall.h**). It returns a list pointer, which you iterate through with `list_next`. Finally, when you've finished with the list use `list_end` on it. Not calling `list_end` will result in a memory leak. Alternatively, use `list_as_array` to get the whole list at once as a temp array variable, which can be looped over using `len_array` and which you don't need to remember to free afterwards.
+      args:
+        - name: listid
+          type: int
+      type: int
     - name: party_member_list
       detail: array party_member_list(int includeHidden)
       doc: |-
         Returns an array of all current party members (0 - only critters that are alive and visible will be returned, 1 - all objects, including the car trunk, etc.)
         The `list_xxx` functions can be used to loop over all items on a map. `list_begin` takes an argument telling sfall what you want to list (defined in **sfall.h**). It returns a list pointer, which you iterate through with `list_next`. Finally, when you've finished with the list use `list_end` on it. Not calling `list_end` will result in a memory leak. Alternatively, use `list_as_array` to get the whole list at once as a temp array variable, which can be looped over using `len_array` and which you don't need to remember to free afterwards.
+      args:
+        - name: includeHidden
+          type: int
+      type: array
     - name: lock_is_jammed
       detail: bool lock_is_jammed(ObjectPtr obj)
       doc: |-
         Returns 1 if the lock (container or scenery) is currently jammed, 0 otherwise.
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: bool
     - name: set_unjam_locks_time
       detail: void set_unjam_locks_time(int time)
       doc: |-
         Sets after how many hours (up to 127 hours) jammed locks will be unjammed if the player leaves the map. Also disables the auto unjam that occurs at midnight when the player is on the map. Passing 0 will disable the auto unjam mechanism completely. The auto unjam mechanism will be reset each time the player reloads the game.
+      args:
+        - name: time
+          type: int
+      type: void
     - name: unjam_lock
       detail: void unjam_lock(ObjectPtr obj)
       doc: |-
         Unjams a lock immediately without having to wait until the next day, or leave the map and then return after 24 hours. __Does not work__ in `use_skill_on_p_proc` procedure.
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: void
     - name: intface_hide
       detail: void intface_hide
       doc: |-
@@ -625,7 +1233,11 @@ sfall_functions:
       doc: |
         Redraws main game interface. Useful after direct changes to current player weapons or stats to reflect changes.
         - redraws main game interface, useful to reflect changes after directly changing current player weapons or stats
-        - `winType`: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**). Pass `-1` to redraw all interface windows.
+      args:
+        - name: winType
+          type: int
+          doc: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**). Pass `-1` to redraw all interface windows.
+      type: void
     - name: intface_show
       detail: void intface_show
       doc: |-
@@ -635,6 +1247,10 @@ sfall_functions:
       doc: |
         Enables/disables the engine's random encounter detection process (grants XP and displays a dialog box).
         - If the process is disabled, the player will always be forced into random encounters when they occur.
+      args:
+        - name: toggle
+          type: bool
+      type: void
     - name: exec_map_update_scripts
       detail: void exec_map_update_scripts
       doc: |-
@@ -643,11 +1259,21 @@ sfall_functions:
       detail: void force_encounter(int map)
       doc: |-
         Can be called either from a global script while traveling on the world map, or from a normal script while on a local map. In either case the encounter occurs shortly after the next time the player moves on the world map. The player will not get an outdoorsman skill check.
+      args:
+        - name: map
+          type: int
+      type: void
     - name: force_encounter_with_flags
       detail: void force_encounter_with_flags(int map, int flags)
       doc: |
         Does the same thing as force_encounter, but allows the specification of some extra options (see **sfall.h** for available flags).
         Forcing a random encounter on a map that is not normally used for random encounters may cause the player to lose the car, if they have it. In this case use `force_encounter_with_flags` with the `ENCOUNTER_FLAG_NO_CAR` flag set.
+      args:
+        - name: map
+          type: int
+        - name: flags
+          type: int
+      type: void
     - name: get_map_enter_position
       detail: array get_map_enter_position
       doc: |-
@@ -656,6 +1282,12 @@ sfall_functions:
       detail: string sfall_func2("get_terrain_name", int x, int y)
       doc: |-
         Returns the terrain type name for the sub-tile on the world map by the specified coordinates, or by the player's current position if called without arguments.
+      args:
+        - name: x
+          type: int
+        - name: y
+          type: int
+      type: string
     - name: in_world_map
       detail: bool in_world_map
       doc: |-
@@ -664,24 +1296,54 @@ sfall_functions:
       detail: void sfall_func1("remove_wm_town_names", bool toggle)
       doc: |
         Enables/disables drawing town names under green circles on the world map.
-        - `toggle`: True - hides town names (Fallout 1 behavior); False - shows town names (default).
+      args:
+        - name: toggle
+          type: bool
+          doc: True - hides town names (Fallout 1 behavior); False - shows town names (default).
+      type: void
     - name: set_map_enter_position
       detail: void set_map_enter_position(int tile, int elevation, int rotation)
       doc: |-
         Overrides the players entry position when entering the map through exit grids. Setting the tile to 0 will put the player on the start hex (default tile and elevation) of the map. Works only in `map_enter_p_proc` procedure.
+      args:
+        - name: tile
+          type: int
+        - name: elevation
+          type: int
+        - name: rotation
+          type: int
+      type: void
     - name: set_map_time_multi
       detail: void set_map_time_multi(float multi)
       doc: |-
         Adjusts how fast time passes while you're on the world map. It takes a single float as an argument, where 1 is the normal speed. This function works in addition to the `WorldMapTimeMod` setting in `ddraw.ini` and the Pathfinder perk, rather than overriding it, so calling `set_map_time_multi(0.5)` when the player has 2 levels of Pathfinder would result in time passing at 25% the normal speed on the world map.
+      args:
+        - name: multi
+          type: float
+      type: void
     - name: set_terrain_name
       detail: void sfall_func3("set_terrain_name", int x, int y, string name)
       doc: |-
         Overrides the terrain type name for the sub-tile on the world map by the specified coordinates.
+      args:
+        - name: x
+          type: int
+        - name: y
+          type: int
+        - name: name
+          type: string
+      type: void
     - name: set_town_title
       detail: void sfall_func2("set_town_title", int areaID, string title)
       doc: |
         Sets a floating text for a town on the world map when hovering the cursor over the player's marker.
-        - `areaID`: the ID number of the town from city.txt.
+      args:
+        - name: areaID
+          type: int
+          doc: the ID number of the town from city.txt.
+        - name: title
+          type: string
+      type: void
     - name: ^
       detail: x^y
       doc: |
@@ -692,20 +1354,38 @@ sfall_functions:
       detail: int/float abs(int/float x)
       doc: |-
         Absolute (positive) value of x.
+      args:
+        - name: x
+          type: int/float
+      type: int/float
     - name: arctan
       detail: float arctan(float x, float y)
       doc: |-
         Arctangent of x. Pass 1 as y (don't ask...).
+      args:
+        - name: x
+          type: float
+        - name: y
+          type: float
+      type: float
     - name: ceil
       detail: int ceil(float x)
       doc: |-
         Round x to the nearest integer that is not less than x.
+      args:
+        - name: x
+          type: float
+      type: int
     - name: cos
       detail: float cos(float x)
       doc: |-
         Cosine of x
+      args:
+        - name: x
+          type: float
+      type: float
     - name: div
-      detail: div(x, y)
+      detail: x div y
       doc: |
         Unsigned integer division. Use as a division operator, like `3 + (20 div 5)`.
         If both dividend and divisor are integers, they will be treated as unsigned integers.
@@ -714,51 +1394,127 @@ sfall_functions:
       detail: float exponent(float x)
       doc: |-
         E^X
+      args:
+        - name: x
+          type: float
+      type: float
     - name: floor2
       detail: int floor2(int/float value)
       doc: |
         Works just like vanilla floor function, but returns correct integers for negative floats.
         - __NOTE:__ vanilla `floor` function works exactly the same as `ceil` for negative floats (i.e. basically `trunc` in C/C++).
+      args:
+        - name: value
+          type: int/float
+      type: int
     - name: log
       detail: float log(float x)
       doc: |-
         Natural logarithm of x.
+      args:
+        - name: x
+          type: float
+      type: float
     - name: round
       detail: int round(float x)
       doc: |-
         Round x to the nearest integer.
+      args:
+        - name: x
+          type: float
+      type: int
     - name: sin
       detail: float sin(float x)
       doc: |-
         Sine of x
+      args:
+        - name: x
+          type: float
+      type: float
     - name: sqrt
       detail: float sqrt(float x)
       doc: |-
         Square root of x.
+      args:
+        - name: x
+          type: float
+      type: float
     - name: tan
       detail: float tan(float x)
       doc: |-
         Tangent of x
+      args:
+        - name: x
+          type: float
+      type: float
     - name: has_fake_perk_npc
       detail: int has_fake_perk_npc(object npc, string namePerk)
       doc: |-
         These functions are similar to `has_fake_*/set_fake_*/set_selectable_perk` functions, but apply to the specified party member NPC (including `dude_obj`)
+      args:
+        - name: npc
+          type: object
+        - name: namePerk
+          type: string
+      type: int
     - name: has_fake_trait_npc
       detail: int has_fake_trait_npc(object npc, string nameTrait)
       doc: |-
         These functions are similar to `has_fake_*/set_fake_*/set_selectable_perk` functions, but apply to the specified party member NPC (including `dude_obj`)
+      args:
+        - name: npc
+          type: object
+        - name: nameTrait
+          type: string
+      type: int
     - name: set_fake_perk_npc
       detail: void set_fake_perk_npc(object npc, string namePerk, int level, int image, string desc)
       doc: |-
         These functions are similar to `has_fake_*/set_fake_*/set_selectable_perk` functions, but apply to the specified party member NPC (including `dude_obj`)
+      args:
+        - name: npc
+          type: object
+        - name: namePerk
+          type: string
+        - name: level
+          type: int
+        - name: image
+          type: int
+        - name: desc
+          type: string
+      type: void
     - name: set_fake_trait_npc
       detail: void set_fake_trait_npc(object npc, string nameTrait, int active, int image, string desc)
       doc: |-
         These functions are similar to `has_fake_*/set_fake_*/set_selectable_perk` functions, but apply to the specified party member NPC (including `dude_obj`)
+      args:
+        - name: npc
+          type: object
+        - name: nameTrait
+          type: string
+        - name: active
+          type: int
+        - name: image
+          type: int
+        - name: desc
+          type: string
+      type: void
     - name: set_selectable_perk_npc
       detail: void set_selectable_perk_npc(object npc, string namePerk, int active, int image, string desc)
       doc: |-
         These functions are similar to `has_fake_*/set_fake_*/set_selectable_perk` functions, but apply to the specified party member NPC (including `dude_obj`)
+      args:
+        - name: npc
+          type: object
+        - name: namePerk
+          type: string
+        - name: active
+          type: int
+        - name: image
+          type: int
+        - name: desc
+          type: string
+      type: void
     - name: dialog_obj
       detail: ObjectPtr dialog_obj
       doc: |-
@@ -767,36 +1523,64 @@ sfall_functions:
       detail: int get_flags(ObjectPtr obj)
       doc: |-
         Returns the current value of object flags (see **define_extra.h** for available flags).
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: int
     - name: get_object_data
-      detail: get_object_data(ObjectPtr object, int offset)
+      detail: int get_object_data(ObjectPtr object, int offset)
       doc: |-
         Returns the data at the specified offset of an object (see `OBJ_DATA_*` constants in **define_extra.h** for offsets).
+      args:
+        - name: object
+          type: ObjectPtr
+        - name: offset
+          type: int
+      type: int
     - name: get_script
       detail: int get_script(ObjectPtr obj)
       doc: |
         Accepts a pointer to an object and returns its `scriptID` (line number in `scripts.lst`), or 0 if the object is unscripted.
         - returns -1 on argument error.
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: int
     - name: loot_obj
       detail: ObjectPtr loot_obj
       doc: |-
         Returns a pointer to the target object (container or critter) of the loot screen.
     - name: obj_is_carrying_obj
-      detail: int (ObjectPtr invenObj, ObjectPtr itemObj)
+      detail: int obj_is_carrying_obj(ObjectPtr invenObj, ObjectPtr itemObj)
       doc: |-
         Returns number of `itemObj` inside invenObj's inventory, note that both arguments are object pointers. useful when dealing with different stacks of same item (`obj_is_carrying_obj_pid` just returns total for all stacks of the same PID.)
+      args:
+        - name: invenObj
+          type: ObjectPtr
+        - name: itemObj
+          type: ObjectPtr
+      type: int
     - name: obj_is_openable
       detail: bool obj_is_openable(object obj)
       doc: |-
         Returns True if the object is openable (i.e. has an opening/closing animation), False otherwise
+      args:
+        - name: obj
+          type: object
+      type: bool
     - name: obj_under_cursor
       detail: ObjectPtr obj_under_cursor(bool onlyCritter, bool includeDude)
       doc: |
         Returns the object under the cursor on the main game screen.
-        - onlyCritter:
-          - True - only checks critters and ignores their cover (roof tiles, walls, scenery, etc.)
-          - False - checks all objects (can't check critters under objects)
-        - passing False to the includeDude argument will ignore dude_obj
-          - **NOTE:** to get an object located on a tile when the cursor is in movement mode (hexagon cursor), use the `tile_under_cursor` function
+        - **NOTE:** to get an object located on a tile when the cursor is in movement mode (hexagon cursor), use the `tile_under_cursor` function
+      args:
+        - name: onlyCritter
+          type: bool
+          doc: True - only checks critters and ignores their cover (roof tiles, walls, scenery, etc.); False - checks all objects (can't check critters under objects)
+        - name: includeDude
+          type: bool
+          doc: passing False will ignore dude_obj
+      type: ObjectPtr
     - name: real_dude_obj
       detail: ObjectPtr real_dude_obj
       doc: |-
@@ -805,26 +1589,52 @@ sfall_functions:
       detail: void remove_script(ObjectPtr obj)
       doc: |-
         Accepts a pointer to an object and will remove the script from that object.
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: void
     - name: set_dude_obj
       detail: void set_dude_obj(ObjectPtr critter)
       doc: |-
         Take control of a given critter. Passing value 0 will reset control back to "real" dude.
+      args:
+        - name: critter
+          type: ObjectPtr
+      type: void
     - name: set_flags
       detail: void set_flags(ObjectPtr obj, int flags)
       doc: |
         Sets the current flags of an object.
-        - All flags are rewritten with the given `flags` integer, so first get the current flags with `get_flags` and use `bwor`/`bwand` to set/remove specific flags.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: flags
+          type: int
+          doc: All flags are rewritten with the given `flags` integer, so first get the current flags with `get_flags` and use `bwor`/`bwand` to set/remove specific flags.
+      type: void
     - name: set_object_data
-      detail: set_object_data(ObjectPtr object, int offset, int data)
+      detail: void set_object_data(ObjectPtr object, int offset, int data)
       doc: |-
         Sets the data at the specified offset of an object.
+      args:
+        - name: object
+          type: ObjectPtr
+        - name: offset
+          type: int
+        - name: data
+          type: int
+      type: void
     - name: set_scr_name
       detail: void set_scr_name(string name)
       doc: |
         Overrides the name of the script object that was set from `scrname.msg`.
         - The changed name will be reset each time the player leaves the map or reloads the game
-        - Passing an empty string ("") to the `name` argument or omitting it will allow the game to get the name for the object from pro_*.msg files
         - __NOTE:__ this function is intended for use in normal game scripts and overrides the name only once for the same object until reset
+      args:
+        - name: name
+          type: string
+          doc: passing an empty string ("") or omitting it will allow the game to get the name for the object from pro_*.msg files
+      type: void
     - name: set_script
       detail: void set_script(ObjectPtr obj, int scriptID)
       doc: |
@@ -832,6 +1642,12 @@ sfall_functions:
         - If used on an object that is already scripted, it will remove the existing script first; you cannot have multiple scripts attached to a single object.
         - Calling `set_script` on `self_obj` will have all sorts of wacky side effects, and should be avoided.
         - If you add 0x80000000 to the scriptID when calling `set_script`, `map_enter_p_proc` will be SKIPPED. The `start` proc will always be run.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: scriptID
+          type: int
+      type: void
     - name: set_self
       detail: void set_self(ObjectPtr setObj)
       doc: |
@@ -841,6 +1657,10 @@ sfall_functions:
         - Calling `set_self(0)` will also revert `self_obj` to its original value. It is recommended to call this after each use of `set_self` in normal scripts in order to avoid unforeseen side effects.
         - `source_obj`, `target_obj`, and similar functions will not work if preceded by `set_self`.
         - __NOTE:__ for `use_obj`, `use_obj_on_obj` vanilla functions to work correctly, it is required to call `set_self` twice. You can also access the local variables in the script of an object after calling `set_self` twice.
+      args:
+        - name: setObj
+          type: ObjectPtr
+      type: void
     - name: set_unique_id
       detail: int set_unique_id(ObjectPtr object, int flag)
       doc: |
@@ -849,21 +1669,47 @@ sfall_functions:
         - to just get the current ID number of an object, use `get_object_data(object, OBJ_DATA_ID)`
         - unique ID numbers are saved in your savegame, and have a range from 0x10000000 to 0x7FFFFFFF
         - there is also a unique ID number range for the player and party members from 18000 to 16795215
-        - to assign a new ID number generated by the engine to the object (i.e. unassign a unique ID), call the function with two arguments and pass -1 for the flag argument
+      args:
+        - name: object
+          type: ObjectPtr
+        - name: flag
+          type: int
+          doc: pass -1 to assign a new ID number generated by the engine to the object (i.e. unassign a unique ID)
+      type: int
     - name: active_hand
       detail: int active_hand
     - name: add_g_timer_event
       detail: void add_g_timer_event(int time, int fixedParam)
       doc: |
         Adds a timer event that calls the `timed_event_p_proc` procedure in the current global script
-        - `time`: the number of ticks after which the event timer is triggered
-        - `fixedParam`: the value that is passed to the `timed_event_p_proc` procedure for the `fixed_param` function
+      args:
+        - name: time
+          type: int
+          doc: the number of ticks after which the event timer is triggered
+        - name: fixedParam
+          type: int
+          doc: the value that is passed to the `timed_event_p_proc` procedure for the `fixed_param` function
+      type: void
     - name: create_message_window
       detail: void create_message_window(string message)
+      args:
+        - name: message
+          type: string
+      type: void
     - name: create_spatial
       detail: ObjectPtr create_spatial(int scriptID, int tile, int elevation, int radius)
       doc: |-
         Creates new spatial script with the given scriptID at the given tile and radius.
+      args:
+        - name: scriptID
+          type: int
+        - name: tile
+          type: int
+        - name: elevation
+          type: int
+        - name: radius
+          type: int
+      type: ObjectPtr
     - name: game_loaded
       detail: int game_loaded
       doc: |-
@@ -880,16 +1726,30 @@ sfall_functions:
         Returns the current AP cost to access the inventory in combat
     - name: get_kill_counter
       detail: int get_kill_counter(int critterType)
+      args:
+        - name: critterType
+          type: int
+      type: int
     - name: get_light_level
       detail: int get_light_level
       doc: |-
         Returns ambient light level in the range of 0 to 65536. The value returned by get_light_level may not exactly match that set by `set_light_level`, as `set_light_level` applies modifiers from the Night Vision perk.
     - name: get_npc_level
-      detail: int get_npc_level(string npc)
+      detail: int get_npc_level(int/string npc)
+      args:
+        - name: npc
+          type: int/string
+      type: int
     - name: get_proto_data
       detail: int get_proto_data(int pid, int offset)
       doc: |-
         Used to read the in-memory copies of the .pro files Fallout makes when they are loaded. The offset refers to the offset in memory from the start of the proto to the element you are reading.
+      args:
+        - name: pid
+          type: int
+        - name: offset
+          type: int
+      type: int
     - name: get_unspent_ap_bonus
       detail: int get_unspent_ap_bonus
       doc: |-
@@ -909,93 +1769,215 @@ sfall_functions:
     - name: get_year
       detail: int get_year
     - name: hero_select_win
-      detail: void hero_select_win(int)
+      detail: void hero_select_win(int raceStyleFlag)
+      args:
+        - name: raceStyleFlag
+          type: int
+      type: void
     - name: inc_npc_level
       detail: void inc_npc_level(int party_member_pid)
       doc: |
         Takes a party member PID or an NPC name (deprecated, for compatibility with sfall 4.1.5/3.8.15 or earlier) as an argument. The NPC must be in your party.
         - This function ignores the player's minimum level and the required number of level-ups between NPC level gains. It also ignores the random element, regardless of sfall's `NPCAutoLevel` or `PartyMemberNonRandomLevelUp` setting.
         - Starting from sfall 4.5/3.8.50, the maximum possible NPC level is 10.
+      args:
+        - name: party_member_pid
+          type: int
+      type: void
     - name: input_funcs_available
       detail: int input_funcs_available
       doc: |-
-        (DEPRECATED) The input functions are only available if the user has the input hook turned on in `ddraw.ini`. Use `input_funcs_available` to check.
+        The input functions are only available if the user has the input hook turned on in `ddraw.ini`. Use `input_funcs_available` to check.
+      deprecated: true
     - name: mark_movie_played
       detail: void mark_movie_played(int id)
+      args:
+        - name: id
+          type: int
+      type: void
     - name: message_str_game
       detail: string message_str_game(int fileId, int messageId)
       doc: |
         Works exactly the same as message_str, except you get messages from files in `text/english/game` folder. Use `GAME_MSG_*` defines or `mstr_*` macros from **sfall.h** to use specific msg file
         - Additional game msg files added by `ExtraGameMsgFileList` setting will have consecutive fileIds assigned beginning from 0x2000 to 0x2FFF. (e.g. if you set `ExtraGameMsgFileList=foo,bar` in `ddraw.ini`, `foo.msg` will be associated with 0x2000 and `bar.msg` with 0x2001.).
         - If a file has a specific number assigned in `ExtraGameMsgFileList`, its fileId will be (0x2000 + assigned number). (e.g. with `ExtraGameMsgFileList=foo,bar:2,foobar` in `ddraw.ini`, `bar.msg` will be associated with 0x2002 and `foobar.msg` with 0x2003.)
+      args:
+        - name: fileId
+          type: int
+        - name: messageId
+          type: int
+      type: string
     - name: mod_kill_counter
       detail: void mod_kill_counter(int critterType, int amount)
+      args:
+        - name: critterType
+          type: int
+        - name: amount
+          type: int
+      type: void
     - name: nb_create_char
       detail: int nb_create_char
       doc: |-
-        (DEPRECATED) Reserved for the brotherhood tactical training mod, and should be avoided. Not implemented, always returns 0.
+        Reserved for the brotherhood tactical training mod, and should be avoided. Not implemented, always returns 0.
+      deprecated: true
     - name: resume_game
       detail: void resume_game
     - name: set_base_hit_chance_mod
       detail: void set_base_hit_chance_mod(int max, int mod)
+      args:
+        - name: max
+          type: int
+        - name: mod
+          type: int
+      type: void
     - name: set_base_pickpocket_mod
       detail: void set_base_pickpocket_mod(int max, int mod)
       doc: |-
         Changes maximum chance of success and chance mod for each steal attempt. `max` will replace 95% success chance cap (so you can set 100% maximum chance, for instance). `mod` will add this much percent to each success chance. for example if your chance is 50% and `mod` is 20, you will get 70% actual success rate
+      args:
+        - name: max
+          type: int
+        - name: mod
+          type: int
+      type: void
     - name: set_critter_hit_chance_mod
-      detail: void set_critter_hit_chance_mod(CritterPtr, int max, int mod)
+      detail: void set_critter_hit_chance_mod(ObjectPtr critter, int max, int mod)
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: max
+          type: int
+        - name: mod
+          type: int
+      type: void
     - name: set_critter_pickpocket_mod
-      detail: void set_critter_pickpocket_mod(CritterPtr, int max, int mod)
+      detail: void set_critter_pickpocket_mod(ObjectPtr critter, int max, int mod)
       doc: |-
         The same as `set_base_pickpocket`, but applies only to specific critter.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: max
+          type: int
+        - name: mod
+          type: int
+      type: void
     - name: set_df_model
       detail: void set_df_model(string name)
+      args:
+        - name: name
+          type: string
+      type: void
     - name: set_dm_model
       detail: void set_dm_model(string name)
+      args:
+        - name: name
+          type: string
+      type: void
     - name: set_hit_chance_max
       detail: void set_hit_chance_max(int percentage)
       doc: |-
         Effects all critters rather than just the player and can set the maximum in the range of 0 to 999.
+      args:
+        - name: percentage
+          type: int
+      type: void
     - name: set_hp_per_level_mod
       detail: void set_hp_per_level_mod(int mod)
+      args:
+        - name: mod
+          type: int
+      type: void
     - name: set_inven_ap_cost
       detail: void set_inven_ap_cost(int cost)
+      args:
+        - name: cost
+          type: int
+      type: void
     - name: set_movie_path
       detail: void set_movie_path(string filename, int movieid)
+      args:
+        - name: filename
+          type: string
+        - name: movieid
+          type: int
+      type: void
     - name: set_pickpocket_max
       detail: void set_pickpocket_max(int percentage)
       doc: |-
         Effects all critters rather than just the player and can set the maximum in the range of 0 to 999.
+      args:
+        - name: percentage
+          type: int
+      type: void
     - name: set_pipboy_available
       detail: void set_pipboy_available(int available)
       doc: |
         Sets the availability of the pipboy in the game. Use 0 to disable the pipboy, and 1 or 2 to enable it (value 2 does not change the player's default appearance).
         - The availability state will be reset each time the player reloads the game.
         - __NOTE:__ starting from sfall 4.4.6/3.8.46, value 1 no longer marks the `VSUIT_MOVIE` movie as "played". Use `mark_movie_played(VSUIT_MOVIE)` instead if you want the old behavior.
+      args:
+        - name: available
+          type: int
+      type: void
     - name: set_proto_data
       detail: void set_proto_data(int pid, int offset, int value)
       doc: |-
         Used to alter the in-memory copies of the .pro files Fallout makes when they are loaded. The offset refers to the offset in memory from the start of the proto to the element you are reading. Changes are not stored on disc, and are not permanent. If you modify the protos, and then Fallout subsequently reloads the file your changes will be lost.
+      args:
+        - name: pid
+          type: int
+        - name: offset
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_reaction_thresholds
       detail: void sfall_func2("set_reaction_thresholds", int neutral, int good)
       doc: |
         Sets the thresholds for "neutral" and "good" NPC reactions
-        - `neutral`: any reaction value greater than this is considered neutral. Valid range: -125..125 (default: -10)
-        - `good`: any reaction value greater than this is considered good. Valid range: -125..125 (default: 10). The value must be greater than or equal to the `neutral` threshold
+      args:
+        - name: neutral
+          type: int
+          doc: "any reaction value greater than this is considered neutral. Valid range: -125..125 (default: -10)"
+        - name: good
+          type: int
+          doc: "any reaction value greater than this is considered good. Valid range: -125..125 (default: 10). The value must be greater than or equal to the `neutral` threshold"
+      type: void
     - name: set_unspent_ap_bonus
       detail: void set_unspent_ap_bonus(int multiplier)
       doc: |-
         Alters the AC bonus you receive per unused action point at the end of your turn in combat. To allow for fractional values, the value given if divided by 4. (Hence the default value is 4 and not 1.)
+      args:
+        - name: multiplier
+          type: int
+      type: void
     - name: set_unspent_ap_perk_bonus
       detail: void set_unspent_ap_perk_bonus(int multiplier)
       doc: |-
         Similar to `set_unspent_ap_bonus`, but effects the extra AC granted by the H2H Evade perk. (The default value of this is also 4, equivalent to doubling the original bonus.
+      args:
+        - name: multiplier
+          type: int
+      type: void
     - name: set_viewport_x
       detail: void set_viewport_x(int view_x)
+      args:
+        - name: view_x
+          type: int
+      type: void
     - name: set_viewport_y
       detail: void set_viewport_y(int view_y)
+      args:
+        - name: view_y
+          type: int
+      type: void
     - name: set_xp_mod
       detail: void set_xp_mod(int percentage)
+      args:
+        - name: percentage
+          type: int
+      type: void
     - name: signal_close_game
       detail: void signal_close_game
       doc: |
@@ -1013,11 +1995,21 @@ sfall_functions:
       doc: |
         unequips an item from the specified slot for a critter or the player
         can take off player's equipped item when the inventory is opened, or the player is in the barter screen
-        slot: 0 - armor slot, 1 - right slot, 2 - left slot (see `INVEN_TYPE_*` in **define.h**)
+      args:
+        - name: critter
+          type: object
+        - name: slot
+          type: int
+          doc: 0 - armor slot, 1 - right slot, 2 - left slot (see `INVEN_TYPE_*` in **define.h**)
+      type: void
     - name: get_outline
       detail: int get_outline(ObjectPtr obj)
       doc: |-
         Returns the current outline color of an object.
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: int
     - name: outlined_object
       detail: ObjectPtr outlined_object
       doc: |-
@@ -1028,10 +2020,20 @@ sfall_functions:
         - sets the outline color of an object (see `OUTLINE_*` constants in **sfall.h**)
         - can also set a custom color from the game palette by shifting the color index value left by 8 bits: `0xCC00` where `CC` is the palette index (available since sfall 4.2.7/3.8.27)
         - passing 0 will disable the outline
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: color
+          type: int
+      type: void
     - name: add_trait
       detail: void add_trait(int traitID)
       doc: |-
         adds the specified trait to the player
+      args:
+        - name: traitID
+          type: int
+      type: void
     - name: apply_heaveho_fix
       detail: void apply_heaveho_fix
     - name: clear_selectable_perks
@@ -1040,16 +2042,28 @@ sfall_functions:
         Restores the "select a perk" box to its default state.
     - name: get_perk_available
       detail: int get_perk_available(int perk)
+      args:
+        - name: perk
+          type: int
+      type: int
     - name: get_perk_owed
       detail: int get_perk_owed
     - name: has_fake_perk
-      detail: int has_fake_perk(string name)
+      detail: int has_fake_perk(string/int name)
       doc: |-
         Returns the number of levels the player has of the perks with the given name or ID of extra perk.
+      args:
+        - name: name
+          type: string/int
+      type: int
     - name: has_fake_trait
       detail: int has_fake_trait(string name)
       doc: |-
         Returns the number of levels the player has of the traits with the given name or ID of extra trait.
+      args:
+        - name: name
+          type: string
+      type: int
     - name: hide_real_perks
       detail: void hide_real_perks
       doc: |-
@@ -1058,80 +2072,260 @@ sfall_functions:
       detail: void perk_add_mode(int type)
       doc: |-
         Modifies what happens when a fake perk is selected from the perks dialog. It is treated as a set of flags - if bit 1 is set then it is added to the player's traits, if bit 2 is set it is added to the player's perks, and if bit 3 is set it is removed from the list of selectable perks. The default is 0x2.
+      args:
+        - name: type
+          type: int
+      type: void
     - name: remove_trait
       detail: void remove_trait(int traitID)
+      args:
+        - name: traitID
+          type: int
+      type: void
     - name: seq_perk_freq
       detail: void seq_perk_freq(int value)
       doc: |-
         Sets the number of levels between each perk.
+      args:
+        - name: value
+          type: int
+      type: void
     - name: set_fake_perk
       detail: void set_fake_perk(string name, int level, int image, string desc)
       doc: |-
         Used to add additional traits and perks to the character screen. They will be saved correctly when the player saves and reloads games, but by themselves they will have no further effect on the character. For perks, the allowed range for levels is between 0 and 100; setting the level to 0 removes that perk. For traits, the level must be 0 or 1. The image is a numeric ID that corresponds to an entry in `skilldex.lst`. The name is limited to 63 characters and the description to 255 characters by sfall, but internal Fallout limits may be lower.
+      args:
+        - name: name
+          type: string
+        - name: level
+          type: int
+        - name: image
+          type: int
+        - name: desc
+          type: string
+      type: void
     - name: set_fake_trait
       detail: void set_fake_trait(string name, int active, int image, string desc)
       doc: |-
         Used to add additional traits and perks to the character screen. They will be saved correctly when the player saves and reloads games, but by themselves they will have no further effect on the character. For perks, the allowed range for levels is between 0 and 100; setting the level to 0 removes that perk. For traits, the level must be 0 or 1. The image is a numeric ID that corresponds to an entry in `skilldex.lst`. The name is limited to 63 characters and the description to 255 characters by sfall, but internal Fallout limits may be lower.
+      args:
+        - name: name
+          type: string
+        - name: active
+          type: int
+        - name: image
+          type: int
+        - name: desc
+          type: string
+      type: void
     - name: set_perk_agl
       detail: void set_perk_agl(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_chr
       detail: void set_perk_chr(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_desc
       detail: void set_perk_desc(int perkID, string value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: string
+      type: void
     - name: set_perk_end
       detail: void set_perk_end(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_freq
       detail: void set_perk_freq(int value)
       doc: |-
         Sets the number of levels between each perk. Setting to 0 will reset it back to the default. This overrides the effects of the skilled trait. Not saved into the save game, so needs to be called once per reload. Be careful not to let the player obtain a perk when no perks are available to pick, or the game may crash.
+      args:
+        - name: value
+          type: int
+      type: void
     - name: set_perk_image
       detail: void set_perk_image(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_int
       detail: void set_perk_int(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_lck
       detail: void set_perk_lck(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_level
       detail: void set_perk_level(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_level_mod
       detail: void set_perk_level_mod(int levels)
       doc: |-
         Sets a modifier between +25 and -25 that is added/subtracted from the player's level for the purposes of deciding which perks can be chosen.
+      args:
+        - name: levels
+          type: int
+      type: void
     - name: set_perk_name
       detail: void set_perk_name(int perkID, string value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: string
+      type: void
     - name: set_perk_owed
       detail: void set_perk_owed(int value)
+      args:
+        - name: value
+          type: int
+      type: void
     - name: set_perk_per
       detail: void set_perk_per(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_ranks
       detail: void set_perk_ranks(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_skill1
       detail: void set_perk_skill1(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_skill1_mag
       detail: void set_perk_skill1_mag(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_skill2
       detail: void set_perk_skill2(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_skill2_mag
       detail: void set_perk_skill2_mag(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_stat
       detail: void set_perk_stat(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_stat_mag
       detail: void set_perk_stat_mag(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_str
       detail: void set_perk_str(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perk_type
       detail: void set_perk_type(int perkID, int value)
+      args:
+        - name: perkID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_perkbox_title
       detail: void set_perkbox_title(string title)
       doc: |-
         Used to change the title of the "select a perk" box, or by using "" it will be set back to the default.
+      args:
+        - name: title
+          type: string
+      type: void
     - name: set_pyromaniac_mod
       detail: void set_pyromaniac_mod(int bonus)
+      args:
+        - name: bonus
+          type: int
+      type: void
     - name: set_selectable_perk
       detail: void set_selectable_perk(string name, int active, int image, string desc)
       doc: |-
         Used to add additional items to "select a perk" box by setting the 'active' parameter to 1, and to remove them again by setting it to 0.
+      args:
+        - name: name
+          type: string
+        - name: active
+          type: int
+        - name: image
+          type: int
+        - name: desc
+          type: string
+      type: void
     - name: set_swiftlearner_mod
       detail: void set_swiftlearner_mod(int bonus)
+      args:
+        - name: bonus
+          type: int
+      type: void
     - name: show_real_perks
       detail: void show_real_perks
       doc: |-
@@ -1140,42 +2334,80 @@ sfall_functions:
       detail: void sfall_func2("set_quest_failure_value", int gvarNumber, int thresholdValue)
       doc: |
         - sets the threshold value (failure_threshold) for the quest at which the quest will be considered failed (its description in the pipboy will be crossed out and colored red)
-        - `gvarNumber`: the number of the global variable controlling the quest
-        - `thresholdValue`: the value of the global variable at which the quest is counted as a failure
+      args:
+        - name: gvarNumber
+          type: int
+          doc: the number of the global variable controlling the quest
+        - name: thresholdValue
+          type: int
+          doc: the value of the global variable at which the quest is counted as a failure
+      type: void
     - name: get_can_rest_on_map
-      detail: get_can_rest_on_map(int mapNum, int elev)
+      detail: int get_can_rest_on_map(int mapNum, int elev)
       doc: |
         - returns the set rest value of the map after using the `set_can_rest_on_map` function
         - Returns -1 if the rest value of the map was not previously set (i.e. no data for the map in `sfalldb.sav`)
         - the `can_rest_here values` from `maps.txt` are ignored.
+      args:
+        - name: mapNum
+          type: int
+        - name: elev
+          type: int
+      type: int
     - name: set_can_rest_on_map
       detail: void set_can_rest_on_map(int mapNum, int elev, bool value)
       doc: |
         Allows/disallows to rest on the map for the specified level, overrides the `can_rest_here` values in `maps.txt`.
-        - `mapNum` is the map index from `maps.txt`
-        - passing -1 to the elev argument will set the rest value for all map elevations
         - the set rest value will be stored in `sfalldb.sav` file (in savegame)
+      args:
+        - name: mapNum
+          type: int
+          doc: the map index from `maps.txt`
+        - name: elev
+          type: int
+          doc: passing -1 will set the rest value for all map elevations
+        - name: value
+          type: bool
+      type: void
     - name: add_extra_msg_file
       detail: int add_extra_msg_file(string fileName)
       doc: |
         Loads a custom message file and returns the file ID number assigned to it, in the range of 0x3000 to 0x3FFF, for use with the `message_str_game` function.
-        - `fileName`: the name of the custom message file (including the .msg extension) in `text\<language>\game\` directory.
         - __NOTE:__ if the msg file does not exist in the current language directory, the function will try to load it from the `text\English\game\` directory.
 
         Alternative form: `int add_extra_msg_file(string fileName, int fileNumber)` **[DEPRECATED]**
         - __Deprecation notice:__ Starting from sfall 4.5/3.8.50, the two-argument form is deprecated. The `fileNumber` argument is ignored, and the function behaves the same as the one-argument form.
+      args:
+        - name: fileName
+          type: string
+          doc: the name of the custom message file (including the .msg extension) in `text\<language>\game\` directory.
+      type: int
     - name: critter_inven_obj2
       detail: ObjectPtr critter_inven_obj2(ObjectPtr obj, int type)
       doc: |-
         Works just like vanilla `critter_inven_obj`, but correctly reports item in player's inactive hand slot.
+      args:
+        - name: obj
+          type: ObjectPtr
+        - name: type
+          type: int
+      type: ObjectPtr
     - name: dialog_message
       detail: void dialog_message(string text)
       doc: |-
         Displays a message in the NPC response window in dialog or barter screen.
+      args:
+        - name: text
+          type: string
+      type: void
     - name: get_current_inven_size
-      detail: get_current_inven_size(ObjectPtr object)
+      detail: int get_current_inven_size(ObjectPtr object)
       doc: |-
         Returns the total size of items in a container or a critter's inventory.
+      args:
+        - name: object
+          type: ObjectPtr
+      type: int
     - name: get_metarule_table
       detail: array get_metarule_table
       doc: |-
@@ -1184,46 +2416,123 @@ sfall_functions:
       detail: int get_object_ai_data(ObjectPtr object, int aiParam)
       doc: |-
         Returns the setting value from the AI packet of an object (critter). Use `AI_CAP_*` constants from **define_extra.h** for the `aiParam` argument to get AI value.
+      args:
+        - name: object
+          type: ObjectPtr
+        - name: aiParam
+          type: int
+      type: int
     - name: get_text_width
       detail: int get_text_width(string text)
       doc: |-
         Returns the text width in pixels for the currently set font.
+      args:
+        - name: text
+          type: string
+      type: int
+    - name: hide_win
+      detail: void sfall_func0("hide_window")
+      doc: |-
+        Hides currently active (selected) script window.
+    - name: hide_window
+      detail: void sfall_func1("hide_window", string winName)
+      doc: |
+        Hides the specified script window.
+      args:
+        - name: winName
+          type: string
+          doc: the window name, assigned to the window by the `CreateWin/create_win` function
+      type: void
     - name: item_weight
       detail: int item_weight(ObjectPtr obj)
       doc: |-
         Returns the weight of an item object.
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: int
     - name: metarule_exist
       detail: bool metarule_exist(string metaruleName)
       doc: |-
         Returns True if the specified name of metarule (sfall_funcX) function exists in the current version of sfall.
+      args:
+        - name: metaruleName
+          type: string
+      type: bool
     - name: npc_engine_level_up
       detail: void npc_engine_level_up(bool toggle)
       doc: |-
         Enables/disables the engine function that increases the level of party members in the player leveling process. If the engine function is disabled, the process of leveling up party members should be performed by script functions.
+      args:
+        - name: toggle
+          type: bool
+      type: void
     - name: objects_in_radius
       detail: array objects_in_radius(int tile, int radius, int elevation, int type)
       doc: |
         - returns an array of objects of a type (see `OBJ_TYPE_*` constants in **define_extra.h**) within the specified radius from the given tile
-        - passing -1 to the `type` argument or _not specifying it_ will return all objects within the radius
         - the radius is limited to 50 hexes
+      args:
+        - name: tile
+          type: int
+        - name: radius
+          type: int
+        - name: elevation
+          type: int
+        - name: type
+          type: int
+          doc: passing -1 or _not specifying it_ will return all objects within the radius
+      type: array
     - name: opcode_exists
       detail: bool opcode_exists(int opcodeNum)
       doc: |
         Returns True if an opcode with the specified number exists in the current version of sfall.
-        - `opcodeNum` starts at `0x8000`.
+      args:
+        - name: opcodeNum
+          type: int
+          doc: starts at `0x8000`.
+      type: bool
+    - name: remove_all_timer_events
+      detail: void sfall_func0("remove_timer_event")
+      doc: |-
+        Clears all set timer events for the current global script.
+    - name: remove_timer_event
+      detail: void sfall_func1("remove_timer_event", int fixedParam)
+      doc: |-
+        Removes all timer events with the specified `fixedParam` value for the current global script.
+      args:
+        - name: fixedParam
+          type: int
+      type: void
     - name: set_drugs_data
       detail: void set_drugs_data(int type, int pid, int value)
       doc: |-
         Overrides the parameters of drugs set in the configuration file (`DrugsFile` setting in `ddraw.ini`). Type: 0 - changes the value of `NumEffects` for the drug (see `Drugs.ini` for the description of `NumEffects`), 1 - changes the duration of the addiction effect for the drug (a value of 1 = one game minute).
+      args:
+        - name: type
+          type: int
+        - name: pid
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_rest_heal_time
       detail: void set_rest_heal_time(int time)
       doc: |
         Sets the time interval in minutes for healing during resting. The default is 180
         - the time interval will be reset each time the player reloads the game
+      args:
+        - name: time
+          type: int
+      type: void
     - name: set_rest_mode
       detail: void set_rest_mode(int flags)
       doc: |-
         Sets the bit flags for the rest mode (see `RESTMODE_*` constants in **sfall.h**). Passing 0 will reset the rest mode. It will also be reset each time the player reloads the game.
+      args:
+        - name: flags
+          type: int
+      type: void
     - name: set_worldmap_heal_time
       detail: void set_worldmap_heal_time(int time)
       doc: |
@@ -1231,134 +2540,263 @@ sfall_functions:
         - passing 0 will revert to 1 second of real time (vanilla engine behavior)
         - passing -1 will disable healing during travel
         - the time interval will be reset each time the player reloads the game
-    - name: sfall_func0("hide_window")
-      detail: void sfall_func0("hide_window")
-      doc: |-
-        Hides currently active (selected) script window.
-    - name: sfall_func0("show_window")
+      args:
+        - name: time
+          type: int
+      type: void
+    - name: show_win
       detail: void sfall_func0("show_window")
       doc: |-
         Displays the script window previously hidden with the `sfall_func0("hide_window")` function.
-    - name: sfall_func1("hide_window", string winName)
-      detail: void sfall_func0("hide_window")
-      doc: |
-        Hides the specified script window.
-        - winName: the window name, assigned to the window by the `CreateWin/create_win` function
-    - name: sfall_func1("remove_timer_event", int fixedParam)
-      detail: void sfall_func1("remove_timer_event", int fixedParam)
-      doc: |-
-        Removes all timer events with the specified `fixedParam` value for the current global script.
-    - name: sfall_func1("show_window", string winName)
+    - name: show_window
       detail: void sfall_func1("show_window", string winName)
       doc: |
         Displays the specified hidden script window.
-        `winName`: the window name, assigned to the window by the `CreateWin/create_win` function
-    - name: sfall_func2("string_compare", string str1, string str2)
-      detail: bool sfall_func2("string_compare", string str1, string str2)
-      doc: |-
-        Compares two strings case-insensitive, and returns `True` if the two strings are matched.
-    - name: sfall_func3("string_compare", string str1, string str2, int codePage)
-      detail: bool sfall_func3("string_compare", string str1, string str2, int codePage)
-      doc: |
-        Compares two strings case-insensitive, and returns `True` if the two strings are matched
-        - `codePage`: code page number to properly compare national characters in the range 128-255 of the ASCII code table
-        available encodings: 1250-1252, 866
+      args:
+        - name: winName
+          type: string
+          doc: the window name, assigned to the window by the `CreateWin/create_win` function
+      type: void
     - name: spatial_radius
       detail: int spatial_radius(ObjectPtr obj)
       doc: |-
         Returns radius of spatial script, associated with the given dummy object (returned by `create_spatial`).
-    - name: void sfall_func0("remove_timer_event")
-      detail: void sfall_func0("remove_timer_event")
+      args:
+        - name: obj
+          type: ObjectPtr
+      type: int
+    - name: string_compare
+      detail: bool sfall_func2("string_compare", string str1, string str2)
       doc: |-
-        Clears all set timer events for the current global script.
+        Compares two strings case-insensitive, and returns `True` if the two strings are matched.
+      args:
+        - name: str1
+          type: string
+        - name: str2
+          type: string
+      type: bool
+    - name: string_compare_locale
+      detail: bool sfall_func3("string_compare", string str1, string str2, int codePage)
+      doc: |
+        Compares two strings case-insensitive, and returns `True` if the two strings are matched
+      args:
+        - name: str1
+          type: string
+        - name: str2
+          type: string
+        - name: codePage
+          type: int
+          doc: "code page number to properly compare national characters in the range 128-255 of the ASCII code table, available encodings: 1250-1252, 866"
+      type: bool
     - name: get_available_skill_points
       detail: int get_available_skill_points
     - name: get_critter_skill_points
-      detail: int get_critter_skill_points(int critter, int skill)
+      detail: int get_critter_skill_points(ObjectPtr critter, int skill)
       doc: |-
         Will get the number of additional points a critter has in a skill, on top of whatever they have from their stats and other bonuses
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: skill
+          type: int
+      type: int
     - name: mod_skill_points_per_level
       detail: void mod_skill_points_per_level(int value)
       doc: |-
         Accepts a value of between -100 and 100, and modifies the number of skill points the player recieves when they level up. This is a modification of what would otherwise happen, rather than a replacement. The value is not saved into the save game, so should be reset in the `game_loaded` section of a script.
+      args:
+        - name: value
+          type: int
+      type: void
     - name: set_available_skill_points
       detail: void set_available_skill_points(int value)
+      args:
+        - name: value
+          type: int
+      type: void
     - name: set_base_skill_mod
       detail: void set_base_skill_mod(int max)
+      args:
+        - name: max
+          type: int
+      type: void
     - name: set_critter_skill_mod
-      detail: void set_critter_skill_mod(CritterPtr, int max)
+      detail: void set_critter_skill_mod(ObjectPtr critter, int max)
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: max
+          type: int
+      type: void
     - name: set_critter_skill_points
-      detail: void set_critter_skill_points(int critter, int skill, int value)
+      detail: void set_critter_skill_points(ObjectPtr critter, int skill, int value)
       doc: |-
         Will set the number of additional points a critter has in a skill, on top of whatever they have from their stats and other bonuses. Note that skill points are part of the proto, so calling it on a critter will affect all critters that share the same proto.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: skill
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_skill_max
       detail: void set_skill_max(int value)
       doc: |-
         Can't be used to increase the skill cap above 300.
+      args:
+        - name: value
+          type: int
+      type: void
     - name: get_critter_base_stat
-      detail: int get_critter_base_stat(CritterPtr, int StatID)
+      detail: int get_critter_base_stat(ObjectPtr critter, int StatID)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: StatID
+          type: int
+      type: int
     - name: get_critter_extra_stat
-      detail: int get_critter_extra_stat(CritterPtr, int StatID)
+      detail: int get_critter_extra_stat(ObjectPtr critter, int StatID)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: StatID
+          type: int
+      type: int
     - name: get_pc_base_stat
       detail: int get_pc_base_stat(int StatID)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: StatID
+          type: int
+      type: int
     - name: get_pc_extra_stat
       detail: int get_pc_extra_stat(int StatID)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: StatID
+          type: int
+      type: int
     - name: get_stat_max
-      detail: get_stat_max(int stat, bool who = False)
+      detail: int get_stat_max(int stat, bool who = False)
       doc: |-
         - Returns the maximum set value of the specified stat (see `set_stat_max` functions)
-        - who: 0 (`False`) or omitting the argument - returns the value of the player, 1 (`True`) - returns the value set for other critters
 
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: stat
+          type: int
+        - name: who
+          type: bool
+          doc: 0 (`False`) or omitting the argument - returns the value of the player, 1 (`True`) - returns the value set for other critters
+          default: "False"
+      type: int
     - name: get_stat_min
-      detail: get_stat_min(int stat, bool who = False)
+      detail: int get_stat_min(int stat, bool who = False)
       doc: |-
         - Returns the minimum set value of the specified stat (see `set_stat_min` functions)
-        - who: 0 (`False`) or omitting the argument - returns the value of the player, 1 (`True`) - returns the value set for other critters
 
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: stat
+          type: int
+        - name: who
+          type: bool
+          doc: 0 (`False`) or omitting the argument - returns the value of the player, 1 (`True`) - returns the value set for other critters
+          default: "False"
+      type: int
     - name: set_critter_base_stat
-      detail: void set_critter_base_stat(CritterPtr, int StatID, int value)
+      detail: void set_critter_base_stat(ObjectPtr critter, int StatID, int value)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: StatID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_critter_extra_stat
-      detail: void set_critter_extra_stat(CritterPtr, int StatID, int value)
+      detail: void set_critter_extra_stat(ObjectPtr critter, int StatID, int value)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: critter
+          type: ObjectPtr
+        - name: StatID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_pc_base_stat
       detail: void set_pc_base_stat(int StatID, int value)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: StatID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: set_pc_extra_stat
       detail: void set_pc_extra_stat(int StatID, int value)
       doc: |-
         The `get/set_pc_base/extra_stat` functions are equivalent to calling `get/set_critter_base/extra_stat` with `dude_obj` as the critter pointer. None of these stat functions take perks into account, and neither do they do range clamping to make sure the stats are valid. Use the normal `get_critter_stat` function to get a correctly perk adjusted and range clamped value for a stat.
+      args:
+        - name: StatID
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: charcode
       detail: int charcode(string text)
       doc: |-
         Returns ASCII code for the first character in the given string.
+      args:
+        - name: text
+          type: string
+      type: int
     - name: get_string_pointer
       detail: int get_string_pointer(string text)
       doc: |
-        (DEPRECATED) Returns a pointer to a string variable or to a text
+        Returns a pointer to a string variable or to a text
         - __NOTE:__ this function is intended for use only in `HOOK_DESCRIPTIONOBJ`. Starting from sfall 4.4/3.8.40, you can return normal strings directly in the hook without calling the function
+      args:
+        - name: text
+          type: string
+      type: int
+      deprecated: true
     - name: string_find
       detail: int string_find(string haystack, string needle)
       doc: |-
         Returns the position of the first occurrence of a `needle` string in a `haystack` string, or -1 if not found. The first character position is 0 (zero).
+      args:
+        - name: haystack
+          type: string
+        - name: needle
+          type: string
+      type: int
     - name: string_find_from
       detail: int string_find_from(string haystack, string needle, int pos)
       doc: |
         Works the same as `string_find`, except you can specify the position to start the search.
-        - If `pos` is negative - it indicates a position starting from the end of the string, similar to `substr()`.
+      args:
+        - name: haystack
+          type: string
+        - name: needle
+          type: string
+        - name: pos
+          type: int
+          doc: If `pos` is negative - it indicates a position starting from the end of the string, similar to `substr()`.
+      type: int
     - name: string_format
       detail: string string_format(string format, any val1, any val2, ...)
       doc: |
@@ -1368,26 +2806,54 @@ sfall_functions:
       detail: string string_format_array(string format, int array)
       doc: |-
         The same as string_format, but accepts an array of parameters.
+      args:
+        - name: format
+          type: string
+        - name: array
+          type: int
+      type: string
     - name: string_replace
       detail: string string_replace(string str, string search, string replace)
       doc: |-
         Replaces all occurances of a given search string in a string with a given replacement string.
+      args:
+        - name: str
+          type: string
+        - name: search
+          type: string
+        - name: replace
+          type: string
+      type: string
     - name: string_split
-      detail: array string_split(string text, split)
+      detail: array string_split(string text, string split)
       doc: |-
         Takes a string and a seperator, searches the string for all instances of the seperator, and returns a temp array filled with the pieces of the string split at each instance. If you give an empty string as the seperator, the string is split into individual characters. You can use this to search for a substring in a string like this: `strlen(get_array(string_split(haystack, needle), 0))`
+      args:
+        - name: text
+          type: string
+        - name: split
+          type: string
+      type: array
     - name: string_to_case
       detail: string sfall_func2("string_to_case", string text, int toCase)
       doc: |
         Converts all letters in the given string to the specified case.
-        ```
-        toCase: 0 - lowercase, 1 - uppercase
-        ```
         NOTE: this function works only for English letters of A-Z/a-z.
+      args:
+        - name: text
+          type: string
+        - name: toCase
+          type: int
+          doc: 0 - lowercase, 1 - uppercase
+      type: string
     - name: strlen
       detail: int strlen(string text)
       doc: |-
         Returns string length.
+      args:
+        - name: text
+          type: string
+      type: int
     - name: substr
       detail: string substr(string text, int start, int length)
       doc: |
@@ -1395,6 +2861,14 @@ sfall_functions:
         - If start is negative - it indicates a position starting from the end of the string (for example `substr("test", -2, 2)` will return last 2 charactes: "st").
         - If length is negative - it means so many characters will be omitted from the end of string (example: `substr("test", 0, -2)` will return string without last 2 characters: "te").
         - If length is zero - it will return a string from the starting position to the end of the string. **New behavior** for sfall 4.2.2/3.8.22
+      args:
+        - name: text
+          type: string
+        - name: start
+          type: int
+        - name: length
+          type: int
+      type: string
     - name: add_iface_tag
       detail: void add_iface_tag
       doc: |
@@ -1404,63 +2878,141 @@ sfall_functions:
       detail: void hide_iface_tag(int tag)
       doc: |
         `show_iface_tag`, `hide_iface_tag` and `is_iface_tag_active` relate to the boxes that appear above the interface such as SNEAK and LEVEL. You can use 0 for **SNEAK** (starting from sfall 4.4.4/3.8.44), 3 for **LEVEL**, 4 for **ADDICT**, and 5 to (4 + the value of BoxBarCount in `ddraw.ini`) for custom boxes. Remember to add your messages to `intrface.msg` and set up the font colours in `ddraw.ini` if you're going to use custom boxes. Starting from sfall 4.1/3.8.12, `is_iface_tag_active` can also be used to check 0 for **SNEAK**, 1 for **POISONED**, and 2 for **RADIATED**.
+      args:
+        - name: tag
+          type: int
+      type: void
     - name: is_iface_tag_active
       detail: int is_iface_tag_active(int tag)
       doc: |
         `show_iface_tag`, `hide_iface_tag` and `is_iface_tag_active` relate to the boxes that appear above the interface such as SNEAK and LEVEL. You can use 0 for **SNEAK** (starting from sfall 4.4.4/3.8.44), 3 for **LEVEL**, 4 for **ADDICT**, and 5 to (4 + the value of BoxBarCount in `ddraw.ini`) for custom boxes. Remember to add your messages to `intrface.msg` and set up the font colours in `ddraw.ini` if you're going to use custom boxes. Starting from sfall 4.1/3.8.12, `is_iface_tag_active` can also be used to check 0 for **SNEAK**, 1 for **POISONED**, and 2 for **RADIATED**.
+      args:
+        - name: tag
+          type: int
+      type: int
     - name: set_iface_tag_text
       detail: void set_iface_tag_text(int tag, string text, int color)
       doc: |
         Sets the text messages and colors for custom notification boxes to the interface without the need to add messages to `intrface.msg` and set up the font colors in `ddraw.ini`. Tag value is the same as used in `show_iface_tag`, `hide_iface_tag`, and `is_iface_tag_active`. The valid range is from 5 to (4 + the value of BoxBarCount in `ddraw.ini`) or the number of the last custom box added using the `add_iface_tag` function. The text is limited to 19 characters.
         `show_iface_tag`, `hide_iface_tag` and `is_iface_tag_active` relate to the boxes that appear above the interface such as SNEAK and LEVEL. You can use 0 for **SNEAK** (starting from sfall 4.4.4/3.8.44), 3 for **LEVEL**, 4 for **ADDICT**, and 5 to (4 + the value of BoxBarCount in `ddraw.ini`) for custom boxes. Remember to add your messages to `intrface.msg` and set up the font colours in `ddraw.ini` if you're going to use custom boxes. Starting from sfall 4.1/3.8.12, `is_iface_tag_active` can also be used to check 0 for **SNEAK**, 1 for **POISONED**, and 2 for **RADIATED**.
+      args:
+        - name: tag
+          type: int
+        - name: text
+          type: string
+        - name: color
+          type: int
+      type: void
     - name: show_iface_tag
       detail: void show_iface_tag(int tag)
       doc: |
         `show_iface_tag`, `hide_iface_tag` and `is_iface_tag_active` relate to the boxes that appear above the interface such as SNEAK and LEVEL. You can use 0 for **SNEAK** (starting from sfall 4.4.4/3.8.44), 3 for **LEVEL**, 4 for **ADDICT**, and 5 to (4 + the value of BoxBarCount in `ddraw.ini`) for custom boxes. Remember to add your messages to `intrface.msg` and set up the font colours in `ddraw.ini` if you're going to use custom boxes. Starting from sfall 4.1/3.8.12, `is_iface_tag_active` can also be used to check 0 for **SNEAK**, 1 for **POISONED**, and 2 for **RADIATED**.
+      args:
+        - name: tag
+          type: int
+      type: void
     - name: get_tile_fid
       detail: int get_tile_fid(int tileData)
       doc: |
         - Returns FID information about the square under the given tile at elevation 0
         - Pass elevation as 4-bit number in bits 25-28 to access other elevations
         - Pass result mode in bits 29-32: 0 - ground FID, 1 - roof FID, 2 - raw data.
+      args:
+        - name: tileData
+          type: int
+      type: int
     - name: get_tile_ground_fid
       detail: int get_tile_ground_fid(int tileNum, int elevation)
       doc: |-
         Returns FID of a ground tile at the given tile number and elevation.
+      args:
+        - name: tileNum
+          type: int
+        - name: elevation
+          type: int
+      type: int
     - name: get_tile_roof_fid
       detail: int get_tile_roof_fid(int tileNum, int elevation)
       doc: |-
         Returns FID of a roof tile at the given tile number and elevation. Note that FID of 1 is used when there is no actual roof.
+      args:
+        - name: tileNum
+          type: int
+        - name: elevation
+          type: int
+      type: int
     - name: obj_blocking_line
       detail: ObjectPtr obj_blocking_line(ObjectPtr objFrom, int tileTo, int blockingType)
       doc: |
         Returns the first object which blocks direct linear path from `objFrom` to `tileTo` using selected blocking function (see `BLOCKING_TYPE_*` constants in **sfall.h**).
         - If path is clear (no blocker was encountered by selected function) - returns 0.
-        - `objFrom` is always excluded from calculations, but is required to be a valid object.
+      args:
+        - name: objFrom
+          type: ObjectPtr
+          doc: always excluded from calculations, but is required to be a valid object.
+        - name: tileTo
+          type: int
+        - name: blockingType
+          type: int
+      type: ObjectPtr
     - name: obj_blocking_tile
       detail: ObjectPtr obj_blocking_tile(int tileNum, int elevation, int blockingType)
       doc: |-
         Returns the first object blocking the given tile using the given blocking function, or 0 if the tile is clear.
+      args:
+        - name: tileNum
+          type: int
+        - name: elevation
+          type: int
+        - name: blockingType
+          type: int
+      type: ObjectPtr
     - name: path_find_to
       detail: array path_find_to(ObjectPtr objFrom, int tileTo, int blockingType)
       doc: |
         Returns the shortest path to a given tile using the given blocking function as an array of tile directions (0..5) to move on each step.
         - Array length equals to a number of steps.
         - Empty array means that specified target cannot be reached.
+      args:
+        - name: objFrom
+          type: ObjectPtr
+        - name: tileTo
+          type: int
+        - name: blockingType
+          type: int
+      type: array
     - name: tile_by_position
       detail: int tile_by_position(int x, int y)
       doc: |
         - returns the tile number at the x, y position relative to the top-left corner of the screen
         - if the position is outside of the range of tiles, it will return -1
+      args:
+        - name: x
+          type: int
+        - name: y
+          type: int
+      type: int
     - name: tile_get_objs
       detail: array tile_get_objs(int tileNum, int elevation)
       doc: |
         Returns an array of all objects at the given tile.
         - It will include any hidden, dead or system objects (like cursor), so make sure to check properly when iterating.
+      args:
+        - name: tileNum
+          type: int
+        - name: elevation
+          type: int
+      type: array
     - name: tile_light
       detail: int tile_light(int elevation, int tileNum)
       doc: |-
         Returns light intensity at the given tile in the range of 0 to 65536.
+      args:
+        - name: elevation
+          type: int
+        - name: tileNum
+          type: int
+      type: int
     - name: tile_refresh_display
       detail: void tile_refresh_display
       doc: |-
@@ -1469,17 +3021,35 @@ sfall_functions:
       detail: int tile_under_cursor
     - name: atof
       detail: float atof(string text)
+      args:
+        - name: text
+          type: string
+      type: float
     - name: atoi
       detail: int atoi(string text)
+      args:
+        - name: text
+          type: string
+      type: int
     - name: sprintf
       detail: string sprintf(string format, any value)
       doc: |
         Formats the given value using standard syntax of C `printf` function (google "printf" for format details). However, it is limited to formatting only 1 value.
         - Can be used to get character by ASCII code (`%c`).
+      args:
+        - name: format
+          type: string
+        - name: value
+          type: any
+      type: string
     - name: typeof
       detail: int typeof(any value)
       doc: |-
         Returns type of the given value: VALTYPE_INT, VALTYPE_FLOAT or VALTYPE_STR.
+      args:
+        - name: value
+          type: any
+      type: int
     - name: sfall_ver_build
       detail: int sfall_ver_build
     - name: sfall_ver_major
@@ -1490,206 +3060,442 @@ sfall_functions:
       detail: int fs_copy(string path, string source)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: path
+          type: string
+        - name: source
+          type: string
+      type: int
     - name: fs_create
       detail: int fs_create(string path, int size)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: path
+          type: string
+        - name: size
+          type: int
+      type: int
     - name: fs_delete
       detail: void fs_delete(int id)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+      type: void
     - name: fs_find
       detail: int fs_find(string path)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: path
+          type: string
+      type: int
     - name: fs_pos
       detail: int fs_pos(int id)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+      type: int
     - name: fs_read_byte
       detail: int fs_read_byte(int id)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+      type: int
     - name: fs_read_float
       detail: float fs_read_float(int id)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+      type: float
     - name: fs_read_int
       detail: int fs_read_int(int id)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+      type: int
     - name: fs_read_short
       detail: int fs_read_short(int id)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+      type: int
     - name: fs_resize
       detail: void fs_resize(int id, int size)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: size
+          type: int
+      type: void
     - name: fs_seek
       detail: void fs_seek(int id, int pos)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: pos
+          type: int
+      type: void
     - name: fs_size
       detail: int fs_size(int id)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+      type: int
     - name: fs_write_bstring
       detail: void fs_write_bstring(int id, string data)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: data
+          type: string
+      type: void
     - name: fs_write_byte
       detail: void fs_write_byte(int id, int data)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: data
+          type: int
+      type: void
     - name: fs_write_float
       detail: void fs_write_float(int id, int data)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: data
+          type: int
+      type: void
     - name: fs_write_int
       detail: void fs_write_int(int id, int data)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: data
+          type: int
+      type: void
     - name: fs_write_short
       detail: void fs_write_short(int id, int data)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: data
+          type: int
+      type: void
     - name: fs_write_string
       detail: void fs_write_string(int id, string data)
       doc: |-
         The `fs_*` functions are used to manipulate a virtual file system. Files saved here should have paths relative to the data folder, and use backslashes as the directory separator. They will take precedence over files stored in the normal data folder. They will also be saved into save games if you set a flag for them using `fs_resize(fileId, -1)`, so be avoid creating large files. Using `fs_copy` followed by `fs_read_xxx`, you can read the contents of existing files.
+      args:
+        - name: id
+          type: int
+        - name: data
+          type: string
+      type: void
     - name: get_weapon_ammo_count
       detail: int get_weapon_ammo_count(ObjectPtr weapon)
       doc: |-
         This also allows to get current charges of a misc item (Geiger counter, etc).
+      args:
+        - name: weapon
+          type: ObjectPtr
+      type: int
     - name: get_weapon_ammo_pid
       detail: int get_weapon_ammo_pid(ObjectPtr weapon)
+      args:
+        - name: weapon
+          type: ObjectPtr
+      type: int
     - name: set_weapon_ammo_count
       detail: void set_weapon_ammo_count(ObjectPtr weapon, int count)
       doc: |-
         This also allows to set current charges of a misc item (Geiger counter, etc).
+      args:
+        - name: weapon
+          type: ObjectPtr
+        - name: count
+          type: int
+      type: void
     - name: set_weapon_ammo_pid
       detail: void set_weapon_ammo_pid(ObjectPtr weapon, int pid)
+      args:
+        - name: weapon
+          type: ObjectPtr
+        - name: pid
+          type: int
+      type: void
     - name: art_frame_data
-      detail: array art_frame_data(string/int artFile/artId, int frame, int rotation)
+      detail: array art_frame_data(string/int art, int frame, int rotation)
       doc: |
         - returns the dimensions of a given PCX or FRM frame as a temp array in the form **[width, height]**
-        - `artFile/artId`: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
-        optional arguments:
-        - `frame`: frame number, the first frame starts at zero
-        - `rotation`: rotation to get the frame for, useful when reading FRM files by path
+        - optional arguments: `frame`, `rotation`
+      args:
+        - name: art
+          type: string/int
+          doc: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
+        - name: frame
+          type: int
+          doc: frame number, the first frame starts at zero
+        - name: rotation
+          type: int
+          doc: rotation to get the frame for, useful when reading FRM files by path
+      type: array
     - name: create_win
       detail: void create_win(string winName, int x, int y, int width, int height, int flags)
       doc: |-
         `flags` argument is optional. Works just like vanilla `CreateWin` function, but creates a window with `MoveOnTop` flag if the flags argument is not specified, and allows to set additional flags for the created window. `MoveOnTop` flag allows the created window to be placed on top of the game interface.
+      args:
+        - name: winName
+          type: string
+        - name: x
+          type: int
+        - name: y
+          type: int
+        - name: width
+          type: int
+        - name: height
+          type: int
+        - name: flags
+          type: int
+      type: void
     - name: draw_image
-      detail: void draw_image(string/int artFile/artId, int frame, int x, int y, bool noTransparent)
+      detail: void draw_image(string/int artFile, int frame, int x, int y, bool noTransparent)
       doc: |
         - displays the specified PCX or FRM image in the active window created by vanilla `CreateWin` or sfall's `create_win` script function
-        - artFile/artId: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
-        optional arguments:
-        - `frame`: frame number, the first frame starts at zero
-        - `x/y`: offset relative to the top-left corner of the window
-        - `noTransparent`: pass True to display an image without transparent background
+        - optional arguments: `frame`, `x`, `y`, `noTransparent`
         - NOTE: to omit optional arguments starting from the right, call the functions with different `sfall_funcX` (e.g. `sfall_func4("draw_image", pathFile, frame, x, y))`
+      args:
+        - name: artFile
+          type: string/int
+          doc: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
+        - name: frame
+          type: int
+          doc: frame number, the first frame starts at zero
+        - name: x
+          type: int
+          doc: horizontal offset relative to the top-left corner of the window
+        - name: y
+          type: int
+          doc: vertical offset relative to the top-left corner of the window
+        - name: noTransparent
+          type: bool
+          doc: pass True to display an image without transparent background
+      type: void
     - name: draw_image_scaled
-      detail: void draw_image_scaled(string/int artFile/artId, int frame, int x, int y, int width, int height)
+      detail: void draw_image_scaled(string/int artFile, int frame, int x, int y, int width, int height)
       doc: |
         - displays the specified PCX or FRM image in the active window created by vanilla `CreateWin` or sfall's `create_win` script function
-        - artFile/artId: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
-        optional arguments:
-        - `frame`: frame number, the first frame starts from zero
-        - `x/y`: offset relative to the top-left corner of the window
-        - `width/height`: the new width/height to scale the image to. Pass -1 to either width or height to keep the aspect ratio when scaling
+        - optional arguments: `frame`, `x`, `y`, `width`, `height`
         - NOTE: to omit optional arguments starting from the right, call the functions with different `sfall_funcX` (e.g. `sfall_func4("draw_image", pathFile, frame, x, y))`
         - if called without `x/y/width/height` arguments, the image will be scaled to fit the window without transparent background
+      args:
+        - name: artFile
+          type: string/int
+          doc: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
+        - name: frame
+          type: int
+          doc: frame number, the first frame starts from zero
+        - name: x
+          type: int
+          doc: horizontal offset relative to the top-left corner of the window
+        - name: y
+          type: int
+          doc: vertical offset relative to the top-left corner of the window
+        - name: width
+          type: int
+          doc: the new width to scale the image to. Pass -1 to either width or height to keep the aspect ratio when scaling
+        - name: height
+          type: int
+          doc: the new height to scale the image to. Pass -1 to either width or height to keep the aspect ratio when scaling
+      type: void
     - name: get_window_attribute
-      detail: int sfall_func1("get_window_attribute", int winType)
+      detail: |-
+        int sfall_func1("get_window_attribute", int winType)
+        int sfall_func2("get_window_attribute", int winType, int attrType)
       doc: |
-        Alternative form: `int sfall_func2("get_window_attribute", int winType, int attrType)`
         Returns the attribute of the specified interface window by the `attrType` argument.
-        - `winType`: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)
-        - `attrType`: `0` - checks and returns a value of 1 if the specified interface window is created by the game (same as without the argument)
-                      `1` - X position, `2` - Y position (relative to the top-left corner of the game screen)
-                      `3` - interface width size, `4` - interface height size
-                      `5` - window ID (to compare with the `get_window_under_mouse` function)
-                      `-1` - returns an associative array of keys (left, top, right, bottom) and values that define the position of the window rectangle
-                      (use standard syntax to access array values, e.g. `winRect.top`, `winRect.bottom`)
         - returns -1 if the specified attribute cannot be obtained
+      args:
+        - name: winType
+          type: int
+          doc: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)
+        - name: attrType
+          type: int
+          doc: |-
+            `0` - checks and returns a value of 1 if the specified interface window is created by the game (same as without the argument)
+            `1` - X position, `2` - Y position (relative to the top-left corner of the game screen)
+            `3` - interface width size, `4` - interface height size
+            `5` - window ID (to compare with the `get_window_under_mouse` function)
+            `-1` - returns an associative array of keys (left, top, right, bottom) and values that define the position of the window rectangle
+            (use standard syntax to access array values, e.g. `winRect.top`, `winRect.bottom`)
+      type: int
     - name: get_window_under_mouse
       detail: int get_window_under_mouse
       doc: |-
         Returns the internal ID of the top-most window under mouse cursor.
     - name: interface_art_draw
-      detail: int sfall_func4("interface_art_draw", int winType, string artFile/int artID, int x, int y)
+      detail: |-
+        int sfall_func4("interface_art_draw", int winType, string/int artFile, int x, int y)
+        int sfall_func5("interface_art_draw", int winType, string/int artFile, int x, int y, int frame)
+        int sfall_func6("interface_art_draw", int winType, string/int artFile, int x, int y, int frame, array param)
       doc: |
-        ```c++
-        int sfall_func4("interface_art_draw", int winType, string artFile/int artID, int x, int y)
-        int sfall_func5("interface_art_draw", int winType, string artFile/int artID, int x, int y, int frame)
-        int sfall_func6("interface_art_draw", int winType, string artFile/int artID, int x, int y, int frame, array param)
-        ```
         - draws the specified PCX or FRM image in the game interface window, returns -1 on any error
-        - `winType`: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)
-          this also takes the value of the flag (0x1000000) to prevent immediate redrawing of the interface window
-        - `artFile/artId`: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
-        - `x/y`: offset relative to the top-left corner of the window
-
-        optional arguments:
-        - `frame`: frame number, the first frame starts at zero
-        - `param`: an array which specifies additional parameters, where:
-          index 0 - sprite direction for multi-directional FRM
-          index 1/index 2 - the new width/height to scale the image to. Pass -1 to use the original width/height
+      args:
+        - name: winType
+          type: int
+          doc: |-
+            the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)
+            this also takes the value of the flag (0x1000000) to prevent immediate redrawing of the interface window
+        - name: artFile
+          type: string/int
+          doc: path to the PCX/FRM file (e.g. `art\\inven\\5mmap.frm`), or its FRM ID number (e.g. `0x7000026`, see specification of the FID format)
+        - name: x
+          type: int
+          doc: horizontal offset relative to the top-left corner of the window
+        - name: y
+          type: int
+          doc: vertical offset relative to the top-left corner of the window
+        - name: frame
+          type: int
+          doc: frame number, the first frame starts at zero
+        - name: param
+          type: array
+          doc: |-
+            an array which specifies additional parameters, where:
+            index 0 - sprite direction for multi-directional FRM
+            index 1/index 2 - the new width/height to scale the image to. Pass -1 to use the original width/height
+      type: int
     - name: interface_overlay
-      detail: sfall_func2("interface_overlay", int winType, int mode)
+      detail: void sfall_func2("interface_overlay", int winType, int mode)
       doc: |
-        Alternative form: `int sfall_func6("interface_overlay", int winType, 2, int x, int y, int width, int height)`.
+        Alternative form: `void sfall_func6("interface_overlay", int winType, 2, int x, int y, int width, int height)`.
 
         Creates an additional drawing surface above the graphic layer of the specified interface window. All subsequent calls of `interface_art_draw` and `interface_print` functions will draw on it.
-        - `winType`: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)
-        - `mode`: 1 - creates a new overlay surface
-                  2 - clears the overlay area or the specified rectangle defined by the `x`, `y`, `width`, `height` arguments
-                  0 - destroys the created overlay surface (frees up the memory allocated to the surface)
+      args:
+        - name: winType
+          type: int
+          doc: the type number of the interface window (see `WINTYPE_*` constants in **sfall.h**)
+        - name: mode
+          type: int
+          doc: |-
+            1 - creates a new overlay surface
+            2 - clears the overlay area or the specified rectangle defined by the `x`, `y`, `width`, `height` arguments
+            0 - destroys the created overlay surface (frees up the memory allocated to the surface)
+      type: void
     - name: interface_print
-      detail: int sfall_func5("interface_print", string text, int winType, int x, int y, int color)
-      doc: |
-        ```c++
+      detail: |-
         int sfall_func5("interface_print", string text, int winType, int x, int y, int color)
         int sfall_func6("interface_print", string text, int winType, int x, int y, int color, int width)
-        ```
+      doc: |
         - displays the text in the specified interface window with the current font. Use vanilla `SetFont` function to set the font
         - returns the count of lines printed, or -1 on any error
-        - `text`: the text to be printed. Use the `\n` control character to move text to a new line (example: "Hello\nWorld!")
-        - `winType`: the type number of the interface window (see `WINTYPE_*` constants in sfall.h)
-        - `x/y`: offset relative to the top-left corner of the window
-        - `color`: the color index in the game palette. Pass 0 if the text color was previously set by vanilla `SetTextColor` function
-          It can also take additional flags (via `bwor`) for displaying text:
-          - `0x0010000` - adds a shadow to the text, the 'textshadow' compiler constant
-          - `0x1000000` - prevents immediate redrawing of the interface window, the `textdirect` compiler constant (works the other way around)
-          - `0x2000000` - fills the background of the text with black color, the `textnofill` compiler constant (works the other way around)
-        - `width` (optional): the maximum width of the text. The text will be wrapped to fit within the specified width
+      args:
+        - name: text
+          type: string
+          doc: 'the text to be printed. Use the `\n` control character to move text to a new line (example: "Hello\nWorld!")'
+        - name: winType
+          type: int
+          doc: the type number of the interface window (see `WINTYPE_*` constants in sfall.h)
+        - name: x
+          type: int
+          doc: horizontal offset relative to the top-left corner of the window
+        - name: y
+          type: int
+          doc: vertical offset relative to the top-left corner of the window
+        - name: color
+          type: int
+          doc: |-
+            the color index in the game palette. Pass 0 if the text color was previously set by vanilla `SetTextColor` function
+            It can also take additional flags (via `bwor`) for displaying text:
+            - `0x0010000` - adds a shadow to the text, the 'textshadow' compiler constant
+            - `0x1000000` - prevents immediate redrawing of the interface window, the `textdirect` compiler constant (works the other way around)
+            - `0x2000000` - fills the background of the text with black color, the `textnofill` compiler constant (works the other way around)
+        - name: width
+          type: int
+          doc: the maximum width of the text. The text will be wrapped to fit within the specified width
+      type: int
     - name: message_box
-      detail: int sfall_func4("message_box", string message, int flags, int color1, int color2)
+      detail: |-
+        int sfall_func1("message_box", string message)
+        int sfall_func2("message_box", string message, int flags)
+        int sfall_func3("message_box", string message, int flags, int color1)
+        int sfall_func4("message_box", string message, int flags, int color1, int color2)
       doc: |
         Creates a dialog box with text and returns the result of pressing the button: 0 - No (Escape), 1 - Yes/Done (Enter). Returns -1 if for some reason the dialog box cannot be created.
-        ```
-        - message: the text in the dialog box. Use the `\n` control character to move text to a new line (example: "Hello\nWorld!")
-        optional arguments:
-        - flags: mode flags (see `MSGBOX_*` constants in define_extra.h). Pass -1 to skip setting the flags (default flags are NORMAL and YESNO)
-        - color1/color2: the color index in the game palette. `color1` sets the text color for the first line, and `color2` for all subsequent lines of text (default color is 145)
-        ```
+      args:
+        - name: message
+          type: string
+          doc: 'the text in the dialog box. Use the `\n` control character to move text to a new line (example: "Hello\nWorld!")'
+        - name: flags
+          type: int
+          doc: mode flags (see `MSGBOX_*` constants in define_extra.h). Pass -1 to skip setting the flags (default flags are NORMAL and YESNO)
+        - name: color1
+          type: int
+          doc: the color index in the game palette for the text of the first line (default color is 145)
+        - name: color2
+          type: int
+          doc: the color index in the game palette for all subsequent lines of text (default color is 145)
+      type: int
     - name: set_window_flag
-      detail: void set_window_flag(string winName/int winID, int flag, bool value)
+      detail: void set_window_flag(string/int window, int flag, bool value)
       doc: |
         Changes the specified flag for the created script or game interface window.
-        - `winName`: the window name, assigned to the window by the `CreateWin/create_win` function
-        - `winID`: the ID number of the interface or script window obtained with the `get_window_under_mouse` function, or 0 for the current game interface
-        - `flag`: the flag to change (see `WIN_FLAG_*` constants in **define_extra.h**)
-        - `value`: True - sets the flag; False - unsets the flag
+      args:
+        - name: window
+          type: string/int
+          doc: the window name, assigned to the window by the `CreateWin/create_win` function, or the ID number of the interface or script window obtained with the `get_window_under_mouse` function, or 0 for the current game interface
+        - name: flag
+          type: int
+          doc: the flag to change (see `WIN_FLAG_*` constants in **define_extra.h**)
+        - name: value
+          type: bool
+          doc: True - sets the flag; False - unsets the flag
+      type: void
     - name: win_fill_color
       detail: int win_fill_color(int x, int y, int width, int height, int color)
       doc: |
         Fills the rectangle area of the currently selected script window with the specified color, or clears the window with transparent (index 0) color (call the function without arguments).
-        - `color`: the color index in the game palette (from 0 to 255)
+      args:
+        - name: x
+          type: int
+        - name: y
+          type: int
+        - name: width
+          type: int
+        - name: height
+          type: int
+        - name: color
+          type: int
+          doc: the color index in the game palette (from 0 to 255)
+      type: int
     - name: get_world_map_x_pos
       detail: int get_world_map_x_pos
       doc: |-
@@ -1702,114 +3508,348 @@ sfall_functions:
       detail: void set_world_map_pos(int x, int y)
       doc: |-
         The mapper manual lists the functions `world_map_x_pos` and `world_map_y_pos`, which supposedly return the player's x and y positions on the world map. `get_world_map_x/y_pos` are included here anyway, because I was unable to get those original functions to work, or even to find any evidence that they existed in game.
+      args:
+        - name: x
+          type: int
+        - name: y
+          type: int
+      type: void
     - name: call_offset_r0
       detail: int call_offset_r0(int address)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+      type: int
     - name: call_offset_r1
       detail: int call_offset_r1(int address, int arg1)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+      type: int
     - name: call_offset_r2
       detail: int call_offset_r2(int address, int arg1, int arg2)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+        - name: arg2
+          type: int
+      type: int
     - name: call_offset_r3
       detail: int call_offset_r3(int address, int arg1, int arg2, int arg3)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+        - name: arg2
+          type: int
+        - name: arg3
+          type: int
+      type: int
     - name: call_offset_r4
       detail: int call_offset_r4(int address, int arg1, int arg2, int arg3, int arg4)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+        - name: arg2
+          type: int
+        - name: arg3
+          type: int
+        - name: arg4
+          type: int
+      type: int
     - name: call_offset_v0
       detail: void call_offset_v0(int address)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+      type: void
     - name: call_offset_v1
       detail: void call_offset_v1(int address, int arg1)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+      type: void
     - name: call_offset_v2
       detail: void call_offset_v2(int address, int arg1, int arg2)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+        - name: arg2
+          type: int
+      type: void
     - name: call_offset_v3
       detail: void call_offset_v3(int address, int arg1, int arg2, int arg3)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+        - name: arg2
+          type: int
+        - name: arg3
+          type: int
+      type: void
     - name: call_offset_v4
       detail: void call_offset_v4(int address, int arg1, int arg2, int arg3, int arg4)
       doc: |-
         Can be used to call arbitrary functions inside Fallout. Different versions are used to call functions with different numbers of arguments. _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: arg1
+          type: int
+        - name: arg2
+          type: int
+        - name: arg3
+          type: int
+        - name: arg4
+          type: int
+      type: void
     - name: sfall_func0
       detail: any sfall_func0(char* funcName)
       doc: |-
         Calls script function with given name and no arguments.
+      args:
+        - name: funcName
+          type: char*
+      type: any
     - name: sfall_func1
-      detail: any sfall_func1(char* funcName, arg1)
+      detail: any sfall_func1(char* funcName, any arg1)
       doc: |-
         Calls script function with given name and 1 argument.
+      args:
+        - name: funcName
+          type: char*
+        - name: arg1
+          type: any
+      type: any
     - name: sfall_func2
-      detail: any sfall_func2(char* funcName, arg1, arg2)
+      detail: any sfall_func2(char* funcName, any arg1, any arg2)
       doc: |-
         Calls script function with given name and 2 arguments.
+      args:
+        - name: funcName
+          type: char*
+        - name: arg1
+          type: any
+        - name: arg2
+          type: any
+      type: any
     - name: sfall_func3
-      detail: any sfall_func3(char* funcName, arg1, arg2, arg3)
+      detail: any sfall_func3(char* funcName, any arg1, any arg2, any arg3)
       doc: |-
         Calls script function with given name and 3 arguments.
+      args:
+        - name: funcName
+          type: char*
+        - name: arg1
+          type: any
+        - name: arg2
+          type: any
+        - name: arg3
+          type: any
+      type: any
     - name: sfall_func4
-      detail: any sfall_func4(char* funcName, arg1, arg2, arg3, arg4)
+      detail: any sfall_func4(char* funcName, any arg1, any arg2, any arg3, any arg4)
       doc: |-
         Calls script function with given name and 4 arguments.
+      args:
+        - name: funcName
+          type: char*
+        - name: arg1
+          type: any
+        - name: arg2
+          type: any
+        - name: arg3
+          type: any
+        - name: arg4
+          type: any
+      type: any
     - name: sfall_func5
-      detail: any sfall_func5(char* funcName, arg1, arg2, arg3, arg4, arg5)
+      detail: any sfall_func5(char* funcName, any arg1, any arg2, any arg3, any arg4, any arg5)
       doc: |-
         Calls script function with given name and 5 arguments.
+      args:
+        - name: funcName
+          type: char*
+        - name: arg1
+          type: any
+        - name: arg2
+          type: any
+        - name: arg3
+          type: any
+        - name: arg4
+          type: any
+        - name: arg5
+          type: any
+      type: any
     - name: sfall_func6
-      detail: any sfall_func6(char* funcName, arg1, arg2, arg3, arg4, arg5, arg6)
+      detail: any sfall_func6(char* funcName, any arg1, any arg2, any arg3, any arg4, any arg5, any arg6)
       doc: |-
         Calls script function with given name and 6 arguments
+      args:
+        - name: funcName
+          type: char*
+        - name: arg1
+          type: any
+        - name: arg2
+          type: any
+        - name: arg3
+          type: any
+        - name: arg4
+          type: any
+        - name: arg5
+          type: any
+        - name: arg6
+          type: any
+      type: any
     - name: sfall_func7
-      detail: any sfall_func7(string funcName, arg1, arg2, arg3, arg4, arg5, arg6, arg7)
+      detail: any sfall_func7(string funcName, any arg1, any arg2, any arg3, any arg4, any arg5, any arg6, any arg7)
       doc: |-
         Calls script function with given name and 7 arguments
+      args:
+        - name: funcName
+          type: string
+        - name: arg1
+          type: any
+        - name: arg2
+          type: any
+        - name: arg3
+          type: any
+        - name: arg4
+          type: any
+        - name: arg5
+          type: any
+        - name: arg6
+          type: any
+        - name: arg7
+          type: any
+      type: any
     - name: sfall_func8
-      detail: any sfall_func8(string funcName, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+      detail: any sfall_func8(string funcName, any arg1, any arg2, any arg3, any arg4, any arg5, any arg6, any arg7, any arg8)
       doc: |-
         Calls script function with given name and 8 arguments
+      args:
+        - name: funcName
+          type: string
+        - name: arg1
+          type: any
+        - name: arg2
+          type: any
+        - name: arg3
+          type: any
+        - name: arg4
+          type: any
+        - name: arg5
+          type: any
+        - name: arg6
+          type: any
+        - name: arg7
+          type: any
+        - name: arg8
+          type: any
+      type: any
     - name: read_byte
       detail: int read_byte(int address)
       doc: |-
         These functions take a memory address as the parameter and can read arbitrary pieces of Fallout's address space.
+      args:
+        - name: address
+          type: int
+      type: int
     - name: read_int
       detail: int read_int(int address)
       doc: |-
         These functions take a memory address as the parameter and can read arbitrary pieces of Fallout's address space.
+      args:
+        - name: address
+          type: int
+      type: int
     - name: read_short
       detail: int read_short(int address)
       doc: |-
         These functions take a memory address as the parameter and can read arbitrary pieces of Fallout's address space.
+      args:
+        - name: address
+          type: int
+      type: int
     - name: read_string
       detail: int read_string(int address)
       doc: |-
         These functions take a memory address as the parameter and can read arbitrary pieces of Fallout's address space.
+      args:
+        - name: address
+          type: int
+      type: int
     - name: write_byte
       detail: void write_byte(int address, int value)
       doc: |-
         These functions take a memory address as the parameter and can write to arbitrary pieces of Fallout's address _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: write_int
       detail: void write_int(int address, int value)
       doc: |-
         These functions take a memory address as the parameter and can write to arbitrary pieces of Fallout's address _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: write_short
       detail: void write_short(int address, int value)
       doc: |-
         These functions take a memory address as the parameter and can write to arbitrary pieces of Fallout's address _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: value
+          type: int
+      type: void
     - name: write_string
       detail: void write_string(int address, string value)
       doc: |-
         These functions take a memory address as the parameter and can write to arbitrary pieces of Fallout's address _None of these functions will work unless_ `AllowUnsafeScripting` _is enabled in_ `ddraw.ini`.
+      args:
+        - name: address
+          type: int
+        - name: value
+          type: string
+      type: void
 hooks:
   type: 21
   items:

@@ -12,9 +12,10 @@ sfall_repo="https://github.com/sfall-team/sfall.git"
 # commit: the two pins move for different reasons, and moving the corpus pin forces the
 # committed compiler oracles to be regenerated.
 sfall_dir="external/sfall-data"
-# Pinned so a regeneration of the tracked sfall data is reproducible; bump it deliberately
-# to the commit of an sfall release tag.
-sfall_commit="6c65e67342bda1488671601e417194199ec72a09" # sfall v4.5.1
+# Pinned so a regeneration of the tracked sfall data is reproducible; bump it deliberately,
+# normally to the commit of an sfall release tag. This one is a master commit past v4.5.1: no
+# release yet carries the per-argument documentation (type, args, metarule) functions.yml now has.
+sfall_commit="3c4e24f294a13d38d77ba23842cf376c913ead40" # sfall master, 2026-11-02
 sfall_file="server/data/fallout-ssl-sfall.yml"
 
 checkout_pinned_repo "$sfall_repo" "$sfall_commit" "$sfall_dir"

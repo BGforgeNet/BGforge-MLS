@@ -729,6 +729,8 @@ repository:
       - match: \b(?i)(hero_select_win)\b
       - match: \b(?i)(hide_iface_tag)\b
       - match: \b(?i)(hide_real_perks)\b
+      - match: \b(?i)(hide_win)\b
+      - match: \b(?i)(hide_window)\b
       - match: \b(?i)(in_world_map)\b
       - match: \b(?i)(inc_npc_level)\b
       - match: \b(?i)(init_hook)\b
@@ -795,9 +797,11 @@ repository:
       - match: \b(?i)(register_hook)\b
       - match: \b(?i)(register_hook_proc)\b
       - match: \b(?i)(register_hook_proc_spec)\b
+      - match: \b(?i)(remove_all_timer_events)\b
       - match: \b(?i)(remove_attacker_knockback)\b
       - match: \b(?i)(remove_script)\b
       - match: \b(?i)(remove_target_knockback)\b
+      - match: \b(?i)(remove_timer_event)\b
       - match: \b(?i)(remove_trait)\b
       - match: \b(?i)(remove_weapon_knockback)\b
       - match: \b(?i)(remove_wm_town_names)\b
@@ -948,6 +952,8 @@ repository:
       - match: \b(?i)(sfall_ver_minor)\b
       - match: \b(?i)(show_iface_tag)\b
       - match: \b(?i)(show_real_perks)\b
+      - match: \b(?i)(show_win)\b
+      - match: \b(?i)(show_window)\b
       - match: \b(?i)(signal_close_game)\b
       - match: \b(?i)(sin)\b
       - match: \b(?i)(sneak_success)\b
@@ -956,6 +962,8 @@ repository:
       - match: \b(?i)(sqrt)\b
       - match: \b(?i)(stop_game)\b
       - match: \b(?i)(stop_sfall_sound)\b
+      - match: \b(?i)(string_compare)\b
+      - match: \b(?i)(string_compare_locale)\b
       - match: \b(?i)(string_find)\b
       - match: \b(?i)(string_find_from)\b
       - match: \b(?i)(string_format)\b

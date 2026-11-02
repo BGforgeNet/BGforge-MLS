@@ -2440,6 +2440,14 @@
           "name": "support.function.fallout-ssl.sfall"
         },
         {
+          "match": "\\b(?i)(hide_win)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(hide_window)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
           "match": "\\b(?i)(in_world_map)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
@@ -2704,6 +2712,10 @@
           "name": "support.function.fallout-ssl.sfall"
         },
         {
+          "match": "\\b(?i)(remove_all_timer_events)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
           "match": "\\b(?i)(remove_attacker_knockback)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
@@ -2713,6 +2725,10 @@
         },
         {
           "match": "\\b(?i)(remove_target_knockback)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(remove_timer_event)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
         {
@@ -3316,6 +3332,14 @@
           "name": "support.function.fallout-ssl.sfall"
         },
         {
+          "match": "\\b(?i)(show_win)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(show_window)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
           "match": "\\b(?i)(signal_close_game)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
@@ -3345,6 +3369,14 @@
         },
         {
           "match": "\\b(?i)(stop_sfall_sound)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(string_compare)\\b",
+          "name": "support.function.fallout-ssl.sfall"
+        },
+        {
+          "match": "\\b(?i)(string_compare_locale)\\b",
           "name": "support.function.fallout-ssl.sfall"
         },
         {
