@@ -172,13 +172,19 @@ export function convertOperatorsAST(node: Node, ctx?: TsslContext): string {
             return `{${properties}}`;
         }
 
-        // Handle conditional expressions (ternary)
+        // SSL has no `?:`: its conditional expression is `value if (condition) else other`. Every operand
+        // and the whole are parenthesised, so neither SSL's precedence nor the splice into a macro body
+        // can regroup what TypeScript grouped; a nested conditional brings its own pair.
         case SyntaxKind.ConditionalExpression: {
             const conditional = node.asKindOrThrow(SyntaxKind.ConditionalExpression);
-            const condition = convertOperatorsAST(conditional.getCondition(), ctx);
-            const whenTrue = convertOperatorsAST(conditional.getWhenTrue(), ctx);
-            const whenFalse = convertOperatorsAST(conditional.getWhenFalse(), ctx);
-            return `(${condition}) ? ${whenTrue} : ${whenFalse}`;
+            const operand = (part: Node): string => {
+                const text = convertOperatorsAST(part, ctx);
+                return part.getKind() === SyntaxKind.ConditionalExpression ? text : `(${text})`;
+            };
+            const condition = operand(conditional.getCondition());
+            const whenTrue = operand(conditional.getWhenTrue());
+            const whenFalse = operand(conditional.getWhenFalse());
+            return `(${whenTrue} if ${condition} else ${whenFalse})`;
         }
 
         case SyntaxKind.PropertyAccessExpression: {

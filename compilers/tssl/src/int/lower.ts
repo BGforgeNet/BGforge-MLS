@@ -918,6 +918,20 @@ class TsslLowering {
                     scope,
                 );
 
+            // Lowered condition first, as the SSL front end lowers the `value if (condition) else other`
+            // the text route writes; but the string table follows the order that text MENTIONS literals,
+            // value before condition, so the condition's strings are interned after the value's.
+            case SyntaxKind.ConditionalExpression: {
+                const conditional = node.asKindOrThrow(SyntaxKind.ConditionalExpression);
+                const mark = this.strings.length;
+                const cond = this.lowerExpression(conditional.getCondition(), scope);
+                const condStrings = this.strings.splice(mark);
+                const whenTrue = this.lowerExpression(conditional.getWhenTrue(), scope);
+                this.strings.push(...condStrings);
+                const whenFalse = this.lowerExpression(conditional.getWhenFalse(), scope);
+                return { kind: "ternary", cond, whenTrue, whenFalse };
+            }
+
             case SyntaxKind.BinaryExpression: {
                 const binary = node.asKindOrThrow(SyntaxKind.BinaryExpression);
                 const operator = binary.getOperatorToken().getText();

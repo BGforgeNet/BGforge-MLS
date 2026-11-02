@@ -79,9 +79,17 @@ describe("operator mappings", () => {
         expect(out).toContain("{1000: 5}");
     });
 
-    it("keeps ternaries with a parenthesized condition", async () => {
+    // SSL has no `?:`; its conditional expression is `value if (condition) else other`. Whether the reference
+    // compiler accepts this and agrees with the bytecode route is tssl-reference.test.ts; this pins the parentheses.
+    it("writes a ternary as SSL's conditional expression, every operand parenthesised", async () => {
         const out = await emit(`function start() {\n    let x = global_var(1) ? 10 : 20;\n}\n`);
-        expect(out).toContain("(global_var(1)) ? 10 : 20");
+        expect(out).toContain("variable x = ((10) if (global_var(1)) else (20));");
+    });
+
+    // A nested conditional is already wrapped whole, so it takes no second pair as an operand.
+    it("nests a ternary chain without doubling its parentheses", async () => {
+        const out = await emit(`function start() {\n    let x = global_var(1) ? 1 : global_var(2) ? 2 : 3;\n}\n`);
+        expect(out).toContain("variable x = ((1) if (global_var(1)) else ((2) if (global_var(2)) else (3)));");
     });
 });
 

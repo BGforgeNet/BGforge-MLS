@@ -51,7 +51,7 @@ TypeScript   SSL         Description
 +  -  *  /  %           unchanged
 =  +=  -=  *=  /=       unchanged
 ++  --                   unchanged
-? :                      ternary (supported)
+c ? a : b    (a) if (c) else (b)   conditional expression
 
 === ENUMS ===
 

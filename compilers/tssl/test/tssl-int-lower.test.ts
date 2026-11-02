@@ -114,6 +114,28 @@ describe("declarations", () => {
         ]);
     });
 
+    // TypeScript's `?:` is right-associative: the chain is `a ? 1 : (b ? 2 : 3)`, not `(a ? 1 : b) ? 2 : 3`.
+    it("lowers a ternary chain with the nested conditional as the alternative", () => {
+        const program = lower(
+            "function start(a: number, b: number) {\n    let x = 0;\n    x = a ? 1 : b ? 2 : 3;\n}\n",
+        );
+        const [first] = program.declarations;
+        if (first?.kind !== "procedure") throw new Error("expected a procedure");
+        const assignment = first.procedure.body[0];
+        if (assignment?.kind !== "assign") throw new Error("expected an assignment");
+        expect(assignment.value).toEqual({
+            kind: "ternary",
+            cond: { kind: "var", scope: "local", index: 0, name: "a" },
+            whenTrue: { kind: "int", value: 1 },
+            whenFalse: {
+                kind: "ternary",
+                cond: { kind: "var", scope: "local", index: 1, name: "b" },
+                whenTrue: { kind: "int", value: 2 },
+                whenFalse: { kind: "int", value: 3 },
+            },
+        });
+    });
+
     it("lowers a left shift by a literal count to a multiply, SSL having no shift", () => {
         const program = lower("function start() {\n    let x = 0;\n    x = 5 << 12;\n}\n");
         const [first] = program.declarations;

@@ -179,11 +179,11 @@ Operators that pass through unchanged: `==`, `!=`, `<`, `>`, `<=`, `>=`, `+`, `-
 SSL has no shift operator. `<<` takes an integer literal count from 0 to 31 and compiles to a multiply by that power
 of two. `>>` and `>>>` are refused: for a non-negative value, divide by a power of two instead.
 
-**Ternary operator** is supported:
+**Ternary operator** is supported, written as SSL's conditional expression:
 
 ```typescript
 const result = x > 0 ? a : b;
-// -> #define result (x > 0) ? a : b
+// -> #define result ((a) if (x > 0) else (b))
 ```
 
 ### Enums

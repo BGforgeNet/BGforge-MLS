@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Transpilers
+
+- A TSSL ternary `c ? a : b` compiles, to `.int` and to `.ssl`; before, both refused it.
+
 ## 3.19.1
 
 ### Transpilers
