@@ -14,7 +14,7 @@ function state0() {
 function state1() {
   say(tra(23))
   // @26 = ~~
-  reply(tra(24)).action(SetNumTimesTalkedTo(0), action_bg1_bags, EscapeArea()).journal(tra(26)).exit()
+  reply(tra(24)).action(SetNumTimesTalkedTo(0), EscapeArea()).journal(tra(26)).exit()
 }
 
 function state2() {

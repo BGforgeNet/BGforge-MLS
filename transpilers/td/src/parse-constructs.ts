@@ -22,8 +22,18 @@ import {
     type TDInterject,
     type TDReplaceStates,
 } from "./types";
-import type { VarsContext } from "../../common/transpiler-utils";
-import { getCallArg, resolveStringExpr, parseBooleanOption, parseRequiredNumber } from "./parse-helpers";
+import { evaluate, type Scope } from "../../common/compile-time-eval";
+import { describeKind, type Value } from "../../common/compile-time-value";
+import {
+    blockScope,
+    booleanOption,
+    getCallArg,
+    integerOf,
+    nameOf,
+    optionalCallArg,
+    optionsOf,
+    stateLabelOf,
+} from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
 import {
     type FuncsContext,
@@ -34,26 +44,30 @@ import {
 import { processChainStatements } from "./chain-processing";
 import { lineNumberOfNode } from "../../common/line-index";
 
+/** What a construct transform reads: the function registry, and the scope its arguments are evaluated in. */
+interface ConstructContext {
+    readonly funcs: FuncsContext;
+    readonly scope: Scope;
+}
+
 /**
  * Transform begin(filename, [states]) or begin(filename, s1, s2, ...) to BEGIN.
  * Supports array form, rest-args form, and object form.
  */
-export function transformBegin(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression,
-): TDConstruct[] | null {
+export function transformBegin(ctx: ConstructContext, call: CallExpression): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 2) {
         throw TranspileError.fromNode(call, `begin() requires at least 2 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
+    const filename = nameOf(getCallArg(args, 0, call), ctx.scope, "a dialog file name");
     const states: TDState[] = [];
 
     // Check for options as last argument (distinguished from object-form states)
     const lastArg = args[args.length - 1];
     const hasOptionsArg = lastArg && Node.isObjectLiteralExpression(lastArg) && !isObjectWithMethods(lastArg);
-    const nonPausing = hasOptionsArg ? parseBooleanOption(lastArg, "nonPausing") || undefined : undefined;
+    const options = hasOptionsArg ? optionsOf(lastArg, ctx.scope, ["nonPausing"], "begin") : new Map<string, Value>();
+    const nonPausing = booleanOption(options, "nonPausing", call) || undefined;
     const stateArgs = hasOptionsArg ? args.slice(1, -1) : args.slice(1);
 
     // Process state arguments
@@ -77,24 +91,23 @@ export function transformBegin(
  * Transform append/appendEarly to APPEND construct.
  * Supports array form, rest-args form, single function, and object form.
  */
-export function transformAppend(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression,
-    isEarly: boolean,
-): TDConstruct[] | null {
+export function transformAppend(ctx: ConstructContext, call: CallExpression, isEarly: boolean): TDConstruct[] | null {
     const funcName = isEarly ? "appendEarly" : "append";
     const args = call.getArguments();
     if (args.length < 2) {
         throw TranspileError.fromNode(call, `${funcName}() requires at least 2 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
+    const filename = nameOf(getCallArg(args, 0, call), ctx.scope, "a dialog file name");
     const states: TDState[] = [];
 
     // Check for options as last argument (distinguished from object-form states)
     const lastArg = args[args.length - 1];
     const hasOptionsArg = lastArg && Node.isObjectLiteralExpression(lastArg) && !isObjectWithMethods(lastArg);
-    const ifFileExists = hasOptionsArg ? parseBooleanOption(lastArg, "ifFileExists") || undefined : undefined;
+    const options = hasOptionsArg
+        ? optionsOf(lastArg, ctx.scope, ["ifFileExists"], funcName)
+        : new Map<string, Value>();
+    const ifFileExists = booleanOption(options, "ifFileExists", call) || undefined;
     const stateArgs = hasOptionsArg ? args.slice(1, -1) : args.slice(1);
 
     // Process state arguments
@@ -114,17 +127,14 @@ export function transformAppend(
 /**
  * Transform replaceState(dialog, stateNum, body) to a patch that replaces a state.
  */
-export function transformReplaceState(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression,
-): TDConstruct[] | null {
+export function transformReplaceState(ctx: ConstructContext, call: CallExpression): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 3) {
         throw TranspileError.fromNode(call, `replaceState() requires 3 arguments (dialog, stateNum, body)`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
-    const stateNum = parseRequiredNumber(args[1]!, "replaceState stateNum", lineNumberOfNode(call));
+    const filename = nameOf(getCallArg(args, 0, call), ctx.scope, "a dialog file name");
+    const stateNum = integerOf(getCallArg(args, 1, call), ctx.scope, "replaceState()'s state number");
     const bodyArg = args[2];
 
     if (!Node.isArrowFunction(bodyArg) && !Node.isFunctionExpression(bodyArg)) {
@@ -146,8 +156,10 @@ export function transformReplaceState(
         line: lineNumberOfNode(call) - 1,
     };
 
-    for (const s of body.getStatements()) {
-        processStateStatement(s, state, ctx.vars, ctx.funcs);
+    const statements = body.getStatements();
+    const scope = blockScope(ctx.scope, statements);
+    for (const s of statements) {
+        processStateStatement(s, state, scope, ctx.funcs);
     }
 
     const operation: TDReplaceStates = {
@@ -166,19 +178,15 @@ export function transformReplaceState(
  *   extendBottom(filename, state, options, transitions)
  *   extendBottom(filename, state, transitions)
  */
-export function transformExtend(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression,
-    isTop: boolean,
-): TDConstruct[] | null {
+export function transformExtend(ctx: ConstructContext, call: CallExpression, isTop: boolean): TDConstruct[] | null {
     const funcName = isTop ? "extendTop" : "extendBottom";
     const args = call.getArguments();
     if (args.length < 3) {
         throw TranspileError.fromNode(call, `${funcName}() requires at least 3 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
-    const stateLabel = resolveStringExpr(getCallArg(args, 1, call), ctx.vars);
+    const filename = nameOf(getCallArg(args, 0, call), ctx.scope, "a dialog file name");
+    const stateLabel = stateLabelOf(getCallArg(args, 1, call), ctx.scope);
 
     // Check if 3rd arg is options object or transitions function
     let position: number | undefined;
@@ -186,20 +194,18 @@ export function transformExtend(
 
     if (args.length === 4) {
         // 4 args: filename, state, options, transitions
-        const optionsArg = args[2];
         transitionsArg = getCallArg(args, 3, call);
-
-        // Parse options object { position: N }
-        if (Node.isObjectLiteralExpression(optionsArg)) {
-            const props = optionsArg.getProperties();
-            for (const prop of props) {
-                if (Node.isPropertyAssignment(prop)) {
-                    const name = prop.getName();
-                    if (name === "position") {
-                        position = Number(prop.getInitializer()?.getText());
-                    }
-                }
+        const optionsArg = getCallArg(args, 2, call);
+        const options = optionsOf(optionsArg, ctx.scope, ["position"], funcName);
+        const positionValue = options.get("position");
+        if (positionValue !== undefined) {
+            if (positionValue.kind !== "int") {
+                throw TranspileError.fromNode(
+                    optionsArg,
+                    `a position is an integer, not ${describeKind(positionValue)}`,
+                );
             }
+            position = positionValue.value;
         }
     } else if (args.length === 3) {
         // 3 args: filename, state, transitions
@@ -214,7 +220,8 @@ export function transformExtend(
         const body = transitionsArg.getBody();
         if (Node.isBlock(body)) {
             // Process all statements together to build transitions
-            processExtendStatements(body.getStatements(), transitions, ctx.vars);
+            const statements = body.getStatements();
+            processExtendStatements(statements, transitions, blockScope(ctx.scope, statements));
         }
     } else {
         throw TranspileError.fromNode(call, `${funcName}() transitions argument must be an arrow function`);
@@ -238,7 +245,7 @@ export function transformExtend(
  * interjectCopyTrans2(entryFile, entryLabel, globalVar, chainFunc)
  */
 export function transformInterject(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
+    ctx: ConstructContext,
     call: CallExpression,
     type: TDConstructType.Interject | TDConstructType.InterjectCopyTrans | TDConstructType.InterjectCopyTrans2,
 ): TDConstruct[] | null {
@@ -255,13 +262,15 @@ export function transformInterject(
         throw TranspileError.fromNode(call, `${funcName}() requires at least ${minArgs} arguments`);
     }
 
-    const entryFile = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
-    const entryLabel = resolveStringExpr(getCallArg(args, 1, call), ctx.vars);
-    const globalVar = resolveStringExpr(getCallArg(args, 2, call), ctx.vars);
+    const entryFile = nameOf(getCallArg(args, 0, call), ctx.scope, "a dialog file name");
+    const entryLabel = stateLabelOf(getCallArg(args, 1, call), ctx.scope);
+    const globalVar = nameOf(getCallArg(args, 2, call), ctx.scope, "an interjection's variable name");
     const chainFunc = args[3];
 
     // Check for safe option (interjectCopyTrans only, arg 5)
-    const safe = type === TDConstructType.InterjectCopyTrans && parseBooleanOption(args[4], "safe");
+    const safe =
+        type === TDConstructType.InterjectCopyTrans &&
+        booleanOption(optionsOf(optionalCallArg(args, 4, call), ctx.scope, ["safe"], funcName), "safe", call);
 
     // Parse chain function body to get entries
     const entries: TDChainEntry[] = [];
@@ -270,7 +279,7 @@ export function transformInterject(
         const body = chainFunc.getBody();
         if (Node.isBlock(body)) {
             const statements = body.getStatements();
-            const currentEntry = processChainStatements(statements, entries, null, ctx.vars);
+            const currentEntry = processChainStatements(statements, entries, null, blockScope(ctx.scope, statements));
 
             // Push final entry
             if (currentEntry) {
@@ -287,8 +296,8 @@ export function transformInterject(
     // copy, so WeiDU terminates it with a bare END and accepts no epilogue in that position.
     let epilogue: TDChainEpilogue | undefined;
     if (type === TDConstructType.Interject) {
-        const exitFile = resolveStringExpr(getCallArg(args, 4, call), ctx.vars);
-        const exitLabel = resolveStringExpr(getCallArg(args, 5, call), ctx.vars);
+        const exitFile = nameOf(getCallArg(args, 4, call), ctx.scope, "a dialog file name");
+        const exitLabel = stateLabelOf(getCallArg(args, 5, call), ctx.scope);
         epilogue = {
             type: TDEpilogueType.End,
             filename: exitFile,
@@ -323,67 +332,64 @@ function isObjectWithMethods(node: Node): boolean {
  * Supports: array literal, rest-args (identifiers), object-with-methods form,
  * and inline state() calls.
  */
-function collectStatesFromArgs(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    stateArgs: Node[],
-    states: TDState[],
-    funcName: string,
-): void {
+function collectStatesFromArgs(ctx: ConstructContext, stateArgs: Node[], states: TDState[], funcName: string): void {
     for (const arg of stateArgs) {
         if (Node.isArrayLiteralExpression(arg)) {
             // Array of state references: [s1, s2, state("label", () => {...})]
             for (const element of arg.getElements()) {
-                if (Node.isCallExpression(element) && element.getExpression().getText() === "state") {
+                if (isInlineState(element)) {
                     collectInlineState(ctx, element, states);
                 } else {
-                    collectSingleStateRef(ctx, element, states, funcName);
+                    collectStateRefs(ctx, element, states, funcName);
                 }
             }
-        } else if (Node.isCallExpression(arg) && arg.getExpression().getText() === "state") {
+        } else if (isInlineState(arg)) {
             // Inline state: begin("DLG", state("label", () => {...}))
             collectInlineState(ctx, arg, states);
-        } else if (Node.isIdentifier(arg)) {
-            // Rest-args form: begin("DLG", s1, s2, s3)
-            collectSingleStateRef(ctx, arg, states, funcName);
         } else if (Node.isObjectLiteralExpression(arg)) {
             // Object form: begin("DLG", { s1() {...}, s2() {...} })
             for (const prop of arg.getProperties()) {
-                if (Node.isMethodDeclaration(prop)) {
-                    const name = prop.getName();
-                    const body = prop.getBody();
-                    if (!body || !Node.isBlock(body)) continue;
-
-                    const state: TDState = {
-                        label: name,
-                        say: [],
-                        transitions: [],
-                    };
-
-                    for (const s of body.getStatements()) {
-                        processStateStatement(s, state, ctx.vars, ctx.funcs);
-                    }
-
-                    states.push(state);
+                if (!Node.isMethodDeclaration(prop)) {
+                    throw TranspileError.fromNode(prop, `an object of states holds methods, one per state`);
                 }
+                const body = prop.getBody();
+                if (!body || !Node.isBlock(body)) continue;
+
+                const state: TDState = {
+                    label: prop.getName(),
+                    say: [],
+                    transitions: [],
+                };
+
+                const statements = body.getStatements();
+                const scope = blockScope(ctx.scope, statements);
+                for (const s of statements) {
+                    processStateStatement(s, state, scope, ctx.funcs);
+                }
+
+                states.push(state);
             }
+        } else {
+            // Rest-args form: begin("DLG", s1, s2, s3)
+            collectStateRefs(ctx, arg, states, funcName);
         }
     }
+}
+
+function isInlineState(node: Node): node is CallExpression {
+    return Node.isCallExpression(node) && node.getExpression().getText() === "state";
 }
 
 /**
  * Process an inline state() call expression: state("label", () => { ... })
  */
-function collectInlineState(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression,
-    states: TDState[],
-): void {
+function collectInlineState(ctx: ConstructContext, call: CallExpression, states: TDState[]): void {
     const args = call.getArguments();
     if (args.length < 2) {
         throw TranspileError.fromNode(call, `state() requires 2 arguments (label, body)`);
     }
 
-    const label = resolveStringExpr(getCallArg(args, 0, call), ctx.vars);
+    const label = stateLabelOf(getCallArg(args, 0, call), ctx.scope);
     const bodyArg = args[1];
 
     if (!Node.isArrowFunction(bodyArg) && !Node.isFunctionExpression(bodyArg)) {
@@ -401,31 +407,53 @@ function collectInlineState(
         transitions: [],
     };
 
-    for (const s of body.getStatements()) {
-        processStateStatement(s, state, ctx.vars, ctx.funcs);
+    const statements = body.getStatements();
+    const scope = blockScope(ctx.scope, statements);
+    for (const s of statements) {
+        processStateStatement(s, state, scope, ctx.funcs);
     }
 
     states.push(state);
 }
 
-/**
- * Resolve a single state reference (identifier) to a TDState and push it.
- */
-function collectSingleStateRef(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    element: Node,
-    states: TDState[],
-    funcName: string,
-): void {
-    if (Node.isIdentifier(element)) {
-        const refName = element.getText();
-        const funcInfo = ctx.funcs.get(refName);
-        if (!funcInfo) {
-            throw TranspileError.fromNode(element, `Function "${refName}" not found in ${funcName}()`);
-        }
-        const state = transformFunctionToState(funcInfo.func, ctx.vars, ctx.funcs, funcInfo.trigger);
-        if (state) {
-            states.push(state);
-        }
+/** The states an expression references: a state function, or an array of them. */
+function collectStateRefs(ctx: ConstructContext, element: Node, states: TDState[], funcName: string): void {
+    if (!Node.isExpression(element)) {
+        throw TranspileError.fromNode(element, `${element.getKindName()} is not a state reference`);
+    }
+    const value = evaluate(element, ctx.scope);
+    const refs = value.kind === "array" ? value.items : [value];
+    for (const ref of refs) {
+        const state = stateOf(ctx, ref, element, funcName);
+        if (state) states.push(state);
     }
 }
+
+/**
+ * The state a function the source declares stands for. A reference that evaluates to the function brings its
+ * closure; a name only (a body-less `declare function`) finds it in the registry, which knows the closure of a
+ * function at module level or in a module-level `if`.
+ */
+function stateOf(ctx: ConstructContext, ref: Value, node: Node, funcName: string): TDState | null {
+    if (ref.kind === "function") {
+        const registered = ctx.funcs.get(ref.name);
+        const trigger = registered?.func === ref.declaration ? registered.trigger : undefined;
+        return transformFunctionToState(ref.declaration, ref.closure, ctx.funcs, trigger);
+    }
+    if (ref.kind !== "symbol") {
+        throw TranspileError.fromNode(node, `${funcName}() takes state functions, not ${describeKind(ref)}`);
+    }
+    const funcInfo = ctx.funcs.get(ref.name);
+    if (!funcInfo) {
+        throw TranspileError.fromNode(node, `Function "${ref.name}" not found in ${funcName}()`);
+    }
+    if (funcInfo.closure === undefined) {
+        throw TranspileError.fromNode(
+            node,
+            `the state '${ref.name}' is declared where ${funcName}() cannot reach it; declare it at module level`,
+        );
+    }
+    return transformFunctionToState(funcInfo.func, funcInfo.closure, ctx.funcs, funcInfo.trigger);
+}
+
+export type { ConstructContext };

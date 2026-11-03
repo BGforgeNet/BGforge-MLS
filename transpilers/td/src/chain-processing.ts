@@ -17,22 +17,48 @@ import {
     SyntaxKind,
 } from "ts-morph";
 import { TDEpilogueType, TDConstructType, type TDChain, type TDChainEntry, type TDChainEpilogue } from "./types";
-import * as utils from "../../common/transpiler-utils";
-import type { VarsContext } from "../../common/transpiler-utils";
-import { getCallArg, getCallArgs, resolveStringExpr, expressionToActionString, validateArgs } from "./parse-helpers";
+import type { Scope } from "../../common/compile-time-eval";
+import { getBlockStatements } from "../../common/transpiler-utils";
+import {
+    actionsOf,
+    blockScope,
+    getCallArg,
+    getCallArgs,
+    isDeclaration,
+    nameOf,
+    stateLabelOf,
+    validateArgs,
+} from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import { expressionToTrigger, expressionToText } from "./expression-eval";
+import { ENTRY, requiredTriggerOf, textOf } from "./expression-eval";
 import { lineNumberOfNode } from "../../common/line-index";
 
 /** TD say keyword constant */
 const SAY_KEYWORD = "say";
 
+/** The call an expression statement in a chain body makes; any other statement is refused. */
+function chainCall(stmt: Statement): CallExpression {
+    if (!stmt.isKind(SyntaxKind.ExpressionStatement)) {
+        throw TranspileError.fromNode(stmt, `${stmt.getKindName()} is not supported in a chain body`);
+    }
+    const expr = stmt.getExpression();
+    if (!Node.isCallExpression(expr)) {
+        throw TranspileError.fromNode(stmt, `${expr.getKindName()} is not supported in a chain body`);
+    }
+    return expr;
+}
+
+function notAChainStatement(expr: CallExpression): TranspileError {
+    return TranspileError.fromNode(expr, `'${expr.getExpression().getText()}()' is not a TD chain statement`);
+}
+
 /**
  * Transform a function to a CHAIN.
+ * @param closure The scope the function's body reads names from.
  */
 function transformFunctionToChain(
     func: FunctionDeclaration | FunctionExpression,
-    vars: VarsContext,
+    closure: Scope,
     entryTrigger?: string,
 ): TDChain | null {
     const name = func.getName();
@@ -47,48 +73,51 @@ function transformFunctionToChain(
     let currentEntry: TDChainEntry | null = null;
     let epilogue: TDChainEpilogue = { type: TDEpilogueType.Exit };
 
-    for (const stmt of body.getStatements()) {
-        if (stmt.isKind(SyntaxKind.ExpressionStatement)) {
-            const expr = stmt.getExpression();
-            if (Node.isCallExpression(expr)) {
-                const funcName = expr.getExpression().getText();
-                const args = expr.getArguments();
-
-                if (funcName === SAY_KEYWORD) {
-                    currentEntry = processSayInChain(args, expr, currentEntry, entries, vars);
-                    // Extract filename from first speaker
-                    if (!filename && currentEntry?.speaker) {
-                        filename = currentEntry.speaker;
-                    }
-                } else if (funcName === "action") {
-                    // Action after current entry
-                    if (args.length === 0) {
-                        throw TranspileError.fromNode(expr, `action() requires at least 1 argument`);
-                    }
-                    if (!currentEntry) {
-                        throw TranspileError.fromNode(expr, `action() must come after a say() statement`);
-                    }
-                    currentEntry.action = args.map((a) => a.getText()).join(" ");
-                } else if (funcName === "exit") {
-                    epilogue = { type: TDEpilogueType.Exit };
-                } else if (funcName === "goTo") {
-                    if (args.length < 1 || !args[0]) {
-                        throw TranspileError.fromNode(expr, `goTo() requires at least 1 argument`);
-                    }
-                    epilogue = {
-                        type: TDEpilogueType.End,
-                        filename,
-                        target: args[0].getText(),
-                    };
-                }
-            }
-        } else if (stmt.isKind(SyntaxKind.IfStatement)) {
+    const statements = body.getStatements();
+    const scope = blockScope(closure, statements);
+    for (const stmt of statements) {
+        if (isDeclaration(stmt)) continue;
+        if (stmt.isKind(SyntaxKind.IfStatement)) {
             // Conditional in chain - push current entry first to preserve order
             if (currentEntry) {
                 entries.push(currentEntry);
                 currentEntry = null;
             }
-            processChainIf(stmt, entries, vars);
+            processChainIf(stmt, entries, scope);
+            continue;
+        }
+        const expr = chainCall(stmt);
+        const funcName = expr.getExpression().getText();
+        const args = expr.getArguments();
+
+        if (funcName === SAY_KEYWORD) {
+            currentEntry = processSayInChain(args, expr, currentEntry, entries, scope);
+            // Extract filename from first speaker
+            if (!filename && currentEntry?.speaker) {
+                filename = currentEntry.speaker;
+            }
+        } else if (funcName === "action") {
+            // Action after current entry
+            if (args.length === 0) {
+                throw TranspileError.fromNode(expr, `action() requires at least 1 argument`);
+            }
+            if (!currentEntry) {
+                throw TranspileError.fromNode(expr, `action() must come after a say() statement`);
+            }
+            currentEntry.action = actionsOf(getCallArgs(args, expr), scope);
+        } else if (funcName === "exit") {
+            epilogue = { type: TDEpilogueType.Exit };
+        } else if (funcName === "goTo") {
+            if (args.length < 1 || !args[0]) {
+                throw TranspileError.fromNode(expr, `goTo() requires at least 1 argument`);
+            }
+            epilogue = {
+                type: TDEpilogueType.End,
+                filename,
+                target: stateLabelOf(getCallArg(args, 0, expr), scope),
+            };
+        } else {
+            throw notAChainStatement(expr);
         }
     }
 
@@ -116,7 +145,7 @@ function processSayInChain(
     expr: CallExpression,
     currentEntry: TDChainEntry | null,
     entries: TDChainEntry[],
-    vars: VarsContext,
+    scope: Scope,
     options?: { trigger?: string },
 ): TDChainEntry | null {
     if (args.length >= 2 && args[0] && args[1]) {
@@ -125,8 +154,8 @@ function processSayInChain(
             entries.push(currentEntry);
         }
         const newEntry: TDChainEntry = {
-            speaker: utils.stripQuotes(args[0].getText()),
-            texts: [expressionToText(getCallArg(args, 1, expr), vars)],
+            speaker: nameOf(getCallArg(args, 0, expr), scope, "a speaker"),
+            texts: [textOf(getCallArg(args, 1, expr), scope)],
         };
         if (options?.trigger) {
             newEntry.trigger = options.trigger;
@@ -137,7 +166,7 @@ function processSayInChain(
         if (!currentEntry) {
             throw TranspileError.fromNode(expr, `say(text) without speaker - must use say(speaker, text) first`);
         }
-        currentEntry.texts.push(expressionToText(getCallArg(args, 0, expr), vars));
+        currentEntry.texts.push(textOf(getCallArg(args, 0, expr), scope));
         return currentEntry;
     } else {
         throw TranspileError.fromNode(expr, `say() requires at least 1 argument`);
@@ -152,28 +181,23 @@ function processChainStatements(
     statements: Statement[],
     entries: TDChainEntry[],
     currentEntry: TDChainEntry | null,
-    vars: VarsContext,
+    scope: Scope,
     options?: { trigger?: string },
 ): TDChainEntry | null {
     for (const stmt of statements) {
-        if (stmt.isKind(SyntaxKind.ExpressionStatement)) {
-            const expr = stmt.getExpression();
-            if (Node.isCallExpression(expr)) {
-                const funcName = expr.getExpression().getText();
-                const args = expr.getArguments();
-
-                if (funcName === SAY_KEYWORD) {
-                    currentEntry = processSayInChain(args, expr, currentEntry, entries, vars, options);
-                }
-            }
-        } else if (stmt.isKind(SyntaxKind.IfStatement)) {
+        if (isDeclaration(stmt)) continue;
+        if (stmt.isKind(SyntaxKind.IfStatement)) {
             // Push current entry before processing conditional
             if (currentEntry) {
                 entries.push(currentEntry);
                 currentEntry = null;
             }
-            processChainIf(stmt, entries, vars);
+            processChainIf(stmt, entries, scope);
+            continue;
         }
+        const expr = chainCall(stmt);
+        if (expr.getExpression().getText() !== SAY_KEYWORD) throw notAChainStatement(expr);
+        currentEntry = processSayInChain(expr.getArguments(), expr, currentEntry, entries, scope, options);
     }
 
     return currentEntry;
@@ -182,11 +206,16 @@ function processChainStatements(
 /**
  * Process an if statement inside a chain (conditional text).
  */
-function processChainIf(ifStmt: IfStatement, entries: TDChainEntry[], vars: VarsContext) {
-    const trigger = expressionToTrigger(ifStmt.getExpression(), vars);
-    const thenStmts = utils.getBlockStatements(ifStmt.getThenStatement());
+function processChainIf(ifStmt: IfStatement, entries: TDChainEntry[], scope: Scope) {
+    if (ifStmt.getElseStatement() !== undefined) {
+        throw TranspileError.fromNode(ifStmt, "else is not supported in a chain body");
+    }
+    const trigger = requiredTriggerOf(ifStmt.getExpression(), scope, ENTRY);
+    const thenStmts = getBlockStatements(ifStmt.getThenStatement());
 
-    const conditionalEntry = processChainStatements(thenStmts, entries, null, vars, { trigger });
+    const conditionalEntry = processChainStatements(thenStmts, entries, null, blockScope(scope, thenStmts), {
+        trigger,
+    });
 
     // Push final conditional entry
     if (conditionalEntry) {
@@ -216,18 +245,15 @@ interface ChainBodyResult {
  *   exit()                     - set epilogue to EXIT
  *   goTo(target)               - set epilogue to END
  */
-function processChainBody(statements: Statement[], defaultFilename: string, vars: VarsContext): ChainBodyResult {
+function processChainBody(statements: Statement[], defaultFilename: string, scope: Scope): ChainBodyResult {
     const entries: TDChainEntry[] = [];
     let currentEntry: TDChainEntry | null = null;
     let currentSpeaker: string = defaultFilename;
     let epilogue: TDChainEpilogue = { type: TDEpilogueType.Exit };
 
     for (const stmt of statements) {
-        if (!stmt.isKind(SyntaxKind.ExpressionStatement)) continue;
-
-        const expr = stmt.getExpression();
-        if (!Node.isCallExpression(expr)) continue;
-
+        if (isDeclaration(stmt)) continue;
+        const expr = chainCall(stmt);
         const funcName = expr.getExpression().getText();
         const args = expr.getArguments();
 
@@ -238,7 +264,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                 if (currentEntry) {
                     entries.push(currentEntry);
                 }
-                currentSpeaker = utils.stripQuotes(args[0]!.getText());
+                currentSpeaker = nameOf(getCallArg(args, 0, expr), scope, "a speaker");
                 currentEntry = {
                     speaker: currentSpeaker,
                     texts: [],
@@ -252,8 +278,8 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                 if (currentEntry) {
                     entries.push(currentEntry);
                 }
-                currentSpeaker = utils.stripQuotes(args[0]!.getText());
-                const trigger = expressionToTrigger(getCallArg(args, 1, expr), vars);
+                currentSpeaker = nameOf(getCallArg(args, 0, expr), scope, "a speaker");
+                const trigger = requiredTriggerOf(getCallArg(args, 1, expr), scope, ENTRY);
                 currentEntry = {
                     speaker: currentSpeaker,
                     texts: [],
@@ -265,7 +291,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
             case SAY_KEYWORD: {
                 if (args.length >= 2 && args[0] && args[1]) {
                     // say(speaker, text) - old form, still supported
-                    currentEntry = processSayInChain(args, expr, currentEntry, entries, vars);
+                    currentEntry = processSayInChain(args, expr, currentEntry, entries, scope);
                     if (currentEntry?.speaker) {
                         currentSpeaker = currentEntry.speaker;
                     }
@@ -278,7 +304,9 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                             texts: [],
                         };
                     }
-                    currentEntry.texts.push(expressionToText(getCallArg(args, 0, expr), vars));
+                    currentEntry.texts.push(textOf(getCallArg(args, 0, expr), scope));
+                } else {
+                    throw TranspileError.fromNode(expr, `say() requires at least 1 argument`);
                 }
                 break;
             }
@@ -290,9 +318,7 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                 if (!currentEntry) {
                     throw TranspileError.fromNode(expr, `action() must come after say()`);
                 }
-                currentEntry.action = getCallArgs(args, expr)
-                    .map((a) => expressionToActionString(a, vars))
-                    .join(" ");
+                currentEntry.action = actionsOf(getCallArgs(args, expr), scope);
                 break;
             }
 
@@ -307,10 +333,13 @@ function processChainBody(statements: Statement[], defaultFilename: string, vars
                 epilogue = {
                     type: TDEpilogueType.End,
                     filename: defaultFilename,
-                    target: resolveStringExpr(getCallArg(args, 0, expr), vars),
+                    target: stateLabelOf(getCallArg(args, 0, expr), scope),
                 };
                 break;
             }
+
+            default:
+                throw notAChainStatement(expr);
         }
     }
 

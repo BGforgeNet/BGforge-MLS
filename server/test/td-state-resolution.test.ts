@@ -126,7 +126,7 @@ begin("DLG", [a]);
         it("does not collect helper functions (called as function)", () => {
             const code = `
 function helper() {
-    action_drink();
+    action(action_drink());
 }
 function start() {
     say(tra(100));
@@ -288,7 +288,7 @@ begin("DLG", [start, other]);
         it("does not warn for helper functions (called as callee)", () => {
             const code = `
 function helper() {
-    action_drink();
+    action(action_drink());
 }
 function start() {
     say(tra(100));
@@ -319,9 +319,9 @@ begin("DLG", [start]);
 
         it("warns on unused function with only engine calls in body", () => {
             const code = `
-function state27() { learnAdditional("wm_ind4"); }
-function state28() { learnAdditional("wm_chaob"); }
-function state29() { learnAdditional("wm_wfire"); }
+function state27() { action(learnAdditional("wm_ind4")).exit(); }
+function state28() { action(learnAdditional("wm_chaob")).exit(); }
+function state29() { action(learnAdditional("wm_wfire")).exit(); }
 function start() {
     say(tra(100));
     reply(tra(101)).action(learnAdditional("wm_ind4")).goTo(next);
@@ -343,10 +343,10 @@ begin("DLG", [start]);
         it("warns on unused function even when similar functions are used in for-of", () => {
             const code = `
 const learnSpells = [state0, state1, state2];
-function state0() { learnAdditional("wm_a"); }
-function state1() { learnAdditional("wm_b"); }
-function state2() { learnAdditional("wm_c"); }
-function state29() { learnAdditional("wm_wfire"); }
+function state0() { action(learnAdditional("wm_a")).exit(); }
+function state1() { action(learnAdditional("wm_b")).exit(); }
+function state2() { action(learnAdditional("wm_c")).exit(); }
+function state29() { action(learnAdditional("wm_wfire")).exit(); }
 function start() {
     say(tra(100));
     for (const s of learnSpells) {
@@ -385,8 +385,8 @@ begin("DLG", [start]);
         it("detects orphan in original source even when missing from IR", () => {
             // Simulates esbuild tree-shaking: state29 not in IR constructs
             const originalCode = `
-function state28() { learnAdditional("wm_chaob"); }
-function state29() { learnAdditional("wm_wfire"); }
+function state28() { action(learnAdditional("wm_chaob")).exit(); }
+function state29() { action(learnAdditional("wm_wfire")).exit(); }
 function start() {
     say(tra(100));
     exit();
@@ -395,7 +395,7 @@ begin("DLG", [start, state28]);
 `;
             // Parse IR from code WITHOUT state29 (as if tree-shaken)
             const irCode = `
-function state28() { learnAdditional("wm_chaob"); }
+function state28() { action(learnAdditional("wm_chaob")).exit(); }
 function start() {
     say(tra(100));
     exit();

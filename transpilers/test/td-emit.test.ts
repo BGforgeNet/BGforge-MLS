@@ -162,13 +162,13 @@ describe("text variants", () => {
             label: "s",
             say: [
                 { text: { type: TDTextType.Tlk, value: 100 } },
-                { text: { type: TDTextType.Forced, value: "shout" } },
+                { text: { type: TDTextType.Forced, value: 12, text: "shout" } },
                 { text: { ...literal("with sound"), sound: "snd1" } },
             ],
             transitions: [],
         };
         const out = emit([{ type: TDConstructType.Begin, filename: "D", states: [state] }]);
-        expect(out).toContain("    SAY #100 = !shout = ~with sound~ [snd1]\n");
+        expect(out).toContain("    SAY #100 = !12 ~shout~ = ~with sound~ [snd1]\n");
     });
 
     it("male/female variants concatenate both renderings", () => {

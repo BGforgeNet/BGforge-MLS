@@ -10,7 +10,7 @@ END
 
 IF ~~ state1
     SAY @23
-    ++ @24 DO ~SetNumTimesTalkedTo(0) action_bg1_bags EscapeArea()~ JOURNAL @26 EXIT
+    ++ @24 DO ~SetNumTimesTalkedTo(0) EscapeArea()~ JOURNAL @26 EXIT
 END
 
 IF ~~ state2

@@ -1,185 +1,156 @@
 /**
- * TD expression evaluation - converts TypeScript expressions to
- * WeiDU D triggers, actions, and text values.
+ * TD triggers and dialog text, from the compile-time evaluator's folded conditions and values.
  *
- * Extracted from TDParser as standalone functions that receive
- * the vars context as a parameter.
+ * A D trigger is a list of trigger calls, each optionally negated, that all must hold, among which `OR(n)` makes
+ * the next n calls alternatives. `&&` joins with a space, `||` becomes `OR(n)`, and `!` reaches the calls, since
+ * the evaluator pushes it down.
  */
 
-import { type Expression, Node, SyntaxKind } from "ts-morph";
+import type { Expression, Node } from "ts-morph";
+import { evaluate, evaluateCondition, type Condition, type Scope } from "../../common/compile-time-eval";
+import { describeKind, type StrRef, type Value } from "../../common/compile-time-value";
+import { TranspileError } from "../../common/transpile-error";
 import { TDTextType, type TDText } from "./types";
-import * as utils from "../../common/transpiler-utils";
-import type { VarsContext } from "../../common/transpiler-utils";
-import { expressionToActionString, parseStringOption } from "./parse-helpers";
+import { formatCall } from "./parse-helpers";
 
-/** TD function/keyword constants for text types */
-const TEXT_KEYWORDS = {
-    TRA: "tra",
-    TLK: "tlk",
-    TLK_FORCED: "tlkForced",
-} as const;
+/** Where a trigger that must not be a constant sits, and what a false one would mean there. */
+interface TriggerSite {
+    /** The trigger, in a refusal's words: "the state's entry trigger". */
+    readonly what: string;
+    /** What a compile-time false trigger would do there: "the state is never entered". */
+    readonly ifFalse: string;
+}
 
-/**
- * Convert an expression to a trigger string.
- */
-function expressionToTrigger(expr: Expression, vars: VarsContext): string {
-    // Handle binary expressions (||, &&)
-    if (Node.isBinaryExpression(expr)) {
-        const opKind = expr.getOperatorToken().getKind();
+const STATE_ENTRY: TriggerSite = { what: "the state's entry trigger", ifFalse: "the state is never entered" };
+const CHAIN_ENTRY: TriggerSite = { what: "the chain's entry trigger", ifFalse: "the chain never starts" };
+const ENTRY: TriggerSite = { what: "the entry trigger", ifFalse: "the lines are never spoken" };
 
-        if (opKind === SyntaxKind.AmpersandAmpersandToken) {
-            // AND: space-separated conditions
-            const left = expressionToTrigger(expr.getLeft(), vars);
-            const right = expressionToTrigger(expr.getRight(), vars);
-            return `${left} ${right}`;
-        }
-
-        if (opKind === SyntaxKind.BarBarToken) {
-            // OR: collect all OR-ed conditions and emit as OR(n) cond1 cond2 ...
-            const conditions = collectOrConditions(expr, vars);
-            const count = conditions.length;
-            return `OR(${count}) ${conditions.join(" ")}`;
-        }
-    }
-
-    // Handle parenthesized expression
-    if (Node.isParenthesizedExpression(expr)) {
-        return expressionToTrigger(expr.getExpression(), vars);
-    }
-
-    // Handle OR(n, cond1, cond2, ...) -> OR(n) cond1 cond2 ...
-    if (Node.isCallExpression(expr)) {
-        const funcName = expr.getExpression().getText();
-        if (funcName === "OR" && expr.getArguments().length >= 2) {
-            const args = expr.getArguments();
-            const count = args[0]?.getText() ?? "2";
-            const conditions = args.slice(1).map((a) => expressionToTrigger(a as Expression, vars));
-            return `OR(${count}) ${conditions.join(" ")}`;
-        }
-        // Regular function call - serialize as trigger
-        return expressionToActionString(expr, vars);
-    }
-
-    // Handle ! prefix
-    if (Node.isPrefixUnaryExpression(expr) && expr.getOperatorToken() === SyntaxKind.ExclamationToken) {
-        const inner = expressionToTrigger(expr.getOperand(), vars);
-        return `!${inner}`;
-    }
-
-    return utils.substituteVars(expr.getText(), vars);
+function patchTrigger(keyword: string): TriggerSite {
+    return { what: `the ${keyword} trigger`, ifFalse: "what it patches is never available" };
 }
 
 /**
- * Collect all conditions from a || chain into a flat array.
+ * A transition's trigger as D text, or the compile-time constant it folds to: true for a transition with no
+ * trigger, false for one that is never available.
  */
-function collectOrConditions(expr: Expression, vars: VarsContext): string[] {
-    const conditions: string[] = [];
-
-    const collect = (e: Expression) => {
-        if (Node.isBinaryExpression(e) && e.getOperatorToken().getKind() === SyntaxKind.BarBarToken) {
-            collect(e.getLeft());
-            collect(e.getRight());
-        } else if (Node.isParenthesizedExpression(e)) {
-            collect(e.getExpression());
-        } else {
-            // Atom - could be a call, negated call, or other expression
-            conditions.push(expressionToTrigger(e, vars));
-        }
-    };
-
-    collect(expr);
-    return conditions;
+function transitionTriggerOf(expr: Expression, scope: Scope): string | boolean {
+    const condition = evaluateCondition(expr, scope);
+    return condition.kind === "constant" ? condition.value : formatTrigger(condition, expr);
 }
 
 /**
- * Convert an expression to TDText.
+ * A trigger that decides whether something exists at all, refused when it is a compile-time constant: false
+ * would remove what it guards, and true would decide nothing.
  */
-function expressionToText(expr: Expression, vars: VarsContext): TDText {
-    // Handle object literal for male/female variants
-    if (Node.isObjectLiteralExpression(expr)) {
-        let male: TDText | undefined;
-        let female: TDText | undefined;
-        let maleSound: string | undefined;
-        let femaleSound: string | undefined;
+function requiredTriggerOf(expr: Expression, scope: Scope, site: TriggerSite): string {
+    const condition = evaluateCondition(expr, scope);
+    if (condition.kind === "constant") {
+        throw TranspileError.fromNode(
+            expr,
+            condition.value
+                ? `${site.what} is true at compile time, so it decides nothing; remove the condition`
+                : `${site.what} is false at compile time, so ${site.ifFalse}; remove it, or test a trigger call`,
+        );
+    }
+    return formatTrigger(condition, expr);
+}
 
-        for (const prop of expr.getProperties()) {
-            if (Node.isPropertyAssignment(prop)) {
-                const propName = prop.getName();
-                const value = prop.getInitializer();
-                if (!value) continue;
-
-                if (propName === "male") {
-                    male = expressionToText(value, vars);
-                } else if (propName === "female") {
-                    female = expressionToText(value, vars);
-                } else if (propName === "maleSound") {
-                    maleSound = utils.stripQuotes(value.getText());
-                } else if (propName === "femaleSound") {
-                    femaleSound = utils.stripQuotes(value.getText());
+function formatTrigger(condition: Condition, node: Node): string {
+    switch (condition.kind) {
+        case "constant":
+            // conjunction() and disjunction() fold constants out of every group, so only a whole condition is
+            // one, and each caller decides that case before formatting.
+            throw new Error("a constant condition has no D trigger text");
+        case "atom":
+            return formatAtom(condition);
+        case "and":
+            return condition.items.map((item) => formatTrigger(item, node)).join(" ");
+        case "or": {
+            const atoms = condition.items.map((item) => {
+                if (item.kind !== "atom") {
+                    throw TranspileError.fromNode(
+                        node,
+                        "an || with an && group inside has no D trigger: OR(n) groups trigger calls only; " +
+                            "distribute the && over the ||",
+                    );
                 }
-            }
-        }
-
-        if (male && female) {
-            if (maleSound) male.sound = maleSound;
-            if (femaleSound) female.sound = femaleSound;
-            return {
-                type: TDTextType.Tra, // Placeholder, actual type from male/female
-                value: 0,
-                male,
-                female,
-            };
+                return formatAtom(item);
+            });
+            return `OR(${atoms.length}) ${atoms.join(" ")}`;
         }
     }
+}
 
-    if (Node.isCallExpression(expr)) {
-        const funcName = expr.getExpression().getText();
-        const args = expr.getArguments();
+function formatAtom(atom: Extract<Condition, { kind: "atom" }>): string {
+    return `${atom.negated ? "!" : ""}${formatCall(atom.name, atom.args, atom.node)}`;
+}
 
-        // tra(num) or $tra(num) or tra(num, { sound: "..." })
-        if ((funcName === TEXT_KEYWORDS.TRA || funcName === "$tra") && args.length >= 1 && args[0]) {
-            const argText = utils.substituteVars(args[0].getText(), vars);
-            const text: TDText = {
-                type: TDTextType.Tra,
-                value: Number(argText),
-                sound: parseStringOption(args[1], "sound"),
-            };
-            return text;
-        }
+/** Dialog text: say, reply and journal text. */
+function textOf(expr: Expression, scope: Scope): TDText {
+    const value = evaluate(expr, scope);
+    if (value.kind === "record") return genderedText(value.fields, expr);
+    return plainText(value, expr);
+}
 
-        // tlk(num) or $tlk(num) or tlk(num, { sound: "..." })
-        if ((funcName === TEXT_KEYWORDS.TLK || funcName === "$tlk") && args.length >= 1 && args[0]) {
-            const argText = utils.substituteVars(args[0].getText(), vars);
-            const text: TDText = {
-                type: TDTextType.Tlk,
-                value: Number(argText),
-                sound: parseStringOption(args[1], "sound"),
-            };
-            return text;
-        }
+function plainText(value: Value, node: Node): TDText {
+    if (value.kind === "string") return { type: TDTextType.Literal, value: value.value };
+    if (value.kind === "strref") return strrefText(value.ref);
+    throw TranspileError.fromNode(
+        node,
+        `dialog text is tra(), tlk(), tlkForced() or a string, not ${describeKind(value)}`,
+    );
+}
 
-        // tlkForced(num, text) - text override is stored in emitter, not IR
-        if (funcName === TEXT_KEYWORDS.TLK_FORCED && args.length >= 2 && args[0] && args[1]) {
-            const numText = utils.substituteVars(args[0].getText(), vars);
-            return {
-                type: TDTextType.Forced,
-                value: numText,
-            };
+function strrefText(ref: StrRef): TDText {
+    switch (ref.form) {
+        case "tra":
+            return { type: TDTextType.Tra, value: ref.id, sound: ref.sound };
+        case "tlk":
+            return { type: TDTextType.Tlk, value: ref.id, sound: ref.sound };
+        case "tlkForced":
+            return { type: TDTextType.Forced, value: ref.id, text: ref.text };
+    }
+}
+
+const GENDERED_FIELDS: readonly string[] = ["male", "female", "maleSound", "femaleSound"];
+
+/** `{ male, female, maleSound?, femaleSound? }`: the text a male and a female PC see. */
+function genderedText(fields: ReadonlyMap<string, Value>, node: Node): TDText {
+    for (const key of fields.keys()) {
+        if (!GENDERED_FIELDS.includes(key)) {
+            throw TranspileError.fromNode(
+                node,
+                `gendered text has no field '${key}'; it takes ${GENDERED_FIELDS.join(", ")}`,
+            );
         }
     }
-
-    if (Node.isStringLiteral(expr) || expr.isKind(SyntaxKind.NoSubstitutionTemplateLiteral)) {
-        return {
-            type: TDTextType.Literal,
-            value: utils.resolveStringLiteral(expr),
-        };
+    const male = fields.get("male");
+    const female = fields.get("female");
+    if (male === undefined || female === undefined) {
+        throw TranspileError.fromNode(node, "gendered text needs both a male and a female text");
     }
-
-    // Fallback to literal
     return {
-        type: TDTextType.Literal,
-        value: utils.substituteVars(expr.getText(), vars),
+        type: TDTextType.Tra, // Placeholder: emitted from male and female
+        value: 0,
+        male: withSound(plainText(male, node), fields.get("maleSound"), node),
+        female: withSound(plainText(female, node), fields.get("femaleSound"), node),
     };
 }
 
-export { expressionToTrigger, expressionToText };
+function withSound(text: TDText, sound: Value | undefined, node: Node): TDText {
+    if (sound === undefined) return text;
+    if (sound.kind !== "string")
+        throw TranspileError.fromNode(node, `a sound is a resource name string, not ${describeKind(sound)}`);
+    return { ...text, sound: sound.value };
+}
+
+export {
+    CHAIN_ENTRY,
+    ENTRY,
+    STATE_ENTRY,
+    patchTrigger,
+    requiredTriggerOf,
+    textOf,
+    transitionTriggerOf,
+    type TriggerSite,
+};

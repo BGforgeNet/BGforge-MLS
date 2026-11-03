@@ -16,6 +16,8 @@ import { Node, Project, SyntaxKind } from "ts-morph";
 import { EXT_TD } from "../../common/extensions";
 import { createTranspiler } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
+import { checkDeclarationKinds } from "../../common/compile-time-eval";
+import { getSharedProject } from "../../common/shared-project";
 import { TranspileError } from "../../common/transpile-error";
 import type { SourcePosition } from "../../common/line-map";
 import type { LineOrigin } from "../../common/tracked-text";
@@ -46,7 +48,7 @@ const td = createTranspiler<TDTranspileResult>({
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)
-        const { code: bundled, origins } = await bundle(filePath, text);
+        const { code: bundled, origins } = await bundle(filePath, text, checkDeclarations);
 
         // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
         // against the file it came from on the way out.
@@ -102,6 +104,16 @@ function parseBundled(bundled: string, text: string, filePath: string, traTag: s
  */
 export async function transpile(filePath: string, text: string): Promise<TDTranspileResult> {
     return td.transpile(filePath, text);
+}
+
+/** Refuses a `let` or `var` in a source the author wrote, read before the bundler rewrites its declarations. */
+function checkDeclarations(file: string, text: string): void {
+    const source = getSharedProject().createSourceFile("td-declaration-check.ts", text, { overwrite: true });
+    try {
+        checkDeclarationKinds(source);
+    } catch (error) {
+        throw TranspileError.wrap(error, { file });
+    }
 }
 
 /** Function metadata extracted from the original (pre-bundling) source. */

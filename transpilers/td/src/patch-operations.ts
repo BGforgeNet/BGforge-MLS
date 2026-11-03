@@ -3,7 +3,7 @@
  * patch operations (ALTER_TRANS, ADD_STATE_TRIGGER, etc.)
  *
  * Extracted from TDParser as standalone functions that receive
- * parser context (vars) as a parameter.
+ * the scope their arguments are evaluated in.
  */
 
 import { type CallExpression, Node, SyntaxKind } from "ts-morph";
@@ -23,32 +23,38 @@ import {
     type TDReplaceStateTrigger,
     type TDReplaceStates,
 } from "./types";
-import * as utils from "../../common/transpiler-utils";
-import type { VarsContext } from "../../common/transpiler-utils";
+import { evaluate, type Scope } from "../../common/compile-time-eval";
+import { describeKind } from "../../common/compile-time-value";
 import {
-    resolveStringExpr,
-    parseStateList,
-    parseNumberArray,
-    parseUnless,
+    actionsOf,
     getCallArg,
-    expressionToActionString,
+    integerListOf,
+    integerOf,
+    nameOf,
+    optionalCallArg,
+    optionsOf,
+    patchTextOf,
+    stateLabelOf,
+    stateListOf,
+    unlessOf,
+    unlessValue,
 } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import { expressionToTrigger, expressionToText } from "./expression-eval";
+import { patchTrigger, requiredTriggerOf, textOf } from "./expression-eval";
 import { type FuncsContext, transformFunctionToState } from "./state-transitions";
 
 /**
  * Transform alterTrans(filename, states, transitions, changes).
  */
-function transformAlterTrans(call: CallExpression, vars: VarsContext): TDConstruct[] | null {
+function transformAlterTrans(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 4) {
         throw TranspileError.fromNode(call, `alterTrans() requires 4 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const states = parseStateList(getCallArg(args, 1, call), vars);
-    const transitions = parseNumberArray(getCallArg(args, 2, call));
+    const filename = nameOf(getCallArg(args, 0, call), scope, "a dialog file name");
+    const states = stateListOf(getCallArg(args, 1, call), scope);
+    const transitions = integerListOf(getCallArg(args, 2, call), scope, "alterTrans()'s transitions");
     const changesObj = args[3];
 
     if (!Node.isObjectLiteralExpression(changesObj)) {
@@ -58,23 +64,25 @@ function transformAlterTrans(call: CallExpression, vars: VarsContext): TDConstru
     const changes: TDAlterTrans["changes"] = {};
 
     for (const prop of changesObj.getProperties()) {
-        if (Node.isPropertyAssignment(prop)) {
-            const propName = prop.getName();
-            const value = prop.getInitializer();
-
-            if (!value) continue;
-
-            if (propName === "trigger") {
-                if (value.getText() === "false") {
-                    changes.trigger = false;
-                } else {
-                    changes.trigger = expressionToTrigger(value, vars);
-                }
-            } else if (propName === "action") {
-                changes.action = expressionToActionString(value, vars);
-            } else if (propName === "reply") {
-                changes.reply = expressionToText(value, vars);
-            }
+        const value = Node.isPropertyAssignment(prop) ? prop.getInitializer() : undefined;
+        if (!Node.isPropertyAssignment(prop) || value === undefined) {
+            throw TranspileError.fromNode(prop, "alterTrans() changes are written as trigger:, action: or reply:");
+        }
+        const propName = prop.getName();
+        if (propName === "trigger") {
+            // `trigger: false` is how alterTrans() clears a trigger; any other constant decides nothing.
+            changes.trigger = value.isKind(SyntaxKind.FalseKeyword)
+                ? false
+                : requiredTriggerOf(value, scope, patchTrigger("ALTER_TRANS"));
+        } else if (propName === "action") {
+            changes.action = actionsOf([value], scope);
+        } else if (propName === "reply") {
+            changes.reply = textOf(value, scope);
+        } else {
+            throw TranspileError.fromNode(
+                prop,
+                `alterTrans() has no change '${propName}'; it takes trigger, action, reply`,
+            );
         }
     }
 
@@ -92,23 +100,18 @@ function transformAlterTrans(call: CallExpression, vars: VarsContext): TDConstru
 /**
  * Transform addStateTrigger(filename, states, trigger, options?).
  */
-function transformAddStateTrigger(call: CallExpression, vars: VarsContext): TDConstruct[] | null {
+function transformAddStateTrigger(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 3) {
         throw TranspileError.fromNode(call, `addStateTrigger() requires at least 3 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const states = parseStateList(getCallArg(args, 1, call), vars);
-    const trigger = expressionToTrigger(getCallArg(args, 2, call), vars);
-    const unless = args[3] ? parseUnless(getCallArg(args, 3, call)) : undefined;
-
     const operation: TDAddStateTrigger = {
         op: TDPatchOp.AddStateTrigger,
-        filename,
-        states,
-        trigger,
-        unless,
+        filename: nameOf(getCallArg(args, 0, call), scope, "a dialog file name"),
+        states: stateListOf(getCallArg(args, 1, call), scope),
+        trigger: requiredTriggerOf(getCallArg(args, 2, call), scope, patchTrigger("ADD_STATE_TRIGGER")),
+        unless: unlessOf(optionalCallArg(args, 3, call), scope, "addStateTrigger"),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -117,37 +120,37 @@ function transformAddStateTrigger(call: CallExpression, vars: VarsContext): TDCo
 /**
  * Transform addTransTrigger(filename, states, trigger, options?).
  */
-function transformAddTransTrigger(call: CallExpression, vars: VarsContext): TDConstruct[] | null {
+function transformAddTransTrigger(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 3) {
         throw TranspileError.fromNode(call, `addTransTrigger() requires at least 3 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const states = parseStateList(getCallArg(args, 1, call), vars);
-    const trigger = expressionToTrigger(getCallArg(args, 2, call), vars);
-
-    let transitions: number[] | undefined;
-    let unless: string | undefined;
+    const filename = nameOf(getCallArg(args, 0, call), scope, "a dialog file name");
+    const states = stateListOf(getCallArg(args, 1, call), scope);
+    const trigger = requiredTriggerOf(getCallArg(args, 2, call), scope, patchTrigger("ADD_TRANS_TRIGGER"));
 
     // args[3] can be options object with trans and/or unless
-    if (args[3]) {
-        const opts = args[3];
-        if (Node.isObjectLiteralExpression(opts)) {
-            for (const prop of opts.getProperties()) {
-                if (Node.isPropertyAssignment(prop)) {
-                    const propName = prop.getName();
-                    const value = prop.getInitializer();
-                    if (!value) continue;
-
-                    if (propName === "trans") {
-                        transitions = parseNumberArray(value);
-                    } else if (propName === "unless") {
-                        unless = parseUnless(value);
-                    }
-                }
-            }
+    const optionsArg = optionalCallArg(args, 3, call);
+    const options = optionsOf(optionsArg, scope, ["trans", "unless"], "addTransTrigger");
+    const trans = options.get("trans");
+    let transitions: number[] | undefined;
+    if (trans !== undefined) {
+        if (trans.kind !== "array") {
+            throw TranspileError.fromNode(
+                call,
+                `addTransTrigger()'s trans is an array of integers, not ${describeKind(trans)}`,
+            );
         }
+        transitions = trans.items.map((item) => {
+            if (item.kind !== "int") {
+                throw TranspileError.fromNode(
+                    call,
+                    `addTransTrigger()'s trans holds integers, not ${describeKind(item)}`,
+                );
+            }
+            return item.value;
+        });
     }
 
     const operation: TDAddTransTrigger = {
@@ -156,7 +159,7 @@ function transformAddTransTrigger(call: CallExpression, vars: VarsContext): TDCo
         states,
         transitions,
         trigger,
-        unless,
+        unless: unlessValue(options.get("unless"), call),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -165,25 +168,19 @@ function transformAddTransTrigger(call: CallExpression, vars: VarsContext): TDCo
 /**
  * Transform addTransAction(filename, states, transitions, action, options?).
  */
-function transformAddTransAction(call: CallExpression, vars: VarsContext): TDConstruct[] | null {
+function transformAddTransAction(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 4) {
         throw TranspileError.fromNode(call, `addTransAction() requires at least 4 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const states = parseStateList(getCallArg(args, 1, call), vars);
-    const transitions = parseNumberArray(getCallArg(args, 2, call));
-    const action = expressionToActionString(getCallArg(args, 3, call), vars);
-    const unless = args[4] ? parseUnless(getCallArg(args, 4, call)) : undefined;
-
     const operation: TDAddTransAction = {
         op: TDPatchOp.AddTransAction,
-        filename,
-        states,
-        transitions,
-        action,
-        unless,
+        filename: nameOf(getCallArg(args, 0, call), scope, "a dialog file name"),
+        states: stateListOf(getCallArg(args, 1, call), scope),
+        transitions: integerListOf(getCallArg(args, 2, call), scope, "addTransAction()'s transitions"),
+        action: actionsOf([getCallArg(args, 3, call)], scope),
+        unless: unlessOf(optionalCallArg(args, 4, call), scope, "addTransAction"),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -195,7 +192,7 @@ function transformAddTransAction(call: CallExpression, vars: VarsContext): TDCon
 function transformReplaceTrans(
     call: CallExpression,
     op: TDPatchOp.ReplaceTransTrigger | TDPatchOp.ReplaceTransAction,
-    vars: VarsContext,
+    scope: Scope,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     const funcName = op === TDPatchOp.ReplaceTransTrigger ? "replaceTransTrigger" : "replaceTransAction";
@@ -204,21 +201,14 @@ function transformReplaceTrans(
         throw TranspileError.fromNode(call, `${funcName}() requires at least 5 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const states = parseStateList(getCallArg(args, 1, call), vars);
-    const transitions = parseNumberArray(getCallArg(args, 2, call));
-    const oldText = utils.resolveStringLiteral(getCallArg(args, 3, call));
-    const newText = utils.resolveStringLiteral(getCallArg(args, 4, call));
-    const unless = args[5] ? parseUnless(getCallArg(args, 5, call)) : undefined;
-
     const operation: TDReplaceTrans = {
         op,
-        filename,
-        states,
-        transitions,
-        oldText,
-        newText,
-        unless,
+        filename: nameOf(getCallArg(args, 0, call), scope, "a dialog file name"),
+        states: stateListOf(getCallArg(args, 1, call), scope),
+        transitions: integerListOf(getCallArg(args, 2, call), scope, `${funcName}()'s transitions`),
+        oldText: patchTextOf(getCallArg(args, 3, call), scope, `${funcName}()'s search text`),
+        newText: patchTextOf(getCallArg(args, 4, call), scope, `${funcName}()'s replacement text`),
+        unless: unlessOf(optionalCallArg(args, 5, call), scope, funcName),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -230,7 +220,7 @@ function transformReplaceTrans(
 function transformReplaceText(
     call: CallExpression,
     op: TDPatchOp.ReplaceTriggerText | TDPatchOp.ReplaceActionText,
-    vars: VarsContext,
+    scope: Scope,
 ): TDConstruct[] | null {
     const args = call.getArguments();
     const funcName = op === TDPatchOp.ReplaceTriggerText ? "replaceTriggerText" : "replaceActionText";
@@ -239,28 +229,22 @@ function transformReplaceText(
         throw TranspileError.fromNode(call, `${funcName}() requires at least 3 arguments`);
     }
 
-    const filenamesArg = getCallArg(args, 0, call);
-    let filenames: string[];
-
     // Can be a single string or array of strings
-    if (Node.isStringLiteral(filenamesArg) || filenamesArg.getKind() === SyntaxKind.StringLiteral) {
-        filenames = [resolveStringExpr(filenamesArg, vars)];
-    } else if (Node.isArrayLiteralExpression(filenamesArg)) {
-        filenames = filenamesArg.getElements().map((e) => resolveStringExpr(e, vars));
-    } else {
-        throw TranspileError.fromNode(call, `${funcName}() first argument must be a string or array of strings`);
-    }
-
-    const oldText = utils.resolveStringLiteral(getCallArg(args, 1, call));
-    const newText = utils.resolveStringLiteral(getCallArg(args, 2, call));
-    const unless = args[3] ? parseUnless(getCallArg(args, 3, call)) : undefined;
+    const filenamesValue = evaluate(getCallArg(args, 0, call), scope);
+    const items = filenamesValue.kind === "array" ? filenamesValue.items : [filenamesValue];
+    const filenames = items.map((item) => {
+        if (item.kind !== "string") {
+            throw TranspileError.fromNode(call, `${funcName}() first argument must be a string or array of strings`);
+        }
+        return item.value;
+    });
 
     const operation: TDReplaceText = {
         op,
         filenames,
-        oldText,
-        newText,
-        unless,
+        oldText: patchTextOf(getCallArg(args, 1, call), scope, `${funcName}()'s search text`),
+        newText: patchTextOf(getCallArg(args, 2, call), scope, `${funcName}()'s replacement text`),
+        unless: unlessOf(optionalCallArg(args, 3, call), scope, funcName),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -269,21 +253,17 @@ function transformReplaceText(
 /**
  * Transform setWeight(filename, state, weight).
  */
-function transformSetWeight(call: CallExpression, vars: VarsContext): TDConstruct[] | null {
+function transformSetWeight(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 3) {
         throw TranspileError.fromNode(call, `setWeight() requires 3 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const state = resolveStringExpr(getCallArg(args, 1, call), vars);
-    const weight = Number(getCallArg(args, 2, call).getText());
-
     const operation: TDSetWeight = {
         op: TDPatchOp.SetWeight,
-        filename,
-        state,
-        weight,
+        filename: nameOf(getCallArg(args, 0, call), scope, "a dialog file name"),
+        state: stateLabelOf(getCallArg(args, 1, call), scope),
+        weight: integerOf(getCallArg(args, 2, call), scope, "a state's weight"),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -292,21 +272,17 @@ function transformSetWeight(call: CallExpression, vars: VarsContext): TDConstruc
 /**
  * Transform replaceSay(filename, state, text).
  */
-function transformReplaceSay(call: CallExpression, vars: VarsContext): TDConstruct[] | null {
+function transformReplaceSay(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 3) {
         throw TranspileError.fromNode(call, `replaceSay() requires 3 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const state = resolveStringExpr(getCallArg(args, 1, call), vars);
-    const text = expressionToText(getCallArg(args, 2, call), vars);
-
     const operation: TDReplaceSay = {
         op: TDPatchOp.ReplaceSay,
-        filename,
-        state,
-        text,
+        filename: nameOf(getCallArg(args, 0, call), scope, "a dialog file name"),
+        state: stateLabelOf(getCallArg(args, 1, call), scope),
+        text: textOf(getCallArg(args, 2, call), scope),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -315,23 +291,18 @@ function transformReplaceSay(call: CallExpression, vars: VarsContext): TDConstru
 /**
  * Transform replaceStateTrigger(filename, states, trigger, options?).
  */
-function transformReplaceStateTrigger(call: CallExpression, vars: VarsContext): TDConstruct[] | null {
+function transformReplaceStateTrigger(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 3) {
         throw TranspileError.fromNode(call, `replaceStateTrigger() requires at least 3 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
-    const states = parseStateList(getCallArg(args, 1, call), vars);
-    const trigger = expressionToTrigger(getCallArg(args, 2, call), vars);
-    const unless = args[3] ? parseUnless(getCallArg(args, 3, call)) : undefined;
-
     const operation: TDReplaceStateTrigger = {
         op: TDPatchOp.ReplaceStateTrigger,
-        filename,
-        states,
-        trigger,
-        unless,
+        filename: nameOf(getCallArg(args, 0, call), scope, "a dialog file name"),
+        states: stateListOf(getCallArg(args, 1, call), scope),
+        trigger: requiredTriggerOf(getCallArg(args, 2, call), scope, patchTrigger("REPLACE_STATE_TRIGGER")),
+        unless: unlessOf(optionalCallArg(args, 3, call), scope, "replaceStateTrigger"),
     };
 
     return [{ type: TDConstructType.Patch, operation }];
@@ -341,13 +312,13 @@ function transformReplaceStateTrigger(call: CallExpression, vars: VarsContext): 
  * Transform replace(filename, { stateNum: function, ... }).
  * Replaces entire states by their numeric index.
  */
-function transformReplace(call: CallExpression, vars: VarsContext, funcs: FuncsContext): TDConstruct[] | null {
+function transformReplace(call: CallExpression, scope: Scope, funcs: FuncsContext): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 2) {
         throw TranspileError.fromNode(call, `replace() requires 2 arguments`);
     }
 
-    const filename = resolveStringExpr(getCallArg(args, 0, call), vars);
+    const filename = nameOf(getCallArg(args, 0, call), scope, "a dialog file name");
     const statesObj = args[1];
 
     if (!Node.isObjectLiteralExpression(statesObj)) {
@@ -357,24 +328,28 @@ function transformReplace(call: CallExpression, vars: VarsContext, funcs: FuncsC
     const replacements = new Map<number, TDState>();
 
     for (const prop of statesObj.getProperties()) {
-        if (Node.isPropertyAssignment(prop)) {
-            const stateNum = Number(prop.getName());
-            const funcExpr = prop.getInitializer();
-
-            if (!funcExpr || !Node.isFunctionExpression(funcExpr)) {
-                throw TranspileError.fromNode(call, `replace() state ${stateNum} must be a function`);
-            }
-
-            const state = transformFunctionToState(funcExpr, vars, funcs);
-
-            if (!state) {
-                throw TranspileError.fromNode(call, `replace() failed to parse state ${stateNum}`);
-            }
-
-            // Override label with the numeric state
-            state.label = stateNum.toString();
-            replacements.set(stateNum, state);
+        if (!Node.isPropertyAssignment(prop)) {
+            throw TranspileError.fromNode(prop, "replace() maps state numbers to functions: 0: function name() {...}");
         }
+        const stateNum = Number(prop.getName());
+        if (!Number.isInteger(stateNum)) {
+            throw TranspileError.fromNode(prop, `replace() keys are state numbers, not '${prop.getName()}'`);
+        }
+        const funcExpr = prop.getInitializer();
+
+        if (!funcExpr || !Node.isFunctionExpression(funcExpr)) {
+            throw TranspileError.fromNode(call, `replace() state ${stateNum} must be a function`);
+        }
+
+        const state = transformFunctionToState(funcExpr, scope, funcs);
+
+        if (!state) {
+            throw TranspileError.fromNode(call, `replace() failed to parse state ${stateNum}`);
+        }
+
+        // Override label with the numeric state
+        state.label = stateNum.toString();
+        replacements.set(stateNum, state);
     }
 
     const operation: TDReplaceStates = {

@@ -210,7 +210,6 @@ function g_familiar_potions() {
    */
 
   // generated in main.tpa, a state for each potion
-  action_drink()
   reply(tra(105)).extern("%dialog%", "%state%")
 }
 

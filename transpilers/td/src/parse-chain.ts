@@ -7,12 +7,11 @@
 
 import { type CallExpression, type Expression, Node } from "ts-morph";
 import { TDConstructType, TDEpilogueType, type TDConstruct, type TDChainEntry, type TDChainEpilogue } from "./types";
-import type { VarsContext } from "../../common/transpiler-utils";
-import { resolveStringExpr } from "./parse-helpers";
+import { evaluate, type Scope } from "../../common/compile-time-eval";
+import { blockScope, getCallArg, nameOf, stateLabelOf } from "./parse-helpers";
 import { TranspileError } from "../../common/transpile-error";
-import { expressionToTrigger } from "./expression-eval";
+import { CHAIN_ENTRY, requiredTriggerOf } from "./expression-eval";
 import { transformFunctionToChain, processChainBody } from "./chain-processing";
-import type { FuncsContext } from "./state-transitions";
 
 /**
  * Transform chain() to CHAIN construct.
@@ -22,10 +21,7 @@ import type { FuncsContext } from "./state-transitions";
  *   chain(dialog, label, body)                        - new form
  *   chain(entryTrigger, dialog, label, body, options) - new form with trigger
  */
-export function transformChainCall(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression,
-): TDConstruct[] | null {
+export function transformChainCall(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     if (args.length < 1) {
         throw TranspileError.fromNode(call, `chain() requires at least 1 argument`);
@@ -38,31 +34,31 @@ export function transformChainCall(
         (args.length >= 3 && Node.isArrowFunction(args[2])) || (args.length >= 4 && Node.isArrowFunction(args[3]));
 
     if (isNewForm) {
-        return transformChainNewForm(ctx, call);
+        return transformChainNewForm(call, scope);
     }
 
     // Old form: chain(function) or chain(trigger, function)
     let trigger: string | undefined;
-    let funcArg: Node;
+    let funcArg: Expression;
 
     if (args.length === 1) {
-        funcArg = args[0]!;
+        funcArg = getCallArg(args, 0, call);
     } else {
-        trigger = expressionToTrigger(args[0] as Expression, ctx.vars);
-        funcArg = args[1]!;
+        trigger = requiredTriggerOf(getCallArg(args, 0, call), scope, CHAIN_ENTRY);
+        funcArg = getCallArg(args, 1, call);
     }
 
-    if (Node.isIdentifier(funcArg)) {
-        const funcName = funcArg.getText();
-        const funcInfo = ctx.funcs.get(funcName);
-        if (!funcInfo) {
-            throw TranspileError.fromNode(funcArg, `Function "${funcName}" not found in chain()`);
-        }
-        const chain = transformFunctionToChain(funcInfo.func, ctx.vars, trigger);
+    if (Node.isFunctionExpression(funcArg)) {
+        const chain = transformFunctionToChain(funcArg, scope, trigger);
         return chain ? [chain] : null;
-    } else if (Node.isFunctionExpression(funcArg)) {
-        const chain = transformFunctionToChain(funcArg, ctx.vars, trigger);
+    }
+    const value = evaluate(funcArg, scope);
+    if (value.kind === "function") {
+        const chain = transformFunctionToChain(value.declaration, value.closure, trigger);
         return chain ? [chain] : null;
+    }
+    if (value.kind === "symbol") {
+        throw TranspileError.fromNode(funcArg, `Function "${value.name}" not found in chain()`);
     }
 
     throw TranspileError.fromNode(call, `chain() argument must be a function reference or expression`);
@@ -72,10 +68,7 @@ export function transformChainCall(
  * Transform new-form chain: chain(dialog, label, body) or chain(trigger, dialog, label, body).
  * The body is an arrow function with from()/fromWhen()/say() calls.
  */
-function transformChainNewForm(
-    ctx: { vars: VarsContext; funcs: FuncsContext },
-    call: CallExpression,
-): TDConstruct[] | null {
+function transformChainNewForm(call: CallExpression, scope: Scope): TDConstruct[] | null {
     const args = call.getArguments();
     let trigger: string | undefined;
     let dialog: string;
@@ -84,14 +77,14 @@ function transformChainNewForm(
 
     if (Node.isArrowFunction(args[2])) {
         // chain(dialog, label, body)
-        dialog = resolveStringExpr(args[0] as Expression, ctx.vars);
-        label = resolveStringExpr(args[1] as Expression, ctx.vars);
+        dialog = nameOf(getCallArg(args, 0, call), scope, "a dialog file name");
+        label = stateLabelOf(getCallArg(args, 1, call), scope);
         bodyArg = args[2];
     } else if (args[3] && Node.isArrowFunction(args[3])) {
         // chain(trigger, dialog, label, body)
-        trigger = expressionToTrigger(args[0] as Expression, ctx.vars);
-        dialog = resolveStringExpr(args[1] as Expression, ctx.vars);
-        label = resolveStringExpr(args[2] as Expression, ctx.vars);
+        trigger = requiredTriggerOf(getCallArg(args, 0, call), scope, CHAIN_ENTRY);
+        dialog = nameOf(getCallArg(args, 1, call), scope, "a dialog file name");
+        label = stateLabelOf(getCallArg(args, 2, call), scope);
         bodyArg = args[3];
     } else {
         throw TranspileError.fromNode(call, `chain() body must be an arrow function`);
@@ -104,7 +97,8 @@ function transformChainNewForm(
     if (Node.isArrowFunction(bodyArg)) {
         const body = bodyArg.getBody();
         if (Node.isBlock(body)) {
-            const result = processChainBody(body.getStatements(), dialog, ctx.vars);
+            const statements = body.getStatements();
+            const result = processChainBody(statements, dialog, blockScope(scope, statements));
             entries.push(...result.entries);
             epilogue = result.epilogue;
         }

@@ -3,7 +3,7 @@
 CHAIN
 IF ~Global("KelseyImoenPizza","LOCALS",0) InParty("Imoen2") See("Imoen2") !StateCheck("Imoen2",STATE_SLEEPING)~ THEN BJKLSY pizzachain
 @1
-DO ~SetGlobal("KelseyImoenPizza", "LOCALS", 1)~
+DO ~SetGlobal("KelseyImoenPizza","LOCALS",1)~
 == IMOEN2J
 @2
 = @3

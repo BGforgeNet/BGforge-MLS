@@ -2,23 +2,24 @@
  * TD Parser - converts TypeScript AST to TD IR
  *
  * Walks the TypeScript AST (via ts-morph) and produces TDScript IR
- * for emission to WeiDU D format.
+ * for emission to WeiDU D format. Every compile-time value goes through the
+ * evaluator (`common/compile-time-eval.ts`) in the scope that reads it.
  *
  * Implementation is split across modules:
- * - parse-helpers.ts: utility functions (evaluate, resolve, validate, parse)
- * - expression-eval.ts: expression to trigger/action/text conversion
+ * - parse-helpers.ts: the values constructs read (names, labels, numbers, lists, options, actions)
+ * - expression-eval.ts: triggers and dialog text
  * - parse-chain.ts: chain() top-level call transforms (transformChainCall)
  * - parse-constructs.ts: begin/append/extend/interject/replaceState transforms
  * - chain-parsing.ts: method chain transition parsing (reply().action().goTo())
  * - chain-processing.ts: chain body processing (from/fromWhen/say)
- * - state-transitions.ts: state/transition/extend processing, loop unrolling
+ * - state-transitions.ts: state/transition/extend processing, helper inlining
  * - state-resolution.ts: transitive state collection and orphan detection
  * - patch-operations.ts: patch operation transforms (ALTER_TRANS, etc.)
  */
 
 import {
     type CallExpression,
-    type FunctionDeclaration,
+    type IfStatement,
     type SourceFile,
     type Statement,
     type VariableStatement,
@@ -26,9 +27,11 @@ import {
     SyntaxKind,
 } from "ts-morph";
 import { TDConstructType, TDPatchOp, type TDScript, type TDConstruct } from "./types";
-import type { VarsContext } from "../../common/transpiler-utils";
-import { evaluateExpression } from "./parse-helpers";
-import { expressionToTrigger } from "./expression-eval";
+import { Scope, declareStatements } from "../../common/compile-time-eval";
+import { getBlockStatements } from "../../common/transpiler-utils";
+import { TranspileError } from "../../common/transpile-error";
+import { blockScope, isDeclaration, unrollLoop } from "./parse-helpers";
+import { STATE_ENTRY, requiredTriggerOf } from "./expression-eval";
 import { type FuncsContext } from "./state-transitions";
 import { resolveTransitiveStates, collectOrphanWarnings } from "./state-resolution";
 import {
@@ -45,6 +48,7 @@ import {
 } from "./patch-operations";
 import { transformChainCall } from "./parse-chain";
 import {
+    type ConstructContext,
     transformBegin,
     transformAppend,
     transformReplaceState,
@@ -78,18 +82,15 @@ const TD_KEYWORDS = {
     REPLACE_STATE_TRIGGER: "replaceStateTrigger",
 } as const;
 
+/** Calls esbuild inserts into a bundle for its own bookkeeping; none of them is a TD construct. */
+const BUNDLER_HELPERS: ReadonlySet<string> = new Set(["__name", "__defProp"]);
+
 /**
  * Per-call parse context. Fresh instance for every parse() invocation - no
  * state is shared across calls.
- *
- * `vars` is intentionally mutable throughout a single pass: inlineUserFunction
- * in state-transitions.ts saves/restores it around each user-function call so
- * that loop-unrolling and parameter substitution work correctly. The mutation
- * is always scoped to the current parse() invocation.
  */
 interface ParseContext {
     readonly sourceFile: SourceFile;
-    readonly vars: VarsContext; // mutable by design - inlineUserFunction mutates it
     readonly funcs: FuncsContext;
     readonly calledAsFunction: Set<string>;
     /** Local names the file exports as `default` through an export list (see `defaultExportedCall`). */
@@ -101,31 +102,25 @@ interface ParseContext {
  * Each call receives a fresh ParseContext - no state leaks between calls.
  */
 export function parse(sourceFile: SourceFile): TDScript {
+    const scope = new Scope();
+    const statements = sourceFile.getStatements();
+    declareStatements(scope, statements);
+
+    const funcs = collectFunctions(sourceFile, scope);
     const ctx: ParseContext = {
         sourceFile,
-        vars: new Map(),
-        funcs: new Map(),
-        calledAsFunction: new Set(),
+        funcs,
+        calledAsFunction: collectCalledFunctions(sourceFile, funcs),
         defaultExports: collectDefaultExportNames(sourceFile),
     };
 
-    // Pass 1: Collect declarations
-    collectDeclarations(ctx);
+    // Transform top-level statements to constructs
+    const constructs = statements.flatMap((stmt) => transformTopLevel(ctx, stmt, scope));
 
-    // Pass 2: Transform top-level statements to constructs
-    const constructs: TDConstruct[] = [];
+    // Transitively collect goTo targets not explicitly listed
+    resolveTransitiveStates(constructs, ctx.funcs);
 
-    for (const stmt of sourceFile.getStatements()) {
-        const construct = transformTopLevel(ctx, stmt);
-        if (construct) {
-            constructs.push(...construct);
-        }
-    }
-
-    // Pass 3: Transitively collect goTo targets not explicitly listed
-    resolveTransitiveStates(constructs, ctx.funcs, ctx.vars);
-
-    // Pass 4: Warn about orphan state functions
+    // Warn about orphan state functions
     const warnings = collectOrphanWarnings(constructs, ctx.funcs, ctx.calledAsFunction);
 
     return {
@@ -136,100 +131,107 @@ export function parse(sourceFile: SourceFile): TDScript {
 }
 
 /**
- * Collect variable and function declarations for compile-time evaluation.
+ * Every function the source declares, by name, for collecting states a construct or a goTo() names. A
+ * module-level function closes over the module scope; one inside a module-level `if` over that block, and takes
+ * the if's condition as its state entry trigger.
  */
-function collectDeclarations(ctx: ParseContext): void {
-    // Collect all variable declarations
-    for (const varDecl of ctx.sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
-        const name = varDecl.getName();
-        const init = varDecl.getInitializer();
-        if (init) {
-            const value = evaluateExpression(init, ctx.vars);
-            if (value !== undefined) {
-                ctx.vars.set(name, value);
-            }
-        }
-    }
-
-    // Collect function declarations (including those inside if statements)
-    for (const func of ctx.sourceFile.getDescendantsOfKind(SyntaxKind.FunctionDeclaration)) {
+function collectFunctions(sourceFile: SourceFile, scope: Scope): FuncsContext {
+    const funcs: FuncsContext = new Map();
+    for (const func of sourceFile.getDescendantsOfKind(SyntaxKind.FunctionDeclaration)) {
         const name = func.getName();
-        if (name) {
-            // Check if function is inside an if statement (entry trigger)
-            const trigger = getFunctionEntryTrigger(ctx, func);
-            ctx.funcs.set(name, { func, trigger });
+        // A body-less `declare function` stands in for the bodied one, wherever either sits.
+        if (name && (!funcs.has(name) || func.getBody() !== undefined)) {
+            funcs.set(name, { func, closure: func.getParent() === sourceFile ? scope : undefined });
         }
     }
-
-    // Identify functions used as direct callees (helper functions, not states).
-    // e.g. helper() -> "helper" is callee, so it's a helper function.
-    // goTo(myState) -> "goTo" is callee, "myState" is an argument, not added.
-    for (const call of ctx.sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-        const callee = call.getExpression();
-        if (Node.isIdentifier(callee)) {
-            const name = callee.getText();
-            if (ctx.funcs.has(name)) {
-                ctx.calledAsFunction.add(name);
-            }
+    for (const stmt of sourceFile.getStatements()) {
+        if (!Node.isIfStatement(stmt)) continue;
+        const thenStmts = getBlockStatements(stmt.getThenStatement());
+        const wrapped = thenStmts.filter((s) => Node.isFunctionDeclaration(s));
+        if (wrapped.length === 0) continue;
+        const trigger = requiredTriggerOf(stmt.getExpression(), scope, STATE_ENTRY);
+        const closure = blockScope(scope, thenStmts);
+        for (const func of wrapped) {
+            const name = func.getName();
+            if (name && func.getBody() !== undefined) funcs.set(name, { func, closure, trigger });
         }
     }
+    return funcs;
 }
 
 /**
- * Check if a function is inside an if statement and return its trigger.
- * Pattern: if (trigger()) { function name() { ... } }
+ * Names used as direct callees (helper functions, not states).
+ * e.g. helper() -> "helper" is callee, so it's a helper function.
+ * goTo(myState) -> "goTo" is callee, "myState" is an argument, not added.
  */
-function getFunctionEntryTrigger(ctx: ParseContext, func: FunctionDeclaration): string | undefined {
-    const parent = func.getParent();
-
-    // Check if parent is a Block inside an IfStatement
-    if (Node.isBlock(parent)) {
-        const blockParent = parent.getParent();
-        if (Node.isIfStatement(blockParent)) {
-            // This function is the "then" branch of an if
-            return expressionToTrigger(blockParent.getExpression(), ctx.vars);
-        }
+function collectCalledFunctions(sourceFile: SourceFile, funcs: FuncsContext): Set<string> {
+    const called = new Set<string>();
+    for (const call of sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+        const callee = call.getExpression();
+        if (Node.isIdentifier(callee) && funcs.has(callee.getText())) called.add(callee.getText());
     }
-
-    return undefined;
+    return called;
 }
 
 /**
  * Transform a top-level statement to TD constructs.
  */
-function transformTopLevel(ctx: ParseContext, stmt: Statement): TDConstruct[] | null {
-    // Skip variable and function declarations - except a binding the file exports as default
+function transformTopLevel(ctx: ParseContext, stmt: Statement, scope: Scope): TDConstruct[] {
+    // Declarations emit nothing - except a binding the file exports as default
     if (stmt.isKind(SyntaxKind.VariableStatement)) {
         const call = defaultExportedCall(ctx, stmt);
-        return call ? transformTopLevelCall(ctx, call) : null;
+        return call ? (transformTopLevelCall(ctx, call, scope) ?? []) : [];
     }
-    if (stmt.isKind(SyntaxKind.FunctionDeclaration)) {
-        return null;
+    if (isDeclaration(stmt) || stmt.isKind(SyntaxKind.ExportDeclaration)) {
+        return [];
     }
 
-    // Skip if-wrapped functions - they're processed when referenced in dialog()/append()
-    // The if-wrapper just provides the entry trigger, which is captured during collection
+    // An if-wrapped function is processed when a construct references it; the if gives it
+    // its entry trigger (see collectFunctions).
     if (stmt.isKind(SyntaxKind.IfStatement)) {
-        return null;
+        checkStateWrapper(stmt);
+        return [];
     }
 
     // Handle expression statement (top-level calls like dialog(), append(), etc.)
-    if (stmt.isKind(SyntaxKind.ExpressionStatement)) {
+    // and export default (for dialog())
+    if (stmt.isKind(SyntaxKind.ExpressionStatement) || stmt.isKind(SyntaxKind.ExportAssignment)) {
         const expr = stmt.getExpression();
-        if (Node.isCallExpression(expr)) {
-            return transformTopLevelCall(ctx, expr);
+        if (!Node.isCallExpression(expr)) {
+            throw TranspileError.fromNode(stmt, `${expr.getKindName()} is not a TD construct`);
         }
+        if (BUNDLER_HELPERS.has(expr.getExpression().getText())) return [];
+        return transformTopLevelCall(ctx, expr, scope) ?? [];
     }
 
-    // Handle export default (for dialog())
-    if (stmt.isKind(SyntaxKind.ExportAssignment)) {
-        const expr = stmt.getExpression();
-        if (Node.isCallExpression(expr)) {
-            return transformTopLevelCall(ctx, expr);
-        }
+    if (stmt.isKind(SyntaxKind.ForStatement) || stmt.isKind(SyntaxKind.ForOfStatement)) {
+        const constructs: TDConstruct[] = [];
+        unrollLoop(stmt, scope, (body, iteration) => {
+            for (const s of body) constructs.push(...transformTopLevel(ctx, s, iteration));
+        });
+        return constructs;
+    }
+    if (stmt.isKind(SyntaxKind.Block)) {
+        const inner = blockScope(scope, stmt.getStatements());
+        return stmt.getStatements().flatMap((s) => transformTopLevel(ctx, s, inner));
     }
 
-    return null;
+    throw TranspileError.fromNode(stmt, `${stmt.getKindName()} is not supported at the top level of a TD file`);
+}
+
+/** A module-level `if` wraps state functions only, giving them its condition as their entry trigger. */
+function checkStateWrapper(stmt: IfStatement): void {
+    if (stmt.getElseStatement() !== undefined) {
+        throw TranspileError.fromNode(stmt, "a module-level if wraps state functions, and takes no else");
+    }
+    for (const s of getBlockStatements(stmt.getThenStatement())) {
+        if (!isDeclaration(s)) {
+            throw TranspileError.fromNode(
+                s,
+                `a module-level if wraps state functions, giving them its trigger; ${s.getKindName()} is not supported in it`,
+            );
+        }
+    }
 }
 
 /**
@@ -263,54 +265,55 @@ function defaultExportedCall(ctx: ParseContext, stmt: VariableStatement): CallEx
 /**
  * Transform a top-level call expression.
  */
-function transformTopLevelCall(ctx: ParseContext, call: CallExpression): TDConstruct[] | null {
+function transformTopLevelCall(ctx: ParseContext, call: CallExpression, scope: Scope): TDConstruct[] | null {
     const funcName = call.getExpression().getText();
+    const constructCtx: ConstructContext = { funcs: ctx.funcs, scope };
 
     switch (funcName) {
         case TD_KEYWORDS.BEGIN:
-            return transformBegin(ctx, call);
+            return transformBegin(constructCtx, call);
         case TD_KEYWORDS.CHAIN:
-            return transformChainCall(ctx, call);
+            return transformChainCall(call, scope);
         case TD_KEYWORDS.APPEND:
-            return transformAppend(ctx, call, false);
+            return transformAppend(constructCtx, call, false);
         case TD_KEYWORDS.APPEND_EARLY:
-            return transformAppend(ctx, call, true);
+            return transformAppend(constructCtx, call, true);
         case TD_KEYWORDS.REPLACE_STATE:
-            return transformReplaceState(ctx, call);
+            return transformReplaceState(constructCtx, call);
         case TD_KEYWORDS.EXTEND_TOP:
         case TD_KEYWORDS.EXTEND_BOTTOM:
-            return transformExtend(ctx, call, funcName === TD_KEYWORDS.EXTEND_TOP);
+            return transformExtend(constructCtx, call, funcName === TD_KEYWORDS.EXTEND_TOP);
         case TD_KEYWORDS.INTERJECT:
-            return transformInterject(ctx, call, TDConstructType.Interject);
+            return transformInterject(constructCtx, call, TDConstructType.Interject);
         case TD_KEYWORDS.INTERJECT_COPY_TRANS:
-            return transformInterject(ctx, call, TDConstructType.InterjectCopyTrans);
+            return transformInterject(constructCtx, call, TDConstructType.InterjectCopyTrans);
         case TD_KEYWORDS.INTERJECT_COPY_TRANS2:
-            return transformInterject(ctx, call, TDConstructType.InterjectCopyTrans2);
+            return transformInterject(constructCtx, call, TDConstructType.InterjectCopyTrans2);
         case TD_KEYWORDS.REPLACE:
-            return transformReplace(call, ctx.vars, ctx.funcs);
+            return transformReplace(call, scope, ctx.funcs);
         case TD_KEYWORDS.ALTER_TRANS:
-            return transformAlterTrans(call, ctx.vars);
+            return transformAlterTrans(call, scope);
         case TD_KEYWORDS.ADD_STATE_TRIGGER:
-            return transformAddStateTrigger(call, ctx.vars);
+            return transformAddStateTrigger(call, scope);
         case TD_KEYWORDS.ADD_TRANS_TRIGGER:
-            return transformAddTransTrigger(call, ctx.vars);
+            return transformAddTransTrigger(call, scope);
         case TD_KEYWORDS.ADD_TRANS_ACTION:
-            return transformAddTransAction(call, ctx.vars);
+            return transformAddTransAction(call, scope);
         case TD_KEYWORDS.REPLACE_TRANS_TRIGGER:
-            return transformReplaceTrans(call, TDPatchOp.ReplaceTransTrigger, ctx.vars);
+            return transformReplaceTrans(call, TDPatchOp.ReplaceTransTrigger, scope);
         case TD_KEYWORDS.REPLACE_TRANS_ACTION:
-            return transformReplaceTrans(call, TDPatchOp.ReplaceTransAction, ctx.vars);
+            return transformReplaceTrans(call, TDPatchOp.ReplaceTransAction, scope);
         case TD_KEYWORDS.REPLACE_TRIGGER_TEXT:
-            return transformReplaceText(call, TDPatchOp.ReplaceTriggerText, ctx.vars);
+            return transformReplaceText(call, TDPatchOp.ReplaceTriggerText, scope);
         case TD_KEYWORDS.REPLACE_ACTION_TEXT:
-            return transformReplaceText(call, TDPatchOp.ReplaceActionText, ctx.vars);
+            return transformReplaceText(call, TDPatchOp.ReplaceActionText, scope);
         case TD_KEYWORDS.SET_WEIGHT:
-            return transformSetWeight(call, ctx.vars);
+            return transformSetWeight(call, scope);
         case TD_KEYWORDS.REPLACE_SAY:
-            return transformReplaceSay(call, ctx.vars);
+            return transformReplaceSay(call, scope);
         case TD_KEYWORDS.REPLACE_STATE_TRIGGER:
-            return transformReplaceStateTrigger(call, ctx.vars);
+            return transformReplaceStateTrigger(call, scope);
         default:
-            return null;
+            throw TranspileError.fromNode(call, `'${funcName}()' is not a TD construct`);
     }
 }

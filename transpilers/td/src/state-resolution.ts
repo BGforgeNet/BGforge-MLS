@@ -14,9 +14,9 @@ import {
     type TDState,
     type TDWarning,
 } from "./types";
-import type { VarsContext } from "../../common/transpiler-utils";
 import { transformFunctionToState, type FuncsContext } from "./state-transitions";
 import { lineIndexFor } from "../../common/line-index";
+import { TranspileError } from "../../common/transpile-error";
 
 /**
  * Collect all goTo target names from a state's transitions.
@@ -55,7 +55,7 @@ export function collectExplicitLabels(constructs: readonly TDConstruct[]): Set<s
  * functions that aren't already explicitly passed to any construct.
  * Prevents having to manually list every reachable state.
  */
-export function resolveTransitiveStates(constructs: TDConstruct[], funcs: FuncsContext, vars: VarsContext) {
+export function resolveTransitiveStates(constructs: TDConstruct[], funcs: FuncsContext) {
     const explicitLabels = collectExplicitLabels(constructs);
 
     for (const construct of constructs) {
@@ -94,7 +94,15 @@ export function resolveTransitiveStates(constructs: TDConstruct[], funcs: FuncsC
             collected.add(target);
             explicitLabels.add(target);
 
-            const state = transformFunctionToState(funcInfo.func, vars, funcs, funcInfo.trigger);
+            // Only a module-level function, or one in a module-level if, has a scope known by name alone.
+            if (funcInfo.closure === undefined) {
+                throw TranspileError.fromNode(
+                    funcInfo.func,
+                    `the state '${target}' a goTo() reaches is declared inside another function or block; ` +
+                        "declare it at module level",
+                );
+            }
+            const state = transformFunctionToState(funcInfo.func, funcInfo.closure, funcs, funcInfo.trigger);
             if (state) {
                 newStates.push(state);
 

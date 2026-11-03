@@ -189,6 +189,8 @@ interface TDSay {
 export interface TDText {
     type: TDTextType;
     value: number | string;
+    /** A forced reference's text, which WeiDU writes into the strref `value` names. */
+    text?: string;
     sound?: string;
     // For male/female variants
     male?: TDText;

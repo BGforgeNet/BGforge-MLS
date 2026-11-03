@@ -61,10 +61,3 @@ declare var STATE_SLEEPING: number;
 declare var Myself: any;
 declare var DRYAD_TELEPORT: any;
 declare var LastTalkedToBy: any;
-
-// ---------------------------------------------------------------------------
-// WeiDU variable references (used in samples as inline actions/calls)
-// ---------------------------------------------------------------------------
-
-declare var action_bg1_bags: Action;
-declare function action_drink(): void;

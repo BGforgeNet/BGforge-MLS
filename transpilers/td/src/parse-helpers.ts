@@ -1,154 +1,193 @@
 /**
- * TD Parser helpers - utility functions for expression evaluation,
- * argument validation, and parsing arrays/states/options.
- *
- * These are extracted from TDParser as standalone functions that
- * receive parser context (vars map) as a parameter.
+ * TD parser helpers: the compile-time values a TD construct reads - names, state labels, integers, lists,
+ * options, actions - each produced by the evaluator (`common/compile-time-eval.ts`) from the syntax tree and
+ * refused, naming the expression, when it is not the kind the construct takes.
  */
 
-import { type Expression, Node, SyntaxKind } from "ts-morph";
-import * as utils from "../../common/transpiler-utils";
-import type { VarsContext } from "../../common/transpiler-utils";
+import {
+    type CallExpression,
+    type Expression,
+    type ForOfStatement,
+    type ForStatement,
+    type Statement,
+    Node,
+} from "ts-morph";
+import { type Scope, declareStatements, evaluate, unrollFor, unrollForOf } from "../../common/compile-time-eval";
+import {
+    describeKind,
+    formatArgument,
+    type ArgumentStyle,
+    type FunctionValue,
+    type Value,
+} from "../../common/compile-time-value";
+import { getBlockStatements } from "../../common/transpiler-utils";
 import { TranspileError } from "../../common/transpile-error";
 
-/** Helper functions that should be resolved at evaluation time, not stored as raw text. */
-const RESOLVED_HELPERS = new Set(["obj", "$obj", "tra", "$tra", "tlk", "$tlk"]);
+/** D actions and triggers in TD's compact form: `SetGlobal("x","GLOBAL",1)`. */
+const TD_ARGUMENTS: ArgumentStyle = { separator: "," };
 
-/**
- * Evaluate an expression to a string value for variable storage.
- * Resolves known helper calls (obj, tra, tlk) so their results are stored
- * rather than the raw call text.
- */
-function evaluateExpression(expr: Expression, vars: VarsContext): string | undefined {
-    // Unwrap `as const` / `as Type` - the type assertion is irrelevant at compile time
-    if (expr.isKind(SyntaxKind.AsExpression)) {
-        return evaluateExpression(expr.getExpression(), vars);
-    }
+function refuse(node: Node, message: string): TranspileError {
+    return TranspileError.fromNode(node, message);
+}
 
-    if (expr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-        const elements = expr.getElements().map((e) => e.getText());
-        return `[${elements.join(", ")}]`;
-    }
+/** An engine call in D's spelling, its arguments as WeiDU reads them. */
+function formatCall(name: string, args: readonly Value[], node: Node): string {
+    return formatArgument({ kind: "call", name, args }, TD_ARGUMENTS, node);
+}
 
-    if (expr.isKind(SyntaxKind.StringLiteral) || expr.isKind(SyntaxKind.NumericLiteral)) {
-        return expr.getText();
-    }
+/** The D action `expr` performs. */
+function actionOf(expr: Expression, scope: Scope): string {
+    const value = evaluate(expr, scope);
+    if (value.kind !== "call") throw refuse(expr, `'${expr.getText()}' is a value, not an action`);
+    return formatCall(value.name, value.args, expr);
+}
 
-    if (expr.isKind(SyntaxKind.Identifier)) {
-        const name = expr.getText();
-        return vars.get(name);
-    }
+/** The actions of an `action(...)` call, as one D action list. */
+function actionsOf(args: readonly Expression[], scope: Scope): string {
+    return args.map((arg) => actionOf(arg, scope)).join(" ");
+}
 
-    // Resolve known helpers (obj, tra, tlk) so variables store the evaluated
-    // result rather than the raw call text. Without this, `const x = obj("npc")`
-    // would store `obj("npc")` and pass it through verbatim in action strings.
-    if (Node.isCallExpression(expr)) {
-        const funcName = expr.getExpression().getText();
-        if (RESOLVED_HELPERS.has(funcName)) {
-            return expressionToActionString(expr, vars);
-        }
-    }
-
-    return expr.getText();
+/** A dialog file, speaker or variable name: a string, or an engine name the source leaves unbound. */
+function nameOf(expr: Expression, scope: Scope, what: string): string {
+    const value = evaluate(expr, scope);
+    if (value.kind === "string") return value.value;
+    if (value.kind === "symbol") return value.name;
+    throw refuse(expr, `${what} is a string, not ${describeKind(value)}`);
 }
 
 /**
- * Resolve an array expression to its string elements.
+ * A state: a function the source declares, or one a body-less `declare function` names, by its name; a label
+ * string as written; a state number.
  */
-function resolveArrayElements(expr: Expression, vars: VarsContext): string[] | null {
-    if (expr.isKind(SyntaxKind.ArrayLiteralExpression)) {
-        // Use flattenArrayElements to support spread expressions
-        return utils.flattenArrayElements(expr, vars);
+function labelOfValue(value: Value, node: Node): string {
+    switch (value.kind) {
+        case "function":
+            return value.name;
+        case "symbol":
+            return value.name;
+        case "string":
+            return value.value;
+        case "int":
+            return String(value.value);
+        default:
+            throw refuse(
+                node,
+                `a state is named by a function, a label string or a state number, not ${describeKind(value)}`,
+            );
     }
-
-    if (expr.isKind(SyntaxKind.Identifier)) {
-        const name = expr.getText();
-        const value = vars.get(name);
-        if (value && value.startsWith("[") && value.endsWith("]")) {
-            // Use parseArrayLiteral to handle nested arrays correctly
-            return utils.parseArrayLiteral(value);
-        }
-    }
-
-    return null;
 }
 
-/**
- * Resolve an expression to its string value.
- * Handles string literals and variable references.
- */
-function resolveStringExpr(expr: Expression, vars: VarsContext): string {
-    if (Node.isStringLiteral(expr) || expr.isKind(SyntaxKind.NoSubstitutionTemplateLiteral)) {
-        return utils.resolveStringLiteral(expr);
-    }
-    if (Node.isIdentifier(expr)) {
-        const name = expr.getText();
-        const value = vars.get(name);
-        if (value !== undefined) {
-            return utils.stripQuotes(value);
-        }
-        return name;
-    }
-    return utils.stripQuotes(expr.getText());
+function stateLabelOf(expr: Expression, scope: Scope): string {
+    return labelOfValue(evaluate(expr, scope), expr);
 }
 
-/**
- * Convert an expression to a D action string.
- * Function calls are serialized as FunctionName(arg1,arg2,...).
- * Handles tra/$tra -> @N, tlk/$tlk -> #N, obj/$obj -> object reference.
- */
-function expressionToActionString(expr: Expression, vars: VarsContext): string {
-    if (Node.isCallExpression(expr)) {
-        const funcName = expr.getExpression().getText();
-        const args = expr.getArguments();
+function integerOf(expr: Expression, scope: Scope, what: string): number {
+    const value = evaluate(expr, scope);
+    if (value.kind !== "int") throw refuse(expr, `${what} is an integer, not ${describeKind(value)}`);
+    return value.value;
+}
 
-        // tra(123) or $tra(123) => @123
-        if ((funcName === "tra" || funcName === "$tra") && args.length >= 1 && args[0]) {
-            return `@${utils.substituteVars(args[0].getText(), vars)}`;
+/** A patch operation's states: one state, or an array of them, each a number or a label. */
+function stateListOf(expr: Expression, scope: Scope): (string | number)[] {
+    const value = evaluate(expr, scope);
+    const items = value.kind === "array" ? value.items : [value];
+    return items.map((item) => (item.kind === "int" ? item.value : labelOfValue(item, expr)));
+}
+
+/** An array of integers: a patch operation's transition numbers. */
+function integerListOf(expr: Expression, scope: Scope, what: string): number[] {
+    const value = evaluate(expr, scope);
+    if (value.kind !== "array") throw refuse(expr, `${what} is an array of integers, not ${describeKind(value)}`);
+    return value.items.map((item) => {
+        if (item.kind !== "int") throw refuse(expr, `${what} holds integers, not ${describeKind(item)}`);
+        return item.value;
+    });
+}
+
+/** An options object's fields, refused unless it is an object holding only the options `allowed` names. */
+function optionsOf(
+    expr: Expression | undefined,
+    scope: Scope,
+    allowed: readonly string[],
+    construct: string,
+): ReadonlyMap<string, Value> {
+    if (expr === undefined) return new Map();
+    const value = evaluate(expr, scope);
+    if (value.kind !== "record") throw refuse(expr, `${construct}() takes its options as an object`);
+    for (const key of value.fields.keys()) {
+        if (!allowed.includes(key)) {
+            throw refuse(expr, `${construct}() has no option '${key}'; it takes ${allowed.join(", ")}`);
         }
-
-        // tlk(123) or $tlk(123) => bare number in action strings
-        // (# prefix is only for D text contexts like SAY/REPLY)
-        if ((funcName === "tlk" || funcName === "$tlk") && args.length >= 1 && args[0]) {
-            return utils.substituteVars(args[0].getText(), vars);
-        }
-
-        // obj("[ANYONE]") or $obj("[ANYONE]") => [ANYONE]
-        // obj("string") or $obj("string") => "string"
-        if ((funcName === "obj" || funcName === "$obj") && args.length >= 1 && args[0]) {
-            const raw = utils.stripQuotes(args[0].getText());
-            if (raw.startsWith("[") && raw.endsWith("]")) {
-                return raw;
-            }
-            return `"${raw}"`;
-        }
-
-        const argStrings = args.map((a) => expressionToActionString(a as Expression, vars));
-        return `${funcName}(${argStrings.join(",")})`;
     }
+    return value.fields;
+}
 
-    if (Node.isStringLiteral(expr)) {
-        // Keep quotes for string arguments
-        return expr.getText();
-    }
+function booleanOption(options: ReadonlyMap<string, Value>, key: string, node: Node): boolean {
+    const value = options.get(key);
+    if (value === undefined) return false;
+    if (value.kind !== "bool") throw refuse(node, `the option '${key}' is a boolean, not ${describeKind(value)}`);
+    return value.value;
+}
 
-    if (Node.isNumericLiteral(expr)) {
-        return expr.getText();
-    }
+/** A patch operation's UNLESS condition: a string, or `{ unless }`, as WeiDU reads it. */
+function unlessOf(expr: Expression | undefined, scope: Scope, construct: string): string | undefined {
+    if (expr === undefined) return undefined;
+    const value = evaluate(expr, scope);
+    if (value.kind !== "record") return unlessValue(value, expr);
+    return unlessValue(optionsOf(expr, scope, ["unless"], construct).get("unless"), expr);
+}
 
-    if (Node.isIdentifier(expr)) {
-        // Could be a constant or identifier - substitute if known
-        const name = expr.getText();
-        const value = vars.get(name);
-        if (value !== undefined) return value;
-        // Scope constants (GLOBAL, LOCALS, MYAREA) arrive as bare identifiers
-        // because ielib can't be bundled - quote them for WeiDU output
-        if (utils.SCOPE_CONSTANTS.has(name)) return `"${name}"`;
-        return name;
-    }
+function unlessValue(value: Value | undefined, node: Node): string | undefined {
+    if (value === undefined) return undefined;
+    if (value.kind !== "string") throw refuse(node, `an UNLESS condition is a string, not ${describeKind(value)}`);
+    return value.value;
+}
 
-    // Fallback to raw text
-    return utils.substituteVars(expr.getText(), vars);
+/** A string a patch operation searches for or replaces with: the author's text, emitted as written. */
+function patchTextOf(expr: Expression, scope: Scope, what: string): string {
+    const value = evaluate(expr, scope);
+    if (value.kind !== "string") throw refuse(expr, `${what} is a string, not ${describeKind(value)}`);
+    return value.value;
+}
+
+/** A child scope holding the block's own constants and functions. */
+function blockScope(scope: Scope, statements: readonly Statement[]): Scope {
+    const inner = scope.child();
+    declareStatements(inner, statements);
+    return inner;
+}
+
+/** A statement that only declares: its names are bound by `declareStatements`, and it emits nothing itself. */
+function isDeclaration(statement: Statement): boolean {
+    return (
+        Node.isVariableStatement(statement) ||
+        Node.isFunctionDeclaration(statement) ||
+        Node.isEmptyStatement(statement) ||
+        Node.isInterfaceDeclaration(statement) ||
+        Node.isTypeAliasDeclaration(statement) ||
+        (Node.isModuleDeclaration(statement) && statement.hasDeclareKeyword()) ||
+        (Node.isEnumDeclaration(statement) && statement.hasDeclareKeyword())
+    );
+}
+
+/** Runs `onBody` once per pass of a compile-time loop, the body's statements in a scope of their own. */
+function unrollLoop(
+    loop: ForStatement | ForOfStatement,
+    scope: Scope,
+    onBody: (statements: Statement[], scope: Scope) => void,
+): void {
+    const statements = getBlockStatements(loop.getStatement());
+    const onIteration = (iteration: Scope) => onBody(statements, blockScope(iteration, statements));
+    if (Node.isForStatement(loop)) unrollFor(loop, scope, onIteration);
+    else unrollForOf(loop, scope, onIteration);
+}
+
+/** The function the source declares that `call` calls, to inline in place of the call; undefined otherwise. */
+function calledHelper(call: CallExpression, scope: Scope): FunctionValue | undefined {
+    const callee = call.getExpression();
+    if (!Node.isIdentifier(callee)) return undefined;
+    const bound = scope.lookup(callee.getText(), callee);
+    return bound?.kind === "function" ? bound : undefined;
 }
 
 /**
@@ -159,100 +198,6 @@ function validateArgs(funcName: string, args: Node[], minArgs: number, lineNumbe
         const argWord = minArgs === 1 ? "argument" : "arguments";
         throw new TranspileError(`${funcName}() requires at least ${minArgs} ${argWord}`, { line: lineNumber });
     }
-}
-
-/**
- * Parse a state list (array of strings/numbers or single value).
- */
-function parseStateList(expr: Expression, vars: VarsContext): (string | number)[] {
-    if (Node.isArrayLiteralExpression(expr)) {
-        return expr.getElements().map((e) => {
-            const text = e.getText();
-            // Check if it's a number or string
-            if (/^\d+$/.test(text)) {
-                return Number(text);
-            }
-            return resolveStringExpr(e, vars);
-        });
-    }
-
-    // Single value
-    const text = expr.getText();
-    if (/^\d+$/.test(text)) {
-        return [Number(text)];
-    }
-    return [resolveStringExpr(expr, vars)];
-}
-
-/**
- * Parse an array of numbers.
- */
-function parseNumberArray(expr: Expression): number[] {
-    if (!Node.isArrayLiteralExpression(expr)) {
-        throw TranspileError.fromNode(expr, `Expected array of numbers`);
-    }
-
-    return expr.getElements().map((e) => Number(e.getText()));
-}
-
-/**
- * Parse unless option (can be string or object with { unless: "..." }).
- */
-function parseUnless(expr: Expression): string | undefined {
-    if (Node.isObjectLiteralExpression(expr)) {
-        for (const prop of expr.getProperties()) {
-            if (Node.isPropertyAssignment(prop) && prop.getName() === "unless") {
-                const value = prop.getInitializer();
-                if (value) {
-                    return utils.stripQuotes(value.getText());
-                }
-            }
-        }
-        return undefined;
-    }
-
-    return utils.stripQuotes(expr.getText());
-}
-
-/**
- * Extract a boolean option from an optional ObjectLiteralExpression argument.
- * Returns true if the property exists and its initializer text is "true".
- */
-function parseBooleanOption(arg: Node | undefined, propertyName: string): boolean {
-    if (!arg || !Node.isObjectLiteralExpression(arg)) return false;
-    for (const prop of arg.getProperties()) {
-        if (Node.isPropertyAssignment(prop) && prop.getName() === propertyName) {
-            return prop.getInitializer()?.getText() === "true";
-        }
-    }
-    return false;
-}
-
-/**
- * Extract a string option from an optional ObjectLiteralExpression argument.
- * Returns the stripped string value if found, undefined otherwise.
- */
-function parseStringOption(arg: Node | undefined, propertyName: string): string | undefined {
-    if (!arg || !Node.isObjectLiteralExpression(arg)) return undefined;
-    for (const prop of arg.getProperties()) {
-        if (Node.isPropertyAssignment(prop) && prop.getName() === propertyName) {
-            const value = prop.getInitializer();
-            if (value) return utils.stripQuotes(value.getText());
-        }
-    }
-    return undefined;
-}
-
-/**
- * Parse a numeric value from a Node's text.
- * Throws with a descriptive error if the value is not a valid number.
- */
-function parseRequiredNumber(arg: Node, context: string, lineNumber: number): number {
-    const value = Number(arg.getText());
-    if (Number.isNaN(value)) {
-        throw new TranspileError(`Expected numeric value for ${context}, got "${arg.getText()}"`, { line: lineNumber });
-    }
-    return value;
 }
 
 /**
@@ -276,6 +221,11 @@ function getCallArg(args: readonly Node[], index: number, callExpr: Node): Expre
     return arg;
 }
 
+/** The argument at `index`, if the call has one. */
+function optionalCallArg(args: readonly Node[], index: number, callExpr: Node): Expression | undefined {
+    return index < args.length ? getCallArg(args, index, callExpr) : undefined;
+}
+
 /**
  * Narrow every entry in a call's argument list to Expression at once.
  *
@@ -294,17 +244,25 @@ function getCallArgs(args: readonly Node[], callExpr: Node): Expression[] {
 }
 
 export {
-    evaluateExpression,
-    resolveArrayElements,
-    resolveStringExpr,
-    expressionToActionString,
-    validateArgs,
-    parseStateList,
-    parseNumberArray,
-    parseUnless,
-    parseBooleanOption,
-    parseStringOption,
-    parseRequiredNumber,
+    actionsOf,
+    blockScope,
+    booleanOption,
+    calledHelper,
+    formatCall,
     getCallArg,
     getCallArgs,
+    integerListOf,
+    integerOf,
+    isDeclaration,
+    labelOfValue,
+    nameOf,
+    optionalCallArg,
+    optionsOf,
+    patchTextOf,
+    stateLabelOf,
+    stateListOf,
+    unlessOf,
+    unlessValue,
+    unrollLoop,
+    validateArgs,
 };

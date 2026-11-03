@@ -8,16 +8,21 @@
 
 import { type CallExpression, type Expression, Node } from "ts-morph";
 import { TDTransitionType, type TDTransition } from "./types";
-import * as utils from "../../common/transpiler-utils";
-import type { VarsContext } from "../../common/transpiler-utils";
+import type { Scope } from "../../common/compile-time-eval";
+import { TranspileError } from "../../common/transpile-error";
 import {
-    resolveStringExpr,
-    expressionToActionString,
+    actionsOf,
+    booleanOption,
+    getCallArg,
+    getCallArgs,
+    integerOf,
+    nameOf,
+    optionalCallArg,
+    optionsOf,
+    stateLabelOf,
     validateArgs,
-    parseBooleanOption,
-    parseRequiredNumber,
 } from "./parse-helpers";
-import { expressionToText } from "./expression-eval";
+import { textOf } from "./expression-eval";
 import { lineNumberOfNode } from "../../common/line-index";
 
 /** Names that start a method chain: reply(...).xxx() or action(...).xxx(). */
@@ -94,7 +99,7 @@ function collectChainSteps(expr: CallExpression): ChainStep[] {
  * Handles: reply(text).action(...).journal(...).goTo(target)
  *          action(...).exit()
  */
-function parseTransitionChain(expr: CallExpression, vars: VarsContext): TDTransition {
+function parseTransitionChain(expr: CallExpression, scope: Scope): TDTransition {
     const steps = collectChainSteps(expr);
     const lineNumber = lineNumberOfNode(expr);
 
@@ -103,25 +108,22 @@ function parseTransitionChain(expr: CallExpression, vars: VarsContext): TDTransi
     };
 
     for (const step of steps) {
+        const arg = (index: number) => getCallArg(step.args, index, step.expr);
         switch (step.name) {
             case "reply":
                 validateArgs("reply", step.args, 1, lineNumber);
-                trans.reply = expressionToText(step.args[0] as Expression, vars);
+                trans.reply = textOf(arg(0), scope);
                 break;
 
-            case "action": {
+            case "action":
                 validateArgs("action", step.args, 1, lineNumber);
-                const actionStr = step.args.map((a) => expressionToActionString(a as Expression, vars)).join(" ");
-                trans.action = actionStr;
+                trans.action = actionsOf(getCallArgs(step.args, step.expr), scope);
                 break;
-            }
 
-            case "goTo": {
+            case "goTo":
                 validateArgs("goTo", step.args, 1, lineNumber);
-                const target = resolveStringExpr(step.args[0] as Expression, vars);
-                trans.next = { type: TDTransitionType.Goto, target };
+                trans.next = { type: TDTransitionType.Goto, target: stateLabelOf(arg(0), scope) };
                 break;
-            }
 
             case "exit":
                 trans.next = { type: TDTransitionType.Exit };
@@ -129,49 +131,51 @@ function parseTransitionChain(expr: CallExpression, vars: VarsContext): TDTransi
 
             case "extern": {
                 validateArgs("extern", step.args, 2, lineNumber);
+                const options = optionsOf(optionalCallArg(step.args, 2, step.expr), scope, ["ifFileExists"], "extern");
                 trans.next = {
                     type: TDTransitionType.Extern,
-                    filename: utils.stripQuotes(step.args[0]!.getText()),
-                    target: utils.stripQuotes(step.args[1]!.getText()),
-                    ifFileExists: parseBooleanOption(step.args[2], "ifFileExists") || undefined,
+                    filename: nameOf(arg(0), scope, "a dialog file name"),
+                    target: stateLabelOf(arg(1), scope),
+                    ifFileExists: booleanOption(options, "ifFileExists", step.expr) || undefined,
                 };
                 break;
             }
 
             case "copyTransLate": {
                 validateArgs("copyTransLate", step.args, 2, lineNumber);
+                const options = optionsOf(optionalCallArg(step.args, 2, step.expr), scope, ["safe"], "copyTransLate");
                 trans.next = {
                     type: TDTransitionType.CopyTrans,
-                    filename: utils.stripQuotes(step.args[0]!.getText()),
-                    target: utils.stripQuotes(step.args[1]!.getText()),
+                    filename: nameOf(arg(0), scope, "a dialog file name"),
+                    target: stateLabelOf(arg(1), scope),
                     late: true,
-                    safe: parseBooleanOption(step.args[2], "safe") || undefined,
+                    safe: booleanOption(options, "safe", step.expr) || undefined,
                 };
                 break;
             }
 
             case "journal":
                 validateArgs("journal", step.args, 1, lineNumber);
-                trans.journal = expressionToText(step.args[0] as Expression, vars);
+                trans.journal = textOf(arg(0), scope);
                 break;
 
             case "solvedJournal":
                 validateArgs("solvedJournal", step.args, 1, lineNumber);
-                trans.solvedJournal = expressionToText(step.args[0] as Expression, vars);
+                trans.solvedJournal = textOf(arg(0), scope);
                 break;
 
             case "unsolvedJournal":
                 validateArgs("unsolvedJournal", step.args, 1, lineNumber);
-                trans.unsolvedJournal = expressionToText(step.args[0] as Expression, vars);
+                trans.unsolvedJournal = textOf(arg(0), scope);
                 break;
 
             case "flags":
                 validateArgs("flags", step.args, 1, lineNumber);
-                trans.flags = parseRequiredNumber(step.args[0]!, "flags", lineNumber);
+                trans.flags = integerOf(arg(0), scope, "a transition's flags");
                 break;
 
             default:
-                throw new Error(`Unknown chain method "${step.name}" at ${lineNumber}`);
+                throw TranspileError.fromNode(step.expr, `Unknown chain method "${step.name}"`);
         }
     }
 

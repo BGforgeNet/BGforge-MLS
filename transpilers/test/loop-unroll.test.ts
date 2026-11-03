@@ -2,9 +2,7 @@
  * Compile-time loop unroll guard tests for TBAF and TD.
  *
  * These drive the real transpile() entry points (not the internal unroll
- * functions) so the assertions keep holding across the tbaf/loop-unroll.ts
- * <-> td/inline-and-unroll.ts unification and after their extraction into a
- * shared transpilers/common core.
+ * functions), which both unroll through the shared compile-time evaluator.
  */
 import { describe, expect, it } from "vitest";
 import { transpile as tbafTranspile } from "../tbaf/src/index";
@@ -34,14 +32,14 @@ describe("loop unroll: multi-variable for-initializer", () => {
         ].join("\n");
         await expect(tdTranspile("/virtual/foo.td", src)).rejects.toMatchObject({
             name: "TranspileError",
-            message: "Cannot unroll for loop: multi-variable initializer",
+            message: expect.stringMatching(/a compile-time for loop declares one counter/),
         });
     });
 });
 
-// Additional scenarios below drive the shared unroll core (transpilers/common/loop-unroll.ts)
-// through TBAF's transformStatement, which dispatches every ForStatement/ForOfStatement to it
-// unconditionally - so these hit the core's other branches without a second internal API.
+// Additional scenarios below drive the evaluator's unrollFor/unrollForOf through TBAF's
+// transformStatement, which dispatches every ForStatement/ForOfStatement to them
+// unconditionally - so these hit their other branches without a second internal API.
 const tbaf = (src: string) => tbafTranspile("/virtual/foo.tbaf", src);
 
 describe("loop unroll: for-loop iteration and cleanup", () => {
