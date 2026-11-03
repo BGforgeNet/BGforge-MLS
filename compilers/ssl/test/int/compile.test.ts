@@ -340,6 +340,18 @@ const CASES: Case[] = [
         name: "an exported variable block",
         source: "export variable begin\n gx := 1;\n gy;\nend\nprocedure start begin\n gy := gx;\nend\n",
     },
+    {
+        // The expansion meets the minus before it as two tokens, not as the `--` their spellings would join into.
+        name: "a macro spliced after an operator its body would join",
+        source: "#define N -1\nprocedure start begin\n variable a := 5;\n display_msg(a-N);\n display_msg(2*N);\nend\n",
+    },
+    {
+        // A body's own two-character operators lex here as two tokens, and must reach the parser joined.
+        name: "a macro body holding two-character operators",
+        source:
+            "#define NE(a, b) (a != b)\n#define GE(a, b) (a >= b)\nprocedure start begin\n variable x := 5;\n" +
+            " if (NE(x, 1) and GE(x, 2)) then x := 3;\nend\n",
+    },
 ];
 
 describe.skipIf(compiler === null || !wasmPresent)("SSL source compiles to matching bytecode", () => {

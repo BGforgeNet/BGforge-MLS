@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fallout SSL
+
+- The built-in compiler keeps a macro's expansion apart from a token it would join: `a-N` under `#define N -1`
+  compiles, as with the reference compiler; it was refused as `a--1`.
+
 ### Transpilers
 
 - TSSL's `.ssl` output keeps the grouping of a constant whose value is an operator expression: with

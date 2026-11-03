@@ -2,6 +2,11 @@
 
 Notable changes to `@bgforge/ssl` (the compiler library and the `ssl` CLI).
 
+## Unreleased
+
+- A macro whose expansion meets a neighbouring token it would join with compiles, as the reference does: under
+  `#define N -1`, `a-N` is `a - -1`; before, it was read as `a--1` and refused as a syntax error.
+
 ## 0.3.1
 
 - `set_perk_skill1_mag` compiles, to the opcode the reference gives it; before, it was refused as not an engine

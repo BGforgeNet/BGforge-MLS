@@ -110,6 +110,8 @@ interface Tok {
     t: string;
     ws: boolean;
     hide: Set<string>;
+    /** The text it was lexed from, by identity: two tokens of one origin touched there already. */
+    origin: object;
 }
 
 const EMPTY_HIDE: ReadonlySet<string> = new Set<string>();
@@ -118,10 +120,11 @@ const LEX = /(\s+)|("(?:[^"\\]|\\.)*"?)|('(?:[^'\\]|\\.)*'?)|(0[xX][0-9a-fA-F]+|
 
 function tokenize(text: string, hide: Set<string> = EMPTY_HIDE as Set<string>): Tok[] {
     const out: Tok[] = [];
+    const origin = {};
     LEX.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = LEX.exec(text)) !== null) {
-        out.push(m[1] === undefined ? { t: m[0], ws: false, hide } : { t: " ", ws: true, hide });
+        out.push(m[1] === undefined ? { t: m[0], ws: false, hide, origin } : { t: " ", ws: true, hide, origin });
     }
     return out;
 }
@@ -132,6 +135,48 @@ function isIdent(tok: Tok | undefined): tok is Tok {
 
 function spell(toks: readonly Tok[]): string {
     return toks.map((t) => t.t).join("");
+}
+
+/** Punctuation pairs the SSL lexer reads as one token: two tokens ending and starting with them must not touch. */
+const JOINED_PUNCTUATION: ReadonlySet<string> = new Set([
+    "!=",
+    "*=",
+    "++",
+    "+=",
+    "--",
+    "-=",
+    "/=",
+    ":=",
+    "<=",
+    "==",
+    ">=",
+    "/*",
+    "//",
+]);
+
+/** Whether `left` written directly before `right` would lex as something other than those two tokens. */
+function wouldJoin(left: string, right: string): boolean {
+    if (JOINED_PUNCTUATION.has(`${left.at(-1)}${right[0]}`)) return true;
+    const relexed = tokenize(left + right);
+    return relexed.length !== 2 || relexed[0]?.t !== left;
+}
+
+/**
+ * An expanded line as text. Where expansion brought together tokens that would join - `a-N` under
+ * `#define N -1` puts the body's `-` after the line's, which written out reads `a--1` - a space keeps them
+ * apart, as the C preprocessor does. Tokens that touched in the text they came from are written as they were:
+ * `!=` lexes here as `!` and `=`, and must stay one operator.
+ */
+function spellExpanded(toks: readonly Tok[]): string {
+    let out = "";
+    let previous: Tok | undefined;
+    for (const tok of toks) {
+        const met = previous !== undefined && previous.origin !== tok.origin && !previous.ws && !tok.ws;
+        if (met && previous !== undefined && wouldJoin(previous.t, tok.t)) out += " ";
+        out += tok.t;
+        previous = tok;
+    }
+    return out;
 }
 
 function trimToks(toks: readonly Tok[]): Tok[] {
@@ -149,7 +194,7 @@ function nextNonWs(toks: readonly Tok[], from: number): number {
 }
 
 function withHide(toks: readonly Tok[], hide: ReadonlySet<string>): Tok[] {
-    return toks.map((t) => ({ t: t.t, ws: t.ws, hide: new Set([...t.hide, ...hide]) }));
+    return toks.map((t) => ({ t: t.t, ws: t.ws, hide: new Set([...t.hide, ...hide]), origin: t.origin }));
 }
 
 function stringifyToks(toks: readonly Tok[]): string {
@@ -209,7 +254,7 @@ class Expander {
         if (macro.variadic) {
             const rest: Tok[] = [];
             args.slice(params.length).forEach((a, i) => {
-                if (i > 0) rest.push({ t: ",", ws: false, hide: EMPTY_HIDE as Set<string> });
+                if (i > 0) rest.push({ t: ",", ws: false, hide: EMPTY_HIDE as Set<string>, origin: {} });
                 rest.push(...a);
             });
             bound.set("__VA_ARGS__", rest);
@@ -230,6 +275,7 @@ class Expander {
                         t: stringifyToks(bound.get(target.t) ?? []),
                         ws: false,
                         hide: EMPTY_HIDE as Set<string>,
+                        origin: {},
                     });
                     i = j;
                     continue;
@@ -336,7 +382,7 @@ class Expander {
      */
     expandChunk(text: string): { text: string; unclosedCall: boolean } {
         this.unclosedCall = false;
-        const expanded = spell(this.expand(tokenize(text)));
+        const expanded = spellExpanded(this.expand(tokenize(text)));
         return { text: expanded, unclosedCall: this.unclosedCall };
     }
 }
