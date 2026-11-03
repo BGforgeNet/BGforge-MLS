@@ -21,7 +21,15 @@ import {
     SyntaxKind,
 } from "ts-morph";
 import { TDTransitionType, type TDState, type TDTransition } from "./types";
-import { bindArguments, declareStatements, type Scope } from "../../common/compile-time-eval";
+import {
+    bindArguments,
+    conjunction,
+    declareStatements,
+    evaluateCondition,
+    negate,
+    type Condition,
+    type Scope,
+} from "../../common/compile-time-eval";
 import type { FunctionValue } from "../../common/compile-time-value";
 import { getBlockStatements } from "../../common/transpiler-utils";
 import { TranspileError } from "../../common/transpile-error";
@@ -40,7 +48,10 @@ import {
     unrollLoop,
     validateArgs,
 } from "./parse-helpers";
-import { STATE_ENTRY, requiredTriggerOf, textOf, transitionTriggerOf } from "./expression-eval";
+import { STATE_ENTRY, requiredTriggerOf, textOf, transitionTrigger } from "./expression-eval";
+
+/** The condition an if outside any other branch inherits: none. */
+const ALWAYS: Condition = { kind: "constant", value: true };
 import { isChainExpression, parseTransitionChain } from "./chain-parsing";
 import {
     addsWholeTransitions,
@@ -242,7 +253,14 @@ function processStateStatement(
  * Also detects state-level wrapping if (where the if wraps the entire body
  * including say()), in which case it becomes a state trigger.
  */
-function processIfTransition(ifStmt: IfStatement, state: TDState, scope: Scope, funcs: FuncsContext, nested: boolean) {
+function processIfTransition(
+    ifStmt: IfStatement,
+    state: TDState,
+    scope: Scope,
+    funcs: FuncsContext,
+    nested: boolean,
+    inherited: Condition = ALWAYS,
+) {
     const thenStmts = getBlockStatements(ifStmt.getThenStatement());
     const thenScope = blockScope(scope, thenStmts);
 
@@ -269,12 +287,14 @@ function processIfTransition(ifStmt: IfStatement, state: TDState, scope: Scope, 
         }
     }
 
-    // A compile-time condition keeps one branch, as TypeScript would run it.
-    const trigger = transitionTriggerOf(ifStmt.getExpression(), scope);
+    // Each branch is guarded by its own condition and the negation of every branch before it, so exactly one of
+    // a chain's replies is offered, as TypeScript would run one branch. A compile-time condition keeps one branch.
+    const own = evaluateCondition(ifStmt.getExpression(), scope);
+    const trigger = transitionTrigger(conjunction([inherited, own]));
     if (trigger !== false) {
         processTriggeredBlock(thenStmts, thenScope, trigger === true ? undefined : trigger, state, funcs);
     }
-    if (trigger !== true) processIfElseBranch(ifStmt, state, scope, funcs);
+    processIfElseBranch(ifStmt, state, scope, funcs, conjunction([inherited, negate(own)]));
 }
 
 /**
@@ -320,21 +340,32 @@ function processTriggeredBlock(
     }
 }
 
-/**
- * Process else/else-if branches of an if statement.
- */
-function processIfElseBranch(ifStmt: IfStatement, state: TDState, scope: Scope, funcs: FuncsContext) {
+/** The else or else-if branch of an if, under `otherwise`: the negation of every condition before it. */
+function processIfElseBranch(
+    ifStmt: IfStatement,
+    state: TDState,
+    scope: Scope,
+    funcs: FuncsContext,
+    otherwise: Condition,
+) {
     const elseStmt = ifStmt.getElseStatement();
     if (!elseStmt) return;
 
     if (Node.isIfStatement(elseStmt)) {
         // else if - recurse; as an else branch it is never the state's entry trigger
-        processIfTransition(elseStmt, state, scope, funcs, true);
-    } else {
-        // else block - no trigger transition
-        const elseStmts = getBlockStatements(elseStmt);
-        processTriggeredBlock(elseStmts, blockScope(scope, elseStmts), undefined, state, funcs);
+        processIfTransition(elseStmt, state, scope, funcs, true, otherwise);
+        return;
     }
+    const trigger = transitionTrigger(otherwise);
+    if (trigger === false) return;
+    const elseStmts = getBlockStatements(elseStmt);
+    processTriggeredBlock(
+        elseStmts,
+        blockScope(scope, elseStmts),
+        trigger === true ? undefined : trigger,
+        state,
+        funcs,
+    );
 }
 
 // =========================================================================

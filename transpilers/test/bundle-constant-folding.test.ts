@@ -1,18 +1,11 @@
 /**
- * Constant arithmetic must be folded before it reaches an emitted mod file.
+ * Constant arithmetic is folded before it reaches an emitted mod file.
  *
- * `SetGlobal("g", "GLOBAL", 1 + 333)` is not valid BAF - an argument is an operand, not an expression -
- * and the repo's own grammar says so, which is what the .tbaf cases assert against rather than a string
- * match. The transpiler has no constant-folding pass of its own, so today whether an expression
- * survives to the mod file is decided entirely by the bundler's optimiser: a same-module binding gets
- * substituted and folded, while `optimization.inlineConst: false` keeps an IMPORTED one whole, and the
- * imported case reaches the file as `10 + 1`.
- *
- * Relying on that is the defect. The fold belongs in `applyHelperFixups`, the one last-mile pass both
- * languages share - TBAF reaches it per argument through `fixupArgs`, TD per whole rendered action
- * string - so the result holds whichever bundler is underneath and whichever granularity the caller
- * uses. `inlineConst` cannot simply be enabled instead: it also folds `const LOCALS = "LOCALS"` into a
- * string literal the emitter then double-quotes (`""LOCALS""`), invalid in 3 of the 13 real mod files.
+ * `SetGlobal("g", "GLOBAL", 1 + 333)` is not valid BAF - an argument is an operand, not an expression - and the
+ * repo's own grammar says so, which is what the .tbaf cases assert against rather than a string match. The
+ * compile-time evaluator folds every argument from the syntax tree, whichever bundler is underneath: a bundler's
+ * optimiser substitutes a same-module binding but keeps an imported one whole, so the imported cases are the ones
+ * that would otherwise reach the file as `10 + 1`.
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
@@ -45,7 +38,7 @@ function setsGlobalTo(emitted: string, name: string, value: number): boolean {
 }
 
 describe("constant folding in emitted mod files", () => {
-    describe("BAF, one argument at a time through fixupArgs", () => {
+    describe("BAF", () => {
         it("folds arithmetic on an imported enum member", async () => {
             const emitted = await emit("script.tbaf");
 
@@ -75,7 +68,7 @@ describe("constant folding in emitted mod files", () => {
         });
     });
 
-    describe("D, whole rendered action strings through applyHelperFixups", () => {
+    describe("D", () => {
         it("folds arithmetic on an imported enum member", async () => {
             const emitted = await emit("dialog.td");
 

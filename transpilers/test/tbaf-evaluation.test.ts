@@ -173,6 +173,20 @@ describe("statements", () => {
         );
     });
 
+    it.each([
+        ["written there", 'SetGlobal("a", "GLOBAL", 1);\nSetGlobal("b", "GLOBAL", 1);\n', 1],
+        ["from a loop", "for (let i = 0; i < 2; i++) {\n    Attack(Player1);\n}\n", 2],
+        ["from a helper", "function hit() {\n    Attack(Player1);\n}\nhit();\n", 2],
+    ])(
+        "refuses an action outside any if or switch, %s, whose block would shadow every block after it",
+        async (_name, src, line) => {
+            await expect(t(src)).rejects.toMatchObject({
+                message: expect.stringMatching(/an action outside any if or switch is not supported/),
+                location: { line },
+            });
+        },
+    );
+
     it("refuses a switch's default case on the line it sits on", async () => {
         const src =
             'switch (Global("s", "LOCALS")) {\n    case 1:\n        Attack(Player1);\n        break;\n    default:\n        Attack(Player2);\n}\n';

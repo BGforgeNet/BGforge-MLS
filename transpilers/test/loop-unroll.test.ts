@@ -37,10 +37,9 @@ describe("loop unroll: multi-variable for-initializer", () => {
     });
 });
 
-// Additional scenarios below drive the evaluator's unrollFor/unrollForOf through TBAF's
-// transformStatement, which dispatches every ForStatement/ForOfStatement to them
-// unconditionally - so these hit their other branches without a second internal API.
-const tbaf = (src: string) => tbafTranspile("/virtual/foo.tbaf", src);
+// Additional scenarios below drive the evaluator's unrollFor/unrollForOf through TBAF, each loop inside an if:
+// an action outside any if is refused, since its block would match on every pass.
+const tbaf = (src: string) => tbafTranspile("/virtual/foo.tbaf", `if (See(Player1)) {\n${src}}\n`);
 
 describe("loop unroll: for-loop iteration and cleanup", () => {
     it("unrolls a for loop, threading the loop variable into each iteration's action args", async () => {

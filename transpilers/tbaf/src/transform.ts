@@ -19,7 +19,7 @@ import {
     SyntaxKind,
 } from "ts-morph";
 import type { BAFAction, BAFBlock, BAFCondition, BAFScript, BAFTopCondition } from "./ir";
-import { dnfToCnf } from "./cnf";
+import { toClauses, type Atom } from "../../common/condition-clauses";
 import {
     Scope,
     bindArguments,
@@ -53,17 +53,20 @@ export class TBAFTransformer {
         const scope = new Scope();
         const statements = sourceFile.getStatements();
         declareStatements(scope, statements);
-        for (const statement of statements) this.transformStatement(statement, scope, ALWAYS);
+        for (const statement of statements) this.transformStatement(statement, scope);
         return { sourceFile: sourceFile.getFilePath(), blocks: this.blocks };
     }
 
-    /** One statement at a level that gives each statement its own blocks, all under `condition`. */
-    private transformStatement(statement: Statement, scope: Scope, condition: Condition): void {
+    /**
+     * One statement at a level that gives each statement its own blocks, all under `condition`; undefined outside
+     * any `if` or `switch`, where an action has no condition to run under.
+     */
+    private transformStatement(statement: Statement, scope: Scope, condition?: Condition): void {
         if (isDeclarationOnly(statement)) return;
         if (Node.isIfStatement(statement)) {
-            this.transformIf(statement, scope, condition);
+            this.transformIf(statement, scope, condition ?? ALWAYS);
         } else if (Node.isSwitchStatement(statement)) {
-            this.transformSwitch(statement, scope, condition);
+            this.transformSwitch(statement, scope, condition ?? ALWAYS);
         } else if (Node.isBlock(statement)) {
             const inner = blockScope(scope, statement.getStatements());
             for (const s of statement.getStatements()) this.transformStatement(s, inner, condition);
@@ -83,6 +86,14 @@ export class TBAFTransformer {
                 const body = helperBody(helper, call, scope);
                 for (const s of body.statements) this.transformStatement(s, body.scope, condition);
                 return;
+            }
+            if (condition === undefined) {
+                // Its block would be IF True(), which matches on every pass, so no block after it would ever run.
+                throw TranspileError.fromNode(
+                    call,
+                    "an action outside any if or switch is not supported: its block would match on every pass and " +
+                        "no block after it would ever run; put it in an if with the condition it runs under",
+                );
             }
             this.blocks.push({
                 conditions: toBlockConditions(condition),
@@ -294,25 +305,18 @@ function toAction(call: CallExpression, scope: Scope): BAFAction {
 
 /** A block's conditions: the folded condition in BAF's AND-of-OR-groups form, `True()` when nothing is left. */
 function toBlockConditions(condition: Condition): BAFTopCondition[] {
-    const cnf = toCnf(condition);
-    return cnf.length > 0 ? cnf : [{ negated: false, name: "True", args: [] }];
+    // A false condition never reaches here: transformStatements skips its body.
+    const clauses = toClauses(condition, toBafCondition, conditionKey);
+    if (clauses.length === 0) return [{ negated: false, name: "True", args: [] }];
+    return clauses.map((clause) => (clause.length === 1 && clause[0] ? clause[0] : { conditions: clause }));
 }
 
-function toCnf(condition: Condition): BAFTopCondition[] {
-    switch (condition.kind) {
-        case "constant":
-            // A false condition never reaches here: transformStatements skips its body.
-            return [];
-        case "atom":
-            return [toBafCondition(condition)];
-        case "and":
-            return condition.items.flatMap(toCnf);
-        case "or":
-            return dnfToCnf(condition.items.map(toCnf));
-    }
+/** Two condition lines are the same check when they print the same. */
+function conditionKey(condition: BAFCondition): string {
+    return `${condition.negated ? "!" : ""}${condition.name}(${condition.args.join(",")})`;
 }
 
-function toBafCondition(atom: Extract<Condition, { kind: "atom" }>): BAFCondition {
+function toBafCondition(atom: Atom): BAFCondition {
     return {
         negated: atom.negated,
         name: atom.name,

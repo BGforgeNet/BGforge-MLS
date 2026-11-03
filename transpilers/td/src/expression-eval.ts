@@ -2,12 +2,13 @@
  * TD triggers and dialog text, from the compile-time evaluator's folded conditions and values.
  *
  * A D trigger is a list of trigger calls, each optionally negated, that all must hold, among which `OR(n)` makes
- * the next n calls alternatives. `&&` joins with a space, `||` becomes `OR(n)`, and `!` reaches the calls, since
- * the evaluator pushes it down.
+ * the next n calls alternatives. `&&` joins with a space, `||` becomes `OR(n)` (an `&&` inside one distributed out
+ * first), and `!` reaches the calls, since the evaluator pushes it down.
  */
 
 import type { Expression, Node } from "ts-morph";
 import { evaluate, evaluateCondition, type Condition, type Scope } from "../../common/compile-time-eval";
+import { toClauses, type Atom } from "../../common/condition-clauses";
 import { describeKind, type StrRef, type Value } from "../../common/compile-time-value";
 import { TranspileError } from "../../common/transpile-error";
 import { TDTextType, type TDText } from "./types";
@@ -34,8 +35,12 @@ function patchTrigger(keyword: string): TriggerSite {
  * trigger, false for one that is never available.
  */
 function transitionTriggerOf(expr: Expression, scope: Scope): string | boolean {
-    const condition = evaluateCondition(expr, scope);
-    return condition.kind === "constant" ? condition.value : formatTrigger(condition, expr);
+    return transitionTrigger(evaluateCondition(expr, scope));
+}
+
+/** As `transitionTriggerOf`, for a condition already folded: an else branch's, which negates the ones before it. */
+function transitionTrigger(condition: Condition): string | boolean {
+    return condition.kind === "constant" ? condition.value : formatTrigger(condition);
 }
 
 /**
@@ -52,36 +57,22 @@ function requiredTriggerOf(expr: Expression, scope: Scope, site: TriggerSite): s
                 : `${site.what} is false at compile time, so ${site.ifFalse}; remove it, or test a trigger call`,
         );
     }
-    return formatTrigger(condition, expr);
+    return formatTrigger(condition);
 }
 
-function formatTrigger(condition: Condition, node: Node): string {
-    switch (condition.kind) {
-        case "constant":
-            // conjunction() and disjunction() fold constants out of every group, so only a whole condition is
-            // one, and each caller decides that case before formatting.
-            throw new Error("a constant condition has no D trigger text");
-        case "atom":
-            return formatAtom(condition);
-        case "and":
-            return condition.items.map((item) => formatTrigger(item, node)).join(" ");
-        case "or": {
-            const atoms = condition.items.map((item) => {
-                if (item.kind !== "atom") {
-                    throw TranspileError.fromNode(
-                        node,
-                        "an || with an && group inside has no D trigger: OR(n) groups trigger calls only; " +
-                            "distribute the && over the ||",
-                    );
-                }
-                return formatAtom(item);
-            });
-            return `OR(${atoms.length}) ${atoms.join(" ")}`;
-        }
-    }
+/**
+ * A non-constant condition as D trigger text: one clause per trigger line or `OR(n)` group, joined by spaces.
+ * Each caller decides a compile-time constant before formatting, since conjunction() and disjunction() fold
+ * constants out of every group and only a whole condition can be one.
+ */
+function formatTrigger(condition: Condition): string {
+    if (condition.kind === "constant") throw new Error("a constant condition has no D trigger text");
+    return toClauses(condition, formatAtom, (text) => text)
+        .map((clause) => (clause.length === 1 ? clause.join("") : `OR(${clause.length}) ${clause.join(" ")}`))
+        .join(" ");
 }
 
-function formatAtom(atom: Extract<Condition, { kind: "atom" }>): string {
+function formatAtom(atom: Atom): string {
     return `${atom.negated ? "!" : ""}${formatCall(atom.name, atom.args, atom.node)}`;
 }
 
@@ -151,6 +142,7 @@ export {
     patchTrigger,
     requiredTriggerOf,
     textOf,
+    transitionTrigger,
     transitionTriggerOf,
     type TriggerSite,
 };

@@ -180,10 +180,43 @@ describe("triggers", () => {
         expect(out).toContain('    +~!See(Player1) !Dead("x")~+ @4 EXIT\n');
     });
 
-    it("refuses an || with an && group inside, which a D trigger has no grouping for", async () => {
-        await expect(
-            state('if (See(Player1) || (See(Player2) && Dead("x"))) {\n        reply(tra(2)).exit();\n    }'),
-        ).rejects.toThrow(/OR\(n\) groups trigger calls/);
+    it("distributes an && inside an || into the OR groups a D trigger can hold", async () => {
+        // a || (b && c) is (a || b) && (a || c).
+        const out = await state(
+            'if (See(Player1) || (See(Player2) && Dead("x"))) {\n        reply(tra(2)).exit();\n    }',
+        );
+        expect(out).toContain('    +~OR(2) See(Player1) See(Player2) OR(2) See(Player1) Dead("x")~+ @2 EXIT\n');
+    });
+
+    it("guards an else reply with the negated condition, so only one of the two is offered", async () => {
+        const out = await state(
+            'if (Global("q", "GLOBAL", 1)) {\n        reply(tra(2)).exit();\n    } else {\n        reply(tra(3)).exit();\n    }',
+        );
+        expect(out).toContain('    +~Global("q","GLOBAL",1)~+ @2 EXIT\n    +~!Global("q","GLOBAL",1)~+ @3 EXIT\n');
+    });
+
+    it("negates every earlier branch of an else-if chain", async () => {
+        const out = await state(
+            [
+                'if (Global("a", "GLOBAL", 1)) {\n        reply(tra(2)).exit();',
+                '} else if (Global("b", "GLOBAL", 1)) {\n        reply(tra(3)).exit();',
+                "} else {\n        reply(tra(4)).exit();\n    }",
+            ].join("\n    "),
+        );
+        expect(out).toContain(
+            [
+                '    +~Global("a","GLOBAL",1)~+ @2 EXIT',
+                '    +~!Global("a","GLOBAL",1) Global("b","GLOBAL",1)~+ @3 EXIT',
+                '    +~!Global("a","GLOBAL",1) !Global("b","GLOBAL",1)~+ @4 EXIT',
+            ].join("\n"),
+        );
+    });
+
+    it("negates a compound condition for its else by pushing the negation to the calls", async () => {
+        const out = await state(
+            'if (See(Player1) && Dead("x")) {\n        reply(tra(2)).exit();\n    } else {\n        reply(tra(3)).exit();\n    }',
+        );
+        expect(out).toContain('    +~OR(2) !See(Player1) !Dead("x")~+ @3 EXIT\n');
     });
 
     it("refuses a trigger that is neither a trigger call nor a compile-time boolean", async () => {

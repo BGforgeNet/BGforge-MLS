@@ -1,7 +1,5 @@
 /**
- * The .td half. TD renders a whole action string through applyHelperFixups
- * (`~SetGlobal(...) SetGlobal(...)~`) rather than one argument at a time, which is why the fold has to
- * live in that shared pass instead of in TBAF's per-argument fixupArgs.
+ * The .td half, several actions in one action string (`~SetGlobal(...) SetGlobal(...)~`).
  *
  * The relative import is extensionless, matching the only relative import in the real corpus
  * (wm_chaos.tbaf -> ./lib.wm_chaos). A .td importing another .td is not a shape the corpus has.
