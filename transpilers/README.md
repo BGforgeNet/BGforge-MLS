@@ -77,12 +77,13 @@ pnpm add -g @bgforge/transpile
 ```
 
 ```
-fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q] [--jobs <n>] [--exclude-from <path>] [--exclude-base <dir>]
+fgtp <file.td|file.tbaf|dir> [--save] [--check] [--no-typecheck] [-r] [-q] [--jobs <n>] [--exclude-from <path>] [--exclude-base <dir>]
 ```
 
 - `--save` - write the transpiled output alongside the source
   (`.td` -> `.d`, `.tbaf` -> `.baf`)
 - `--check` - exit 1 if any output is not up to date
+- `--no-typecheck` - transpile without the type check described below
 - `-r` - recurse into directories
 - `-q` - quiet mode (suppress summary)
 - `--jobs <n>` - process a directory's files with N parallel workers
@@ -90,6 +91,20 @@ fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q] [--jobs <n>] [--exclud
 - `--exclude-base <dir>` - resolve `--exclude-from` entries against `<dir>` instead of the target
 
 Without `--save`, the transpiled output is printed to stdout.
+
+### Type checking
+
+Each script is type-checked before it is transpiled, and a script with type errors is not transpiled: no output is
+written for it and the run exits 1. A name the script does not bind, such as a misspelled engine action, is an error
+here rather than text in the generated file. Errors print as `file:line:column: error TS<code>: message`.
+
+The check uses the nearest `tsconfig.json` whose files include the script (its `include` matches `.tbaf` and `.td`),
+so its options, `strict` among them, are the mod's own. Where no `tsconfig.json` includes the script, it is checked
+with strict defaults, and the run says so once. A project holding `.td` scripts gets the TD API (`begin`, `say`,
+`reply`, `goTo`, ...) declared and the editor's ES2020 library, so the command line reports what the editor shows.
+
+Only the script's own errors are reported; errors in the mod's `.ts` modules are for `tsc`. Transpiling from the editor
+does not run the check, since the editor shows the same errors as you type.
 
 ### TSSL is not here
 
@@ -109,8 +124,12 @@ This section describes the repository source, not the published package.
 
 - **One package**: `common/`, `tbaf/` and `td/` are directories of `@bgforge/transpile`, not packages of their own.
   The public API is `src/index.ts`. `src/internal.ts` is the second entry point, `@bgforge/transpile/internal`: the
-  pipeline, error type, line provenance, output-path mapping, shared parse project and TD warning shape that the
-  BGforge MLS server and the TSSL compiler build on. It has no semver promise and ships no type declarations.
+  pipeline, error type, line provenance, output-path mapping, shared parse project, TD warning shape and the
+  type-check helpers (which tsconfig.json governs a script, the error it gets) that the BGforge MLS server and the
+  TSSL compiler build on. It has no semver promise and ships no type declarations.
+- **Type check** (`src/typecheck.ts`): `fgtp`'s, for TBAF and TD. The TSSL compiler has its own program builder
+  (`compilers/tssl/src/typecheck.ts`) over the helpers in `common/script-typecheck.ts`. The TD runtime declarations
+  it needs ship beside the bundle as `out/td-runtime.d.ts`, copied by the build.
 - **Shared pipeline** (`transpilers/common/transpiler-pipeline.ts`): `createTranspiler()` handles extension
   validation and `@tra` tag extraction, and never writes to stdout. TBAF, TD and the TSSL compiler all build on it;
   only the TSSL compiler's `compile()` uses its file-writing variant.

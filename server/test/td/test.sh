@@ -41,8 +41,9 @@ for sample in samples/*.td; do
     cp "$sample" "$tmpdir/${name}.td"
 done
 
-# Batch transpile (single node process)
-node --no-warnings "$CLI" "$tmpdir" -r --save -q 2>&1
+# Batch transpile (single node process). Phase 1 already type-checked these samples against the runtime
+# declarations and engine stubs beside them, which the copies in $tmpdir do not have.
+node --no-warnings "$CLI" "$tmpdir" -r --save -q --no-typecheck 2>&1
 
 for sample in samples/*.td; do
     name=$(basename "$sample" .td)

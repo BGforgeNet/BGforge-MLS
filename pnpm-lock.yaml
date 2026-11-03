@@ -642,6 +642,9 @@ importers:
 
   plugins/td-plugin:
     devDependencies:
+      '@bgforge/shared':
+        specifier: workspace:*
+        version: link:../../shared
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2

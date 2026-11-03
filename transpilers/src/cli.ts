@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * CLI tool to transpile TD and TBAF files to WeiDU D and BAF. Auto-detects language by file extension.
- * Usage: fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q]
+ * Usage: fgtp <file.td|file.tbaf|dir> [--save] [--check] [--no-typecheck] [-r] [-q]
  *
  * `.tssl` is NOT handled here. It became a compiler in its own right - `@bgforge/tssl`, the `tssl` bin -
  * whose default output is INT bytecode with the SSL text as an option, which is not a shape this
@@ -11,7 +11,9 @@
 import * as fs from "fs";
 import * as path from "path";
 import { EXT_TD, EXT_TBAF } from "../common/extensions";
+import { formatTypeError } from "../common/script-typecheck";
 import { tbaf as transpileTBAF, td as transpileTD, outputPathFor } from "./index";
+import { TranspilerTypechecker } from "./typecheck";
 import {
     type FileResult,
     type OutputMode,
@@ -36,6 +38,23 @@ const MAX_FILE_SIZES: Record<string, number> = {
     td: 8 * 1024 * 1024,
 };
 
+let typecheck = true;
+
+/** Shared across a run: one type-check program per tsconfig serves every script it includes. */
+const typechecker = new TranspilerTypechecker();
+let notedUnconfigured = false;
+
+/** Reports a script's type errors and whether there were any; a script with errors is not transpiled. */
+function typecheckFails(filePath: string): boolean {
+    const result = typechecker.check(filePath);
+    if (result.config === undefined && !notedUnconfigured) {
+        notedUnconfigured = true;
+        console.warn(`No tsconfig.json includes ${filePath}; type-checking with strict defaults`);
+    }
+    for (const error of result.errors) console.error(formatTypeError(error));
+    return result.errors.length > 0;
+}
+
 function getTranspileType(filePath: string): TranspileType | null {
     const lower = filePath.toLowerCase();
     if (lower.endsWith(EXT_TD)) return "td";
@@ -55,6 +74,7 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
 
         const text = fs.readFileSync(filePath, "utf-8");
         const resolved = path.resolve(filePath);
+        if (typecheck && typecheckFails(resolved)) return "error";
 
         let output: string;
         if (type === "td") {
@@ -103,9 +123,12 @@ async function processFile(filePath: string, mode: OutputMode): Promise<FileResu
     });
 }
 
-const HELP = `Usage: fgtp <file.td|file.tbaf|dir> [--save] [--check] [-r] [-q] [--jobs <n>]
+const HELP = `Usage: fgtp <file.td|file.tbaf|dir> [--save] [--check] [--no-typecheck] [-r] [-q] [--jobs <n>]
+  Each script is type-checked first, against the tsconfig.json that includes it; one with errors is not transpiled.
+
   --save              Write output to file (default: stdout)
   --check             Check if output files are up to date (exit 1 if not)
+  --no-typecheck      Transpile without the type check
   -r                  Recursively transpile all .td and .tbaf files in directory
   -q                  Quiet mode: suppress summary, only print changed files
   --jobs <n>          Process directory files with N parallel workers
@@ -122,8 +145,14 @@ Examples:
   .tssl is compiled by the separate 'tssl' CLI (@bgforge/tssl), not by fgtp.`;
 
 async function main() {
-    const args = parseCliArgs(HELP, { modes: ["save", "check"] });
+    const args = parseCliArgs(HELP, {
+        extraOptions: [["--no-typecheck", "Transpile without the type check"]],
+        modes: ["save", "check"],
+    });
     if (!args) return;
+
+    // cac spells a default-true flag `--no-x`.
+    typecheck = args.extra?.typecheck !== false;
 
     await runCli({ args, extensions: EXTENSIONS, description: ".td and .tbaf", processFile });
 }

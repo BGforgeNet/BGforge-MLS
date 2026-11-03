@@ -420,4 +420,7 @@ Don't wrap them in quotes yourself -- they are quoted automatically.
 .tbaf -> transpiler -> .baf -> WeiDU -> game
 ```
 
-Press Ctrl+R in VSCode or use the transpile CLI to compile.
+Press Ctrl+R in VSCode or use the transpile CLI (`fgtp`) to compile.
+
+The CLI type-checks each script first, against the `tsconfig.json` that includes it, and does not transpile one with
+type errors - a misspelled engine name, say. `--no-typecheck` skips the check.

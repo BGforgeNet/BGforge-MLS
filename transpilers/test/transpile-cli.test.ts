@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { execFileSync } from "child_process";
+import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import transpileLibPackage from "../package.json";
@@ -17,19 +17,23 @@ const NODE = process.execPath;
 const SAMPLES_DIR = path.join(REPO_ROOT, "server/test/td/samples");
 const SAMPLES_EXPECTED = path.join(REPO_ROOT, "server/test/td/samples-expected");
 
-/** Run the transpile CLI, returning exit code, stdout, stderr. */
+/**
+ * Run the transpile CLI, returning exit code, stdout, stderr.
+ *
+ * `spawnSync` rather than `execFileSync`: the latter reports stderr only by throwing, so a run that exits 0
+ * while warning would arrive here with its warning discarded.
+ */
 function run(...args: string[]): { code: number; stdout: string; stderr: string } {
-    try {
-        const stdout = execFileSync(NODE, ["--no-warnings", CLI, ...args], {
-            encoding: "utf-8",
-            stdio: ["pipe", "pipe", "pipe"],
-            timeout: SPAWN_TIMEOUT_MS,
-        });
-        return { code: 0, stdout, stderr: "" };
-    } catch (error: unknown) {
-        const e = error as { status: number; stdout: string; stderr: string };
-        return { code: e.status ?? 1, stdout: e.stdout ?? "", stderr: e.stderr ?? "" };
-    }
+    const result = spawnSync(NODE, ["--no-warnings", CLI, ...args], { encoding: "utf-8", timeout: SPAWN_TIMEOUT_MS });
+    // A timeout leaves `status` null, which would otherwise read as an ordinary exit 1 and send the
+    // reader hunting for an assertion bug instead of a hung CLI.
+    if (result.error) throw result.error;
+    return { code: result.status ?? 1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+}
+
+/** The generated and compiled files in a directory: what a refused run must not have written. */
+function outputsIn(dir: string): string[] {
+    return fs.readdirSync(dir).filter((name) => /\.(baf|d)$/.test(name));
 }
 
 describe("transpile CLI integration", () => {
@@ -40,6 +44,13 @@ describe("transpile CLI integration", () => {
             throw new Error("cli.js not built. Run: pnpm build:transpile");
         }
         fs.mkdirSync(tmpDir, { recursive: true });
+        // What a mod has, so the type check the CLI runs by default sees the engine names the samples use.
+        // `types: []` keeps the repo's @types/node out of it: its `Global` clashes with the stubs'.
+        fs.writeFileSync(
+            path.join(tmpDir, "tsconfig.json"),
+            JSON.stringify({ compilerOptions: { types: [] }, include: ["**/*"] }),
+        );
+        fs.copyFileSync(path.join(REPO_ROOT, "server/test/td/td-engine-stubs.d.ts"), path.join(tmpDir, "stubs.d.ts"));
     });
 
     afterEach(() => {
@@ -154,7 +165,9 @@ describe("transpile CLI integration", () => {
             fs.copyFileSync(tdFile, tmpTd);
             const sourceBefore = fs.readFileSync(tmpTd, "utf-8");
 
-            const { code } = run(tmpTd, "--save");
+            // The tsconfig's `include` does not match an uppercase extension, so the stubs would be out of
+            // the check's sight; the output path is what this case is about.
+            const { code } = run(tmpTd, "--save", "--no-typecheck");
             expect(code).toBe(0);
             expect(fs.existsSync(path.join(tmpDir, "Upper.d"))).toBe(true);
             expect(fs.readFileSync(tmpTd, "utf-8")).toBe(sourceBefore);
@@ -185,6 +198,65 @@ describe("transpile CLI integration", () => {
             expect(code).toBe(1);
             expect(stderr).toContain(`Error: ${flag} is not supported by this command`);
             expect(stdout).toBe("");
+        });
+    });
+
+    describe("the type check it runs before transpiling", () => {
+        const engine =
+            "declare const Myself: string;\ndeclare function See(name: string): boolean;\n" +
+            "declare function SmallWait(seconds: number): void;\n";
+        const typo = "if (See(Mysefl)) {\n    SmallWait(1);\n}\n";
+
+        beforeEach(() => {
+            fs.writeFileSync(path.join(tmpDir, "engine.d.ts"), engine);
+        });
+
+        it("refuses a .tbaf that uses an identifier it does not bind, naming its position and writing nothing", () => {
+            const file = path.join(tmpDir, "typo.tbaf");
+            fs.writeFileSync(file, typo, "utf-8");
+
+            const { code, stdout, stderr } = run(file, "--save");
+
+            expect(code).toBe(1);
+            expect(stderr).toContain(`${file}:1:9: error TS2552: Cannot find name 'Mysefl'. Did you mean 'Myself'?`);
+            expect(stdout).not.toContain("Transpiled:");
+            expect(outputsIn(tmpDir)).toStrictEqual([]);
+        });
+
+        it("refuses a .td that uses a name the TD API does not declare", () => {
+            const file = path.join(tmpDir, "typo.td");
+            fs.writeFileSync(file, 'begin("DLG", state("0", () => {\n    bogus();\n}));\n', "utf-8");
+
+            const { code, stderr } = run(file, "--save");
+
+            expect(code).toBe(1);
+            expect(stderr).toContain(`${file}:2:5: error TS2304: Cannot find name 'bogus'.`);
+            expect(outputsIn(tmpDir)).toStrictEqual([]);
+        });
+
+        it("transpiles the same script under --no-typecheck", () => {
+            const file = path.join(tmpDir, "unchecked.tbaf");
+            fs.writeFileSync(file, typo, "utf-8");
+
+            expect(run(file, "--save", "--no-typecheck").code).toBe(0);
+            expect(outputsIn(tmpDir)).toStrictEqual(["unchecked.baf"]);
+        });
+
+        it("says once when no tsconfig.json includes the scripts, and checks them with strict defaults", () => {
+            const dir = path.join(tmpDir, "unconfigured");
+            fs.mkdirSync(dir);
+            // Excluded from the tsconfig above, as a script outside a mod's `include` is.
+            fs.writeFileSync(
+                path.join(tmpDir, "tsconfig.json"),
+                JSON.stringify({ compilerOptions: { types: [] }, exclude: ["unconfigured"] }),
+            );
+            for (const name of ["one.tbaf", "two.tbaf"]) fs.writeFileSync(path.join(dir, name), "", "utf-8");
+
+            const { code, stderr } = run(dir, "-r", "--save");
+
+            expect(code).toBe(0);
+            expect(stderr.split("No tsconfig.json includes")).toHaveLength(2);
+            expect(stderr).toContain("; type-checking with strict defaults");
         });
     });
 

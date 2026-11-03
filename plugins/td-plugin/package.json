@@ -4,6 +4,7 @@
     "private": true,
     "description": "TypeScript Language Service Plugin for TD files - injects runtime types, filters completions, excludes DOM lib",
     "devDependencies": {
+        "@bgforge/shared": "workspace:*",
         "@types/node": "catalog:",
         "typescript": "catalog:",
         "vitest": "catalog:"

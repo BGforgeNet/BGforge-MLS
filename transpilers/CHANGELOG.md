@@ -2,6 +2,17 @@
 
 Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
 
+## Unreleased
+
+### Changed
+
+- `fgtp` type-checks each `.tbaf` and `.td` script before transpiling it, against the `tsconfig.json` that includes
+  it, and does not transpile a script with type errors: it reports each error as
+  `file:line:column: error TS<code>: message` and exits 1. A name the script does not bind, such as a misspelled
+  engine action, is now an error instead of text in the generated file. `--no-typecheck` transpiles without the
+  check. A script no `tsconfig.json` includes is checked with strict defaults. A project holding `.td` scripts gets
+  the TD API declared, as in the editor.
+
 ## 0.5.1
 
 ### Changed

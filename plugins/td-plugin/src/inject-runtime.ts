@@ -8,6 +8,7 @@
 import type ts from "typescript";
 import * as path from "path";
 import * as fs from "fs";
+import { tdProjectSettings } from "@bgforge/shared/td-project-settings";
 
 /** Result of resolving the runtime file path. */
 interface RuntimeResolution {
@@ -105,10 +106,6 @@ export function overrideHost(host: ts.LanguageServiceHost, resolvedPath: string,
         if (!allFiles.some((f: string) => isTdFile(f))) {
             return settings;
         }
-        return {
-            ...settings,
-            target: tsModule.ScriptTarget.ES2020,
-            lib: ["lib.es2020.d.ts"],
-        };
+        return { ...settings, ...tdProjectSettings(tsModule.ScriptTarget) };
     };
 }

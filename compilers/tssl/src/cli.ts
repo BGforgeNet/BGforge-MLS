@@ -19,7 +19,8 @@ import { EXT_TSSL } from "@bgforge/shared/languages";
 import { emitProgram, optimize } from "@bgforge/ssl";
 import { createBatchState, transpile, type TranspileBatchState } from "./index";
 import { lowerTsslProgram } from "./int/lower";
-import { TsslTypechecker, type TsslTypeError } from "./typecheck";
+import { formatTypeError } from "@bgforge/transpile/internal";
+import { TsslTypechecker } from "./typecheck";
 import {
     type FileResult,
     type OutputMode,
@@ -51,12 +52,6 @@ let switches: CompileSwitches = { level: 1, shortCircuit: false, emit: "int", ty
 /** Shared across a run like `batch`: one type-check program per tsconfig serves every script it includes. */
 const typechecker = new TsslTypechecker();
 let notedUnconfigured = false;
-
-/** `file:line:col: error TS1234: message`, the shape editors' problem matchers read. */
-function formatTypeError(error: TsslTypeError): string {
-    const position = error.line === undefined ? "" : `:${error.line}:${error.column ?? 1}`;
-    return `${error.file}${position}: error TS${error.code}: ${error.message}`;
-}
 
 /** Reports a script's type errors and whether there were any; a script with errors is not compiled. */
 function typecheckFails(filePath: string): boolean {

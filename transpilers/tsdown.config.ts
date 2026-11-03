@@ -11,6 +11,8 @@ export default defineConfig({
     publint: "ci-only",
     attw: "ci-only",
     clean: true,
+    // The CLI's type check declares the TD API from this file, read beside the bundle (src/typecheck.ts).
+    copy: ["td/src/td-runtime.d.ts"],
     sourcemap: false,
     platform: "node",
     target: "node22",

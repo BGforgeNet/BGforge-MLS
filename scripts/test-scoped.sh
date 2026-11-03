@@ -130,7 +130,7 @@ declare -A suite_prefixes=(
     [transpilers]="transpilers/ shared/"
     [scripts]="scripts/ shared/"
     ["tssl-plugin"]="plugins/tssl-plugin/ shared/"
-    ["td-plugin"]="plugins/td-plugin/"
+    ["td-plugin"]="plugins/td-plugin/ shared/"
 )
 grammars_label="grammar test suite"
 grammars_check="scripts/test-grammars.sh"

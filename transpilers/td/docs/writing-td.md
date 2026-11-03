@@ -735,4 +735,7 @@ Negative coordinates are supported (e.g. `[-1, -1]` for "current location"). Onl
 .td -> transpiler -> .d -> WeiDU -> game
 ```
 
-Press Ctrl+R in VSCode or use the transpile CLI to compile.
+Press Ctrl+R in VSCode or use the transpile CLI (`fgtp`) to compile.
+
+The CLI type-checks each script first, against the `tsconfig.json` that includes it, and does not transpile one with
+type errors - a misspelled engine name or TD function, say. `--no-typecheck` skips the check.

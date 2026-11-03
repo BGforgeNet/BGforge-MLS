@@ -37,8 +37,9 @@ for sample in samples/*.tbaf; do
     cp "$sample" "$tmpdir/${name}.tbaf"
 done
 
-# Batch transpile (single node process)
-node --no-warnings "$CLI" "$tmpdir" -r --save -q 2>&1
+# Batch transpile (single node process). Phase 1 already type-checked these samples against the runtime
+# declarations beside them, which the copies in $tmpdir do not have.
+node --no-warnings "$CLI" "$tmpdir" -r --save -q --no-typecheck 2>&1
 
 for sample in samples/*.tbaf; do
     name=$(basename "$sample" .tbaf)

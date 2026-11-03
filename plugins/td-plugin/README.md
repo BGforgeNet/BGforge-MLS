@@ -14,7 +14,8 @@ TypeScript Language Service Plugin for `.td` (TypeScript-to-D dialog transpiler)
 Overrides the `LanguageServiceHost` and intercepts `LanguageService` via a `Proxy`:
 
 - `getScriptFileNames` - appends `td-runtime.d.ts` when the project contains `.td` files
-- `getCompilationSettings` - sets `target: ES2020` and `lib: ["lib.es2020.d.ts"]` for `.td` projects
+- `getCompilationSettings` - sets `target: ES2020` and `lib: ["lib.es2020.d.ts"]` for `.td` projects, from
+  `shared/td-project-settings.ts`, which the `fgtp` type check applies too
 - `getCompletionsAtPosition` - applies blocklist filtering per file type
 
 Uses the current `host.getScriptFileNames()` (not a stale pre-override reference) so files added by other plugins or tsserver are seen.

@@ -17,6 +17,15 @@ export { createTranspiler, type TranspilerEvent } from "../common/transpiler-pip
 export { makeGeneratedHeader } from "../common/transpiler-utils";
 export { outputPathFor } from "../common/output-path";
 
+// What the CLIs' pre-compile type checks share: the governing tsconfig.json and the error a script gets
+export {
+    ScriptConfigs,
+    scriptTypeError,
+    formatTypeError,
+    type ScriptTypeError,
+    type ScriptTypecheckResult,
+} from "../common/script-typecheck";
+
 // The parse project short-lived syntactic reads share
 export { getSharedProject } from "../common/shared-project";
 

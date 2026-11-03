@@ -199,4 +199,6 @@ if (Global("buffed", LOCALS, 0)) {
 === COMPILATION ===
 
 .tbaf -> transpiler -> .baf -> WeiDU -> game
-Press Ctrl+R in VSCode or use the transpile CLI.
+Press Ctrl+R in VSCode or use the transpile CLI (fgtp).
+The CLI type-checks each script first, against the tsconfig.json that includes it, and does not transpile one with
+type errors. --no-typecheck skips the check.
