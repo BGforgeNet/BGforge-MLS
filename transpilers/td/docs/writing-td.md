@@ -284,7 +284,7 @@ function myState() {
 // -> IF ~Global("active","GLOBAL",1)~ myState SAY @1 ...
 ```
 
-**`else` / `else if`:** Creates additional transitions without triggers (else) or with negated triggers:
+**`else` / `else if`:** Each branch's transitions are guarded by its own condition and the negation of every branch before it, so exactly one branch's replies are offered:
 
 ```typescript
 function myState() {
@@ -296,7 +296,11 @@ function myState() {
     reply(tra(3)).goTo(noSword);
   }
 }
+// -> +~PartyHasItem("SWORD01")~+ @2 + hasSword
+//    +~!PartyHasItem("SWORD01")~+ @3 + noSword
 ```
+
+A negated `&&` becomes an `OR(n)` of negated triggers, and an `&&` inside an `||` is distributed into OR groups, as in TBAF. A condition that is a compile-time constant keeps one branch: a false transition trigger drops the transition. A constant state entry trigger, chain or interject entry trigger, or trigger given to `addStateTrigger`, `addTransTrigger`, `replaceStateTrigger` or `alterTrans` is an error: a true one decides nothing, and a false one removes what it guards. `alterTrans(..., { trigger: false })` written literally still clears a trigger.
 
 ## Chain Dialogs
 
@@ -440,15 +444,17 @@ say(tlk(12345)); // -> SAY #12345
 
 ### `tlkForced(n, text)` -- Forced TLK Reference
 
-Maps to `!N` in D output.
+Maps to `!N ~text~` in D output:
+
+```typescript
+say(tlkForced(12345, "You have it.")); // -> SAY !12345 ~You have it.~
+```
 
 ### String Literals
 
-Plain strings become tilde-delimited text:
-
-```typescript
-say("Hello world"); // -> SAY ~Hello world~
-```
+Dialog text is a `tra()` or `tlk()` reference, so it stays translatable: the type check rejects a plain string as
+text. With `--no-typecheck` the transpiler still writes one as tilde-delimited text (`say("Hello world")` ->
+`SAY ~Hello world~`).
 
 ### Male/Female Variants
 
@@ -553,15 +559,19 @@ replaceStateTrigger("BJALVAR", [1, 2, 3], Global("newTrigger", "GLOBAL", 1));
 
 ### Compile-Time Variables
 
-All variables are compile-time only. Values are substituted textually:
+All variables are compile-time only. A `const` is evaluated as TypeScript evaluates it, and its value is used wherever its name appears - a dialog or speaker name, an `extern` target, a trigger or action argument:
 
 ```typescript
 const DIALOG = "MYDLG";
 const QUEST_VAR = "my_quest";
+const STAGE = 2 * 5;
 
-begin(DIALOG, [myState]);
-// DIALOG is substituted to "MYDLG"
+begin(DIALOG, [myState]); // -> BEGIN MYDLG
+// in myState: reply(tra(4)).action(SetGlobal(QUEST_VAR, "GLOBAL", STAGE)).exit();
+// -> ++ @4 DO ~SetGlobal("my_quest","GLOBAL",10)~ EXIT
 ```
+
+Values follow the same rules as in TBAF: integers only (a fraction, a result past 32 bits, or an inexact `/` is an error; write `Math.trunc(a / b)` for integer division), strings joined with `+` or template literals, and compile-time arrays and objects. A value cannot change: `let` and `var` are errors (`let` stays for a `for` loop's counter), and so is an assignment. Names follow TypeScript's scopes.
 
 ### Helper Functions (With Parameters)
 
@@ -687,8 +697,7 @@ Engine builtins come from [IETS](https://github.com/BGforgeNet/iets):
 
 ```typescript
 import { tra, tlk, obj } from "@bgforge/iets";
-import { Global, SetGlobal, See } from "@bgforge/iets/triggers.d";
-import { Player1, Myself } from "@bgforge/iets/objects.d";
+import { Global, SetGlobal, See, Player1, Myself } from "@bgforge/iets/bg2";
 ```
 
 Local files can also be imported:
@@ -711,7 +720,7 @@ function myState() {
 // -> DO ~CreateCreature("ccguard2",[2791.831],6)~ EXIT
 ```
 
-Negative coordinates are supported (e.g. `[-1, -1]` for "current location"). Only two-element numeric arrays are converted. Three-element arrays and object identifiers like `[PC]` are left unchanged.
+Negative coordinates are supported (e.g. `[-1, -1]` for "current location"). Only a pair of integers becomes a point; any other array in an argument is an error. An object specifier such as `[PC]` is an array to TypeScript, so write it as `obj("[PC]")`.
 
 ## Gotchas and Pitfalls
 
@@ -719,7 +728,7 @@ Negative coordinates are supported (e.g. `[-1, -1]` for "current location"). Onl
 
 2. **First dialog claims shared states.** If two `begin()`/`append()` constructs reach the same state via `goTo()`, the first one processed claims it. List shared states explicitly in both constructs.
 
-3. **Variables must be compile-time primitives.** No objects, arrays of objects, or computed values. Only strings and numbers.
+3. **Variables are compile-time values.** Integers, strings, arrays and objects, computed as TypeScript computes them; an argument takes an integer, a string, a point, an engine name or call, `obj()`, `tra()` or `tlk()`. Anything that would reach the output and that TD cannot write faithfully is an error naming the construct; a constant nothing reads is never evaluated.
 
 4. **`copyTrans` vs `copyTransLate`.** `copyTrans()` at state level copies transitions before other D actions. `.copyTransLate()` in a transition chain copies them after. Use `copyTransLate` when the target state might not exist yet at compile time.
 

@@ -29,4 +29,3 @@ In the editor, the same output is available behind the `bgforge.tssl.emitSsl` se
 
 - **[Writing TSSL](writing-tssl.md)** -- Comprehensive reference for all supported syntax, forbidden constructs, and gotchas
 - **[Converting SSL to TSSL](converting-ssl-to-tssl.md)** -- Step-by-step migration guide from existing SSL scripts
-- **[LLM Reference](llms.txt)** -- Compact reference optimized for LLM context windows (copy into your project for AI-assisted coding)

@@ -412,8 +412,16 @@ describe("argument formatting", () => {
 
     it("refuses a value WeiDU has no spelling for", () => {
         expect(() => format({ kind: "bool", value: true })).toThrow(/pass 1 or 0/);
+        // `[PC]` is an array to TypeScript; an object specifier is written as one.
+        expect(() => format({ kind: "array", items: [{ kind: "symbol", name: "PC" }] })).toThrow(
+            /write an object specifier as obj\("\[PC\]"\)/,
+        );
         expect(() => format({ kind: "array", items: [int(1), int(2), int(3)] })).toThrow(/exists only at compile time/);
         expect(() => format({ kind: "string", value: `a"b~c` })).toThrow(/both/);
         expect(() => format({ kind: "strref", ref: { form: "tlkForced", id: 1, text: "t" } })).toThrow(/dialog text/);
+        // An argument writes the reference alone, so a sound there would be dropped.
+        expect(() => format({ kind: "strref", ref: { form: "tra", id: 5, sound: "SND01" } })).toThrow(
+            /a sound belongs to dialog text/,
+        );
     });
 });

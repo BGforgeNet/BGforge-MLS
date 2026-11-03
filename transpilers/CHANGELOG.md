@@ -12,6 +12,31 @@ Notable changes to `@bgforge/transpile` (the library and the `fgtp` CLI).
   engine action, is now an error instead of text in the generated file. `--no-typecheck` transpiles without the
   check. A script no `tsconfig.json` includes is checked with strict defaults. A project holding `.td` scripts gets
   the TD API declared, as in the editor.
+- TBAF and TD compute every compile-time value the output uses from the syntax tree, as TypeScript evaluates it,
+  and refuse what BAF or D cannot express rather than pass the source text through. A constant built from another
+  constant, arithmetic, strings joined with `+` or a template literal, `arr[i]`, `obj.field` and ternaries now
+  compile to their values. Refused, each with a message naming the construct: `var`, and `let` outside a loop
+  counter; an assignment; a fraction; a result past 32 bits; a `/` that does not divide exactly (write
+  `Math.trunc(a / b)` or `Math.floor(a / b)`); and any statement, or expression the output uses, that neither
+  language has a meaning for.
+- TBAF refuses an action outside any `if` or `switch`: its block matched on every pass, so no block after it ran.
+- TBAF refuses a `switch` case that falls through into the next; empty cases stacked above one share its block.
+- An `&&` inside an `||` compiles, distributed into the OR groups BAF and D hold, in both languages.
+
+### Fixed
+
+- TBAF decides a condition that is a compile-time constant, as documented: `const x = 1; if (x > 3)` emits no
+  block, where it emitted one under `True()`. A condition that is neither a trigger call nor a compile-time
+  boolean is an error, where it became `True()`.
+- A constant declared in one function or block no longer takes the value of another declared elsewhere with the same
+  name.
+- Arithmetic is no longer folded inside a name: `(x1 * 2) / 2` no longer becomes `(x2) / 2`. A string's contents are
+  written as they are: `"[1, 2] tra(5)"` no longer becomes `"[1.2] @5"`.
+- TD resolves constants used as a chain speaker, an `extern` target and a chain action's argument, which reached the
+  output as the constant's name, and a constant weight, which was refused or written as `#NaN`.
+- TD's `else` and `else if` transitions carry the negation of the conditions before them, so only one branch's
+  replies are offered.
+- TD writes `tlkForced(n, text)` as `!n ~text~`, the form WeiDU reads; the text was dropped.
 
 ## 0.5.1
 

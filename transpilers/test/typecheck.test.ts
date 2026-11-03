@@ -39,6 +39,26 @@ const TBAF_UNBOUND = "if (See(Unbound)) {\n    SmallWait(1);\n}\n";
 const TD_DIALOG = 'begin("DLG", state("0", () => {\n    exit();\n}));\n';
 const UNTYPED_PARAMETER = "function twice(x) {\n    return x * 2;\n}\ntwice(1);\n";
 
+describe("TD dialog text", () => {
+    // A stand-in for iets's tra(); the TD runtime declares StrRef.
+    const TRA = "declare function tra(index: number): StrRef;\n";
+    const textIn = (text: string) => `begin("DLG", state("0", () => {\n    say(${text});\n    exit();\n}));\n`;
+    const errorsFor = (text: string) => {
+        const dir = mod({ "tsconfig.json": STRICT, "tra.d.ts": TRA, "a.td": textIn(text) });
+        return checker.check(path.join(dir, "a.td")).errors.map((error) => error.message);
+    };
+
+    it("takes tlkForced() and male/female text built from references", () => {
+        expect(errorsFor('tlkForced(12345, "You have it.")')).toEqual([]);
+        expect(errorsFor("{ male: tra(1), female: tra(2) }")).toEqual([]);
+        expect(errorsFor('{ male: tra(1), female: tra(2), maleSound: "M01", femaleSound: "F01" }')).toEqual([]);
+    });
+
+    it("rejects a raw string as text, deliberately, so text stays translatable", () => {
+        expect(errorsFor('"Hello"')).toEqual([expect.stringMatching(/not assignable/)]);
+    });
+});
+
 describe("TranspilerTypechecker", () => {
     it("reports an identifier the script does not bind at its line and column, naming the tsconfig it used", () => {
         const dir = mod({ "tsconfig.json": STRICT, "engine.d.ts": ENGINE, "a.tbaf": TBAF_UNBOUND });

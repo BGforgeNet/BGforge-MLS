@@ -29,18 +29,18 @@ The index of every document in the repo. Start here.
 
 ## Languages and compilers
 
-| Document                                                             | Contents                                                                     |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [../compilers/README.md](../compilers/README.md)                     | What each compiler is and how they relate                                    |
-| [../compilers/ssl/README.md](../compilers/ssl/README.md)             | Fallout SSL -> INT compiler; ships the `ssl` CLI                             |
-| [../compilers/tssl/README.md](../compilers/tssl/README.md)           | TypeScript -> INT compiler, the `tssl` CLI, and the folib contract           |
-| [../compilers/tssl/docs/](../compilers/tssl/docs/)                   | TSSL user guide, writing guide, SSL-to-TSSL conversion guide, and `llms.txt` |
-| [../compilers/bcs/README.md](../compilers/bcs/README.md)             | Infinity Engine BCS codec and BAF compiler (library only, no CLI)            |
-| [../transpilers/README.md](../transpilers/README.md)                 | Transpile library, the `fgtp` CLI, and the transpiler package layout         |
-| [../transpilers/tbaf/docs/](../transpilers/tbaf/docs/)               | TBAF -> BAF user guide, writing guide, and `llms.txt`                        |
-| [../transpilers/td/docs/](../transpilers/td/docs/)                   | TD -> D user guide, writing guide, and `llms.txt`                            |
-| [../plugins/tssl-plugin/README.md](../plugins/tssl-plugin/README.md) | TSSL tsserver plugin source                                                  |
-| [../plugins/td-plugin/README.md](../plugins/td-plugin/README.md)     | TD tsserver plugin source                                                    |
+| Document                                                             | Contents                                                             |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [../compilers/README.md](../compilers/README.md)                     | What each compiler is and how they relate                            |
+| [../compilers/ssl/README.md](../compilers/ssl/README.md)             | Fallout SSL -> INT compiler; ships the `ssl` CLI                     |
+| [../compilers/tssl/README.md](../compilers/tssl/README.md)           | TypeScript -> INT compiler, the `tssl` CLI, and the folib contract   |
+| [../compilers/tssl/docs/](../compilers/tssl/docs/)                   | TSSL user guide, writing guide, and SSL-to-TSSL conversion guide     |
+| [../compilers/bcs/README.md](../compilers/bcs/README.md)             | Infinity Engine BCS codec and BAF compiler (library only, no CLI)    |
+| [../transpilers/README.md](../transpilers/README.md)                 | Transpile library, the `fgtp` CLI, and the transpiler package layout |
+| [../transpilers/tbaf/docs/](../transpilers/tbaf/docs/)               | TBAF -> BAF user guide and writing guide                             |
+| [../transpilers/td/docs/](../transpilers/td/docs/)                   | TD -> D user guide and writing guide                                 |
+| [../plugins/tssl-plugin/README.md](../plugins/tssl-plugin/README.md) | TSSL tsserver plugin source                                          |
+| [../plugins/td-plugin/README.md](../plugins/td-plugin/README.md)     | TD tsserver plugin source                                            |
 
 ## Libraries and packages
 

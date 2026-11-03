@@ -29,6 +29,17 @@ interface Action {
 // --- IElib sync surface end ---
 
 /**
+ * Dialog text: a `tra()`/`tlk()` reference, or a pair of them for a male and a female protagonist.
+ *
+ * A raw string is deliberately not text here, although the transpiler would write one as `~...~`: text stays a
+ * translatable reference.
+ */
+type DialogText = StrRef | { male: StrRef; female: StrRef; maleSound?: string; femaleSound?: string };
+
+/** A forced TLK reference with its text (`!N ~text~` in D): WeiDU writes the text to the TLK at that index. */
+declare function tlkForced(index: number, text: string): StrRef;
+
+/**
  * A dialogue state: a nullary function whose `say`/`reply`/`goTo` calls describe one state.
  *
  * Deliberately a call signature and not a brand, unlike `StrRef` and `Action` above. Those name values
@@ -53,8 +64,8 @@ type StateFn = () => void;
  * Variadic: `say(t1, t2, t3)` emits multisay (`SAY text = text = text`).
  * Two-arg form: `say(dialog, text)` for cross-dialog say (chain speaker switch).
  */
-declare function say(...text: StrRef[]): void;
-declare function say(dialog: string, text: StrRef): void;
+declare function say(...text: DialogText[]): void;
+declare function say(dialog: string, text: DialogText): void;
 
 /**
  * Copy all transitions from the given state in the given dialog file.
@@ -77,11 +88,11 @@ declare function weight(n: number): void;
 /** Shared terminal and modifier methods for transition builders. */
 interface TransitionBuilder<Self> {
     /** Add text to the PC's journal if this transition is taken. */
-    journal(text: StrRef): Self;
+    journal(text: DialogText): Self;
     /** Add text to the "solved" section of the PC's journal. */
-    solvedJournal(text: StrRef): Self;
+    solvedJournal(text: DialogText): Self;
     /** Add text to the "unsolved" section of the PC's journal. */
-    unsolvedJournal(text: StrRef): Self;
+    unsolvedJournal(text: DialogText): Self;
     /** Set transition feature flags directly using the binary DLG format. */
     flags(n: number): Self;
     /** Continue dialogue at the given state label in the same DLG file. */
@@ -107,7 +118,7 @@ interface AfterAction extends TransitionBuilder<AfterAction> {}
  * If this transition is taken, the PC says the reply text.
  * Returns a builder for chaining `.action()`, `.journal()`, and terminal (`.goTo()`, `.exit()`, `.extern()`).
  */
-declare function reply(text: StrRef): AfterReply;
+declare function reply(text: DialogText): AfterReply;
 
 /**
  * Execute engine actions if this transition is taken.
@@ -138,13 +149,13 @@ declare function copyTransLate(dialog: string, state: string | number, options?:
 declare function flags(value: number): void;
 
 /** Add text to the PC's journal if this transition is taken. */
-declare function journal(text: StrRef): void;
+declare function journal(text: DialogText): void;
 
 /** Add text to the "solved" section of the PC's journal. */
-declare function solvedJournal(text: StrRef): void;
+declare function solvedJournal(text: DialogText): void;
 
 /** Add text to the "unsolved" section of the PC's journal. */
-declare function unsolvedJournal(text: StrRef): void;
+declare function unsolvedJournal(text: DialogText): void;
 
 // ---------------------------------------------------------------------------
 // Dialog operations - BEGIN, APPEND, EXTEND
@@ -294,7 +305,7 @@ declare function alterTrans(
     dialog: string,
     states: (string | number)[],
     trans: number[],
-    options: { trigger?: boolean; action?: Action; reply?: StrRef },
+    options: { trigger?: boolean; action?: Action; reply?: DialogText },
 ): void;
 
 /**
@@ -369,7 +380,7 @@ declare function setWeight(dialog: string, state: string | number, weight: numbe
  * Destructively change the SAY text of the given state.
  * Should only be used to patch or workaround existing dialogues.
  */
-declare function replaceSay(dialog: string, state: string | number, text: StrRef): void;
+declare function replaceSay(dialog: string, state: string | number, text: DialogText): void;
 
 /**
  * Destructively set the trigger string of the specified states.
@@ -384,5 +395,5 @@ declare function replaceStateTrigger(dialog: string, states: (string | number)[]
 declare function replace(dialog: string, states: Record<number, () => void>): void;
 
 // ---------------------------------------------------------------------------
-// Text helpers: tra(), tlk(), obj() are declared in ielib.
+// Text helpers: tra(), tlk(), obj() are declared in iets.
 // ---------------------------------------------------------------------------

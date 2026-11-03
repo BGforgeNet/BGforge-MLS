@@ -68,6 +68,13 @@ export function formatArgument(value: Value, style: ArgumentStyle, node: Node): 
         case "call":
             return `${value.name}(${value.args.map((arg) => formatArgument(arg, style, node)).join(style.separator)})`;
         case "strref":
+            // An argument writes the reference alone; a sound with it would reach no output.
+            if (value.ref.form !== "tlkForced" && value.ref.sound !== undefined) {
+                throw TranspileError.fromNode(
+                    node,
+                    `a sound belongs to dialog text; an argument takes ${value.ref.form}(n)`,
+                );
+            }
             if (value.ref.form === "tra") return `@${value.ref.id}`;
             if (value.ref.form === "tlk") return String(value.ref.id);
             throw TranspileError.fromNode(
@@ -78,6 +85,13 @@ export function formatArgument(value: Value, style: ArgumentStyle, node: Node): 
             const [x, y] = value.items;
             if (value.items.length === 2 && x?.kind === "int" && y?.kind === "int") {
                 return `[${formatArgument(x, style, node)}.${formatArgument(y, style, node)}]`;
+            }
+            // `[PC]` reads as BAF's object specifier but is an array to TypeScript.
+            if (value.items.length === 1 && x?.kind === "symbol") {
+                throw TranspileError.fromNode(
+                    node,
+                    `[${x.name}] is an array to TypeScript; write an object specifier as obj("[${x.name}]")`,
+                );
             }
             throw TranspileError.fromNode(
                 node,

@@ -15,4 +15,3 @@ Engine builtins (triggers, actions, objects) are provided by [IETS](https://gith
 ## Guides
 
 - **[Writing TBAF](writing-tbaf.md)** -- Comprehensive reference for all supported syntax, condition algebra, and gotchas
-- **[LLM Reference](llms.txt)** -- Compact reference optimized for LLM context windows (copy into your project for AI-assisted coding)

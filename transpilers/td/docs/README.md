@@ -15,4 +15,3 @@ Engine builtins (triggers, actions, objects) and text helpers (`tra`, `tlk`, `ob
 ## Guides
 
 - **[Writing TD](writing-td.md)** -- Comprehensive reference for the dialog API, state/transition model, and gotchas
-- **[LLM Reference](llms.txt)** -- Compact reference optimized for LLM context windows (copy into your project for AI-assisted coding)
