@@ -109,8 +109,8 @@ parallel \
 # other check. Run them yourself after a webview change - see AGENTS.md.
 
 # transpile-external is the one suite that WRITES to external/: it transpiles in place and verifies the
-# result by `git diff` against the committed output, restoring the generated .ssl afterwards. That
-# method needs a clean tree and no concurrent reader, so it runs alone after the block rather than in it.
+# result by `git diff` against the committed output. That method needs a clean tree and no concurrent
+# reader, so it runs alone after the block rather than in it.
 step "Transpile external (writes external/, so it runs alone)"
 ./scripts/test-transpile-external.sh
 

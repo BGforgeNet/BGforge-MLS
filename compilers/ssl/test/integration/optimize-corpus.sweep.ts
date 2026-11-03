@@ -27,7 +27,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
-import { BROKEN_WHEN_OPTIMISED, CORPUS_SIZE, corpusKey, listScripts } from "./corpus.ts";
+import { BROKEN_WHEN_OPTIMISED, CORPUS_SIZE, corpusKey, isGenerated, listScripts, liveOracle } from "./corpus.ts";
 import { currentPins, loadManifest, sha256, staleness } from "./oracle-manifest.ts";
 import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 import { shardScripts } from "@bgforge/shared/cli/test/shard.ts";
@@ -101,7 +101,7 @@ export function registerOptimizeShard(index: number, count: number): void {
 
                 for (const level of LEVELS) {
                     const at = results.get(level)!;
-                    const digest = oracles.entries.get(key)?.[level];
+                    const digest = isGenerated(script) ? liveOracle(script, level) : oracles.entries.get(key)?.[level];
                     if (digest === undefined) {
                         // A script the manifest has never seen means the corpus and manifest disagree
                         // about the population itself - regeneration territory, counted not skipped.

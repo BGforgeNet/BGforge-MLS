@@ -652,13 +652,11 @@ class TsslLowering {
      * Expands an `@inline` function into the call it stands for.
      *
      * Substitution is TEXTUAL, deliberately, because the route this must agree with expands these as
-     * `#define` macros through the C preprocessor. An argument is spliced in WITHOUT parentheses, so
-     * precedence re-associates across the boundary: `ndebug("a " + x)` against
-     * `#define ndebug(msg) debug_msg(NAME + ": " + msg)` yields `((NAME + ": ") + "a ") + x`, not
-     * `(NAME + ": ") + ("a " + x)`. The two compute the same string and compile to different bytes, and
-     * matching the bytes is what keeps an emitted `.ssl` guaranteed to compile to what we emit directly.
-     * Substituting the caller's parsed subtree instead would be the hygienic reading and is a change to
-     * make deliberately, not by accident.
+     * `#define` macros through the C preprocessor. Extraction already parenthesised each parameter the
+     * body uses as an operand (`inline-functions.ts`), so an argument keeps its grouping on both routes:
+     * `#define ndebug(msg) debug_msg(NAME + ": " + (msg))` makes `ndebug("a " + x)` the
+     * `(NAME + ": ") + ("a " + x)` TypeScript means. Matching the text route's bytes is what keeps an
+     * emitted `.ssl` guaranteed to compile to what we emit directly.
      */
     private expansionOf(inline: InlineFunc, actual: Node[], at: Node): Node[] {
         const substitution = new Map<string, string>();

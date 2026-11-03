@@ -156,6 +156,10 @@ parallel \
     "SSL CLI" "pnpm --filter @bgforge/ssl build" \
     "TSSL CLI" "pnpm --filter @bgforge/tssl build"
 
+# Writes external/, so it runs here: once the tssl CLI exists, and before Phase 3, whose jobs only read it.
+step "Generating the mods' .ssl from .tssl"
+"$SCRIPT_DIR/generate-external-ssl.sh"
+
 # Support early exit for test-all.sh (runs its own Phase 3 with extended tests interleaved)
 if [[ "${TEST_STOP_AFTER_BUILD:-}" == "1" ]]; then
     timing_summary "Phases 1-2 passed (build-only mode)"

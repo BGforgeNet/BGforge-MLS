@@ -3,7 +3,7 @@
  * Handles @inline-tagged functions: extraction from source, usage detection, and macro output.
  */
 
-import type { SourceFile, Node } from "ts-morph";
+import { Project, type SourceFile, type Node } from "ts-morph";
 import {
     SyntaxKind,
     sslName,
@@ -63,7 +63,7 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
                 if (paramNames.has(argText)) return { type: "param", value: argText };
                 // Convert operators to SSL syntax (| -> bwor, etc.), keeping the TypeScript spelling
                 // for the consumer that re-parses rather than splices.
-                return { type: "constant", value: convertOperatorsAST(arg), source: argText };
+                return { type: "constant", ...withOperandParams(arg, paramNames) };
             });
             return { targetFunc: callExpr.getExpression().getText(), args };
         };
@@ -96,11 +96,7 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
                 // SSL, and anything the author wrote inside is theirs.
                 const inner = returnExpr.asKind(SyntaxKind.ParenthesizedExpression)?.getExpression();
                 const expression = inner ?? returnExpr;
-                inlineBody = {
-                    kind: "expression",
-                    value: convertOperatorsAST(expression),
-                    source: expression.getText(),
-                };
+                inlineBody = { kind: "expression", ...withOperandParams(expression, paramNames) };
             }
         } else if (statements.length > 0) {
             const bodyCalls = statements.map((statement) =>
@@ -117,6 +113,68 @@ function extractInlineFunctionsFromSource(source: SourceFile, result: Map<string
 
         result.set(funcName, { body: inlineBody, params });
     }
+}
+
+/** Parses the operand rewrites below, apart from any compile's project: they need syntax only. */
+let operandProject: Project | undefined;
+
+/**
+ * `expression` with each parameter it uses as an operator's operand parenthesised, in TypeScript and in SSL
+ * spelling. The macro is spliced as text, so without the parentheses an argument such as `a + 1` regroups with
+ * the operator around it: `dbl(a + 1)` over `x * 2` read `a + 1 * 2`. A parameter that is a whole call argument,
+ * already parenthesised, or a property name spells no operand and stays as written.
+ */
+function withOperandParams(expression: Node, params: ReadonlySet<string>): { value: string; source: string } {
+    const text = expression.getText();
+    const offset = expression.getStart();
+    const operands = [expression, ...expression.getDescendants()]
+        .filter((node) => node.getKind() === SyntaxKind.Identifier && params.has(node.getText()))
+        .map((identifier) => outermostTypeWrapper(identifier))
+        .filter((node) => isOperatorOperand(node))
+        .sort((a, b) => b.getStart() - a.getStart());
+    if (operands.length === 0) return { value: convertOperatorsAST(expression), source: text };
+
+    let source = text;
+    for (const operand of operands) {
+        const start = operand.getStart() - offset;
+        const end = operand.getEnd() - offset;
+        source = `${source.slice(0, start)}(${source.slice(start, end)})${source.slice(end)}`;
+    }
+    operandProject ??= new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
+    const parsed = operandProject
+        .createSourceFile("operand.ts", `const operand = (${source});`, { overwrite: true })
+        .getVariableDeclarations()[0]
+        ?.getInitializer()
+        ?.asKind(SyntaxKind.ParenthesizedExpression)
+        ?.getExpression();
+    if (parsed === undefined) throw new Error(`cannot re-parse inline operand '${source}'`);
+    return { value: convertOperatorsAST(parsed), source };
+}
+
+/** The node standing for an identifier once type syntax around it erases: `x as number` is `x`. */
+function outermostTypeWrapper(identifier: Node): Node {
+    let node = identifier;
+    for (let parent = node.getParent(); parent !== undefined; parent = node.getParent()) {
+        const kind = parent.getKind();
+        const erases =
+            kind === SyntaxKind.AsExpression ||
+            kind === SyntaxKind.SatisfiesExpression ||
+            kind === SyntaxKind.NonNullExpression ||
+            kind === SyntaxKind.TypeAssertionExpression;
+        if (!erases) break;
+        node = parent;
+    }
+    return node;
+}
+
+/** Whether `node` is an operand of an operator, where a spliced compound argument could regroup. */
+function isOperatorOperand(node: Node): boolean {
+    const kind = node.getParent()?.getKind();
+    return (
+        kind === SyntaxKind.BinaryExpression ||
+        kind === SyntaxKind.PrefixUnaryExpression ||
+        kind === SyntaxKind.PostfixUnaryExpression
+    );
 }
 
 /**

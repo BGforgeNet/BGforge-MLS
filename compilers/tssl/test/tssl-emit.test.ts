@@ -79,6 +79,17 @@ describe("enum emission", () => {
     });
 });
 
+describe("@inline macros", () => {
+    it("parenthesises a parameter used as an operand, so a compound argument keeps its grouping", async () => {
+        const out = await emit(
+            "/** @inline */\nfunction dbl(x: number): number {\n    return x * 2;\n}\n" +
+                "function start() {\n    let a = 10;\n    display_msg(dbl(a + 1));\n}\n",
+        );
+        expect(out).toContain("#define dbl(x) ((x) * 2)");
+        expect(out).toContain("display_msg(dbl(a + 1));");
+    });
+});
+
 describe("constant emission", () => {
     // A define body is spliced into each use as text, so `b * 2` under a bare `#define b a + 1` reads as
     // `a + 1 * 2`. Whether the parenthesised body compiles to what TypeScript computes is checked across

@@ -77,6 +77,36 @@ clone_repos() {
     done <"$txt_file"
 }
 
+# Install the dependencies of repo $1 when it declares some and has none installed. The transpilers
+# resolve a mod's library imports (folib, iets) from its own node_modules.
+# --ignore-workspace prevents pnpm from resolving to the parent monorepo workspace, but pnpm still
+# takes the monorepo's lockfile unless --lockfile-dir says otherwise, and counts a nested package (the
+# IElib submodule) as a project unless --workspace-packages narrows it; either way a frozen install then
+# fails for want of an importer entry. --pm-on-fail=ignore stops it recording the monorepo's
+# packageManager pin into the repo's lockfile. --ignore-scripts skips lifecycle scripts: pnpm errors on
+# unapproved builds (ERR_PNPM_IGNORED_BUILDS), and the workspace's allowBuilds list is detached by
+# --ignore-workspace. The transpilers only read installed sources for type resolution (folib / iets
+# .d.ts); no postinstall artefacts are needed.
+install_repo_deps() {
+    local dir="$1"
+    if [[ -f "$dir/package.json" && ! -d "$dir/node_modules" ]]; then
+        echo "Installing dependencies for $(basename "$dir")..."
+        (cd "$dir" && pnpm install --ignore-workspace --lockfile-dir . --workspace-packages . --pm-on-fail=ignore \
+            --ignore-scripts)
+    fi
+}
+
+# Write the .ssl each tracked .tssl in repo $1 compiles to, beside it, as the mod's own build does, with
+# the tssl CLI at $2. Such a mod ignores those files as build output, so a checkout has none, and the SSL
+# corpus sweeps compile them. --no-typecheck: type errors are the transpile gate's to report.
+generate_tssl_ssl() {
+    local dir="$1"
+    local cli="$2"
+    [[ -z "$(git -C "$dir" ls-files '*.tssl')" ]] && return 0
+    install_repo_deps "$dir"
+    node --no-warnings "$cli" "$dir" -r --ssl --no-int --no-typecheck -q
+}
+
 # Clone IESDP into $1 if missing, then check out the latest remote ielib branch.
 # Shared by ie-update.sh (BAF actions/triggers data) and ie-binary-update.sh
 # (binary format specs), which both source the data off the ielib branch.

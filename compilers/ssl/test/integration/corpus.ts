@@ -14,9 +14,14 @@
  */
 
 import { execFileSync } from "node:child_process";
+import * as fs from "node:fs";
+import { createRequire } from "node:module";
+import * as os from "node:os";
 import * as path from "node:path";
 import { SPAWN_TIMEOUT_MS } from "@bgforge/shared/spawn-timeout.ts";
+import { preprocess } from "../../src/preprocess.ts";
 import { narrow, scriptsIn, scriptsUnder } from "./corpus-files.ts";
+import { sha256, type OracleDigest } from "./oracle-manifest.ts";
 
 // Anchored to this file rather than through the shared `repo-root` helper: that helper reads
 // `__dirname`, which the `pnpm ssl-oracles` ES-module entry chain does not have. Same reasoning as
@@ -38,18 +43,19 @@ export function corpusKey(script: string): string {
 }
 
 /**
- * The other pinned mods' scripts. Twenty-eight against RP's fifteen hundred, and worth more than that
+ * The other pinned mods' scripts. Twenty-nine against RP's fifteen hundred, and worth more than that
  * ratio suggests: a corpus of one mod is a corpus of one house style, and three defects found by first
  * compiling these - a negated parameter default, a map keyed by a PID constant, an argument list split
  * across lines - are ordinary code that no RP script happens to contain. Neither preprocesses until the
  * headers they borrow from each other are linked into place, which `global-setup.ts` does.
  *
- * `source_test` under FO2tweaks is left out: the mod's own build compiles `source` alone, so those are
- * scratch files rather than something it ships.
+ * FO2tweaks' are the `.ssl` its build generates from its `.tssl`, which `scripts/generate-external-ssl.sh`
+ * writes (see `isGenerated`). `source_test` under it is left out: the mod's own build compiles `source`
+ * alone, so those are scratch files rather than something it ships.
  */
 const OTHER_SCRIPTS = [path.join(FALLOUT, "FO2tweaks/source"), path.join(FALLOUT, "Fallout2_Party_Orders/source")];
 
-export const CORPUS_SIZE = 1553;
+export const CORPUS_SIZE = 1554;
 
 /**
  * Corpus scripts that do not compile, and what is wrong with each. Every one is a defect in the mod's own
@@ -158,6 +164,54 @@ export function runReference(compiler: string, cwd: string, stem: string, level:
                 .filter((line) => !line.startsWith("[Warning]") && !line.startsWith("***"));
             throw new ReferenceRefusedError(signal ? `killed by ${signal}` : `exit ${status ?? "?"}`, said);
         }
+    }
+}
+
+/**
+ * The reference's verdict on `<stem>.ssl` in `cwd` at one level: the digest of its bytes, or `refused`.
+ * A killed child throws instead, being an environmental fault rather than a verdict.
+ */
+export function referenceDigest(compiler: string, cwd: string, stem: string, level: number): OracleDigest {
+    try {
+        runReference(compiler, cwd, stem, level);
+    } catch (error) {
+        if (!(error instanceof ReferenceRefusedError)) throw error;
+        if (error.why.startsWith("killed")) {
+            throw new Error(`${stem} -O${level}: reference child ${error.why}; re-run`, { cause: error });
+        }
+        return "refused";
+    }
+    return sha256(new Uint8Array(fs.readFileSync(path.join(cwd, `${stem}.int`))));
+}
+
+/**
+ * Whether a script is a mod's build output, generated beside its `.tssl` by `scripts/generate-external-ssl.sh`.
+ * Its text moves with the TSSL compiler rather than with a corpus pin, so no committed oracle can stand for
+ * it, and the sweeps take `liveOracle` instead.
+ */
+export function isGenerated(script: string): boolean {
+    return fs.existsSync(path.join(path.dirname(script), `${path.basename(script, path.extname(script))}.tssl`));
+}
+
+/** The reference's verdict on a script at one level, run now on our preprocessed text, as a committed oracle is. */
+export function liveOracle(script: string, level: number): OracleDigest {
+    let text: string;
+    try {
+        text = preprocess(script);
+    } catch {
+        // As in the committed manifest: a script our preprocessor refuses has no oracle at any level.
+        return "refused";
+    }
+    const compiler = createRequire(path.join(REPO_ROOT, "server/package.json")).resolve(
+        "sslc-emscripten-noderawfs/compiler.mjs",
+    );
+    const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "ssl-live-oracle-"));
+    try {
+        const stem = path.basename(script, path.extname(script));
+        fs.writeFileSync(path.join(workDir, `${stem}.ssl`), text);
+        return referenceDigest(compiler, workDir, stem, level);
+    } finally {
+        fs.rmSync(workDir, { recursive: true, force: true });
     }
 }
 

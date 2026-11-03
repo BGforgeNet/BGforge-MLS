@@ -22,7 +22,9 @@ export interface InlineCall {
  * `expression` is a returned value that is not itself a call, and it is spliced PARENTHESISED: an
  * argument re-associates across a bare splice, and so does a body. `a := m + 1` against a bare
  * `metarule(46, 0) != 0` compiles to different bytes than against the wrapped form, because SSL reads
- * the bare one as a comparison against `0 + 1`. A call is atomic and needs no such wrapping.
+ * the bare one as a comparison against `0 + 1`. A call is atomic and needs no such wrapping. For the
+ * same reason, each parameter the expression uses as an operator's operand is parenthesised in both
+ * spellings, and so is one a call passes on inside an operator.
  */
 export type InlineBody =
     | { kind: "calls"; calls: InlineCall[] }

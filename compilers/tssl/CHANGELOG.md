@@ -10,6 +10,9 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
   bare expression, so a use under a tighter operator regrouped: with `const b = a + 1`, `b * 2` computed
   `a + (1 * 2)`. The `.ssl` now parenthesises such a value, and a negative enum member, as `#define b (a + 1)`.
   Compiling to `.int` was not affected.
+- An `@inline` function keeps its arguments' grouping. Its body took each argument as text, as the `#define` it
+  mirrors does, so `twice(a + 1)` over `return x * 2` computed `a + (1 * 2)`. A parameter the body uses as an
+  operand is now parenthesised, in the `.int` and in the `.ssl`, as `#define twice(x) ((x) * 2)`.
 
 ### Changed
 

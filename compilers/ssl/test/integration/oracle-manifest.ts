@@ -1,5 +1,5 @@
 /**
- * The committed oracle manifest: for every corpus script, the digest of what the bundled compiler
+ * The committed oracle manifest: for every pinned corpus script, the digest of what the bundled compiler
  * produced from OUR preprocessed text at each optimisation level, or `refused` where it refused.
  *
  * The corpus differential used to obtain these live - ~4500 synchronous child processes per run, each

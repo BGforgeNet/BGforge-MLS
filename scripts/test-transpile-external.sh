@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # E2E transpiler test: transpile .td/.tbaf/.tssl from external repos,
-# write output, verify git status is clean (no changes to committed .d/.baf/.ssl).
+# write output, verify git status is clean (no changes to committed .d/.baf).
 # Uses directory mode (-r --save) for batch processing in a single node process.
 # Repos are tested in parallel since they are independent.
 
@@ -21,6 +21,9 @@ mkdir -p "$LOG_DIR"
 
 # shellcheck source=scripts/parallel-lib.sh
 source "$SCRIPT_DIR/parallel-lib.sh"
+
+# shellcheck source=scripts/external-repos-lib.sh
+source "$SCRIPT_DIR/external-repos-lib.sh"
 
 # Build CLIs if missing
 if [[ ! -f "$CLI" ]]; then
@@ -48,24 +51,10 @@ test_repo() {
     # Reset to committed state before testing
     git -C "$dir" checkout .
 
-    # Install dependencies if node_modules is missing.
-    # --ignore-workspace prevents pnpm from resolving to the parent monorepo workspace, but pnpm still
-    # takes the monorepo's lockfile unless --lockfile-dir says otherwise, and counts a nested package (the
-    # IElib submodule) as a project unless --workspace-packages narrows it; either way a frozen install then
-    # fails for want of an importer entry. --pm-on-fail=ignore stops it recording the monorepo's
-    # packageManager pin into the repo's lockfile. --ignore-scripts skips lifecycle scripts: pnpm errors on
-    # unapproved builds (ERR_PNPM_IGNORED_BUILDS), and the workspace's allowBuilds list is detached by
-    # --ignore-workspace. The transpile CLI only reads installed sources for type
-    # resolution (folib / iets .d.ts); no postinstall artefacts are needed.
-    if [[ -f "$dir/package.json" && ! -d "$dir/node_modules" ]]; then
-        echo "Installing dependencies for $repo..."
-        (cd "$dir" && pnpm install --ignore-workspace --lockfile-dir . --workspace-packages . --pm-on-fail=ignore \
-            --ignore-scripts)
-    fi
+    install_repo_deps "$dir"
 
     # One process per language family, and only where that family has sources. `.tssl` belongs to the
-    # tssl compiler, which emits bytecode by default - `--ssl` is what asks it for the .ssl this
-    # gate compares. `fgtp` covers the rest.
+    # tssl compiler, which writes the .int its ignored build output; `fgtp` covers the rest.
     if [[ -n "$(git -C "$dir" ls-files '*.td' '*.tbaf')" ]]; then
         if ! node --no-warnings "$CLI" "$dir" -r --save 2>&1; then
             echo "FAIL: $repo (transpilation errors)"
@@ -73,7 +62,7 @@ test_repo() {
         fi
     fi
     if [[ -n "$(git -C "$dir" ls-files '*.tssl')" ]]; then
-        if ! node --no-warnings "$TSSL_CLI" "$dir" -r --ssl 2>&1; then
+        if ! node --no-warnings "$TSSL_CLI" "$dir" -r 2>&1; then
             echo "FAIL: $repo (tssl compilation errors)"
             return 1
         fi
@@ -81,48 +70,17 @@ test_repo() {
 
     # .baf and .d outputs must match the committed files byte for byte - their pipelines promise it.
     local changed
-    changed=$(git -C "$dir" diff --name-only -- ':!*.ssl')
+    changed=$(git -C "$dir" diff --name-only)
     if [[ -n "$changed" ]]; then
         echo "FAIL: $repo (output differs from committed files)"
-        git -C "$dir" diff --stat -- ':!*.ssl'
+        git -C "$dir" diff --stat
         return 1
     fi
 
-    # Generated .ssl text is allowed to drift (spacing, literal spelling, comments); what ships is the
-    # compiled script, so the gate is bytecode equivalence against the committed version at every level.
-    # An allow-listed file is a VERIFIED intended divergence from the committed baseline, not tolerated
-    # noise - a correction the old pipeline got wrong, or codegen the tag now honours:
-    #   gl_g_healing_revision.ssl - the author's 100.0 float divisors were shipped as integer 100
-    #     (integer division) by the old bundler's literal normalisation; the transpiler now preserves them.
-    #   gl_g_molotov.ssl - SSL's and/or share one precedence level, so the old output's stripped
-    #     parentheses changed `(a && b) || (c && d)` into `((a and b) or c) and d`; the transpiler now
-    #     keeps the author's grouping.
-    #   gl_g_level5.ssl, gl_g_map_hotkey.ssl, gl_g_modoc_brahmin.ssl, gl_g_no_drop_items_on_death.ssl -
-    #     each bundles an `@inline` function the old pipeline emitted as a procedure anyway
-    #     (map_first_run, shitter_has_blown, inven_count); it is now the `#define` the tag asks for, so
-    #     the script carries one procedure fewer and the body sits at the call site.
-    #     TODO: temporary - the baseline is stale, not wrong. folib 0.4.2 drops the tag on all three, so
-    #     bumping the FO2tweaks pin in external/fallout.txt to a commit that resolves it (and
-    #     regenerating the oracles, as that file says) makes these match again; drop them from this list
-    #     then, so their bytecode is checked once more.
-    if [[ -n "$(git -C "$dir" diff --name-only -- '*.ssl')" ]]; then
-        if ! (cd "$ROOT_DIR" && pnpm --silent ssl-equiv "$dir" \
-            --allow gl_g_healing_revision.ssl --allow gl_g_molotov.ssl \
-            --allow gl_g_level5.ssl --allow gl_g_map_hotkey.ssl \
-            --allow gl_g_modoc_brahmin.ssl --allow gl_g_no_drop_items_on_death.ssl); then
-            echo "FAIL: $repo (generated .ssl no longer compiles to the committed bytecode)"
-            return 1
-        fi
-        # Other suites read these trees (the SSL corpus differential compiles the .ssl files), so the
-        # equivalence-checked drift is put back rather than left for them to sweep.
-        git -C "$dir" checkout -- '*.ssl'
-    fi
-
-    # The bytecode oracle measures the same property as ssl-equiv above - the transpiler still produces
-    # something that compiles to the bytes it used to - without needing a committed .ssl to compare
-    # against, so it is what remains once a mod stops shipping the intermediate. Both run while both can:
-    # ssl-equiv covers the text as committed, this covers the bytecode at four switch sets including the
-    # `-s` the mods actually ship, which no other sweep exercises on a real script.
+    # A mod's generated .ssl is ignored build output, so there is no committed text to compare against.
+    # The bytecode oracle measures what that comparison did - the transpiler still produces something
+    # that compiles to the bytes it used to - at four switch sets including the `-s` the mods actually
+    # ship, which no other sweep exercises on a real script.
     if [[ -n "$(git -C "$dir" ls-files '*.tssl')" ]]; then
         if ! (cd "$ROOT_DIR" && pnpm --silent tssl-oracles "$dir"); then
             echo "FAIL: $repo (transpiled bytecode differs from the committed oracles)"

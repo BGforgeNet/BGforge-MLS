@@ -24,7 +24,7 @@ import { Language, Parser } from "web-tree-sitter";
 import { compileText } from "../../src/compile.ts";
 import { preprocess } from "../../src/preprocess.ts";
 import { REPO_ROOT } from "@bgforge/shared/cli/test/repo-root.ts";
-import { corpusKey, listScripts, RP_SCRIPTS } from "./corpus.ts";
+import { corpusKey, isGenerated, listScripts, liveOracle, RP_SCRIPTS } from "./corpus.ts";
 import { currentPins, loadManifest, sha256, staleness } from "./oracle-manifest.ts";
 import { builtArtifactsPresent } from "@bgforge/shared/cli/test/built-artifacts.ts";
 
@@ -42,7 +42,7 @@ const SAMPLE = 24;
 const COMPARED_FLOOR = SAMPLE - 4;
 
 /**
- * How many of the sample come from the mods other than the Restoration Project. They are 28 scripts
+ * How many of the sample come from the mods other than the Restoration Project. They are 29 scripts
  * against RP's fifteen hundred, so a stride over the concatenated corpus reaches at most one of them by
  * arithmetic - and `corpus.ts` records three defects found by compiling exactly those, none of which any
  * RP script exposes. Sampling them separately is what keeps a house style out of the canary.
@@ -105,7 +105,7 @@ describe.skipIf(!ready)("corpus canary", () => {
 
         for (const script of sampled) {
             const key = corpusKey(script);
-            const digest = oracles.entries.get(key)?.[0];
+            const digest = isGenerated(script) ? liveOracle(script, 0) : oracles.entries.get(key)?.[0];
             if (digest === undefined) {
                 unlisted++;
                 continue;

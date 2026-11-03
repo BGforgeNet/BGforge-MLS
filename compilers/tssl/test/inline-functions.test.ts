@@ -243,6 +243,41 @@ describe("extractInlineFunctions", () => {
         });
     });
 
+    it("parenthesises a parameter that is an operand, so a compound argument keeps its grouping", () => {
+        // `dbl(a + 1)` must mean (a + 1) * 2, as TypeScript computes it, not a + (1 * 2).
+        const source = sourceFrom("/** @inline */\nexport function dbl(x: number): number {\n    return x * 2;\n}\n");
+        expect(extractInlineFunctions(source).get("dbl")?.body).toEqual({
+            kind: "expression",
+            value: "(x) * 2",
+            source: "(x) * 2",
+        });
+    });
+
+    it("parenthesises an operand parameter inside a call's argument, and leaves a whole-argument one bare", () => {
+        const source = sourceFrom(
+            "/** @inline */\nexport function show(x: number): void {\n    display_msg(x * 2);\n    display_msg(x);\n}\n",
+        );
+        const inline = extractInlineFunctions(source).get("show");
+        expect(inline?.body).toEqual({
+            kind: "calls",
+            calls: [
+                { targetFunc: "display_msg", args: [{ type: "constant", value: "(x) * 2", source: "(x) * 2" }] },
+                { targetFunc: "display_msg", args: [{ type: "param", value: "x" }] },
+            ],
+        });
+    });
+
+    it("leaves a property name that spells a parameter alone, and a parameter the author parenthesised", () => {
+        const source = sourceFrom(
+            "/** @inline */\nexport function pick(x: number): number {\n    return cfg.x + (x) - x;\n}\n",
+        );
+        expect(extractInlineFunctions(source).get("pick")?.body).toEqual({
+            kind: "expression",
+            value: "cfg.x + (x) - (x)",
+            source: "cfg.x + (x) - (x)",
+        });
+    });
+
     it("sees the call through a chain of type assertions", () => {
         // folib's `inven_count` returns `critter_inven_obj(...) as unknown as number` - two assertions,
         // so peeling one leaves another and the call is never found.

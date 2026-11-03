@@ -29,6 +29,15 @@ function has_flag(mask: number): boolean {
     return ((mask & 2) != 0);
 }
 
+/**
+ * An @inline parameter used as an operand, called with a compound argument. Both routes parenthesise the
+ * operand, so `twice(limit + 1)` is (limit + 1) * 2; without that, the splice read limit + 1 * 2.
+ * @inline
+ */
+function twice(value: number): number {
+    return value * 2;
+}
+
 export function start(): void {
     greet("second");
     if (has_flag(6)) {
@@ -70,6 +79,7 @@ export function start(): void {
     let ratio = 1.0 * 7 / 2;
     display_msg(ratio);
 
+    display_msg(twice(limit + 1));
     display_msg(SPAN * 2);
     display_msg(100 / HALF);
     display_msg(-SPAN);

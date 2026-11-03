@@ -55,8 +55,9 @@ with short-circuiting both ways, over a whole real mod. The two routes cannot dr
 Three agreements are load-bearing and were each found by that differential rather than by reading, so
 change them only deliberately:
 
-- An `@inline` function substitutes its arguments **textually**, so `+` re-associates across the splice
-  exactly as the `#define` it mirrors does.
+- An `@inline` function substitutes its arguments **textually**, as the `#define` it mirrors does, with each
+  parameter the body uses as an operand parenthesised on both routes: `dbl(a + 1)` over `x * 2` is
+  `(a + 1) * 2`, as TypeScript computes it.
 - A negation folds to a constant only where an initial value must be constant, never in an expression -
   there it is a push and a NEGATE.
 - A `switch` always evaluates its subject into a temporary, because the SSL route renders `switch (X)`

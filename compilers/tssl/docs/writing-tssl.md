@@ -253,6 +253,17 @@ function map_first_run(): boolean {
 // -> #define map_first_run (metarule(METARULE_TEST_FIRSTRUN, 0) != 0)
 ```
 
+A parameter used as an operand is parenthesised too, so an argument keeps its grouping: `twice(a + 1)` is
+`(a + 1) * 2`.
+
+```typescript
+/** @inline */
+function twice(x: number): number {
+  return x * 2;
+}
+// -> #define twice(x) ((x) * 2)
+```
+
 The `@inline` tag must appear in a JSDoc comment (`/** @inline */`), not a regular comment.
 
 A body the macro cannot stand for stays an ordinary procedure, and the tag has no effect. SSL has no
