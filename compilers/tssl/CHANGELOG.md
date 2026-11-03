@@ -2,6 +2,23 @@
 
 Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 
+## Unreleased
+
+### Fixed
+
+- A constant whose value is an operator expression keeps its grouping in the `.ssl` output. Its `#define` held the
+  bare expression, so a use under a tighter operator regrouped: with `const b = a + 1`, `b * 2` computed
+  `a + (1 * 2)`. The `.ssl` now parenthesises such a value, and a negative enum member, as `#define b (a + 1)`.
+  Compiling to `.int` was not affected.
+
+### Changed
+
+- A top-level statement that is not a declaration (an assignment, a call, an `if`, a loop) is refused, naming its
+  line. SSL has no module-level code, and both outputs used to drop such a statement without a word. `var` is
+  refused the same way, with `let` or `const` as the remedy.
+- Compiling to `.int` refuses a property access on something other than an enum as not yet supported, rather than
+  as an unknown enum member.
+
 ## 0.5.1
 
 ### Fixed

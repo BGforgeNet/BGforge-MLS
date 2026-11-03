@@ -1,6 +1,13 @@
 // Constructs no real .tssl in the pinned corpus exercises, so the corpus sweep cannot tell the two
 // routes to bytecode apart on them. Each one below was a real divergence or a silent miscompile.
 
+// Constants whose values are operator expressions. The text route splices a define's body as text, so
+// a bare `#define SPAN BASE + 1` regrouped under a tighter operator at the use: `SPAN * 2` read as
+// `BASE + 1 * 2`. The direct route lowers each constant from its declaration and never regrouped.
+const BASE = 10;
+const SPAN = BASE + 1;
+const HALF = BASE / 2;
+
 /**
  * An @inline body of more than one call. Every folib inline is a single call, so nothing in the corpus
  * reaches this: the text route writes a semicolon-separated `#define`, the direct route a statement
@@ -62,4 +69,8 @@ export function start(): void {
     // division into integer division.
     let ratio = 1.0 * 7 / 2;
     display_msg(ratio);
+
+    display_msg(SPAN * 2);
+    display_msg(100 / HALF);
+    display_msg(-SPAN);
 }

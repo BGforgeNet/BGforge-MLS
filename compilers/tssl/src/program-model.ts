@@ -120,6 +120,9 @@ export const DESTRUCTURING_REFUSAL = "destructuring is not supported; declare ea
 /** The refusal for a `for` initializer declaring more than the one variable SSL's holds. */
 export const FOR_INITIALIZER_REFUSAL = "a for initializer declares one variable; declare the others before the loop";
 
+/** An SSL script has no module-level code, so a top-level statement that is not a declaration runs nowhere. */
+const TOP_LEVEL_REFUSAL = "only declarations belong at the top level; move this into a procedure";
+
 /** A refusal pinned to the node that earned it, in the file and line the author can open. */
 export function refuseAt(node: Node, message: string): TranspileError {
     return new TranspileError(message, { file: realFileOf(node), line: node.getStartLineNumber() });
@@ -143,15 +146,17 @@ function collectModuleItems(source: SourceFile, file: string, isEntry: boolean):
                         : keyword === SyntaxKind.LetKeyword
                           ? items.lets
                           : null;
-                if (bucket) {
-                    for (const decl of declList.getDeclarations()) {
-                        // A binding pattern's `getName()` is the pattern text, which both back ends would
-                        // emit as though it were an identifier. Refused here so neither has to.
-                        if (decl.getNameNode().getKind() !== SyntaxKind.Identifier) {
-                            throw refuseAt(decl, DESTRUCTURING_REFUSAL);
-                        }
-                        bucket.push(decl);
+                if (!bucket) {
+                    const keywordText = declList.getFirstChild()?.getText() ?? "this declaration";
+                    throw refuseAt(varStmt, `'${keywordText}' is not supported; declare it with let or const`);
+                }
+                for (const decl of declList.getDeclarations()) {
+                    // A binding pattern's `getName()` is the pattern text, which both back ends would
+                    // emit as though it were an identifier. Refused here so neither has to.
+                    if (decl.getNameNode().getKind() !== SyntaxKind.Identifier) {
+                        throw refuseAt(decl, DESTRUCTURING_REFUSAL);
                     }
+                    bucket.push(decl);
                 }
                 break;
             }
@@ -169,10 +174,24 @@ function collectModuleItems(source: SourceFile, file: string, isEntry: boolean):
                 }
                 break;
             }
-            default:
-                // Type-only statements (interfaces, aliases), imports/exports, and top-level expression
-                // statements contribute nothing, exactly as they always have.
+            // No code: `moduleEdges` walks the imports and re-exports, and the rest is type syntax. A default
+            // export stays unread because a default import is refused.
+            case SyntaxKind.ImportDeclaration:
+            case SyntaxKind.ExportDeclaration:
+            case SyntaxKind.ExportAssignment:
+            case SyntaxKind.InterfaceDeclaration:
+            case SyntaxKind.TypeAliasDeclaration:
+            case SyntaxKind.EmptyStatement:
                 break;
+            case SyntaxKind.ModuleDeclaration:
+            case SyntaxKind.ClassDeclaration: {
+                const ambient =
+                    stmt.asKind(SyntaxKind.ModuleDeclaration) ?? stmt.asKindOrThrow(SyntaxKind.ClassDeclaration);
+                if (!ambient.hasDeclareKeyword()) throw refuseAt(stmt, `${stmt.getKindName()} is not supported`);
+                break;
+            }
+            default:
+                throw refuseAt(stmt, TOP_LEVEL_REFUSAL);
         }
     }
     return items;

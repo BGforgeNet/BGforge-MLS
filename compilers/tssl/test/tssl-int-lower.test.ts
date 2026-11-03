@@ -180,6 +180,16 @@ describe("refusals", () => {
         ],
         ["a for loop with no condition", "function start() {\n    for (;;) {}\n}\n", /for loop has no condition/],
         [
+            "a top-level statement",
+            "let g = 1;\ng = 2;\nfunction start() {\n    display_msg(g);\n}\n",
+            /only declarations belong at the top level/,
+        ],
+        [
+            "a property of something that is not an enum",
+            "const cfg = { id: 7 };\nfunction start() {\n    display_msg(cfg.id);\n}\n",
+            /'cfg\.id' is not lowered yet: of property accesses, only an enum member's is/,
+        ],
+        [
             "an integer literal past 32 bits",
             "function start() {\n    let x = 0;\n    x = 4294967296 + 1;\n}\n",
             /integer literal 4294967296 does not fit in 32 bits/,

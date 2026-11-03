@@ -112,6 +112,8 @@ class TsslLowering {
     private readonly constants = new Map<string, Node>();
     /** Enum members whose value the declaration gives directly rather than through an initialiser. */
     private readonly enumValues = new Map<string, number | string>();
+    /** Every non-ambient enum, so a missing member reads as one rather than as some other property access. */
+    private readonly enumNames = new Set<string>();
     /** Names generated temporaries `tmp.<n>`, counted across the whole unit as the SSL side does. */
     private tempCounter = 0;
     private scratchSeq = 0;
@@ -187,6 +189,7 @@ class TsslLowering {
                 if (initializer && !this.constants.has(decl.getName())) this.constants.set(decl.getName(), initializer);
             }
             for (const decl of module.enums) {
+                this.enumNames.add(decl.getName());
                 for (const member of decl.getMembers()) {
                     const flat = `${decl.getName()}_${member.getName()}`;
                     const value = member.getValue();
@@ -847,7 +850,14 @@ class TsslLowering {
                 if (value !== undefined) return this.valueOf(value);
                 const constant = this.constants.get(flat);
                 if (constant !== undefined) return this.lowerExpression(constant, scope);
-                throw refuseAt(node, `unknown enum member '${flat}'`);
+                if (this.enumNames.has(access.getExpression().getText())) {
+                    throw refuseAt(node, `unknown enum member '${flat}'`);
+                }
+                // The text route prints the access as written, which SSL reads as a map lookup.
+                throw refuseAt(
+                    node,
+                    `'${access.getText()}' is not lowered yet: of property accesses, only an enum member's is`,
+                );
             }
 
             // Type syntax carries no value: `x as number`, `x satisfies T` and `x!` are all their operand.

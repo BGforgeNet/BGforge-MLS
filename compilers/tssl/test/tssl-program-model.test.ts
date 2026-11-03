@@ -207,6 +207,60 @@ describe("refusals of syntax with no SSL counterpart", () => {
     });
 });
 
+describe("top-level statements", () => {
+    // An SSL script has no module-level code, so a statement here has nowhere to run. Both back ends read
+    // the collected declarations, and skipping the rest used to compile them out without a word.
+    it.each([
+        ["an assignment", "let counter = 1;\ncounter = 2;", 2],
+        ["an increment", "let counter = 1;\ncounter++;", 2],
+        ["a call", 'display_msg("x");', 1],
+        ["an if", "if (1) {\n    display_msg(1);\n}", 1],
+        ["a loop", "for (let i = 0; i < 2; i++) {}", 1],
+    ])("refuses %s, naming its line", async (_name, statements, line) => {
+        await expect(emit(`${statements}\nfunction start() {}\n`)).rejects.toMatchObject({
+            message: expect.stringMatching(/only declarations belong at the top level/),
+            location: { line },
+        });
+    });
+
+    it("refuses one in an imported module, naming that module", async () => {
+        await expect(
+            emit(`import { helper } from "./lib";\nfunction start() {\n    helper();\n}\n`, {
+                "lib.ts": 'display_msg("loaded");\nexport function helper(): void {}\n',
+            }),
+        ).rejects.toMatchObject({
+            message: expect.stringMatching(/only declarations belong at the top level/),
+            location: { file: expect.stringMatching(/lib\.ts$/), line: 1 },
+        });
+    });
+
+    it("refuses a var, which neither back end declares", async () => {
+        await expect(emit(`var counter = 1;\nfunction start() {\n    display_msg(counter);\n}\n`)).rejects.toThrow(
+            /'var' is not supported; declare it with let or const/,
+        );
+    });
+
+    it("accepts the statements that carry no code", async () => {
+        const out = await emit(
+            [
+                "type Id = number;",
+                "interface Box {",
+                "    id: Id;",
+                "}",
+                "declare const OUTSIDE: number;",
+                "declare function engine_call(): void;",
+                ";",
+                "export {};",
+                "function start() {",
+                "    display_msg(OUTSIDE);",
+                "}",
+                "",
+            ].join("\n"),
+        );
+        expect(out).toContain("procedure start() begin\n    display_msg(OUTSIDE);\nend");
+    });
+});
+
 describe("destructuring in a top-level declaration", () => {
     // `getName()` on a binding pattern returns the pattern text, so an unrefused one reaches the output
     // as though `[a, b]` were an identifier. Both back ends read these declarations, so the refusal

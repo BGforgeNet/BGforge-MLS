@@ -62,6 +62,13 @@ describe("enum emission", () => {
         expect(out).toContain("display_msg(Damage_Fire);");
     });
 
+    it("parenthesises a negative member, which the preprocessor would otherwise splice after a minus", async () => {
+        const out = await emit(
+            `enum Step {\n    Back = -1,\n}\nfunction start() {\n    display_msg(5 - Step.Back);\n}\n`,
+        );
+        expect(out).toContain("#define Step_Back (-1)");
+    });
+
     it("prints a declare-enum member bare, leaving its value to the headers", async () => {
         const out = await emit(
             `import { Stat } from "./engine.d";\nfunction start() {\n    display_msg(Stat.STAT_ch);\n}\n`,
@@ -69,5 +76,38 @@ describe("enum emission", () => {
         );
         expect(out).toContain("display_msg(STAT_ch);");
         expect(out).not.toContain("#define STAT_ch");
+    });
+});
+
+describe("constant emission", () => {
+    // A define body is spliced into each use as text, so `b * 2` under a bare `#define b a + 1` reads as
+    // `a + 1 * 2`. Whether the parenthesised body compiles to what TypeScript computes is checked across
+    // both routes by `compilers/tssl/test/constructs/corpus-gaps.tssl`.
+    const source = [
+        "const a = 10;",
+        "const b = a + 1;",
+        "const neg = -1;",
+        "const name = 'x';",
+        "const pick = a > 5 ? 1 : 2;",
+        "const call = get_sfall_global_int('x');",
+        "function start() {",
+        "    display_msg(b * 2 + neg + pick + call);",
+        "    display_msg(name);",
+        "}",
+        "",
+    ].join("\n");
+
+    it("parenthesises an operator expression", async () => {
+        const out = await emit(source);
+        expect(out).toContain("#define b (a + 1)");
+        expect(out).toContain("#define neg (-1)");
+    });
+
+    it("leaves a value that is already one operand bare", async () => {
+        const out = await emit(source);
+        expect(out).toContain("#define a 10");
+        expect(out).toContain('#define name "x"');
+        expect(out).toContain("#define pick ((1) if (a > 5) else (2))");
+        expect(out).toContain('#define call get_sfall_global_int("x")');
     });
 });

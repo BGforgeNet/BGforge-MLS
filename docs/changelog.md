@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Transpilers
+
+- TSSL's `.ssl` output keeps the grouping of a constant whose value is an operator expression: with
+  `const b = a + 1`, `b * 2` computed `a + (1 * 2)`.
+- TSSL refuses a top-level statement that is not a declaration, and `var`; both were dropped without a word.
+
 ## 3.19.2
 
 ### Transpilers

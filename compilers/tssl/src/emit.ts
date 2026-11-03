@@ -8,7 +8,7 @@
  * lets a compiler error on the generated SSL be reported on the line the author wrote.
  */
 
-import type { EnumDeclaration, FunctionDeclaration, Node, VariableDeclaration } from "ts-morph";
+import { Node, type EnumDeclaration, type FunctionDeclaration, type VariableDeclaration } from "ts-morph";
 import { RESERVED_VAR_NAMES, SyntaxKind, conlog, type TsslContext } from "./types";
 import { convertOperatorsAST, convertVarOrConstToVariable } from "./convert-operators";
 import { generateInlineMacros } from "./inline-functions";
@@ -163,11 +163,46 @@ function renderModule(module: ModuleItems, program: TsslProgram, ctx: TsslContex
     return section;
 }
 
+/**
+ * Initializers whose SSL spelling is already a single operand. A define's body is spliced into each use as
+ * text, so any other value is parenthesised: a bare `#define b a + 1` makes `b * 2` read as `a + 1 * 2`.
+ */
+const OPERAND_KINDS: ReadonlySet<SyntaxKind> = new Set([
+    SyntaxKind.NumericLiteral,
+    SyntaxKind.StringLiteral,
+    SyntaxKind.Identifier,
+    SyntaxKind.TrueKeyword,
+    SyntaxKind.FalseKeyword,
+    SyntaxKind.ParenthesizedExpression,
+    SyntaxKind.CallExpression,
+    SyntaxKind.PropertyAccessExpression,
+    SyntaxKind.ElementAccessExpression,
+    SyntaxKind.ArrayLiteralExpression,
+    SyntaxKind.ObjectLiteralExpression,
+    // Emitted wrapped whole, as SSL's `a if (c) else b` needs.
+    SyntaxKind.ConditionalExpression,
+]);
+
+/** Whether an initializer is a define body as it stands. Type syntax erases, so the expression under it decides. */
+function isOperand(node: Node): boolean {
+    let inner = node;
+    while (
+        Node.isAsExpression(inner) ||
+        Node.isSatisfiesExpression(inner) ||
+        Node.isNonNullExpression(inner) ||
+        Node.isTypeAssertion(inner)
+    ) {
+        inner = inner.getExpression();
+    }
+    return OPERAND_KINDS.has(inner.getKind());
+}
+
 /** `#define name value`, the value converted to SSL spelling. */
 function renderDefine(decl: VariableDeclaration, ctx: TsslContext, origin: SourcePosition): Chunk {
     const initializer = decl.getInitializer();
-    const value = initializer ? convertOperatorsAST(initializer, ctx) : "";
-    return { text: `#define ${decl.getName()} ${value}`, origin };
+    if (!initializer) return { text: `#define ${decl.getName()} `, origin };
+    const value = convertOperatorsAST(initializer, ctx);
+    return { text: `#define ${decl.getName()} ${isOperand(initializer) ? value : `(${value})`}`, origin };
 }
 
 /** `variable name = value;` - rebuilt from the declaration, so type annotations erase. */
@@ -185,7 +220,15 @@ function renderEnum(enumDecl: EnumDeclaration, program: TsslProgram, origin: Sou
         const flat = `${enumDecl.getName()}_${member.getName()}`;
         if (!program.usedEnumMembers.has(flat)) continue;
         const value = member.getValue();
-        const rendered = value === undefined ? "0" : typeof value === "string" ? JSON.stringify(value) : String(value);
+        // A negative value is parenthesised for the reason a constant's operator expression is.
+        const rendered =
+            value === undefined
+                ? "0"
+                : typeof value === "string"
+                  ? JSON.stringify(value)
+                  : value < 0
+                    ? `(${value})`
+                    : String(value);
         chunks.push({ text: `#define ${flat} ${rendered}`, origin });
     }
     return chunks;
