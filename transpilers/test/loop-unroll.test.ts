@@ -15,7 +15,7 @@ describe("loop unroll: multi-variable for-initializer", () => {
         const src = `for (let i = 0, j = 0; i < 3; i++) {\n    Continue();\n}\n`;
         await expect(tbafTranspile("/virtual/foo.tbaf", src)).rejects.toMatchObject({
             name: "TranspileError",
-            message: "Cannot unroll for loop: multi-variable initializer",
+            message: expect.stringMatching(/a compile-time for loop declares one counter/),
         });
     });
 
@@ -72,37 +72,37 @@ describe("loop unroll: for-loop iteration and cleanup", () => {
     });
 
     it("rejects a for loop whose initializer is not a variable declaration (complex initializer)", async () => {
-        await expect(tbaf(`let i = 0;\nfor (i = 0; i < 3; i++) {\n    Attack(Player1);\n}\n`)).rejects.toMatchObject({
+        await expect(tbaf(`for (i = 0; i < 3; i++) {\n    Attack(Player1);\n}\n`)).rejects.toMatchObject({
             name: "TranspileError",
-            message: "Cannot unroll for loop: complex initializer",
+            message: expect.stringMatching(/a compile-time for loop declares one counter/),
         });
     });
 
     it("rejects a for loop with a non-numeric initializer", async () => {
         await expect(tbaf(`for (let i = "abc"; i < 3; i++) {\n    Attack(Player1);\n}\n`)).rejects.toMatchObject({
             name: "TranspileError",
-            message: "Cannot unroll for loop: non-numeric initializer",
+            message: expect.stringMatching(/an integer was expected, not a string/),
         });
     });
 
     it("rejects a for loop with no condition", async () => {
         await expect(tbaf(`for (let i = 0; ; i++) {\n    Attack(Player1);\n}\n`)).rejects.toMatchObject({
             name: "TranspileError",
-            message: "Cannot unroll for loop: no condition",
+            message: "a compile-time for loop needs a condition",
         });
     });
 
     it("rejects a for loop with no incrementor", async () => {
         await expect(tbaf(`for (let i = 0; i < 3; ) {\n    Attack(Player1);\n}\n`)).rejects.toMatchObject({
             name: "TranspileError",
-            message: "Cannot unroll for loop: no incrementor",
+            message: "a compile-time for loop needs an incrementor",
         });
     });
 
     it("rejects a for loop that would exceed the maximum iteration count", async () => {
         await expect(tbaf(`for (let i = 0; i < 5000; i++) {\n    Attack(Player1);\n}\n`)).rejects.toMatchObject({
             name: "TranspileError",
-            message: expect.stringMatching(/Loop exceeded maximum 1000 iterations/),
+            message: expect.stringMatching(/runs past 1000 passes/),
         });
     });
 });
@@ -120,7 +120,7 @@ describe("loop unroll: for-of destructuring", () => {
             tbaf(`const items = [1, 2, 3];\nfor (const [a, b] of items) {\n    Attack(a);\n}\n`),
         ).rejects.toMatchObject({
             name: "TranspileError",
-            message: expect.stringMatching(/Cannot destructure "1" - not a valid array literal/),
+            message: expect.stringMatching(/an integer cannot be destructured as an array/),
         });
     });
 });

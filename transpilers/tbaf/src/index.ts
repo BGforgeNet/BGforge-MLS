@@ -7,13 +7,13 @@
 
 import { Project } from "ts-morph";
 import { EXT_TBAF } from "../../common/extensions";
-import { applyHelperFixups } from "../../common/transpiler-utils";
 import { createTranspiler } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
+import { checkDeclarationKinds } from "../../common/compile-time-eval";
+import { getSharedProject } from "../../common/shared-project";
 import { TranspileError } from "../../common/transpile-error";
 import type { SourcePosition } from "../../common/line-map";
 import { emitBAF, type EmittedBAF } from "./emit";
-import { type BAFScript, isOrGroup } from "./ir";
 import { TBAFTransformer } from "./transform";
 
 /** Generated BAF, plus where each of its lines came from in the files the author wrote. */
@@ -28,7 +28,7 @@ const tbaf = createTranspiler<TBAFResult>({
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)
-        const { code: bundled, origins } = await bundle(filePath, text);
+        const { code: bundled, origins } = await bundle(filePath, text, checkDeclarations);
 
         // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
         // against the file it came from on the way out.
@@ -64,14 +64,11 @@ function transformBundled(bundled: string, filePath: string, traTag: string | un
     const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
     const sourceFile = project.createSourceFile("bundled.ts", bundled);
 
-    // 3. Transform AST to IR
+    // 3. Transform AST to IR; arguments arrive formatted, so nothing rewrites them afterwards.
     const transformer = new TBAFTransformer();
     const ir = { ...transformer.transform(sourceFile), sourceFile: filePath, traTag };
 
-    // 4. Apply BAF-specific fixups to IR
-    applyBAFFixups(ir);
-
-    // 5. Emit BAF text
+    // 4. Emit BAF text
     return emitBAF(ir);
 }
 
@@ -93,34 +90,12 @@ export async function transpileWithSourceMap(filePath: string, text: string): Pr
     return tbaf.transpile(filePath, text);
 }
 
-/**
- * Apply BAF-specific fixups to the IR.
- * Handles LOCALS/GLOBAL quoting, $obj(), $tra(), point notation replacements.
- */
-export function applyBAFFixups(script: BAFScript): void {
-    for (const block of script.blocks) {
-        // Fix conditions
-        for (const cond of block.conditions) {
-            if (isOrGroup(cond)) {
-                for (const c of cond.conditions) {
-                    c.args = fixupArgs(c.args);
-                }
-            } else {
-                cond.args = fixupArgs(cond.args);
-            }
-        }
-
-        // Fix actions
-        for (const action of block.actions) {
-            action.args = fixupArgs(action.args);
-        }
+/** Refuses a `let` or `var` in a source the author wrote, read before the bundler rewrites its declarations. */
+function checkDeclarations(file: string, text: string): void {
+    const source = getSharedProject().createSourceFile("tbaf-declaration-check.ts", text, { overwrite: true });
+    try {
+        checkDeclarationKinds(source);
+    } catch (error) {
+        throw TranspileError.wrap(error, { file });
     }
-}
-
-/**
- * Apply WeiDU helper fixups to argument list using shared resolution logic.
- * Returns a new array with fixups applied.
- */
-function fixupArgs(args: readonly string[]): string[] {
-    return args.map((arg) => applyHelperFixups(arg));
 }

@@ -32,13 +32,6 @@ describe("condition composition", () => {
         const out = await t(`if (!See(Player1)) {\n    Attack(Player1);\n}\n`);
         expect(out).toContain("IF\n  !See(Player1)\nTHEN");
     });
-
-    it("rejects top-level negation of an OR group", async () => {
-        await expect(t(`if (!(See(Player1) || See(Player2))) {\n    Attack(Player1);\n}\n`)).rejects.toMatchObject({
-            name: "TranspileError",
-            message: expect.stringMatching(/Negation of OR groups is not supported/),
-        });
-    });
 });
 
 describe("else-branch inversion (De Morgan)", () => {
@@ -99,22 +92,12 @@ describe("user-function inlining", () => {
         expect(out).toContain('Global("i", "GLOBAL", 3)');
     });
 
-    it("rejects a multi-condition function inside an OR group", async () => {
-        await expect(
-            t(`${FUNC}if (See(Player2) || isThreatened()) {\n    Attack(Player1);\n}\n`),
-        ).rejects.toMatchObject({
-            name: "TranspileError",
-            message: expect.stringMatching(/inside OR group/),
-        });
-    });
-});
-
-describe("opaque condition fallback", () => {
-    it("wraps a bare identifier condition (not a call) in a True() placeholder", async () => {
-        // Not a real BAF construct - `flag` is neither a call, negation, nor binary
-        // expression, so it falls through to the opaque-condition marker.
-        const out = await t(`if (flag) {\n    Attack(Player1);\n}\n`);
-        expect(out).toContain("IF\n  True()\nTHEN");
+    it("distributes a multi-condition function inside an OR group into OR groups BAF can hold", async () => {
+        // a || (b && c) is (a || b) && (a || c).
+        const out = await t(`${FUNC}if (See(Player2) || isThreatened()) {\n    Attack(Player1);\n}\n`);
+        expect(out).toContain(
+            "IF\n  OR(2)\n    See(Player2)\n    See(Player1)\n  OR(2)\n    See(Player2)\n    Range(Player1)\nTHEN",
+        );
     });
 });
 

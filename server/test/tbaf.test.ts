@@ -7,7 +7,6 @@ import { describe, expect, it } from "vitest";
 import { Project } from "ts-morph";
 import { TBAFTransformer } from "../../transpilers/tbaf/src/transform";
 import { emitBAF } from "../../transpilers/tbaf/src/emit";
-import { applyBAFFixups } from "../../transpilers/tbaf/src/index";
 import { transformEnums } from "../../transpilers/common/enum-transform";
 
 describe("TBAF Transpiler", () => {
@@ -17,7 +16,6 @@ describe("TBAF Transpiler", () => {
         const project = new Project({ useInMemoryFileSystem: true });
         const sourceFile = project.createSourceFile("test.tbaf", code);
         const ir = transformer.transform(sourceFile);
-        applyBAFFixups(ir);
         // These assert the emitted text; the per-line provenance alongside it has its own suite.
         return emitBAF(ir).text;
     }
@@ -341,19 +339,6 @@ switch (Global("state", "LOCALS")) {
             expect(result).toContain("Wait(1)");
             expect(result).toContain('Global("state", "LOCALS", 1)');
             expect(result).toContain("Attack(NearestEnemyOf(Myself))");
-        });
-    });
-
-    describe("parseExpressionFromText", () => {
-        it("keeps an earlier expression readable after parsing another", () => {
-            // Inlining a function called from inside another inlined condition parses a second expression
-            // while the first is still in use; its nodes must survive that.
-            const t = new TBAFTransformer();
-            t.transform(new Project({ useInMemoryFileSystem: true }).createSourceFile("empty.ts", ""));
-            const a = t.parseExpressionFromText("Global('foo', 'LOCALS', 1)");
-            const b = t.parseExpressionFromText("Global('bar', 'LOCALS', 2)");
-            expect(a?.getText()).toBe("Global('foo', 'LOCALS', 1)");
-            expect(b?.getText()).toBe("Global('bar', 'LOCALS', 2)");
         });
     });
 

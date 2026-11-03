@@ -11,9 +11,9 @@ import { transpile } from "../tbaf/src/index";
 describe("bundle(): source with no imports", () => {
     it("transforms a local enum to a flat const even without any imports to bundle", async () => {
         const src =
-            'enum Spell {\n  Shield = "WIZARD_SHIELD",\n}\n\nif (See(Player1)) {\n  Spell(Myself, Spell.Shield);\n}\n';
+            'enum SpellId {\n  Shield = "WIZARD_SHIELD",\n}\n\nif (See(Player1)) {\n  Spell(Myself, SpellId.Shield);\n}\n';
         const out = await transpile("/virtual/foo.tbaf", src);
         expect(out).toContain("WIZARD_SHIELD");
-        expect(out).not.toContain("Spell.Shield");
+        expect(out).not.toContain("SpellId.Shield");
     });
 });

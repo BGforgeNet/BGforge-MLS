@@ -31,6 +31,12 @@ export interface BundledSource {
 }
 
 /**
+ * A check of a source the author wrote, as written: the bundler rewrites some of what such a check reads (a
+ * top-level `const` becomes `var`), so it runs on the entry and on each imported module outside node_modules.
+ */
+export type SourceCheck = (file: string, text: string) => void;
+
+/**
  * Bundle a TBAF file and its imports into a single TypeScript string.
  *
  * Skips bundling for files without imports - esbuild tree-shakes block-scoped
@@ -38,9 +44,11 @@ export interface BundledSource {
  *
  * @param filePath Absolute path to the .tbaf/.td file
  * @param sourceText Content of the source file
+ * @param checkSource Run on each source the author wrote, before its bundled form is read
  * @returns Bundled TypeScript code (or the original text if no imports), with line provenance
  */
-export async function bundle(filePath: string, sourceText: string): Promise<BundledSource> {
+export async function bundle(filePath: string, sourceText: string, checkSource?: SourceCheck): Promise<BundledSource> {
+    checkSource?.(filePath, sourceText);
     // Transform local enums even for files without imports.
     // Note: esbuild bundling is skipped for files without imports to avoid
     // tree-shaking block-scoped functions.
@@ -66,6 +74,7 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
     // that esbuild can't resolve (extensionless imports).
     const sharedEnums = new Map<string, ReadonlyArray<EnumMember>>();
     const sharedExternalEnumNames = new Set<string>();
+    const imported: string[] = [];
 
     const result = await bundleWithEsbuild({
         filePath,
@@ -73,10 +82,31 @@ export async function bundle(filePath: string, sourceText: string): Promise<Bund
         marker: TBAF_CODE_MARKER,
         sharedEnums,
         sharedExternalEnumNames,
-        extraPlugins: [tbafResolverPlugin(sharedEnums), tsExtensionResolverPlugin(sharedExternalEnumNames)],
+        extraPlugins: [
+            ...(checkSource === undefined ? [] : [authoredSourcesPlugin(imported)]),
+            tbafResolverPlugin(sharedEnums),
+            tsExtensionResolverPlugin(sharedExternalEnumNames),
+        ],
     });
+    // After the build rather than inside a plugin: esbuild turns a plugin's exception into its own error,
+    // and the check's file and line would not survive the trip.
+    for (const file of imported) checkSource?.(file, fs.readFileSync(file, "utf-8"));
 
     return { code: expandExponentLiterals(result.code), origins: result.origins };
+}
+
+/** Records each imported module the author wrote; loads nothing, so the loaders after it still run. */
+function authoredSourcesPlugin(imported: string[]): esbuild.Plugin {
+    return {
+        name: "authored-sources",
+        setup(build) {
+            build.onLoad({ filter: /\.(tbaf|td|ts)$/ }, (args) => {
+                const library = args.path.split(path.sep).includes("node_modules");
+                if (!library && !args.path.endsWith(".d.ts")) imported.push(args.path);
+                return null;
+            });
+        },
+    };
 }
 
 /**

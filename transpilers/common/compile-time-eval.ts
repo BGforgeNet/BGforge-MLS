@@ -631,7 +631,8 @@ export type Condition =
           readonly negated: boolean;
           readonly name: string;
           readonly args: readonly Value[];
-          readonly node: CallExpression;
+          /** The source of the call, for the line a diagnostic names; a switch's subject for its case conditions. */
+          readonly node: Node;
       }
     | { readonly kind: "and"; readonly items: readonly Condition[] }
     | { readonly kind: "or"; readonly items: readonly Condition[] };
@@ -649,7 +650,7 @@ export function evaluateCondition(expr: Expression, scope: Scope): Condition {
         const operator = node.getOperatorToken().getKind();
         if (operator === SyntaxKind.AmpersandAmpersandToken || operator === SyntaxKind.BarBarToken) {
             const items = [evaluateCondition(node.getLeft(), scope), evaluateCondition(node.getRight(), scope)];
-            return operator === SyntaxKind.AmpersandAmpersandToken ? and(items) : or(items);
+            return operator === SyntaxKind.AmpersandAmpersandToken ? conjunction(items) : disjunction(items);
         }
     }
     if (Node.isCallExpression(node) && Node.isIdentifier(node.getExpression())) {
@@ -678,7 +679,7 @@ function orCall(node: CallExpression, scope: Scope): Condition {
     if (count !== rest.length) {
         throw refuse(node, `OR(${count}, ...) groups ${rest.length} condition${rest.length === 1 ? "" : "s"}`);
     }
-    return or(rest.map((item) => evaluateCondition(item, scope)));
+    return disjunction(rest.map((item) => evaluateCondition(item, scope)));
 }
 
 export function negate(condition: Condition): Condition {
@@ -688,13 +689,14 @@ export function negate(condition: Condition): Condition {
         case "atom":
             return { ...condition, negated: !condition.negated };
         case "and":
-            return or(condition.items.map(negate));
+            return disjunction(condition.items.map(negate));
         case "or":
-            return and(condition.items.map(negate));
+            return conjunction(condition.items.map(negate));
     }
 }
 
-function and(items: readonly Condition[]): Condition {
+/** All of `items`, constants folded away and nested groups flattened. */
+export function conjunction(items: readonly Condition[]): Condition {
     const kept: Condition[] = [];
     for (const item of items) {
         if (item.kind === "constant") {
@@ -709,7 +711,8 @@ function and(items: readonly Condition[]): Condition {
     return kept.length === 1 ? only : { kind: "and", items: kept };
 }
 
-function or(items: readonly Condition[]): Condition {
+/** Any of `items`, constants folded away and nested groups flattened. */
+export function disjunction(items: readonly Condition[]): Condition {
     const kept: Condition[] = [];
     for (const item of items) {
         if (item.kind === "constant") {
