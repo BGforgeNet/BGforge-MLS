@@ -16,7 +16,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import type * as esbuild from "esbuild-wasm";
-import { bundleWithEsbuild, expandExponentLiterals } from "./esbuild-utils";
+import { bundleWithEsbuild } from "./esbuild-utils";
 import { transformEnums, collectDeclareEnums, type EnumMember } from "./enum-transform";
 import { hasImports } from "./transpiler-utils";
 import { lineCount, type SourcePosition } from "./line-map";
@@ -60,9 +60,7 @@ export async function bundle(filePath: string, sourceText: string, checkSource?:
         const transformed = enums.size > 0;
         const lines = transformed ? lineMap : Array.from({ length: lineCount(sourceText) }, (_, i) => i);
         return {
-            // An exponent literal the author wrote reaches the mod file just as esbuild's would, so both
-            // branches expand it; the expansion stays on its line, so the line map holds.
-            code: expandExponentLiterals(transformed ? code : sourceText),
+            code: transformed ? code : sourceText,
             origins: lines.map((line) => ({ file: filePath, line })),
         };
     }
@@ -92,7 +90,7 @@ export async function bundle(filePath: string, sourceText: string, checkSource?:
     // and the check's file and line would not survive the trip.
     for (const file of imported) checkSource?.(file, fs.readFileSync(file, "utf-8"));
 
-    return { code: expandExponentLiterals(result.code), origins: result.origins };
+    return { code: result.code, origins: result.origins };
 }
 
 /** Records each imported module the author wrote; loads nothing, so the loaders after it still run. */

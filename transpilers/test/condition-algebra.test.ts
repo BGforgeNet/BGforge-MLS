@@ -1,7 +1,7 @@
 /**
- * TBAF condition-algebra tests: &&/||/! composition, De Morgan inversion for
- * else blocks, DNF->CNF conversion, user-function inlining, and switch
- * conditions (tbaf/src/condition-algebra.ts).
+ * TBAF condition tests: &&/||/! composition, De Morgan inversion for else
+ * blocks, distribution into OR groups, user-function inlining, and switch
+ * conditions.
  *
  * These drive the real transpile() entry point (not the internal functions)
  * so the assertions keep holding across internal refactors - same convention

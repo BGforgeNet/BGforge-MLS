@@ -9,8 +9,7 @@ import { Project } from "ts-morph";
 import { EXT_TBAF } from "../../common/extensions";
 import { createTranspiler } from "../../common/transpiler-pipeline";
 import { bundle } from "../../common/bundle";
-import { checkDeclarationKinds } from "../../common/compile-time-eval";
-import { getSharedProject } from "../../common/shared-project";
+import { checkSourceDeclarations } from "../../common/compile-time-eval";
 import { TranspileError } from "../../common/transpile-error";
 import type { SourcePosition } from "../../common/line-map";
 import { emitBAF, type EmittedBAF } from "./emit";
@@ -28,7 +27,7 @@ const tbaf = createTranspiler<TBAFResult>({
 
     async transpileCore(filePath, text, traTag) {
         // 1. Bundle imports (skips bundling internally for files without imports)
-        const { code: bundled, origins } = await bundle(filePath, text, checkDeclarations);
+        const { code: bundled, origins } = await bundle(filePath, text, checkSourceDeclarations);
 
         // Everything below reads the bundled text, so a failure's line is a line of THAT - restated
         // against the file it came from on the way out.
@@ -88,14 +87,4 @@ export async function transpile(filePath: string, text: string): Promise<string>
  */
 export async function transpileWithSourceMap(filePath: string, text: string): Promise<TBAFResult> {
     return tbaf.transpile(filePath, text);
-}
-
-/** Refuses a `let` or `var` in a source the author wrote, read before the bundler rewrites its declarations. */
-function checkDeclarations(file: string, text: string): void {
-    const source = getSharedProject().createSourceFile("tbaf-declaration-check.ts", text, { overwrite: true });
-    try {
-        checkDeclarationKinds(source);
-    } catch (error) {
-        throw TranspileError.wrap(error, { file });
-    }
 }

@@ -56,7 +56,6 @@
     "devDependencies": {
         "@bgforge/shared": "workspace:*",
         "fast-check": "catalog:",
-        "quick-lru": "catalog:",
         "ts-morph": "catalog:",
         "tsdown": "catalog:",
         "vitest": "catalog:"

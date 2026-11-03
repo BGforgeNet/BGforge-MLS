@@ -404,20 +404,6 @@ export function cleanupEsbuildOutput(
 }
 
 /**
- * Write exponent-form integers (`1e3`, `15e5`) back out in decimal: esbuild's shortest-form output, or what the
- * author wrote in a file with no imports.
- *
- * esbuild prints the shortest form of a number and has no option to keep the source's, and WeiDU refuses
- * `1e3` in BAF - which is also what a D action string holds. Only the integer forms are expanded; a negative
- * exponent or a fractional mantissa is left as written.
- */
-export function expandExponentLiterals(code: string): string {
-    return replaceOutsideStrings(code, /(?<![\w.])\d+e\+?\d+\b/g, (literal) =>
-        literal.replace(/e\+?(\d+)$/, (_, exponent: string) => "0".repeat(Number(exponent))),
-    );
-}
-
-/**
  * Iterate over segments of code that are NOT inside string literals or comments.
  * Used for collecting identifiers safely.
  */

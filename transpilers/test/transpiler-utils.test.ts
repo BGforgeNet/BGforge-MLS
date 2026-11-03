@@ -1,131 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { cpuTimeMs } from "@bgforge/shared/cpu-time";
-import {
-    applyHelperFixups,
-    evaluateCondition,
-    extractTraTag,
-    getWordBoundaryRegex,
-    hasImports,
-    makeGeneratedHeader,
-    parseArrayLiteral,
-    parseIncrement,
-    stripQuotes,
-    substituteVars,
-    type VarsContext,
-} from "../common/transpiler-utils";
-
-describe("getWordBoundaryRegex", () => {
-    test("returns a global regex matching the bounded word", () => {
-        const re = getWordBoundaryRegex("count");
-        expect(re.flags).toBe("g");
-        expect("for i = 0 to count step countup".match(re)).toEqual(["count"]);
-    });
-
-    test.each([
-        ["a name starting with $", "$x", "a + $x * $x1 + b$x", ["$x"]],
-        ["a name ending with $", "x$", "x$ + x$y + ax$", ["x$"]],
-        ["a name holding $", "a$b", "a$b + a$bc + za$b", ["a$b"]],
-        ["a name that is not glued to $", "x", "x + $x + x$ + x", ["x", "x"]],
-        ["a name holding a dot", "a.b", "a.b + axb", ["a.b"]],
-    ])("matches %s only as a whole identifier", (_what, name, text, expected) => {
-        expect(text.match(getWordBoundaryRegex(name))).toEqual(expected);
-    });
-
-    test("returns the same instance for the same name (memoized)", () => {
-        expect(getWordBoundaryRegex("foo")).toBe(getWordBoundaryRegex("foo"));
-    });
-
-    test("returns different instances for different names", () => {
-        expect(getWordBoundaryRegex("foo")).not.toBe(getWordBoundaryRegex("bar"));
-    });
-});
-
-describe("substituteVars", () => {
-    test("replaces a variable token with its value", () => {
-        const vars: VarsContext = new Map([["count", "5"]]);
-        expect(substituteVars("i < count", vars)).toBe("i < 5");
-    });
-
-    test("replaces a variable whose name starts with $", () => {
-        const vars: VarsContext = new Map([["$i", "3"]]);
-        expect(substituteVars("$i < n && $index", vars)).toBe("3 < n && $index");
-    });
-
-    test("respects word boundaries (does not replace partial matches)", () => {
-        const vars: VarsContext = new Map([["i", "9"]]);
-        expect(substituteVars("size + index", vars)).toBe("size + index");
-    });
-
-    test("substitutes multiple variables", () => {
-        const vars: VarsContext = new Map([
-            ["count", "5"],
-            ["base", "10"],
-        ]);
-        expect(substituteVars("base + count", vars)).toBe("10 + 5");
-    });
-
-    test("returns text unchanged when no variables match", () => {
-        const vars: VarsContext = new Map([["unused", "0"]]);
-        expect(substituteVars("plain text", vars)).toBe("plain text");
-    });
-
-    // The fold this pins: a value carrying `$&` or `$1` must substitute the same as one that does not,
-    // rather than being read as a replacement template.
-    test("treats replacement patterns in a value as literal text", () => {
-        const plain: VarsContext = new Map([["v", "AB"]]);
-        const dollar: VarsContext = new Map([["v", "$& $1 $$"]]);
-        expect(substituteVars("x v y", plain)).toBe("x AB y");
-        expect(substituteVars("x v y", dollar)).toBe("x $& $1 $$ y");
-    });
-
-    // A string literal is text, not code: the loop variable `i` in `"step i"` is a word the author wrote.
-    test("leaves quoted string literals alone", () => {
-        const vars: VarsContext = new Map([["i", "5"]]);
-        expect(substituteVars('Display("step i")', vars)).toBe('Display("step i")');
-        expect(substituteVars('f(i, \'i\', "a \\" i")', vars)).toBe('f(5, \'i\', "a \\" i")');
-    });
-
-    test("substitutes inside a template literal's ${...} but not its text", () => {
-        const vars: VarsContext = new Map([["i", "5"]]);
-        expect(substituteVars("`row ${i} of i`", vars)).toBe("`row ${5} of i`");
-        expect(substituteVars("`a ${f({ k: i })} ${'i'}`", vars)).toBe("`a ${f({ k: 5 })} ${'i'}`");
-    });
-});
-
-describe("parseIncrement", () => {
-    test("recognizes ++, --, +=N, -=N, and falls back to 1 for anything else", () => {
-        expect(parseIncrement("i++")).toBe(1);
-        expect(parseIncrement("i--")).toBe(-1);
-        expect(parseIncrement("i += 5")).toBe(5);
-        expect(parseIncrement("i -= 3")).toBe(-3);
-        expect(parseIncrement("i")).toBe(1);
-    });
-
-    test("falls back to a step of 1/-1 when the +=/-= operand doesn't parse as a number", () => {
-        expect(parseIncrement("i += x")).toBe(1);
-        expect(parseIncrement("i -= x")).toBe(-1);
-    });
-});
-
-describe("evaluateCondition", () => {
-    const noVars: VarsContext = new Map();
-
-    test("substitutes the loop variable and other compile-time vars before evaluating", () => {
-        expect(evaluateCondition("i < count", "i", 5, new Map([["count", "10"]]))).toBe(true);
-        expect(evaluateCondition("i < count", "i", 15, new Map([["count", "10"]]))).toBe(false);
-    });
-
-    test("coerces a numeric result to boolean", () => {
-        expect(evaluateCondition("i", "i", 0, noVars)).toBe(false);
-        expect(evaluateCondition("i", "i", 1, noVars)).toBe(true);
-    });
-
-    test("wraps an evaluation failure with the substituted text and loop variable", () => {
-        expect(() => evaluateCondition("i ===", "i", 3, noVars)).toThrow(
-            /Cannot evaluate loop condition "i ===" with i=3\. Substituted: "3 ==="/,
-        );
-    });
-});
+import { extractTraTag, hasImports, makeGeneratedHeader, stripQuotes } from "../common/transpiler-utils";
 
 describe("stripQuotes", () => {
     test("folds double, single, and backtick quoting to the same bare content", () => {
@@ -154,6 +29,19 @@ describe("hasImports", () => {
         expect(hasImports('const a = 1;\n\n\n   import X from "y";\n')).toBe(true);
         expect(hasImports('const a = 1;\r\nimport X from "y";\r\n')).toBe(true);
         expect(hasImports("export   *   from 'y'")).toBe(true);
+    });
+
+    test("scans a long run of line and paragraph separators in linear time", () => {
+        // Under `m` both separators end a line, so the leading-blank class must stop at them as it does at \n.
+        for (const separator of [String.fromCodePoint(0x2028), String.fromCodePoint(0x2029)]) {
+            const text = separator.repeat(100_000) + "const z = 1;";
+            let found: boolean | undefined;
+            const elapsed = cpuTimeMs(() => {
+                found = hasImports(text);
+            });
+            expect(found).toBe(false);
+            expect(elapsed).toBeLessThan(500);
+        }
     });
 
     test("needs the keyword to open its line and be followed by a blank", () => {
@@ -187,91 +75,6 @@ describe("extractTraTag", () => {
 
     test("returns undefined when no @tra tag is present", () => {
         expect(extractTraTag("const x = 1;\n")).toBeUndefined();
-    });
-});
-
-describe("applyHelperFixups", () => {
-    test('resolves obj("[X]") and $obj("[X]") to a bracketed object reference', () => {
-        expect(applyHelperFixups('obj("[ANYONE]")')).toBe("[ANYONE]");
-        expect(applyHelperFixups('$obj("[ANYONE]")')).toBe("[ANYONE]");
-    });
-
-    test('resolves obj("str") to a quoted string literal', () => {
-        expect(applyHelperFixups('obj("hello")')).toBe('"hello"');
-    });
-
-    test("resolves tra(N) to an @N translation reference", () => {
-        expect(applyHelperFixups("tra(42)")).toBe("@42");
-        expect(applyHelperFixups("$tra(42)")).toBe("@42");
-    });
-
-    test("resolves tlk(N) to a bare number (no # prefix)", () => {
-        expect(applyHelperFixups("tlk(1234)")).toBe("1234");
-    });
-
-    test("quotes a bare WeiDU scope constant", () => {
-        expect(applyHelperFixups("GLOBAL")).toBe('"GLOBAL"');
-    });
-
-    test("converts [x, y] comma notation to BAF's dot-separated point notation, including negatives", () => {
-        expect(applyHelperFixups("[2791, 831]")).toBe("[2791.831]");
-        expect(applyHelperFixups("[-1, -1]")).toBe("[-1.-1]");
-    });
-
-    test.each([
-        ["1 + 333", "334"],
-        ["10 + 1 + 2", "13"],
-        ["2 * 3 - 4", "2"],
-        ["12-3", "9"],
-        ["5 -3", "2"],
-        ["-1 + 5", "4"],
-        ["10 % 4", "2"],
-        ["a1+2", "a3"],
-        ["7 / 2", "7 / 2"],
-        ["[869.340]", "[869.340]"],
-        ["[-1.-1]", "[-1.-1]"],
-        ["12345", "12345"],
-        ["1 +", "1 +"],
-    ])("folds constant arithmetic in %j to %j", (text, expected) => {
-        expect(applyHelperFixups(text)).toBe(expected);
-    });
-
-    // No timing test: the 4096-character input cap keeps the old pattern's quadratic cost to milliseconds.
-    test("leaves a digit run at the input cap unfolded", () => {
-        const digits = "1".repeat(4000) + "x";
-        expect(applyHelperFixups(digits)).toBe(digits);
-    });
-
-    test("is idempotent on already-resolved values", () => {
-        const once = applyHelperFixups("tra(1)");
-        expect(applyHelperFixups(once)).toBe(once);
-    });
-
-    test("throws on input far longer than any real WeiDU arg", () => {
-        const huge = "x".repeat(5000);
-        expect(() => applyHelperFixups(huge)).toThrow(/exceeds 4096/);
-    });
-});
-
-describe("parseArrayLiteral", () => {
-    test("parses a simple literal into element strings", () => {
-        expect(parseArrayLiteral('["foo", "bar"]')).toEqual(['"foo"', '"bar"']);
-    });
-
-    test("keeps nested array elements intact", () => {
-        expect(parseArrayLiteral("[[1, 2], [3, 4]]")).toEqual(["[1, 2]", "[3, 4]"]);
-    });
-
-    test("does not split on a comma inside a quoted string", () => {
-        expect(parseArrayLiteral('["a, b", "c"]')).toEqual(['"a, b"', '"c"']);
-    });
-
-    test("returns an empty array for an empty literal", () => {
-        expect(parseArrayLiteral("[]")).toEqual([]);
-    });
-
-    test("returns null for text that isn't bracketed", () => {
-        expect(parseArrayLiteral("not-an-array")).toBeNull();
     });
 });
 

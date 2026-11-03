@@ -21,6 +21,7 @@ import {
     type Statement,
 } from "ts-morph";
 import { TranspileError } from "./transpile-error";
+import { getSharedProject } from "./shared-project";
 import { describeKind, INT32_MAX, INT32_MIN, type FunctionValue, type StrRef, type Value } from "./compile-time-value";
 import { MAX_LOOP_ITERATIONS, SCOPE_CONSTANTS } from "./transpiler-utils";
 
@@ -139,6 +140,16 @@ export function checkDeclarationKinds(source: SourceFile): void {
                 ? `'${word}' is not supported; a loop counter is declared with let`
                 : `'${word}' declares a value that can change, which a compile-time value cannot; use const`,
         );
+    }
+}
+
+/** `checkDeclarationKinds` on a source's text, naming `file` in a refusal: the check TBAF and TD give `bundle()`. */
+export function checkSourceDeclarations(file: string, text: string): void {
+    const source = getSharedProject().createSourceFile("declaration-check.ts", text, { overwrite: true });
+    try {
+        checkDeclarationKinds(source);
+    } catch (error) {
+        throw TranspileError.wrap(error, { file });
     }
 }
 
