@@ -21,6 +21,9 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
   refused the same way, with `let` or `const` as the remedy.
 - Compiling to `.int` reads and writes a map property written with a dot, `m.id`, as the lookup `m["id"]`, which
   is what the `.ssl` output already compiled to. It used to refuse it.
+- Reading or writing a key of a top-level `const` array or map (`CFG.id`, `IDS[0]`) is refused, naming the
+  constant. Its `#define` made each use the literal itself, which SSL cannot index: the `.ssl` failed to compile,
+  and the `.int` read a fresh copy, so a write was lost.
 
 ## 0.5.1
 

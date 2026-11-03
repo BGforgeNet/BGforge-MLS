@@ -261,6 +261,29 @@ describe("top-level statements", () => {
     });
 });
 
+describe("a key of a top-level constant array or map", () => {
+    // A top-level const is a #define, so each use is its literal, and SSL indexes only a variable:
+    // `cfg.id` came out as `{"id": 7}.id`, which no SSL compiler accepts.
+    const mapHelper = "declare function map<V>(entries: Record<string, V>): Record<string, V>;";
+    it.each([
+        ["a property read", "const cfg = { id: 7 };", "display_msg(cfg.id);", "cfg"],
+        ["an element read", "const cfg = { id: 7 };", 'display_msg(cfg["id"]);', "cfg"],
+        ["an array element", "const ids = [1, 2];", "display_msg(ids[0]);", "ids"],
+        ["a map() constant", `${mapHelper} const cfg = map({ id: 7 });`, "display_msg(cfg.id);", "cfg"],
+        ["a write", "const cfg = { id: 7 };", "cfg.id = 5;", "cfg"],
+    ])("refuses %s, naming the constant and its line", async (_name, declaration, use, name) => {
+        await expect(emit(`${declaration}\nfunction start() {\n    ${use}\n}\n`)).rejects.toMatchObject({
+            message: expect.stringMatching(new RegExp(`'${name}' is a top-level constant`)),
+            location: { line: 3 },
+        });
+    });
+
+    it("compiles the same literal held by a procedure's own variable", async () => {
+        const out = await emit("function start() {\n    const cfg = { id: 7 };\n    display_msg(cfg.id);\n}\n");
+        expect(out).toContain("display_msg(cfg.id);");
+    });
+});
+
 describe("destructuring in a top-level declaration", () => {
     // `getName()` on a binding pattern returns the pattern text, so an unrefused one reaches the output
     // as though `[a, b]` were an identifier. Both back ends read these declarations, so the refusal

@@ -26,7 +26,7 @@ import {
     type VariableDeclaration,
 } from "ts-morph";
 import { TranspileError } from "@bgforge/transpile/internal";
-import type { InlineFunc } from "./types";
+import { RESERVED_VAR_NAMES, type InlineFunc } from "./types";
 
 /** What one module contributes, in its own statement order. */
 export interface ModuleItems {
@@ -300,6 +300,22 @@ function declarationOf(id: Node): Node | undefined {
     return implementation ?? declarations[0];
 }
 
+/** Whether a declaration's value, once type syntax erases, is an array or map literal, or `list(...)`/`map(...)`. */
+function holdsArrayLiteral(decl: VariableDeclaration): boolean {
+    let value = decl.getInitializer();
+    while (
+        Node.isAsExpression(value) ||
+        Node.isSatisfiesExpression(value) ||
+        Node.isNonNullExpression(value) ||
+        Node.isTypeAssertion(value) ||
+        Node.isParenthesizedExpression(value)
+    ) {
+        value = value.getExpression();
+    }
+    if (Node.isArrayLiteralExpression(value) || Node.isObjectLiteralExpression(value)) return true;
+    return Node.isCallExpression(value) && RESERVED_VAR_NAMES.has(value.getExpression().getText());
+}
+
 /** Whether a declaration is one of the top-level kinds the emitter can output from a project file. */
 function isEmittable(decl: Node): decl is FunctionDeclaration | VariableDeclaration | EnumDeclaration {
     if (decl.getSourceFile().getFilePath().endsWith(".d.ts")) return false;
@@ -409,8 +425,34 @@ export function buildProgramModel(
         keep(decl);
     };
 
+    const topLevelConsts = new Set<Node>(modules.flatMap((module) => module.consts));
+    const entryConsts = new Map(entry.consts.map((decl) => [decl.getName(), decl]));
+    /** This program's top-level const an identifier names, if it names one. */
+    const topLevelConstOf = (id: Identifier): VariableDeclaration | undefined => {
+        const decl = declarationOf(id);
+        if (!decl || !Node.isVariableDeclaration(decl)) return undefined;
+        if (topLevelConsts.has(decl)) return decl;
+        // An entry without imports is a global script, so in a batch the checker binds its names to whichever
+        // script declared them first; the #define a use reads is still this entry's own.
+        return Node.isSourceFile(decl.getVariableStatement()?.getParent())
+            ? entryConsts.get(decl.getName())
+            : undefined;
+    };
+
     const scanBody = (root: Node): void => {
         root.forEachDescendant((node) => {
+            if (Node.isPropertyAccessExpression(node) || Node.isElementAccessExpression(node)) {
+                const obj = node.getExpression();
+                const decl = Node.isIdentifier(obj) ? topLevelConstOf(obj) : undefined;
+                // A top-level const is a #define, so each use is its literal, and SSL indexes only a variable.
+                if (decl && holdsArrayLiteral(decl)) {
+                    throw refuseAt(
+                        node,
+                        `'${obj.getText()}' is a top-level constant, so each use is its array or map literal, ` +
+                            "which SSL cannot index; declare it with let inside the procedure that reads it",
+                    );
+                }
+            }
             if (Node.isPropertyAccessExpression(node)) {
                 const obj = node.getExpression();
                 if (Node.isIdentifier(obj)) {

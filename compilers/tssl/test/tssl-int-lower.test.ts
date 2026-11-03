@@ -190,6 +190,11 @@ describe("refusals", () => {
             /'\?\.' is not supported; SSL has no null/,
         ],
         [
+            "a key of a top-level constant map",
+            "const cfg = { id: 7 };\nfunction start() {\n    display_msg(cfg.id);\n}\n",
+            /'cfg' is a top-level constant/,
+        ],
+        [
             "an integer literal past 32 bits",
             "function start() {\n    let x = 0;\n    x = 4294967296 + 1;\n}\n",
             /integer literal 4294967296 does not fit in 32 bits/,

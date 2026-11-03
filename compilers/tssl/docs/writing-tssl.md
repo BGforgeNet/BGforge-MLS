@@ -31,6 +31,10 @@ function example() {
 
 Only top-level `const` produces `#define`. Inside function bodies, `const` and `let` are equivalent.
 
+A top-level `const` holding an array or map can be passed whole, but reading a key of it (`CFG.id`, `IDS[0]`)
+is refused: each use is the literal itself, and SSL indexes only a variable. Hold it in a `let` inside the
+procedure that reads it.
+
 **Scoping rules:** All variables are function-scoped, like `var` in JavaScript. There is no block scoping. Variable declarations are hoisted to the top of the function. See [Gotchas](#gotchas-and-pitfalls) for important implications.
 
 ### Functions
