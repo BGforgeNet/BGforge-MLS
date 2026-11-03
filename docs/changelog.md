@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.20.0
 
 ### Fallout SSL
 

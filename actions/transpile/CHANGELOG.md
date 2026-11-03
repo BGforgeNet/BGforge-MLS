@@ -2,6 +2,12 @@
 
 Notable changes to the `actions/transpile` Action. CLI changes: `transpilers/CHANGELOG.md`.
 
+## 1.2.0
+
+- `version` defaults to `@bgforge/transpile` 0.6.0. It type-checks each script and refuses one with type errors, so a
+  mod's CI now fails on them; set `version` to `0.5.1` to keep the old CLI. TBAF and TD values are computed as
+  TypeScript evaluates them, and what BAF or D cannot express is refused.
+
 ## 1.1.0
 
 - `actions/setup-node` v7.1.0.

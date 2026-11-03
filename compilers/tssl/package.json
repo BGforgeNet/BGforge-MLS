@@ -1,6 +1,6 @@
 {
     "name": "@bgforge/tssl",
-    "version": "0.5.1",
+    "version": "0.6.0",
     "description": "TSSL compiler: TypeScript to Fallout INT bytecode, with the tssl CLI and an option to emit SSL",
     "keywords": [
         "compiler",

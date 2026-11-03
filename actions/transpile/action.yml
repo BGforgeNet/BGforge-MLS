@@ -10,7 +10,7 @@ inputs:
   version:
     description: 'npm version specifier for @bgforge/transpile. Defaults to the release this Action version was tested with; "latest" opts into the newest.'
     required: false
-    default: "0.5.1"
+    default: "0.6.0"
   commit-message:
     description: "Commit subject when transpiled output changes."
     required: false

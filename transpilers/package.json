@@ -1,6 +1,6 @@
 {
     "name": "@bgforge/transpile",
-    "version": "0.5.1",
+    "version": "0.6.0",
     "description": "Library for transpiling TBAF and TD source files to WeiDU BAF and WeiDU D",
     "keywords": [
         "infinity-engine",

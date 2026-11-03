@@ -2,6 +2,11 @@
 
 Notable changes to the `actions/tssl` Action. Compiler changes: `compilers/tssl/CHANGELOG.md`.
 
+## 1.3.0
+
+- `version` defaults to `@bgforge/tssl` 0.6.0. An `@inline` function keeps its arguments' grouping, which changes
+  the bytecode of a call that passed an expression, and a key of a top-level `const` array or map is refused.
+
 ## 1.2.1
 
 - `version` defaults to `@bgforge/tssl` 0.5.1, which compiles a ternary, `floor(x)` and `set_perk_skill1_mag`.
