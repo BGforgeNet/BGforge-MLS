@@ -304,6 +304,7 @@ See [Gotchas](#gotchas-and-pitfalls) for why non-computed keys don't work.
 ```typescript
 arr[i]; // -> arr[i]
 obj[key]; // -> obj[key]
+obj.name; // -> obj.name, the same lookup as obj["name"]
 ```
 
 ### Imports

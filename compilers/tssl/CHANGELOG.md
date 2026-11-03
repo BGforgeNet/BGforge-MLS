@@ -19,8 +19,8 @@ Notable changes to `@bgforge/tssl` (the compiler library and the `tssl` CLI).
 - A top-level statement that is not a declaration (an assignment, a call, an `if`, a loop) is refused, naming its
   line. SSL has no module-level code, and both outputs used to drop such a statement without a word. `var` is
   refused the same way, with `let` or `const` as the remedy.
-- Compiling to `.int` refuses a property access on something other than an enum as not yet supported, rather than
-  as an unknown enum member.
+- Compiling to `.int` reads and writes a map property written with a dot, `m.id`, as the lookup `m["id"]`, which
+  is what the `.ssl` output already compiled to. It used to refuse it.
 
 ## 0.5.1
 

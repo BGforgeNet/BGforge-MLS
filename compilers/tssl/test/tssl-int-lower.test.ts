@@ -185,9 +185,9 @@ describe("refusals", () => {
             /only declarations belong at the top level/,
         ],
         [
-            "a property of something that is not an enum",
-            "const cfg = { id: 7 };\nfunction start() {\n    display_msg(cfg.id);\n}\n",
-            /'cfg\.id' is not lowered yet: of property accesses, only an enum member's is/,
+            "an optional property access",
+            "function start() {\n    let m = map({ id: 7 });\n    display_msg(m?.id);\n}\n",
+            /'\?\.' is not supported; SSL has no null/,
         ],
         [
             "an integer literal past 32 bits",
@@ -196,6 +196,21 @@ describe("refusals", () => {
         ],
     ])("refuses %s rather than approximating it", (_name, source, message) => {
         expect(() => lower(source)).toThrow(message);
+    });
+});
+
+describe("property access", () => {
+    // SSL reads `m.id` as a map lookup keyed by the string "id", which is what the text route prints.
+    it("lowers a property of a map as the lookup keyed by its name", () => {
+        const dotted = lower("function start() {\n    let m = map({ id: 7 });\n    display_msg(m.id);\n}\n");
+        const keyed = lower('function start() {\n    let m = map({ id: 7 });\n    display_msg(m["id"]);\n}\n');
+        expect(Buffer.from(emitProgram(dotted))).toEqual(Buffer.from(emitProgram(keyed)));
+    });
+
+    it("lowers an assignment to a property of a map as the keyed write", () => {
+        const dotted = lower("function start() {\n    let m = map({ id: 7 });\n    m.id = 5;\n}\n");
+        const keyed = lower('function start() {\n    let m = map({ id: 7 });\n    m["id"] = 5;\n}\n');
+        expect(Buffer.from(emitProgram(dotted))).toEqual(Buffer.from(emitProgram(keyed)));
     });
 });
 

@@ -79,6 +79,12 @@ export function start(): void {
     let ratio = 1.0 * 7 / 2;
     display_msg(ratio);
 
+    // A map property read and written with a dot. The text route prints it as written, which SSL reads as
+    // the lookup keyed by the name as a string; the direct route refused it.
+    let config = map({ id: 7 });
+    config.id = config.id + 1;
+    display_msg(config.id);
+
     display_msg(twice(limit + 1));
     display_msg(SPAN * 2);
     display_msg(100 / HALF);

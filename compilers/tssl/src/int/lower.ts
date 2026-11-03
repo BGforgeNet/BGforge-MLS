@@ -20,7 +20,7 @@
  * before the entry, then variables, then bodies.
  */
 
-import { SyntaxKind, type FunctionDeclaration, type Node, type Project } from "ts-morph";
+import { SyntaxKind, type FunctionDeclaration, type Node, type Project, type PropertyAccessExpression } from "ts-morph";
 import {
     engineFunction,
     Expansions,
@@ -549,24 +549,48 @@ class TsslLowering {
         const op = ASSIGN_OPS.get(operator);
         if (op === undefined) return null;
 
-        // `arr[key] = value` writes through the engine; there is no slot to assign to.
-        const element = binary.getLeft().asKind(SyntaxKind.ElementAccessExpression);
-        if (element) {
+        // `arr[key] = value` and `m.key = value` write through the engine; there is no slot to assign to.
+        const left = binary.getLeft();
+        const property = left.asKind(SyntaxKind.PropertyAccessExpression);
+        if (left.isKind(SyntaxKind.ElementAccessExpression) || (property && !this.flattensToDefine(property))) {
             if (op !== "=") throw refuseAt(binary, `'${operator}' on an array element is not lowered yet`);
-            const index = element.getArgumentExpression();
-            if (!index) throw refuseAt(element, "element assignment has no index");
-            const call = this.engineCall(element, "set_array", [
-                this.lowerExpression(element.getExpression(), scope),
-                this.lowerExpression(index, scope),
+            const call = this.engineCall(left, "set_array", [
+                ...this.lowerKeyedAccess(left, scope),
                 this.lowerExpression(binary.getRight(), scope),
             ]);
-            if (call.kind !== "libCall") throw refuseAt(element, "set_array did not lower to an engine call");
+            if (call.kind !== "libCall") throw refuseAt(left, "set_array did not lower to an engine call");
             return { kind: "libStmt", opcode: call.opcode, args: call.args };
         }
 
         const target = this.lowerExpression(binary.getLeft(), scope);
         if (target.kind !== "var") throw refuseAt(binary.getLeft(), "assignment target must be a variable");
         return { kind: "assign", target, op, value: this.lowerExpression(binary.getRight(), scope) };
+    }
+
+    /** Whether `X.Y` is an enum member or a constant, which the text route flattens to an `X_Y` define. */
+    private flattensToDefine(access: PropertyAccessExpression): boolean {
+        const object = access.getExpression().getText();
+        const flat = `${object}_${access.getName()}`;
+        return this.enumValues.has(flat) || this.constants.has(flat) || this.enumNames.has(object);
+    }
+
+    /**
+     * The object and key of `arr[key]`, or of `m.key`, which SSL reads as the lookup keyed by the name as a
+     * string. Lowered in written order, so the key interns after any string the object holds.
+     */
+    private lowerKeyedAccess(access: Node, scope: Scope): [Expr, Expr] {
+        const property = access.asKind(SyntaxKind.PropertyAccessExpression);
+        if (property) {
+            if (property.hasQuestionDotToken()) throw refuseAt(access, "'?.' is not supported; SSL has no null");
+            const object = this.lowerExpression(property.getExpression(), scope);
+            const key = property.getName();
+            this.strings.push(key);
+            return [object, { kind: "string", value: key }];
+        }
+        const element = access.asKindOrThrow(SyntaxKind.ElementAccessExpression);
+        const index = element.getArgumentExpression();
+        if (!index) throw refuseAt(element, "element access has no index");
+        return [this.lowerExpression(element.getExpression(), scope), this.lowerExpression(index, scope)];
     }
 
     private declareLocal(scope: Scope, name: string, initial: VariableDecl["initial"]): Extract<Expr, { kind: "var" }> {
@@ -851,11 +875,7 @@ class TsslLowering {
                 if (this.enumNames.has(access.getExpression().getText())) {
                     throw refuseAt(node, `unknown enum member '${flat}'`);
                 }
-                // The text route prints the access as written, which SSL reads as a map lookup.
-                throw refuseAt(
-                    node,
-                    `'${access.getText()}' is not lowered yet: of property accesses, only an enum member's is`,
-                );
+                return this.engineCall(access, "get_array", this.lowerKeyedAccess(access, scope));
             }
 
             // Type syntax carries no value: `x as number`, `x satisfies T` and `x!` are all their operand.
@@ -918,15 +938,8 @@ class TsslLowering {
             }
 
             // `arr[i]` reads through the engine rather than by address.
-            case SyntaxKind.ElementAccessExpression: {
-                const access = node.asKindOrThrow(SyntaxKind.ElementAccessExpression);
-                const index = access.getArgumentExpression();
-                if (!index) throw refuseAt(access, "element access has no index");
-                return this.engineCall(access, "get_array", [
-                    this.lowerExpression(access.getExpression(), scope),
-                    this.lowerExpression(index, scope),
-                ]);
-            }
+            case SyntaxKind.ElementAccessExpression:
+                return this.engineCall(node, "get_array", this.lowerKeyedAccess(node, scope));
 
             case SyntaxKind.ParenthesizedExpression:
                 return this.lowerExpression(

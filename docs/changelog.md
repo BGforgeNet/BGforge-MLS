@@ -13,6 +13,7 @@
   `const b = a + 1`, `b * 2` computed `a + (1 * 2)`.
 - An `@inline` TSSL function keeps its arguments' grouping: `twice(a + 1)` over `return x * 2` computes
   `(a + 1) * 2`, in the `.int` and the `.ssl`; it computed `a + (1 * 2)`.
+- TSSL compiles a map property written with a dot, `m.id`, to `.int`; before, it was refused.
 - TSSL refuses a top-level statement that is not a declaration, and `var`; both were dropped without a word.
 - TBAF and TD compile every constant, expression and condition the output uses to what the TypeScript means, or
   refuse it with a message naming the construct; before, source text reached the generated file as written, or was
